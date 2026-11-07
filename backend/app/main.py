@@ -76,10 +76,19 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             if origin and host and origin.split("://", 1)[-1] != host:
                 raise HTTPException(403, "origen no permitido")
 
+    async def body_json(request: Request) -> dict:
+        try:
+            body = await request.json()
+        except Exception:
+            raise HTTPException(400, "cuerpo JSON requerido")
+        if not isinstance(body, dict):
+            raise HTTPException(400, "cuerpo JSON requerido")
+        return body
+
     # ---- sesión ----
     @app.post("/api/login")
     async def login(request: Request, response: Response):
-        body = await request.json()
+        body = await body_json(request)
         ip = client_ip(request)
         try:
             tok = auth.login(ip, str(body.get("user", "")), str(body.get("password", "")))
@@ -106,15 +115,6 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         return {"authenticated": auth.valid(request.cookies.get(COOKIE))}
 
     # ---- config ----
-    async def body_json(request: Request) -> dict:
-        try:
-            body = await request.json()
-        except Exception:
-            raise HTTPException(400, "cuerpo JSON requerido")
-        if not isinstance(body, dict):
-            raise HTTPException(400, "cuerpo JSON requerido")
-        return body
-
     def draft(body: dict):
         """Valida el borrador {config: ...}; devuelve Config o responde 422 con errores por campo."""
         cfg, errors = validate_config(body.get("config"))
@@ -440,7 +440,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
 
     @app.post("/api/versions/{game}/restore", dependencies=[Depends(require)])
     async def restore(game: str, request: Request):
-        body = await request.json()
+        body = await body_json(request)
         cfg = _cfg()
         try:
             msg = restore_version(cfg, game, str(body.get("version", "")), str(body.get("source", "")),
