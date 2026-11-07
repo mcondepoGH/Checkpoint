@@ -151,8 +151,37 @@ Checkpoint comprueba si hay una versión nueva consultando las Releases pública
 - El resultado se guarda en memoria y en `data/update_cache.json` durante `CHECKPOINT_UPDATE_CACHE_HOURS`. Un fallo de red es silencioso: se conserva el último resultado y se reintenta pasados unos minutos.
 - Se desactiva en **Configuración > Comprobar actualizaciones** (o con `CHECKPOINT_UPDATE_CHECK=0` como valor inicial). Desactivada, no se hace ninguna petición a internet. El botón **Comprobar ahora** fuerza la consulta (máximo una por minuto).
 - **Canal** (Configuración > Comprobar actualizaciones): **Estable** (por defecto) solo ofrece Releases normales; **Pruebas** (`beta`) ofrece también pre-releases (nunca borradores), que pueden fallar. En Pruebas se ofrece la versión más alta entre estables y preliminares, con el orden de semver: `0.5.0-rc.1` < `0.5.0-rc.2` < `0.5.0`. Un tag con sufijo (`-rc.1`) cuenta como preliminar aunque GitHub no lo marque. Cambiar de canal descarta el resultado guardado y vuelve a consultar. Nunca se ofrece bajar de versión: desde una preliminar en canal Estable solo se avisa cuando haya una estable mayor. La insignia y el diálogo marcan «preliminar» cuando procede.
-- La etiqueta de imagen `beta` llegará con la fase de publicación; hoy el canal solo cambia qué avisos se muestran.
+- La etiqueta de imagen `beta` la publica el workflow de release (ver «Publicación de versiones»); el canal solo cambia qué avisos se muestran, no la imagen que ejecutas.
 - API (requiere sesión): `GET /api/version`, `GET /api/updates[?refresh=true]` (incluye `canal` y `prerelease`, si la versión ofrecida es preliminar) y `PUT /api/updates` con `{"enabled": true|false, "channel": "stable"|"beta"}` (parcial: basta uno de los dos; valor no válido, 422).
+
+## Publicación de versiones
+
+Al subir un tag `vX.Y.Z` el workflow `.github/workflows/release.yml` publica la imagen en GHCR y crea la GitHub Release (la que consulta la comprobación de nuevas versiones).
+
+1. Edita `VERSION` con la versión nueva (sin `v`), por ejemplo `0.5.0` o `0.5.0-rc.1`, y haz commit en `main`.
+2. Crea un tag anotado con el mismo número: `git tag -a v0.5.0 -m "v0.5.0"`.
+3. Sube el commit y el tag: `git push origin main v0.5.0`.
+
+Si `VERSION` no coincide con el tag, el workflow falla antes de construir nada. Un tag con sufijo (`-rc.1`, `-beta.2`) se publica como pre-release.
+
+Etiquetas de imagen (`ghcr.io/<owner>/checkpoint`, con `<owner>` en minúsculas):
+
+| Tag | Etiquetas de imagen | Release |
+|---|---|---|
+| `v0.5.0` (estable) | `v0.5.0`, `0.5.0`, `latest` | normal |
+| `v0.5.0-rc.1` (pre-release) | `v0.5.0-rc.1`, `0.5.0-rc.1`, `beta` | pre-release |
+
+La imagen se construye solo para `linux/amd64`; para añadir `arm64` hay instrucciones en un comentario del workflow.
+
+Uso en compose:
+
+```yaml
+services:
+  checkpoint:
+    image: ghcr.io/<owner>/checkpoint:latest   # o una versión fija, p. ej. :0.5.0, o :beta
+```
+
+Tras la primera publicación, el paquete de GHCR es privado por defecto: cámbialo a público en la página del paquete (Package settings > Danger Zone > Change visibility) si quieres bajarlo sin autenticarte.
 
 ## Conflictos
 
