@@ -9,7 +9,7 @@ export const OS_OPTIONS = [['windows', 'Windows'], ['linux', 'Linux']]
 const LEGACY_OS = { steamos: 'linux' };;
 
 export const blankDevice = () => ({ id: uid(), name: '', host: '', port: '22', user: '', os: 'linux' });
-export const blankGame = () => ({ id: uid(), name: '', a: '', b: '', pathA: '', pathB: '', process: '', keep: '' });
+export const blankGame = () => ({ id: uid(), name: '', a: '', b: '', pathA: '', pathB: '', process: '', keep: '', onConflict: '' });
 
 // Versiones guardadas por juego: global (por defecto) y override por juego (vacío = usar el global). 0 = sin límite.
 export const DEFAULT_MAX_VERSIONS = 20;
@@ -25,6 +25,7 @@ export function fromConfig(cfg) {
     id: uid(), name, a: idOf(g.devices[0]), b: idOf(g.devices[1]),
     pathA: g.paths?.[g.devices[0]] ?? '', pathB: g.paths?.[g.devices[1]] ?? '',
     process: g.process || '', keep: g.keep_versions == null ? '' : String(g.keep_versions),
+    onConflict: g.on_conflict || '',
   }));
   return { devices, games, maxVersions: String(cfg?.max_versions ?? DEFAULT_MAX_VERSIONS) };
 }
@@ -87,6 +88,7 @@ export function toConfig(draft) {
       devices: [na, nb], paths,
       ...(g.process.trim() ? { process: g.process.trim() } : {}),
       ...(String(g.keep).trim() !== '' ? { keep_versions: num(g.keep) } : {}),
+      ...(g.onConflict ? { on_conflict: g.onConflict } : {}),
     };
   }
   return { max_versions: num(draft.maxVersions), devices, games };

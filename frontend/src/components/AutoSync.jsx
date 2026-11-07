@@ -4,8 +4,12 @@ import Field from './Field.jsx';
 import AutoSyncLog from './AutoSyncLog.jsx';
 
 const PRESETS = [1, 6, 12, 24];
-const STATUS = { ok: 'ok', error: 'error', aborted: 'aborted', skipped: 'aborted' };
-const STATUS_TXT = { ok: 'correcta', error: 'con errores', aborted: 'abortada', skipped: 'omitida (ya en curso)' };
+const STATUS = { ok: 'ok', error: 'error', aborted: 'aborted', skipped: 'aborted', conflict: 'conflict', partial: 'aborted' };
+const STATUS_TXT = { ok: 'correcta', error: 'con errores', aborted: 'abortada', skipped: 'omitida (ya en curso)', conflict: 'con conflictos', partial: 'parcial' };
+const ON_CONFLICT_HELP = {
+  skip: 'Omitir: el guardado no se efectúa y el juego queda marcado como «Conflicto» para resolverlo a mano. Es la opción segura.',
+  newest: 'Gana el más reciente: se aplica el save con fecha más nueva y el otro se guarda en versiones. Si las fechas difieren menos de 2 s, se omite.',
+};
 
 const fmt = (iso) => (iso ? new Date(iso).toLocaleString() : '—');
 
@@ -16,6 +20,7 @@ export default function AutoSync() {
   const [enabled, setEnabled] = useState(false);
   const [hours, setHours] = useState('24');
   const [runOnStart, setRunOnStart] = useState(false);
+  const [onConflict, setOnConflict] = useState('skip');
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState(null); // {kind:'ok'|'error', text}
   const [serverErr, setServerErr] = useState('');
@@ -25,6 +30,7 @@ export default function AutoSync() {
     setEnabled(s.enabled);
     setHours(String(s.interval_hours));
     setRunOnStart(s.run_on_start);
+    setOnConflict(s.on_conflict || 'skip');
   };
 
   const load = useCallback(async () => {
@@ -45,15 +51,15 @@ export default function AutoSync() {
   const num = Number(hours);
   const localErr = hours.trim() === '' || !Number.isFinite(num) || num < min || num > max
     ? `Introduce un número entre ${min} y ${max} horas.` : '';
-  const dirty = saved && (enabled !== saved.enabled || num !== saved.interval_hours || runOnStart !== saved.run_on_start);
+  const dirty = saved && (enabled !== saved.enabled || num !== saved.interval_hours || runOnStart !== saved.run_on_start || onConflict !== (saved.on_conflict || 'skip'));
 
   const save = async () => {
     setBusy(true); setMsg(null); setServerErr('');
     try {
-      apply(await api('/api/scheduler', { method: 'PUT', body: { enabled, interval_hours: num, run_on_start: runOnStart } }));
+      apply(await api('/api/scheduler', { method: 'PUT', body: { enabled, interval_hours: num, run_on_start: runOnStart, on_conflict: onConflict } }));
       setMsg({ kind: 'ok', text: 'Guardado.' });
     } catch (e) {
-      setServerErr(e.data?.errors?.interval_hours || '');
+      setServerErr(e.data?.errors?.interval_hours || e.data?.errors?.on_conflict || '');
       setMsg({ kind: 'error', text: e.message });
     } finally { setBusy(false); }
   };
@@ -96,6 +102,16 @@ export default function AutoSync() {
         <input type="checkbox" checked={runOnStart} onChange={(e) => setRunOnStart(e.target.checked)} />
         Ejecutar también al arrancar la aplicación
       </label>
+
+      <Field label="En caso de conflicto" hint={ON_CONFLICT_HELP[onConflict]}>
+        {(p) => (
+          <select {...p} value={onConflict} onChange={(e) => setOnConflict(e.target.value)}>
+            <option value="skip">Omitir el guardado (seguro)</option>
+            <option value="newest">Gana el más reciente</option>
+          </select>
+        )}
+      </Field>
+      <p className="muted">Hay conflicto cuando los dos dispositivos han cambiado desde la última sincronización y su contenido es distinto. Cada juego puede sustituir este ajuste en Configuración. En la sincronización manual siempre se pregunta.</p>
 
       <div className="row">
         <button type="button" className="btn primary" disabled={busy || !dirty || !!localErr} onClick={save}>Guardar</button>

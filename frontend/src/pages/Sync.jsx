@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import EmptyState from '../components/EmptyState.jsx';
+import ConflictDialog from '../components/ConflictDialog.jsx';
+
+const RES_TXT = { conflict: 'Conflicto', partial: 'Parcial' };
 
 // Fecha ISO -> {time, date}; null si no se puede interpretar.
 function splitWhen(iso) {
@@ -33,6 +36,9 @@ function LastRun({ s }) {
                   : <span>{s.finished?.replace('T', ' ') || '—'}</span>}
           {s.dry_run && <span className="lr-tag">dry-run</span>}</dd>
       </div>
+      {s.result === 'conflict' && <div className="lr-row"><dt>Conflicto</dt><dd className="lr-msg">{s.message}</dd></div>}
+      {s.result === 'partial' && <div className="lr-row"><dt>Parcial</dt><dd className="lr-msg">{s.message}</dd></div>}
+      {s.offline?.length > 0 && <div className="lr-row"><dt>Offline</dt><dd className="pills">{s.offline.map((d) => <span className="pill" key={d}>{d}</span>)}</dd></div>}
       {winner && <div className="lr-row"><dt>Ganador</dt><dd><span className="pill win">{winner}</span></dd></div>}
       {list.length > 0 && (
         <div className="lr-row"><dt>{planned ? 'Destinos' : 'Actualizados'}</dt>
@@ -49,6 +55,8 @@ export default function Sync({ config, onGoSettings }) {
   const [status, setStatus] = useState({});
   const [active, setActive] = useState(null); // {game, lines, done}
   const [error, setError] = useState('');
+  const [conflict, setConflict] = useState(null); // {game, conflict}
+  const [resolving, setResolving] = useState(false);
   const esRef = useRef(null);
   const logRef = useRef(null);
 
@@ -56,21 +64,41 @@ export default function Sync({ config, onGoSettings }) {
   useEffect(() => { loadStatus(); return () => esRef.current?.close(); }, []);
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [active?.lines.length]);
 
-  const run = async (game) => {
+  // resolution/expect: solo al resolver un conflicto desde el popup.
+  const run = async (game, resolution, expect) => {
     setError('');
     try {
-      const { run_id } = await api(`/api/sync/${encodeURIComponent(game)}`, { method: 'POST', body: { dry_run: !!dry[game] } });
+      const body = { dry_run: !!dry[game] };
+      if (resolution) { body.resolution = resolution; body.expect = expect; }
+      const { run_id } = await api(`/api/sync/${encodeURIComponent(game)}`, { method: 'POST', body });
       setActive({ game, lines: [], done: false });
       esRef.current?.close();
       const es = new EventSource(`/api/runs/${run_id}/stream`);
       esRef.current = es;
       es.onmessage = (ev) => setActive((a) => ({ ...a, lines: [...a.lines, JSON.parse(ev.data)] }));
-      es.addEventListener('done', () => { es.close(); setActive((a) => ({ ...a, done: true })); loadStatus(); });
-      es.onerror = () => { es.close(); setActive((a) => a && { ...a, done: true }); loadStatus(); };
+      es.addEventListener('done', (ev) => {
+        es.close(); setActive((a) => ({ ...a, done: true })); loadStatus(); setResolving(false);
+        try {
+          const st = JSON.parse(ev.data);
+          if (st?.result === 'conflict' && st.conflict) setConflict({ game, conflict: st.conflict });
+          else setConflict(null);
+        } catch { setConflict(null); }
+      });
+      es.onerror = () => { es.close(); setResolving(false); setActive((a) => a && { ...a, done: true }); loadStatus(); };
     } catch (e) { setError(e.message); }
   };
 
-  const badge = (s) => s && <span className={`badge ${s.result}`}>{s.result}</span>;
+  const badge = (s) => s && <span className={`badge ${s.result}`}>{RES_TXT[s.result] || s.result}</span>;
+  const openConflict = (g) => {
+    const c = status[g]?.conflict;
+    if (c) setConflict({ game: g, conflict: c });
+  };
+  const resolve = (resolution, expect) => {
+    setResolving(true);
+    const g = conflict.game;
+    setConflict(null);
+    run(g, resolution, expect);
+  };
 
   return (
     <section className={games.length === 0 ? 'fill' : undefined}>
@@ -92,11 +120,21 @@ export default function Sync({ config, onGoSettings }) {
               <div className={`meter ${running ? 'running' : (s?.result || '')}`} role="progressbar" aria-label={`Estado de ${g}`}><i /></div>
               <LastRun s={s} />
               <label className="check"><input type="checkbox" checked={!!dry[g]} onChange={(e) => setDry({ ...dry, [g]: e.target.checked })} /> Dry-run</label>
+              {s?.result === 'conflict' && !running && (
+                <div className="conflict-flag" role="alert">
+                  <span><b>Conflicto:</b> dos versiones distintas, no se ha guardado nada.</span>
+                  <button type="button" className="btn" onClick={() => openConflict(g)}>Resolver</button>
+                </div>
+              )}
               <button className="btn primary" disabled={running} onClick={() => run(g)}>{running ? 'En curso…' : 'Sincronizar'}</button>
             </div>
           );
         })}
       </div>
+      {conflict && (
+        <ConflictDialog game={conflict.game} conflict={conflict.conflict} busy={resolving}
+          onCancel={() => setConflict(null)} onResolve={resolve} />
+      )}
       {active && (
         <div className="card logcard">
           <h3>Log: {active.game} {active.done ? '(terminado)' : '(en vivo)'}</h3>

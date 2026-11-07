@@ -2,8 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { api } from '../api.js';
 import EmptyState from './EmptyState.jsx';
 
-const RES = { ok: 'ok', error: 'error', aborted: 'aborted', skipped: 'aborted' };
-const RES_TXT = { ok: 'correcta', error: 'error', aborted: 'abortada', skipped: 'omitida' };
+const RES = { ok: 'ok', error: 'error', aborted: 'aborted', skipped: 'aborted', conflict: 'conflict', partial: 'aborted' };
+const RES_TXT = { ok: 'correcta', error: 'error', aborted: 'abortada', skipped: 'omitida', conflict: 'omitido por conflicto', partial: 'parcial' };
 const TRIG_TXT = { scheduled: 'Programada', startup: 'Arranque', 'config-change': 'Cambio de ajustes' };
 
 const fmtDate = (iso) => (iso ? new Date(iso).toLocaleString() : '—');

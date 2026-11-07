@@ -43,6 +43,15 @@ export default function GameCard({ game, devices, errors, localError, keepError,
           {(p) => <input {...p} type="number" inputMode="numeric" min="0" max={MAX_VERSIONS_LIMIT} step="1" value={game.keep} onChange={set('keep')} placeholder={String(globalMax)} />}
         </Field>
       </div>
+      <Field label="En conflicto (sync automática)" hint="Sustituye al ajuste global de Sincronización automática solo para este juego." error={errors.on_conflict}>
+        {(p) => (
+          <select {...p} value={game.onConflict || ''} onChange={set('onConflict')}>
+            <option value="">Usar el ajuste global</option>
+            <option value="skip">Omitir el guardado</option>
+            <option value="newest">Gana el más reciente</option>
+          </select>
+        )}
+      </Field>
       <div className="row end">
         <button type="button" className="btn danger" onClick={onRemove} aria-label={`Eliminar juego ${title}`}>Eliminar</button>
       </div>
