@@ -22,16 +22,11 @@ export const idPrefix = (name, kind) => {
     .replace(/[^a-z0-9_-]+/g, '-').slice(0, 40).replace(/^[-_]+|[-_]+$/g, '');
   return base || kind;
 };
-// Espejo de generate_id (backend/app/config.py).
-export const newId = (name, kind = 'juego') => `${idPrefix(name, kind)}-${hex8()}`;
-export const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
 // Id con el que se guardará el elemento: el real si existe; si no, prefijo del nombre actual + su salt.
 export const idOf = (item, kind) => item.id || `${idPrefix(item.name, kind)}-${item.salt}`;
 
 export const OS_OPTIONS = [['windows', 'Windows'], ['linux', 'Linux']]
-// Valor heredado de config.yaml: se muestra como Linux (equivale a él) y se guarda como tal.
-const LEGACY_OS = { steamos: 'linux' };;
 
 export const blankDevice = () => ({ key: uid(), id: null, salt: hex8(), name: '', local: false, host: '', port: '22', user: '', os: 'linux' });
 
@@ -61,12 +56,12 @@ export const VERSIONS_HINT = '0 = sin límite; al superarlo se borran las más a
 
 export function fromConfig(cfg) {
   const devices = Object.entries(cfg?.devices || {}).map(([id, d]) => ({
-    key: id, id, name: d.name ?? id, orig: d.name ?? id, local: d.local === true,
-    host: d.host ?? '', port: String(d.port ?? 22), user: d.user ?? '', os: LEGACY_OS[d.os] || d.os,
+    key: id, id, name: d.name, orig: d.name, local: d.local === true,
+    host: d.host ?? '', port: String(d.port ?? 22), user: d.user ?? '', os: d.os,
   }));
   const keyOf = (id) => devices.find((d) => d.id === id)?.key || '';
   const games = Object.entries(cfg?.games || {}).map(([id, g]) => ({
-    key: id, id, name: g.name ?? id, orig: g.name ?? id, a: keyOf(g.devices[0]), b: keyOf(g.devices[1]),
+    key: id, id, name: g.name, orig: g.name, a: keyOf(g.devices[0]), b: keyOf(g.devices[1]),
     pathA: g.paths?.[g.devices[0]] ?? '', pathB: g.paths?.[g.devices[1]] ?? '',
     process: g.process || '', keep: g.keep_versions == null ? '' : String(g.keep_versions),
     onConflict: g.on_conflict || '',
@@ -128,7 +123,7 @@ export function localErrors(draft, runtime) {
 export function toConfig(draft) {
   const devices = {};
   for (const d of draft.devices) {
-    const os = LEGACY_OS[d.os] || d.os;
+    const { os } = d;
     devices[idOf(d, 'dispositivo')] = d.local
       ? { name: cleanName(d.name), local: true, os }
       : { name: cleanName(d.name), host: d.host, user: d.user, os, port: num(d.port) };
@@ -153,7 +148,8 @@ export function toConfig(draft) {
 // Clave canónica de la config tal como la enviaría el formulario sin tocar nada.
 export const baseKeyOf = (config) => JSON.stringify(toConfig(fromConfig(config)));
 // ¿Hay cambios pendientes? Solo si el borrador difiere de la config cargada o hay errores locales.
-export const isDirty = (draft, config, runtime) => JSON.stringify(toConfig(draft)) !== baseKeyOf(config) || Object.keys(localErrors(draft, runtime)).length > 0;
+export const hasChanges = (payloadKey, baseKey, local) => payloadKey !== baseKey || Object.keys(local).length > 0;
+export const isDirty = (draft, config, runtime) => hasChanges(JSON.stringify(toConfig(draft)), baseKeyOf(config), localErrors(draft, runtime));
 
 export const gamesUsing = (draft, devKey) =>
   draft.games.filter((g) => g.a === devKey || g.b === devKey).map((g) => g.name || '(sin nombre)');

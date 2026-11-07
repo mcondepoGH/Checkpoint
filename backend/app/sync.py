@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
 from . import locking, settings
-from .config import Config, ConfigError, resolve_ref
+from .config import ON_CONFLICT, Config, ConfigError, resolve_ref
 from .redact import redact
 from .transport import Transport, TransportError, get_transport
 
@@ -153,11 +153,6 @@ def _new_version_dir(data_dir: Path, game: str) -> Path:
     return d
 
 
-def _src(k: str) -> str:
-    """Carpeta de un origen (id de dispositivo o 'hub') dentro de una versión: el propio id."""
-    return k
-
-
 def _replace_dir(src: Path, dst: Path):
     """Sustituye dst por copia de src de forma casi atómica."""
     dst.parent.mkdir(parents=True, exist_ok=True)
@@ -174,8 +169,6 @@ def _replace_dir(src: Path, dst: Path):
         shutil.rmtree(old)
 
 
-ON_CONFLICT = ("skip", "newest")
-DEFAULT_ON_CONFLICT = "skip"
 # Diferencia de mtime por debajo de la cual no se puede decir cuál es "el más reciente" (deriva de reloj).
 CLOCK_TOLERANCE = 2
 
@@ -452,12 +445,12 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
             L(f"{dn(k)}: {fp.files} ficheros, hash {(fp.hash or '-')[:12]}, mtime máx {_fmt(fp.mtime)}")
 
         raw = load_baseline(data_dir, game)
-        base = {k: raw[_src(k)] for k in fps if _src(k) in raw}
+        base = {k: raw[k] for k in fps if k in raw}
         L("baseline: " + ", ".join(f"{dn(k)}={'sí' if k in base else 'no'}" for k in fps))
 
         def remember(h):  # tras una sync completa todos los participantes en línea tienen `h`
             if not dry_run:
-                save_baseline(data_dir, game, {_src(k): h for k in fps})
+                save_baseline(data_dir, game, {k: h for k in fps})
 
         d = decide(fps, base)
         if d["kind"] == "same":
@@ -531,7 +524,7 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
             new_version = vdir.name
             for k in targets:
                 if not fps[k].empty:
-                    shutil.copytree(dirs[k], vdir / _src(k))
+                    shutil.copytree(dirs[k], vdir / k)
                     L(f"versión guardada: {vdir.name}/{dn(k)}")
         # 6. Escribir: primero el hub (local, atómico), luego los dispositivos. Un fallo en un dispositivo
         #    no impide intentar el otro; el resultado es 'partial' y NO se actualiza ningún baseline.
@@ -572,7 +565,7 @@ def restore_version(cfg: Config, game: str, version: str, source: str, data_dir:
     game = resolve_game(cfg, game)
     if VERSION_RE.match(version):
         source = _origin_id(cfg, game, source)
-    if not VERSION_RE.match(version) or source not in {_src(d) for d in (*cfg.games[game].devices, "hub")}:
+    if not VERSION_RE.match(version) or source not in {d for d in (*cfg.games[game].devices, "hub")}:
         raise SyncAbort("versión/origen inválido")
     gs = game
     with _game_lock(data_dir, gs):

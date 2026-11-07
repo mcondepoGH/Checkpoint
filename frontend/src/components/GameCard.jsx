@@ -2,6 +2,7 @@ import React from 'react';
 import Field from './Field.jsx';
 import { MAX_VERSIONS_LIMIT, NAME_HINT, NAME_MAX, VERSIONS_HINT } from '../draft.js';
 import IdNote from './IdNote.jsx';
+import { ON_CONFLICT_OPTIONS } from '../format.js';
 
 export default function GameCard({ game, devices, errors, localError, keepError, globalMax, nameA, nameB, idA, idB, idText, renamed, onChange, onRemove }) {
   const set = (k) => (e) => onChange({ [k]: e.target.value });
@@ -48,8 +49,7 @@ export default function GameCard({ game, devices, errors, localError, keepError,
         {(p) => (
           <select {...p} value={game.onConflict || ''} onChange={set('onConflict')}>
             <option value="">Usar el ajuste global</option>
-            <option value="skip">Omitir el guardado</option>
-            <option value="newest">Gana el más reciente</option>
+            {ON_CONFLICT_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         )}
       </Field>

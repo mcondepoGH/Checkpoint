@@ -8,7 +8,7 @@ RUN npm run build
 
 # --- 2) runtime ---
 FROM python:3.12-alpine
-RUN apk add --no-cache openssh-client rsync tar bash tzdata su-exec \
+RUN apk add --no-cache openssh-client rsync tar tzdata su-exec \
  && pip install --no-cache-dir --upgrade pip
 ARG PUID=1000
 ARG PGID=1000
@@ -22,14 +22,10 @@ COPY backend/app ./app
 COPY VERSION ./VERSION
 COPY --from=web /web/dist ./static
 # La CLI baja a checkpoint si se invoca como root (docker exec), para no crear ficheros de root en /data.
-RUN printf '#!/bin/sh\nif [ "$(id -u)" = "0" ]; then exec su-exec checkpoint python -m app.cli "$@"; fi\nexec python -m app.cli "$@"\n' > /usr/local/bin/checkpoint && chmod +x /usr/local/bin/checkpoint \
- && ln -s checkpoint /usr/local/bin/savesync   # compat: `docker exec ... savesync` (nombre antiguo)
+RUN printf '#!/bin/sh\nif [ "$(id -u)" = "0" ]; then exec su-exec checkpoint python -m app.cli "$@"; fi\nexec python -m app.cli "$@"\n' > /usr/local/bin/checkpoint && chmod +x /usr/local/bin/checkpoint
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
-ENV HOME=/home/checkpoint PYTHONUNBUFFERED=1 CHECKPOINT_IN_DOCKER=1 \
-    CHECKPOINT_CONFIG=/config/config.yaml CHECKPOINT_DATA=/data \
-    CHECKPOINT_SSH_KEY=/keys/id_ed25519 CHECKPOINT_KNOWN_HOSTS=/keys/known_hosts \
-    CHECKPOINT_STATIC=/app/static
+ENV HOME=/home/checkpoint PYTHONUNBUFFERED=1 CHECKPOINT_RUNTIME=docker
 # Sin USER: el entrypoint arranca como root, prepara carpetas y baja a checkpoint.
 EXPOSE 8088
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

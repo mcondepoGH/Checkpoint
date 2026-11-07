@@ -1,7 +1,6 @@
 """Sincronización automática periódica: una tarea asyncio que ejecuta todos los juegos cada X horas.
 
-Ajustes persistentes en DATA_DIR/scheduler.json (prevalecen sobre las variables de entorno, que solo
-dan los valores iniciales). Fechas internas en UTC, en ISO 8601."""
+Ajustes persistentes en DATA_DIR/scheduler.json (se editan desde la UI; sin fichero, valores por defecto). Fechas internas en UTC, en ISO 8601."""
 import asyncio
 import json
 import logging
@@ -15,7 +14,8 @@ from typing import Callable, Optional
 from starlette.concurrency import run_in_threadpool
 
 from . import history, settings
-from .sync import ON_CONFLICT, SyncAbort, run_sync
+from .config import ON_CONFLICT
+from .sync import SyncAbort, run_sync
 
 MIN_HOURS, MAX_HOURS = 0.25, 168.0
 FILE = "scheduler.json"
@@ -86,12 +86,9 @@ def compute_next_run(enabled: bool, interval_hours: float, last_run: Optional[da
     return now + step
 
 
-def env_defaults() -> dict:
-    h = settings.AUTO_INTERVAL_HOURS
-    if not (math.isfinite(h) and MIN_HOURS <= h <= MAX_HOURS):
-        h = 24.0
-    return {"enabled": settings.AUTO_ENABLED, "interval_hours": h, "run_on_start": settings.AUTO_RUN_ON_START,
-            "on_conflict": settings.AUTO_ON_CONFLICT if settings.AUTO_ON_CONFLICT in ON_CONFLICT else "skip"}
+def default_settings() -> dict:
+    """Ajustes de sync automática hasta que se guarden desde la UI."""
+    return {"enabled": False, "interval_hours": 24.0, "run_on_start": False, "on_conflict": "skip"}
 
 
 class Scheduler:
@@ -114,7 +111,7 @@ class Scheduler:
         return settings.DATA_DIR / FILE
 
     def _load(self) -> dict:
-        base = env_defaults()
+        base = default_settings()
         try:
             saved = json.loads(self._path().read_text())
             merged = validate_settings(saved, base)
@@ -162,7 +159,7 @@ class Scheduler:
                 continue
             self.current = game
             m = ""
-            policy = getattr(cfg.games[game], "on_conflict", None) or self.cfg.get("on_conflict", "skip")
+            policy = cfg.games[game].on_conflict or self.cfg.get("on_conflict", "skip")
             try:
                 st = self.runner(cfg, game, False, log=lambda m: None, conflict_policy=policy)
                 res[game] = st["result"]

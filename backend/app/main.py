@@ -1,15 +1,12 @@
 """API FastAPI. Motivo de FastAPI: pydantic ya valida la config y SSE/streaming vienen incluidos."""
 import asyncio
 import json
-import queue
 import threading
 import time
 import uuid
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import Dict, List, Optional
 
-import os
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import ValidationError
@@ -76,10 +73,19 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             if origin and host and origin.split("://", 1)[-1] != host:
                 raise HTTPException(403, "origen no permitido")
 
+    async def body_json(request: Request) -> dict:
+        try:
+            body = await request.json()
+        except Exception:
+            raise HTTPException(400, "cuerpo JSON requerido")
+        if not isinstance(body, dict):
+            raise HTTPException(400, "cuerpo JSON requerido")
+        return body
+
     # ---- sesión ----
     @app.post("/api/login")
     async def login(request: Request, response: Response):
-        body = await request.json()
+        body = await body_json(request)
         ip = client_ip(request)
         try:
             tok = auth.login(ip, str(body.get("user", "")), str(body.get("password", "")))
@@ -106,15 +112,6 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         return {"authenticated": auth.valid(request.cookies.get(COOKIE))}
 
     # ---- config ----
-    async def body_json(request: Request) -> dict:
-        try:
-            body = await request.json()
-        except Exception:
-            raise HTTPException(400, "cuerpo JSON requerido")
-        if not isinstance(body, dict):
-            raise HTTPException(400, "cuerpo JSON requerido")
-        return body
-
     def draft(body: dict):
         """Valida el borrador {config: ...}; devuelve Config o responde 422 con errores por campo."""
         cfg, errors = validate_config(body.get("config"))
@@ -133,11 +130,6 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         snap = store.snapshot()
         # `runtime` (docker|native) y `platform` (linux|windows|macos): lo único del sistema que se expone.
         return {"version": snap.version, "config": snap.as_dict(), "error": snap.error, **runtime.info()}
-
-    @app.get("/api/config/status", dependencies=[Depends(require)])
-    def config_status():
-        snap = store.snapshot()
-        return {"version": snap.version, "error": snap.error}
 
     @app.get("/api/config/events", dependencies=[Depends(require)])
     def config_events():
@@ -265,18 +257,18 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             raise HTTPException(404, "clave SSH aún no generada")
         return {"public_key": pub}
 
-    def _cfg() -> Config:
+    def _config(error) -> Config:
         snap = store.snapshot()  # recarga si el fichero cambió; cada ejecución conserva la Config con la que empezó
         if snap.error:
-            raise HTTPException(500, f"config.yaml inválido: {snap.error}")
+            raise error(f"config.yaml inválido: {snap.error}")
         return snap.cfg
+
+    def _cfg() -> Config:
+        return _config(lambda msg: HTTPException(500, msg))
 
     # ---- sync automática ----
     def _auto_cfg() -> Config:
-        snap = store.snapshot()
-        if snap.error:
-            raise RuntimeError(f"config.yaml inválido: {snap.error}")
-        return snap.cfg
+        return _config(RuntimeError)
 
     scheduler = Scheduler(_auto_cfg, lambda g: any(r.game == g and not r.done for r in runs.values()))
     holder["scheduler"] = scheduler
@@ -296,10 +288,6 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     # ---- versión y actualizaciones (solo detección) ----
     checker = updates.UpdateChecker()
 
-    @app.get("/api/version", dependencies=[Depends(require)])
-    def get_version():
-        return {"version": updates.installed_version()}
-
     @app.get("/api/updates", dependencies=[Depends(require)])
     def get_updates(refresh: bool = False):
         return checker.state(refresh=refresh)
@@ -308,7 +296,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     async def put_updates(request: Request):
         if not updates.applicable():
             return JSONResponse({"detail": "La comprobación de actualizaciones no se aplica en Docker "
-                                 "(fuérzala con CHECKPOINT_UPDATE_CHECK=1)", "aplicable": False}, status_code=409)
+                                 "(la versión la fija la imagen)", "aplicable": False}, status_code=409)
         body = await body_json(request)
         errors = {}
         if "enabled" in body and not isinstance(body["enabled"], bool):
@@ -403,16 +391,14 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     @app.get("/api/status", dependencies=[Depends(require)])
     def status():
         out = {}
-        games = store.snapshot().cfg.games if store.snapshot().cfg else {}
+        cfg = store.snapshot().cfg
+        games = cfg.games if cfg else {}
         sd = settings.DATA_DIR / "status"
         if sd.is_dir():
             for f in sd.glob("*.json"):
                 try:
                     st = json.loads(f.read_text())
-                    # El fichero se llama como el id del juego: esa es la clave. Los ficheros antiguos
-                    # guardaban el nombre en "game": se conserva como "name" y "game" pasa a ser el id.
-                    if isinstance(st.get("game"), str) and st["game"] != f.stem:
-                        st.setdefault("name", st["game"])
+                    # El fichero se llama como el id del juego: esa es la clave y el valor de "game".
                     st["game"] = f.stem
                     # La UI pinta `name`: siempre el nombre actual de la config (nunca el id).
                     if f.stem in games and games[f.stem].name:
@@ -440,7 +426,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
 
     @app.post("/api/versions/{game}/restore", dependencies=[Depends(require)])
     async def restore(game: str, request: Request):
-        body = await request.json()
+        body = await body_json(request)
         cfg = _cfg()
         try:
             msg = restore_version(cfg, game, str(body.get("version", "")), str(body.get("source", "")),

@@ -10,7 +10,8 @@ import pytest
 from app.config import parse_config
 from app.sync import (SyncAbort, count_versions, fingerprint, list_versions, load_baseline, relfiles,
                       restore_version, run_sync, save_baseline)
-from app.transport import LocalDeviceTransport, LocalTransport, TransportError
+from app.transport import LocalDeviceTransport, TransportError
+from fakes import LocalTransport
 
 
 class LEnv:

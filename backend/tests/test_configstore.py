@@ -7,17 +7,18 @@ import pytest
 
 from app import configstore, settings
 from app.config import parse_config, validate_config
-from app.configstore import Conflict, ConfigStore, InvalidConfig, config_events_gen, diff_configs, render_yaml
+from app.configstore import Conflict, ConfigStore, InvalidConfig, config_events_gen, diff_configs
 
 from test_api import CFG, client, login  # noqa: F401  (fixture)
 
 SEED = """\
 # mis dispositivos
 devices:
-  a: {host: 10.0.0.1, user: u, os: linux, port: 22}   # servidor
-  b: {host: 10.0.0.2, user: u, os: windows}
+  a: {name: Equipo A, host: 10.0.0.1, user: u, os: linux, port: 22}   # servidor
+  b: {name: Equipo B, host: 10.0.0.2, user: u, os: windows}
 games:
   g:
+    name: Juego de prueba
     devices: [a, b]        # exactamente dos
     paths:
       a: "/home/u/saves"
@@ -48,9 +49,9 @@ def test_validate_ok():
 
 
 def test_validate_errors_by_field_path():
-    d = {"devices": {"pc": {"host": "x y", "user": "u", "os": "linux", "port": 70000},
-                     "laptop": {"host": "h", "user": "u", "os": "linux"}},
-         "games": {"ejemplo": {"devices": ["pc", "laptop"], "paths": {"pc": "rel", "laptop": "/x/y"},
+    d = {"devices": {"pc": {"name": "Equipo pc", "host": "x y", "user": "u", "os": "linux", "port": 70000},
+                     "laptop": {"name": "Equipo laptop", "host": "h", "user": "u", "os": "linux"}},
+         "games": {"ejemplo": {"name": "Juego ejemplo", "devices": ["pc", "laptop"], "paths": {"pc": "rel", "laptop": "/x/y"},
                                "process": "a;b", "keep_versions": -1}}}
     cfg, errs = validate_config(d)
     assert cfg is None
@@ -62,15 +63,15 @@ def test_validate_errors_by_field_path():
 
 def test_validate_incomplete_game_and_duplicates():
     d = copy.deepcopy(CFG)
-    d["games"] = {"g": {"devices": ["a", "a"], "paths": {"a": "/x/y"}}}
+    d["games"] = {"g": {"name": "Juego g", "devices": ["a", "a"], "paths": {"a": "/x/y"}}}
     _, errs = validate_config(d)
     assert errs["games.g.devices.1"].startswith("debe ser distinto")
-    d["games"]["g"] = {"devices": ["a", ""], "paths": {"a": "/x/y"}}
+    d["games"]["g"] = {"name": "Juego g", "devices": ["a", ""], "paths": {"a": "/x/y"}}
     _, errs = validate_config(d)
     assert errs == {"games.g.devices.1": "elige un dispositivo"}
-    d["games"]["g"] = {"devices": ["a", "zz"], "paths": {"a": "/x/y"}}
+    d["games"]["g"] = {"name": "Juego g", "devices": ["a", "zz"], "paths": {"a": "/x/y"}}
     assert "games.g.devices.1" in validate_config(d)[1]
-    d["games"]["g"] = {"devices": ["a", "b"], "paths": {"a": "/x/y"}}
+    d["games"]["g"] = {"name": "Juego g", "devices": ["a", "b"], "paths": {"a": "/x/y"}}
     assert validate_config(d)[1] == {"games.g.paths.b": "falta la ruta del save"}
     d["games"]["g"] = {"keep_versions": "x"}
     errs = validate_config(d)[1]
@@ -80,7 +81,7 @@ def test_validate_incomplete_game_and_duplicates():
 
 def test_validate_via_endpoint(client):
     login(client)
-    r = client.post("/api/config/validate", json={"config": {"devices": {"a": {"host": "-x", "user": "u", "os": "linux"}}}})
+    r = client.post("/api/config/validate", json={"config": {"devices": {"a": {"name": "Equipo a", "host": "-x", "user": "u", "os": "linux"}}}})
     assert r.status_code == 200 and r.json()["ok"] is False and "devices.a.host" in r.json()["errors"]
     assert client.post("/api/config/validate", json={"config": CFG}).json() == {"ok": True, "errors": {}}
     assert client.post("/api/config/validate", json=[1]).status_code == 400
@@ -92,7 +93,7 @@ def test_save_preserves_comments_and_backs_up(env):
     snap = store.snapshot()
     d = draft_of(store)
     d["devices"]["a"]["host"] = "10.0.0.9"
-    d["devices"]["c"] = {"host": "10.0.0.3", "user": "u", "os": "linux", "port": 22}
+    d["devices"]["c"] = {"name": "Equipo C", "host": "10.0.0.3", "user": "u", "os": "linux", "port": 22}
     res = store.save(snap.version, validate_config(d)[0])
     assert res["changed"] and res["backup"] == "config.yaml.bak-2026-01-01_120000"
     text = settings.CONFIG_PATH.read_text()
@@ -221,12 +222,12 @@ def test_restore_conflict_and_invalid(env):
 
 # ---------- diff ----------
 def test_diff():
-    old = parse_config({"devices": {"a": {"host": "h1", "user": "u", "os": "linux"},
-                                    "b": {"host": "h2", "user": "u", "os": "linux"}}}).model_dump()
+    old = parse_config({"devices": {"a": {"name": "Equipo a", "host": "h1", "user": "u", "os": "linux"},
+                                    "b": {"name": "Equipo b", "host": "h2", "user": "u", "os": "linux"}}}).model_dump()
     new = copy.deepcopy(old)
     new["devices"]["a"]["port"] = 2200
     del new["devices"]["b"]
-    new["devices"]["c"] = {"host": "h3", "user": "u", "os": "linux", "port": 22}
+    new["devices"]["c"] = {"name": "Equipo C", "host": "h3", "user": "u", "os": "linux", "port": 22}
     d = diff_configs(old, new)
     assert d["devices"]["added"] == ["c"] and d["devices"]["removed"] == ["b"]
     assert d["devices"]["changed"] == {"a": {"port": {"old": 22, "new": 2200}}}
@@ -256,7 +257,7 @@ def test_api_flow(client):
     settings.CONFIG_PATH.write_text(settings.CONFIG_PATH.read_text() + "\n# a mano\n")
     r = client.put("/api/config", json={"config": d2, "base_version": v1})
     assert r.status_code == 409 and r.json()["current_version"] != v1
-    assert client.get("/api/config/status").json()["version"] == r.json()["current_version"]
+    assert client.get("/api/config").json()["version"] == r.json()["current_version"]
     # guardar bien, listar copias, restaurar
     v2 = r.json()["current_version"]
     assert client.put("/api/config", json={"config": d2, "base_version": v2}).status_code == 200

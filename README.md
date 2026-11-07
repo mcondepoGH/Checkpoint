@@ -6,7 +6,7 @@
 
 ![Licencia MIT](https://img.shields.io/badge/licencia-MIT-green)
 
-Checkpoint mantiene sincronizadas las partidas guardadas de un juego entre dos dispositivos, por SSH, desde una interfaz web. Corre en un contenedor Docker; no se instala nada en los dispositivos.
+Checkpoint mantiene sincronizadas las partidas guardadas de un juego entre dos dispositivos, por SSH, desde una interfaz web. Corre en Docker o directamente en un equipo (modo nativo); no se instala nada en los dispositivos.
 
 - Sincroniza los guardados de un juego entre dos dispositivos y elige la copia más reciente.
 - Interfaz web con tema gaming.
@@ -18,11 +18,11 @@ Checkpoint mantiene sincronizadas las partidas guardadas de un juego entre dos d
 ## Cómo funciona
 
 ```
- Dispositivo A  <--- SSH --->  Checkpoint (Docker)  <--- SSH --->  Dispositivo B
+ Dispositivo A  <--- SSH --->  Checkpoint           <--- SSH --->  Dispositivo B
  (ruta del save)               copias + versiones                  (ruta del save)
 ```
 
-- **Dispositivos**: equipos con servidor SSH (Windows o Linux). Checkpoint entra con una clave que genera él mismo.
+- **Dispositivos**: equipos con servidor SSH (Windows o Linux) o, en modo nativo, el propio equipo donde corre Checkpoint («Este equipo»). Checkpoint entra por SSH con una clave que genera él mismo.
 - **Juegos**: cada juego enlaza dos dispositivos y la carpeta de guardado en cada uno. Los nombres de dispositivos y juegos son libres (hasta 64 caracteres, con espacios, acentos y emojis; sin `/` ni `\`).
 - **Sincronizar**: Checkpoint descarga los guardados, recuerda cuál era el estado tras la última sincronización y propaga el lado que ha cambiado. Si solo un dispositivo está conectado, lo compara con la copia del hub. Antes de sobrescribir guarda la copia perdedora como versión.
 - **Versiones**: se conservan las últimas N de cada juego (`max_versions` global, 20 por defecto, 0 = sin límite; `keep_versions` lo sustituye en un juego) y se pueden restaurar desde la UI.
@@ -31,7 +31,7 @@ Solo la opción «gana el más reciente» de los conflictos usa fechas de modifi
 
 ## Instalación
 
-Requisitos: Docker y Docker Compose.
+Requisitos: Docker y Docker Compose. Sin Docker, ver [Instalación sin Docker](#instalación-sin-docker).
 
 1. Clona el repositorio:
    ```bash
@@ -45,24 +45,24 @@ Requisitos: Docker y Docker Compose.
    ```bash
    docker compose up -d --build
    ```
+   (Si prefieres la imagen publicada, usa `image: ghcr.io/<owner>/checkpoint:latest` en `docker-compose.yml`; ver «Publicación de versiones».)
 4. Abre `http://IP-DEL-SERVIDOR:8088`.
+
+Variables (todas con prefijo `CHECKPOINT_`, salvo las de compose). La sincronización automática y la comprobación de versiones se ajustan desde la pantalla Configuración, no con variables.
 
 | Variable | Por defecto | Descripción |
 |---|---|---|
 | `CHECKPOINT_USER` | (obligatoria) | Usuario de acceso a la web |
 | `CHECKPOINT_PASSWORD` | (obligatoria) | Contraseña, en claro en el `.env` |
-| `CHECKPOINT_PORT` | `8088` | Puerto publicado |
-| `CHECKPOINT_AUTO_ENABLED` | `0` | Valor inicial de la sync automática |
-| `CHECKPOINT_AUTO_INTERVAL_HOURS` | `24` | Valor inicial del intervalo |
-| `CHECKPOINT_AUTO_ON_CONFLICT` | `skip` | Valor inicial ante conflictos en la sync automática (`skip` o `newest`) |
-| `CHECKPOINT_UPDATE_CHECK` | sin definir (`1` como valor inicial) | Sin Docker, valor inicial de la comprobación de versiones nuevas (`0` la desactiva; lo guardado en la UI prevalece). En Docker la comprobación está desactivada salvo que la definas explícitamente a `1` |
-| `CHECKPOINT_UPDATE_CHANNEL` | `stable` | Canal inicial de versiones: `stable` o `beta` (pruebas; otro valor se trata como `stable`; lo guardado en la UI prevalece) |
-| `CHECKPOINT_UPDATE_REPO` | `mcondepoGH/Checkpoint` | Repositorio de GitHub (`dueño/repo`) cuyas Releases se consultan |
-| `CHECKPOINT_UPDATE_CACHE_HOURS` | `6` | Horas que se reutiliza el resultado antes de volver a consultar (mínimo 0.25) |
+| `CHECKPOINT_PORT` | `8088` | Puerto publicado en Docker (dentro del contenedor la web escucha en el 8088); con `serve`, puerto de escucha |
+| `CHECKPOINT_HOST` | `127.0.0.1` | Solo con `serve` (sin Docker): dirección de escucha |
+| `CHECKPOINT_HOME_DIR` | según el sistema | Solo sin Docker: carpeta base de `config/`, `data/` y `keys/` (ver más abajo) |
+| `CHECKPOINT_SESSION_HOURS` | `12` | Horas de validez de la sesión |
 | `CHECKPOINT_COOKIE_SECURE` / `CHECKPOINT_TRUST_PROXY` | `0` | Pon `1` tras un proxy inverso con HTTPS |
-| `TZ`, `PUID`, `PGID` | `Europe/Madrid`, `1000` | Zona horaria y usuario del contenedor |
+| `CHECKPOINT_RUNTIME` | automático | `docker` o `native`: fuerza el modo (la imagen lo fija a `docker`) |
+| `TZ`, `PUID`, `PGID` | `UTC`, `1000` | Zona horaria (p. ej. `Europe/London`) y usuario del contenedor (solo compose) |
 
-El prefijo antiguo `SAVESYNC_*` sigue aceptándose (obsoleto). Si la contraseña lleva `$`, ponla entre comillas simples.
+Si la contraseña lleva `$`, ponla entre comillas simples.
 
 ## Instalación sin Docker
 
@@ -89,9 +89,11 @@ Sin Docker las carpetas no son `/config`, `/data` y `/keys`, sino (se crean sola
 | macOS | `~/Library/Application Support/checkpoint` |
 | Windows | `%APPDATA%\checkpoint` |
 
-Variables para cambiarlo (las de Docker siguen igual): `CHECKPOINT_HOME_DIR` (carpeta base), o una a una `CHECKPOINT_CONFIG` (fichero `config.yaml`), `CHECKPOINT_DATA`, `CHECKPOINT_SSH_KEY`, `CHECKPOINT_KNOWN_HOSTS` y `CHECKPOINT_STATIC` (web compilada; por defecto `frontend/dist`). También `CHECKPOINT_HOST` y `CHECKPOINT_PORT` para `serve`.
+Para cambiar la carpeta base usa `CHECKPOINT_HOME_DIR`. También `CHECKPOINT_HOST` y `CHECKPOINT_PORT` para `serve`. La web compilada se sirve desde `frontend/dist`.
 
-Cómo se decide si es Docker o nativo: la imagen fija `CHECKPOINT_IN_DOCKER=1`; si no, se mira si existe `/.dockerenv` o `/run/.containerenv`. `CHECKPOINT_RUNTIME=docker|native` fuerza el resultado.
+Cómo se decide si es Docker o nativo: la imagen fija `CHECKPOINT_RUNTIME=docker`; si no, se mira si existe `/.dockerenv` o `/run/.containerenv`. `CHECKPOINT_RUNTIME=docker|native` fuerza el resultado.
+
+La CLI (`checkpoint list|versions|sync|serve`; en Docker, `docker exec checkpoint checkpoint list`) acepta el id o el nombre de cada juego.
 
 Arranque al iniciar sesión en Linux (unidad de usuario de systemd, `~/.config/systemd/user/checkpoint.service`; ajusta las rutas):
 
@@ -129,7 +131,7 @@ devices:
 
 - **Linux**: probado (suite automática de pruebas, incluido el motor de sincronización con «Este equipo» sobre el sistema de ficheros real, y un arranque real con `serve`).
 - **macOS y Windows nativo**: **experimental, no verificado**. El código contempla `pgrep`/`tasklist`, el bloqueo con `msvcrt` y las rutas `C:/...`, pero solo se ha comprobado con simulaciones. Con Windows como equipo anfitrión, además, `rsync` no existe de serie, así que los dispositivos remotos no están soportados ahí; «Este equipo» sí está pensado para funcionar.
-- El acceso por SSH a dispositivos remotos no se ha probado en esta rama contra un servidor SSH real (las pruebas lo simulan); es el mismo código que antes.
+- El acceso por SSH a dispositivos remotos no está cubierto por pruebas contra un servidor SSH real (las pruebas lo simulan).
 
 ## Primeros pasos
 
@@ -141,28 +143,28 @@ devices:
 
 ## Sincronización automática
 
-En **Configuración > Sincronización automática** activa la opción y elige cada cuántas horas se ejecuta (de 0.25 a 168). Cada ciclo sincroniza todos los juegos; si uno falla, los demás continúan. Debajo se muestra el **Registro de ejecuciones** con resultado por juego y detalle al hacer clic. Los ajustes guardados en la UI prevalecen sobre las variables de entorno.
+En **Configuración > Sincronización automática** activa la opción y elige cada cuántas horas se ejecuta (de 0.25 a 168). Cada ciclo sincroniza todos los juegos; si uno falla, los demás continúan. Debajo se muestra el **Registro de ejecuciones** con resultado por juego y detalle al hacer clic. Sin ajustes guardados, está desactivada y el intervalo es de 24 horas.
 
 ## Nuevas versiones
 
-Checkpoint comprueba si hay una versión nueva consultando las Releases públicas de GitHub (solo HTTPS, por defecto solo versiones estables: se ignoran borradores y pre-releases). Si la hay, aparece la insignia **Nueva versión disponible** en la cabecera, con la versión instalada, la nueva y sus notas. Por ahora no actualiza nada: en Docker, reconstruye la imagen y vuelve a levantar el contenedor; en instalación nativa, descarga la nueva versión y reinicia.
+Checkpoint comprueba si hay una versión nueva consultando las Releases públicas de GitHub (solo HTTPS, por defecto solo versiones estables: se ignoran borradores y pre-releases). Si la hay, aparece la insignia **Nueva versión disponible** en la cabecera, con la versión instalada, la nueva y sus notas. No actualiza nada: en Docker, actualiza la imagen (`docker compose pull` si usas la imagen publicada, o reconstruye si la construyes tú) y recrea el contenedor; en instalación nativa, descarga la nueva versión y reinicia.
 
-**Solo en instalación nativa.** Con Docker la comprobación está **desactivada por defecto**: no hace ninguna petición a internet, no lee ni escribe caché, y no aparecen la insignia ni la tarjeta «Comprobar actualizaciones» (allí se actualiza a mano, reconstruyendo la imagen). Para activarla en Docker, define `CHECKPOINT_UPDATE_CHECK=1` en el entorno del contenedor (debe estar definida explícitamente con un valor verdadero: `1`, `true`, `yes` u `on`; sin definir, o con `0`, sigue desactivada). Sin Docker (Linux, y el futuro `.exe` de Windows) está activa siempre. Cómo se decide Docker o nativo: ver «Instalación sin Docker».
+**Solo en instalación nativa.** En Docker la versión la fija la imagen: la comprobación no se aplica (no hace ninguna petición a internet, no lee ni escribe caché y no aparecen la insignia ni la tarjeta «Comprobar actualizaciones»). La versión instalada se muestra siempre en el pie de la interfaz. Cómo se decide Docker o nativo: ver «Instalación sin Docker».
 
-- La versión instalada sale del fichero `VERSION` de la raíz del repositorio (la imagen lo incluye). Sin él, o en desarrollo, es «desconocida» y no se ofrece ninguna actualización.
-- El resultado se guarda en memoria y en `data/update_cache.json` durante `CHECKPOINT_UPDATE_CACHE_HOURS`. Un fallo de red es silencioso: se conserva el último resultado y se reintenta pasados unos minutos.
-- Se desactiva en **Configuración > Comprobar actualizaciones** (o con `CHECKPOINT_UPDATE_CHECK=0` como valor inicial, sin Docker). Desactivada, no se hace ninguna petición a internet. El botón **Comprobar ahora** fuerza la consulta (máximo una por minuto).
-- **Canal** (Configuración > Comprobar actualizaciones): **Estable** (por defecto) solo ofrece Releases normales; **Pruebas** (`beta`) ofrece también pre-releases (nunca borradores), que pueden fallar. En Pruebas se ofrece la versión más alta entre estables y preliminares, con el orden de semver: `0.5.0-rc.1` < `0.5.0-rc.2` < `0.5.0`. Un tag con sufijo (`-rc.1`) cuenta como preliminar aunque GitHub no lo marque. Cambiar de canal descarta el resultado guardado y vuelve a consultar. Nunca se ofrece bajar de versión: desde una preliminar en canal Estable solo se avisa cuando haya una estable mayor. La insignia y el diálogo marcan «preliminar» cuando procede.
+- La versión instalada sale del fichero `VERSION` de la raíz del repositorio (la imagen lo incluye). Sin él, o en desarrollo, es «desconocida» y no se ofrece ninguna actualización. El repositorio consultado es siempre el de este proyecto.
+- El resultado se guarda en memoria y en `data/update_cache.json` durante 6 horas. Un fallo de red es silencioso: se conserva el último resultado y se reintenta pasados unos minutos.
+- Se desactiva en **Configuración > Comprobar actualizaciones** (viene activada). Desactivada, no se hace ninguna petición a internet. El botón **Comprobar ahora** fuerza la consulta (máximo una por minuto).
+- **Canal** (Configuración > Comprobar actualizaciones): **Estable** (por defecto) solo ofrece Releases normales; **Pruebas** (`beta`) ofrece también pre-releases (nunca borradores), que pueden fallar. En Pruebas se ofrece la versión más alta entre estables y preliminares, con el orden de semver: `1.0.0-rc.1` < `1.0.0-rc.2` < `1.0.0`. Un tag con sufijo (`-rc.1`) cuenta como preliminar aunque GitHub no lo marque. Cambiar de canal descarta el resultado guardado y vuelve a consultar. Nunca se ofrece bajar de versión: desde una preliminar en canal Estable solo se avisa cuando haya una estable mayor. La insignia y el diálogo marcan «preliminar» cuando procede.
 - La etiqueta de imagen `beta` la publica el workflow de release (ver «Publicación de versiones»); el canal solo cambia qué avisos se muestran, no la imagen que ejecutas.
-- API (requiere sesión): `GET /api/version`, `GET /api/updates[?refresh=true]` (incluye `aplicable`, `canal` y `prerelease`, si la versión ofrecida es preliminar) y `PUT /api/updates` con `{"enabled": true|false, "channel": "stable"|"beta"}` (parcial: basta uno de los dos; valor no válido, 422). En Docker sin forzar, `GET` devuelve `aplicable: false` con campos neutros (sin error, sin red) y `PUT` responde 409.
+- API (requiere sesión): `GET /api/updates[?refresh=true]` (incluye `actual`, la versión instalada, `aplicable`, `canal` y `prerelease`, si la versión ofrecida es preliminar) y `PUT /api/updates` con `{"enabled": true|false, "channel": "stable"|"beta"}` (parcial: basta uno de los dos; valor no válido, 422). En Docker, `GET` devuelve `aplicable: false` con campos neutros (sin error, sin red) y `PUT` responde 409.
 
 ## Publicación de versiones
 
 Al subir un tag `vX.Y.Z` el workflow `.github/workflows/release.yml` publica la imagen en GHCR y crea la GitHub Release (la que consulta la comprobación de nuevas versiones).
 
-1. Edita `VERSION` con la versión nueva (sin `v`), por ejemplo `0.5.0` o `0.5.0-rc.1`, y haz commit en `main`.
-2. Crea un tag anotado con el mismo número: `git tag -a v0.5.0 -m "v0.5.0"`.
-3. Sube el commit y el tag: `git push origin main v0.5.0`.
+1. Edita `VERSION` con la versión nueva (sin `v`), por ejemplo `1.0.0` o `1.0.0-rc.1`, y pon la misma en `frontend/package.json` y `frontend/package-lock.json` (`npm test` lo comprueba). Haz commit en `main`.
+2. Crea un tag anotado con el mismo número: `git tag -a v1.0.0 -m "v1.0.0"`.
+3. Sube el commit y el tag: `git push origin main v1.0.0`.
 
 Si `VERSION` no coincide con el tag, el workflow falla antes de construir nada. Un tag con sufijo (`-rc.1`, `-beta.2`) se publica como pre-release.
 
@@ -170,8 +172,8 @@ Etiquetas de imagen (`ghcr.io/<owner>/checkpoint`, con `<owner>` en minúsculas)
 
 | Tag | Etiquetas de imagen | Release |
 |---|---|---|
-| `v0.5.0` (estable) | `v0.5.0`, `0.5.0`, `latest` | normal |
-| `v0.5.0-rc.1` (pre-release) | `v0.5.0-rc.1`, `0.5.0-rc.1`, `beta` | pre-release |
+| `v1.0.0` (estable) | `v1.0.0`, `1.0.0`, `latest` | normal |
+| `v1.0.0-rc.1` (pre-release) | `v1.0.0-rc.1`, `1.0.0-rc.1`, `beta` | pre-release |
 
 La imagen se construye solo para `linux/amd64`; para añadir `arm64` hay instrucciones en un comentario del workflow.
 
@@ -180,7 +182,7 @@ Uso en compose:
 ```yaml
 services:
   checkpoint:
-    image: ghcr.io/<owner>/checkpoint:latest   # o una versión fija, p. ej. :0.5.0, o :beta
+    image: ghcr.io/<owner>/checkpoint:latest   # o una versión fija, p. ej. :1.0.0, o :beta
 ```
 
 Tras la primera publicación, el paquete de GHCR es privado por defecto: cámbialo a público en la página del paquete (Package settings > Danger Zone > Change visibility) si quieres bajarlo sin autenticarte.
@@ -192,7 +194,7 @@ Hay conflicto cuando los dos dispositivos han cambiado desde la última sincroni
 - **Sincronización automática**: `on_conflict` en Configuración > Sincronización automática. `skip` (por defecto) no guarda nada y marca el juego como «Conflicto»; `newest` hace ganar el save más reciente (si las fechas difieren menos de 2 s, se omite). Un juego puede sustituirlo con `on_conflict` en `config.yaml`.
 - **Sincronización manual**: siempre pregunta. Un popup ofrece cancelar, «Gana el más reciente» o elegir qué dispositivo gana, con fecha y tamaño de cada uno. En la CLI: `checkpoint sync JUEGO --resolve newest|device:DISPOSITIVO` (sale con código 3 si hay conflicto).
 
-En todos los casos la copia perdedora se guarda antes en versiones. La primera sincronización tras actualizar solo tiene el hub como referencia: si ambos lados difieren, se trata como conflicto.
+En todos los casos la copia perdedora se guarda antes en versiones. En la primera sincronización de cada juego (aún sin estado guardado) el hub es la única referencia: si ambos lados difieren, se trata como conflicto.
 
 ## Configuración
 
@@ -218,7 +220,7 @@ games:
     keep_versions: 5           # opcional: sustituye a max_versions para este juego
 ```
 
-La clave de cada juego y dispositivo es su **ID interno**, que no cambia nunca; `name` es solo una etiqueta y se puede renombrar libremente sin perder saves, versiones ni logs. La CLI y la API aceptan el ID o el nombre. Un `config.yaml` antiguo (indexado por nombre, sin `name`) sigue funcionando y se convierte al formato nuevo la primera vez que guardas desde la UI, conservando los datos.
+La clave de cada juego y dispositivo es su **ID interno**, que no cambia nunca; `name` es solo una etiqueta y se puede renombrar libremente sin perder saves, versiones ni logs. `name` es obligatorio en cada juego y dispositivo. La CLI y la API aceptan el ID o el nombre.
 
 ## Seguridad
 
@@ -235,9 +237,11 @@ La clave de cada juego y dispositivo es su **ID interno**, que no cambia nunca; 
 cd backend && python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt -r requirements-dev.txt && pytest
 cd ../frontend && npm install && npm run dev     # desarrollo
-npm test                                         # pruebas de node (borrador, tarjeta de dispositivo y avisos de versión)
+npm test                                         # pruebas de node (borrador, formato, tarjeta de dispositivo y avisos de versión)
 npm run build                                    # producción
 ```
+
+`esbuild` no está declarado en `frontend/package.json`: llega como dependencia transitiva de `vite`.
 
 ## Licencia
 

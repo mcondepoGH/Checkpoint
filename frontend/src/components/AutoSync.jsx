@@ -2,16 +2,13 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { api } from '../api.js';
 import Field from './Field.jsx';
 import AutoSyncLog from './AutoSyncLog.jsx';
+import { fmtDateTime, ON_CONFLICT_OPTIONS, RESULT_CLASS, RESULT_TEXT } from '../format.js';
 
 const PRESETS = [1, 6, 12, 24];
-const STATUS = { ok: 'ok', error: 'error', aborted: 'aborted', skipped: 'aborted', conflict: 'conflict', partial: 'aborted' };
-const STATUS_TXT = { ok: 'correcta', error: 'con errores', aborted: 'abortada', skipped: 'omitida (ya en curso)', conflict: 'con conflictos', partial: 'parcial' };
 const ON_CONFLICT_HELP = {
   skip: 'Omitir: el guardado no se efectúa y el juego queda marcado como «Conflicto» para resolverlo a mano. Es la opción segura.',
   newest: 'Gana el más reciente: se aplica el save con fecha más nueva y el otro se guarda en versiones. Si las fechas difieren menos de 2 s, se omite.',
 };
-
-const fmt = (iso) => (iso ? new Date(iso).toLocaleString() : '—');
 
 // Tarjeta "Sincronización automática": ejecuta todos los juegos cada X horas. Se guarda por separado
 // del config.yaml (endpoint /api/scheduler).
@@ -106,8 +103,7 @@ export default function AutoSync() {
       <Field label="En caso de conflicto" hint={ON_CONFLICT_HELP[onConflict]}>
         {(p) => (
           <select {...p} value={onConflict} onChange={(e) => setOnConflict(e.target.value)}>
-            <option value="skip">Omitir el guardado (seguro)</option>
-            <option value="newest">Gana el más reciente</option>
+            {ON_CONFLICT_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
         )}
       </Field>
@@ -119,9 +115,9 @@ export default function AutoSync() {
 
       {saved && (
         <p className="autosync-status" aria-live="polite">
-          Última ejecución: {fmt(saved.last_run)}
-          {ls && <> <span className={`badge ${STATUS[ls.result] || ''}`}>{STATUS_TXT[ls.result] || ls.result}</span></>}
-          {' · '}Próxima: {saved.enabled ? fmt(saved.next_run) : 'desactivada'}
+          Última ejecución: {fmtDateTime(saved.last_run)}
+          {ls && <> <span className={`badge ${RESULT_CLASS[ls.result] || ''}`}>{RESULT_TEXT[ls.result] || ls.result}</span></>}
+          {' · '}Próxima: {saved.enabled ? fmtDateTime(saved.next_run) : 'desactivada'}
           {ls?.message && <small className="muted block">{ls.message}</small>}
         </p>
       )}

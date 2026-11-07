@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import {
-  MAX_VERSIONS_LIMIT, VERSIONS_HINT, blankDevice, blankGame, canOfferLocal, deviceId, baseKeyOf, errorsFor, fromConfig, gamesUsing, idOf, localErrors, nameOf, pathsOf, removeDevice, renamed, toConfig,
+  MAX_VERSIONS_LIMIT, VERSIONS_HINT, blankDevice, blankGame, canOfferLocal, deviceId, baseKeyOf, errorsFor, fromConfig, gamesUsing, hasChanges, idOf, localErrors, nameOf, pathsOf, removeDevice, renamed, toConfig,
 } from '../draft.js';
 import Field from '../components/Field.jsx';
 import DeviceCard from '../components/DeviceCard.jsx';
@@ -43,7 +43,7 @@ export default function Settings({ loaded, stale, configError, runtime, platform
   const payload = useMemo(() => toConfig(draft), [draft]);
   const payloadKey = JSON.stringify(payload);
   const baseKey = useMemo(() => baseKeyOf(loaded.config), [loaded.config]);
-  const dirty = payloadKey !== baseKey || Object.keys(local).length > 0;
+  const dirty = hasChanges(payloadKey, baseKey, local);
   const hasLocal = Object.keys(local).length > 0;
 
   const dirtyRef = useRef(dirty);

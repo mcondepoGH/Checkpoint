@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import EmptyState from '../components/EmptyState.jsx';
 import { labelOf } from '../names.js';
+import { parseRun } from '../format.js';
 import ConflictDialog from '../components/ConflictDialog.jsx';
 
 const RES_TXT = { conflict: 'Conflicto', partial: 'Parcial' };
@@ -14,15 +15,6 @@ function splitWhen(iso) {
     time: d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
     date: d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
   };
-}
-
-// Ganador y dispositivos: campos del estado o, si faltan, se extraen del mensaje "ganador X; actualizados A, B".
-function parseRun(s) {
-  const m = /^ganador\s+([^;]+?);\s*(actualizados|destinos)\s+(.+)$/.exec(s.message || '');
-  const winner = s.winner || (m && m[1].trim()) || '';
-  const list = Array.isArray(s.targets) && s.targets.length ? s.targets : (m ? m[3].split(',').map((x) => x.trim()).filter(Boolean) : []);
-  const planned = s.dry_run || (m && m[2] === 'destinos') || s.result === 'dry-run';
-  return { winner, list, planned, structured: !!(winner || list.length) };
 }
 
 function LastRun({ s, devName }) {

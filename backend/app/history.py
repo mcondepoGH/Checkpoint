@@ -18,7 +18,7 @@ MAX_ENTRIES = 200
 MAX_DAYS = 30
 MSG_LEN = 300
 RESULTS = {"ok", "error", "aborted", "skipped", "conflict", "partial"}
-TRIGGERS = {"scheduled", "startup", "config-change"}
+TRIGGERS = {"scheduled", "startup"}
 
 _lock = threading.Lock()
 
@@ -103,10 +103,8 @@ def append(entry: dict, now: Optional[datetime] = None) -> None:
 def annotate(entries: List[dict], games: dict) -> List[dict]:
     """Copia de `entries` donde cada juego lleva `id` (o None) y `name` legibles. `games` = {id: Game} actual.
 
-    Entradas nuevas: clave = id, `name` guardado (se actualiza al nombre actual si el juego sigue existiendo).
-    Entradas antiguas (clave = nombre): si coincide con el id o el nombre de un juego actual se mapea; si no,
-    se muestra el nombre tal cual con id None."""
-    by_name = {g.name: i for i, g in games.items()}
+    Clave = id del juego, `name` guardado (se actualiza al nombre actual si el juego sigue existiendo; si ya
+    no existe se muestra el guardado con id None)."""
     out = []
     for e in entries:
         gs = {}
@@ -114,8 +112,6 @@ def annotate(entries: List[dict], games: dict) -> List[dict]:
             d = dict(d) if isinstance(d, dict) else {"result": d}
             if key in games:
                 gid, name = key, games[key].name
-            elif key in by_name:  # historial antiguo: la clave era el nombre
-                gid, name = by_name[key], key
             else:
                 gid, name = None, d.get("name") or key
             gs[key] = {**d, "id": gid, "name": name}

@@ -1,28 +1,24 @@
-"""Ajustes desde variables de entorno."""
+"""Ajustes desde variables de entorno (CHECKPOINT_*): USER, PASSWORD, PORT, HOST, HOME_DIR, SESSION_HOURS,
+COOKIE_SECURE, TRUST_PROXY y RUNTIME. El resto de rutas y valores se derivan de ellas o son constantes."""
 import os
 from pathlib import Path
 
 from .runtime import platform_name, running_in_docker
 
+SSH_TIMEOUT = 8  # s de conexión SSH
+
 
 def env(suffix, default=None, environ=None):
-    """Lee CHECKPOINT_<suffix>; si no existe, cae a SAVESYNC_<suffix> (nombre antiguo, deprecado)."""
+    """Lee CHECKPOINT_<suffix>; vacío o ausente = valor por defecto."""
     environ = os.environ if environ is None else environ
-    for prefix in ("CHECKPOINT_", "SAVESYNC_"):
-        v = environ.get(prefix + suffix)
-        if v not in (None, ""):
-            return v
-    return default
-
-
-def _env(suffix, default):
-    return env(suffix, default)
+    v = environ.get("CHECKPOINT_" + suffix)
+    return default if v in (None, "") else v
 
 
 def native_home(environ=None) -> Path:
     """Carpeta base de Checkpoint en modo nativo (sin Docker). CHECKPOINT_HOME_DIR la fija a mano; por defecto
     ~/.local/share/checkpoint (Linux, respeta XDG_DATA_HOME), ~/Library/Application Support/checkpoint (macOS)
-    o %APPDATA%\\checkpoint (Windows). En Docker los valores por defecto son /config, /data y /keys."""
+    o %APPDATA%\\checkpoint (Windows). En Docker las rutas son /config, /data y /keys."""
     environ = os.environ if environ is None else environ
     forced = env("HOME_DIR", None, environ)
     if forced:
@@ -47,7 +43,7 @@ def _static_default() -> str:
 
 
 def _paths():
-    """(config, data, ssh_key, known_hosts, static) por defecto según el entorno de ejecución."""
+    """(config, data, ssh_key, known_hosts, static) según el entorno de ejecución."""
     if running_in_docker():
         return "/config/config.yaml", "/data", "/keys/id_ed25519", "/keys/known_hosts", _static_default()
     h = native_home()
@@ -55,44 +51,21 @@ def _paths():
             str(h / "keys" / "known_hosts"), _static_default())
 
 
-_D_CONFIG, _D_DATA, _D_KEY, _D_KNOWN, _D_STATIC = _paths()
-CONFIG_PATH = Path(_env("CONFIG", _D_CONFIG))
-DATA_DIR = Path(_env("DATA", _D_DATA))
-SSH_KEY = _env("SSH_KEY", _D_KEY)
-KNOWN_HOSTS = _env("KNOWN_HOSTS", _D_KNOWN)
-STATIC_DIR = Path(_env("STATIC", _D_STATIC))
-SESSION_HOURS = float(_env("SESSION_HOURS", "12"))
-COOKIE_SECURE = _env("COOKIE_SECURE", "0") == "1"
-TRUST_PROXY = _env("TRUST_PROXY", "0") == "1"
-SSH_TIMEOUT = int(_env("SSH_TIMEOUT", "8"))
-
-# Sincronización automática: valores iniciales; lo guardado desde la UI prevalece.
-AUTO_ENABLED = _env("AUTO_ENABLED", "0").strip().lower() in ("1", "true", "yes", "on")
-AUTO_RUN_ON_START = _env("AUTO_RUN_ON_START", "0").strip().lower() in ("1", "true", "yes", "on")
-AUTO_ON_CONFLICT = _env("AUTO_ON_CONFLICT", "skip").strip().lower()
-if AUTO_ON_CONFLICT not in ("skip", "newest"):
-    AUTO_ON_CONFLICT = "skip"
-try:
-    AUTO_INTERVAL_HOURS = float(_env("AUTO_INTERVAL_HOURS", "24"))
-except ValueError:
-    AUTO_INTERVAL_HOURS = 24.0
-
-# Comprobación de nuevas versiones (solo lectura, GitHub Releases). UPDATE_CHECK y UPDATE_CHANNEL
-# («stable» o «beta»; otro valor -> stable) son los valores iniciales; lo guardado desde la UI prevalece.
-UPDATE_CHECK = _env("UPDATE_CHECK", "1").strip().lower() not in ("0", "false", "no", "off")
+_CONFIG, _DATA, _KEY, _KNOWN, _STATIC = _paths()
+CONFIG_PATH = Path(_CONFIG)
+DATA_DIR = Path(_DATA)
+SSH_KEY = _KEY
+KNOWN_HOSTS = _KNOWN
+STATIC_DIR = Path(_STATIC)
 
 
-def update_check_forced(environ=None) -> bool:
-    """True si CHECKPOINT_UPDATE_CHECK está definido EXPLÍCITAMENTE con valor verdadero (1/true/yes/on).
-    «No definido» (o vacío) no cuenta: es lo que distingue el valor por defecto de un forzado. En Docker la
-    comprobación de versiones solo se aplica si esto es True; en instalación nativa siempre se aplica."""
-    v = env("UPDATE_CHECK", None, environ)
-    return v is not None and v.strip().lower() in ("1", "true", "yes", "on")
+def _float_env(suffix, default):
+    try:
+        return float(env(suffix, default))
+    except ValueError:
+        raise SystemExit(f"CHECKPOINT_{suffix} debe ser un número (valor: {env(suffix)!r})")
 
 
-UPDATE_CHANNEL = "beta" if _env("UPDATE_CHANNEL", "stable").strip().lower() == "beta" else "stable"
-UPDATE_REPO = _env("UPDATE_REPO", "mcondepoGH/Checkpoint").strip()
-try:
-    UPDATE_CACHE_HOURS = max(0.25, float(_env("UPDATE_CACHE_HOURS", "6")))
-except ValueError:
-    UPDATE_CACHE_HOURS = 6.0
+SESSION_HOURS = _float_env("SESSION_HOURS", "12")
+COOKIE_SECURE = env("COOKIE_SECURE", "0") == "1"
+TRUST_PROXY = env("TRUST_PROXY", "0") == "1"

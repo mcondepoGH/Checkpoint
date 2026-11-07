@@ -1,8 +1,6 @@
 """Modelo y validación de config.yaml; escritura atómica."""
-import hashlib
 import os
 import re
-import secrets
 import tempfile
 import unicodedata
 from pathlib import Path
@@ -14,8 +12,6 @@ from .runtime import running_in_docker
 from pydantic import (BaseModel, ConfigDict, Field, StrictBool, StrictInt, ValidationError, field_validator, model_serializer,
                       model_validator)
 
-# Formato antiguo de nombre; sigue siendo válido y su slug es el propio nombre.
-NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$")
 NAME_MAX = 64
 NAME_HELP = (f"1 a {NAME_MAX} caracteres: se admiten espacios (sin dobles ni al principio/final), "
              "símbolos, acentos y emojis; no se admiten / \\ ni caracteres de control")
@@ -27,9 +23,8 @@ USER_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.\-]{0,31}$")
 PROC_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_. \-]{0,63}$")
 # Caracteres permitidos en rutas: nada de metacaracteres de shell/cmd.
 PATH_CHARS_RE = re.compile(r"^[\w .\-/()\[\]+,@~=#{}]+$")
-# "steamos" es un alias heredado de "linux": se sigue aceptando para no romper configs existentes, pero la UI ya no lo ofrece.
-OSES = ("windows", "steamos", "linux")
-ON_CONFLICT_VALUES = ("skip", "newest")
+OSES = ("windows", "linux")
+ON_CONFLICT = ("skip", "newest")  # política ante conflictos de la sync automática
 # Versiones guardadas por juego: 0 = sin límite.
 DEFAULT_MAX_VERSIONS = 20
 MAX_VERSIONS_LIMIT = 1000
@@ -40,8 +35,13 @@ class ConfigError(ValueError):
     pass
 
 
+MISSING_NAME_MSG = "falta el campo name (obligatorio): el nombre visible del elemento"
+
+
 def name_error(name) -> Optional[str]:
     """Mensaje de error si `name` no es un nombre visible válido; None si lo es."""
+    if name is None:
+        return MISSING_NAME_MSG
     if not isinstance(name, str):
         return f"nombre inválido: debe ser texto ({NAME_HELP})"
     if not name.strip():
@@ -61,36 +61,6 @@ def name_error(name) -> Optional[str]:
     if not name.strip("."):
         return "nombre inválido: no puede ser solo puntos"
     return None
-
-
-def slug_for(name: str) -> str:
-    """Id de un elemento del formato ANTIGUO (indexado por nombre). Solo se usa para migrarlo en memoria:
-    los elementos nuevos reciben un id aleatorio (`generate_id`) y nunca se vuelve a derivar del nombre.
-
-    Nombre antiguo válido (letras, números, _ y -) -> el propio nombre (conserva datos existentes).
-    Resto -> parte ASCII + hash corto del nombre original (estable, sin colisiones "A B" vs "A-B").
-    """
-    if NAME_RE.fullmatch(name):
-        return name
-    base = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
-    base = re.sub(r"[^A-Za-z0-9_-]+", "-", base)[:40].strip("-_")
-    digest = hashlib.sha1(unicodedata.normalize("NFC", name).encode("utf-8")).hexdigest()[:8]
-    return f"{base or 'item'}-{digest}"
-
-
-def generate_id(name: str, taken=(), kind: str = "juego") -> str:
-    """Identificador nuevo para un elemento creado: parte ASCII del nombre + '-' + 8 hex aleatorios.
-
-    Se genera UNA vez al crear el elemento; renombrarlo no lo cambia. Único (sin distinguir mayúsculas)
-    entre `taken` y distinto de 'hub'. Espejo de `newId` en frontend/src/draft.js.
-    """
-    base = unicodedata.normalize("NFKD", str(name or "")).encode("ascii", "ignore").decode().lower()
-    base = re.sub(r"[^a-z0-9_-]+", "-", base)[:40].strip("-_") or kind
-    low = {str(t).casefold() for t in taken}
-    while True:
-        cand = f"{base}-{secrets.token_hex(4)}"
-        if cand.casefold() not in low and cand.casefold() not in RESERVED_SLUGS:
-            return cand
 
 
 def resolve_ref(items, ref):
@@ -143,12 +113,19 @@ class Device(BaseModel):
     """Dispositivo remoto (SSH: host, user, port) o `local: true` = el equipo donde corre Checkpoint
     (sin SSH; solo fuera de Docker). Un dispositivo local no lleva host/user/port."""
     model_config = ConfigDict(extra="forbid")
-    name: str = ""  # etiqueta visible y editable; la clave del mapa es el id
+    name: str = Field(None, validate_default=True)  # obligatorio: etiqueta visible y editable; la clave del mapa es el id
     local: StrictBool = False
     host: Optional[str] = Field(None, validate_default=True)
     user: Optional[str] = Field(None, validate_default=True)
     os: str
     port: Optional[int] = Field(None, validate_default=True)
+
+    @field_validator("name", mode="before")
+    @classmethod
+    def _name_required(cls, v):
+        if v is None:
+            raise ValueError(MISSING_NAME_MSG)
+        return v
 
     @field_validator("host", "user", "port", mode="before")
     @classmethod
@@ -189,14 +166,14 @@ class Device(BaseModel):
         if self.local:  # sin host/user/port
             for k in ("host", "user", "port"):
                 d.pop(k, None)
-        else:  # compatibilidad: los dispositivos remotos se escriben igual que siempre
+        else:  # los remotos no escriben `local: false`
             d.pop("local", None)
         return d
 
 
 class Game(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    name: str = ""  # etiqueta visible y editable; la clave del mapa es el id
+    name: str = Field(None, validate_default=True)  # obligatorio: etiqueta visible y editable; la clave es el id
     devices: List[str]  # ids de dispositivo
     paths: Dict[str, str]  # id de dispositivo -> ruta
     process: Optional[str] = None
@@ -205,10 +182,17 @@ class Game(BaseModel):
     # Override por juego de la política de la sync automática ante conflictos; ausente = ajuste global.
     on_conflict: Optional[str] = None
 
+    @field_validator("name", mode="before")
+    @classmethod
+    def _name_required(cls, v):
+        if v is None:
+            raise ValueError(MISSING_NAME_MSG)
+        return v
+
     @field_validator("on_conflict")
     @classmethod
     def _onc(cls, v):
-        if v is not None and v not in ON_CONFLICT_VALUES:
+        if v is not None and v not in ON_CONFLICT:
             raise ValueError("on_conflict debe ser 'skip' o 'newest'")
         return v
 
@@ -227,55 +211,6 @@ class Game(BaseModel):
         if v is not None and not 0 <= v <= MAX_VERSIONS_LIMIT:
             raise ValueError(f"keep_versions {MAX_VERSIONS_MSG}")
         return v
-
-
-def normalize_raw(data):
-    """Convierte el formato antiguo (secciones indexadas por nombre, sin campo `name`) al formato con ids.
-
-    Un elemento sin `name` es legado: su id es `slug_for(clave)` (igual que siempre, así las carpetas de
-    data/ no cambian) y su nombre la clave antigua. Las referencias por nombre en game.devices/paths se
-    resuelven a ids. Idempotente; no valida (eso lo hacen el esquema y semantic_errors)."""
-    if not isinstance(data, dict):
-        return data
-    out = dict(data)
-    legacy = {}  # sección -> {nombre antiguo: id}
-    for sec in ("devices", "games"):
-        items = data.get(sec)
-        if not isinstance(items, dict):
-            continue
-        new, legacy[sec] = {}, {}
-        for k, v in items.items():
-            if isinstance(k, str) and isinstance(v, dict) and "name" not in v:
-                nid = slug_for(k)
-                if nid in items or nid in new:  # choca con otra clave: se deja la clave tal cual (error de validación)
-                    nid = k
-                legacy[sec][k] = nid
-                new[nid] = {"name": k, **v}
-            else:
-                new[k] = v
-        out[sec] = new
-
-    def ref(sec, r):
-        if not isinstance(r, str):
-            return r
-        ids = out.get(sec) or {}
-        # una clave que ya es id de un elemento no legado manda; si no, se resuelve el nombre antiguo
-        if r in ids and r not in legacy.get(sec, {}).values():
-            return r
-        return legacy.get(sec, {}).get(r, r)
-
-    games = out.get("games")
-    if isinstance(games, dict) and legacy.get("devices") is not None:
-        for gid, g in list(games.items()):
-            if not isinstance(g, dict):
-                continue
-            g = dict(g)
-            if isinstance(g.get("devices"), list):
-                g["devices"] = [ref("devices", d) for d in g["devices"]]
-            if isinstance(g.get("paths"), dict):
-                g["paths"] = {ref("devices", d): p for d, p in g["paths"].items()}
-            games[gid] = g
-    return out
 
 
 def semantic_errors(devices, games) -> List[Tuple[str, str]]:
@@ -381,11 +316,6 @@ class Config(BaseModel):
             raise ValueError(f"max_versions {MAX_VERSIONS_MSG}")
         return v
 
-    @model_validator(mode="before")
-    @classmethod
-    def _legacy(cls, data):
-        return normalize_raw(data)
-
     def versions_limit(self, game: str) -> int:
         """Límite efectivo de versiones del juego (por id): su override o el global. 0 = sin límite."""
         k = self.games[game].keep_versions
@@ -431,7 +361,6 @@ def validate_config(data) -> Tuple[Optional[Config], Dict[str, str]]:
         return None, {"": "config debe ser un mapa YAML"}
     errors: Dict[str, str] = {}
     cfg = None
-    data = normalize_raw(data)
     try:
         cfg = Config.model_validate(data)
     except ValidationError as e:
@@ -504,7 +433,3 @@ def atomic_write(path: Path, text: str, mode: Optional[int] = None) -> None:
             os.unlink(tmp)
         raise
 
-
-def save_config(path: Path, cfg: Config) -> None:
-    text = yaml.safe_dump(cfg.model_dump(exclude_none=True), sort_keys=False, allow_unicode=True)
-    atomic_write(path, text)

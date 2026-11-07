@@ -1,4 +1,3 @@
-import os
 import stat
 import subprocess
 
@@ -109,13 +108,13 @@ def test_keyscan_uses_arg_list_no_shell(monkeypatch):
 def test_changed_host_key_gives_clear_error():
     p = subprocess.CompletedProcess(
         [], 255, b"", b"@@@ WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED! @@@\nHost key verification failed.")
-    msg = _err(p, Device(host="10.0.0.5", user="u", os="linux"))
+    msg = _err(p, Device(name="Equipo", host="10.0.0.5", user="u", os="linux"))
     assert "CAMBIADO" in msg and "No se sobrescribe" in msg
 
 
 def test_check_marks_first_use_and_fails_if_keyscan_fails(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "KNOWN_HOSTS", str(tmp_path / "known_hosts"))
-    dev = Device(host="10.0.0.5", user="u", os="linux")
+    dev = Device(name="Equipo", host="10.0.0.5", user="u", os="linux")
     monkeypatch.setattr(bootstrap, "_keyscan", lambda h, p: SCAN)
     monkeypatch.setattr("app.transport._run",
                         lambda a, timeout=0, stdin=None: subprocess.CompletedProcess(a, 0, b"ok", b""))
@@ -165,27 +164,22 @@ def test_create_app_from_env(monkeypatch):
 def test_create_app_without_vars_fails(monkeypatch):
     monkeypatch.delenv("CHECKPOINT_USER", raising=False)
     monkeypatch.delenv("CHECKPOINT_PASSWORD", raising=False)
-    monkeypatch.delenv("SAVESYNC_USER", raising=False)
-    monkeypatch.delenv("SAVESYNC_PASSWORD", raising=False)
     with pytest.raises(RuntimeError, match="Faltan CHECKPOINT_USER"):
         create_app()
 
 
-def test_env_fallback_to_legacy_savesync_prefix(monkeypatch):
+def test_savesync_prefix_is_ignored(monkeypatch):
     from app import settings
     for k in ("USER", "PASSWORD", "PORT"):
         monkeypatch.delenv("CHECKPOINT_" + k, raising=False)
-        monkeypatch.delenv("SAVESYNC_" + k, raising=False)
-    assert settings.env("PORT", "8088") == "8088"
     monkeypatch.setenv("SAVESYNC_PORT", "9000")
-    assert settings.env("PORT", "8088") == "9000"           # solo el nombre antiguo
-    monkeypatch.setenv("CHECKPOINT_PORT", "9100")
-    assert settings.env("PORT", "8088") == "9100"           # el nuevo prevalece
+    assert settings.env("PORT", "8088") == "8088"
     monkeypatch.setenv("SAVESYNC_USER", "viejo")
     monkeypatch.setenv("SAVESYNC_PASSWORD", "clave-vieja")
-    c = TestClient(create_app())
-    assert c.post("/api/login", json={"user": "viejo", "password": "clave-vieja"}).status_code == 200
-    assert "checkpoint_session" in c.cookies
+    with pytest.raises(RuntimeError, match="Faltan CHECKPOINT_USER"):
+        create_app()
+    monkeypatch.setenv("CHECKPOINT_PORT", "9100")
+    assert settings.env("PORT", "8088") == "9100"
 
 
 def test_password_not_logged(monkeypatch, caplog, capsys):

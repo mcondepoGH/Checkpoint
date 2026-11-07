@@ -2,7 +2,6 @@
 import copy
 import json
 import os
-import re
 from datetime import datetime, timezone
 from types import SimpleNamespace
 
@@ -10,25 +9,24 @@ import pytest
 import yaml
 
 from app import cli, history, settings
-from app.config import (ConfigError, ID_RE, generate_id, load_config, normalize_raw, parse_config, resolve_ref,
-                        save_config, slug_for, validate_config)
-from app.configstore import ConfigStore, diff_configs, render_yaml
+from app.config import ConfigError, load_config, parse_config, resolve_ref, validate_config
+from app.configstore import diff_configs, render_yaml
 from app.scheduler import Scheduler
 from app.sync import (SyncAbort, count_versions, fingerprint, list_versions, load_baseline, resolve_game,
                       restore_version, run_sync, save_baseline)
-from app.transport import LocalTransport
+from fakes import LocalTransport
 
 from test_api import client, login  # noqa: F401  (fixture)
 
-GAME = "Mi Juego VII"
-GID = "Mi-Juego-VII-28d4413f"  # slug_for(GAME): la carpeta que ya existe en disco para este juego
+GAME = "Juego de prueba"
+GID = "juego-de-prueba-28d4413f"  # id interno estable: es la carpeta de data/ del juego
 PC, LAPTOP = "pc", "laptop"
 
-LEGACY = {
-    "devices": {PC: {"host": "h1", "user": "u", "os": "windows"},
-                LAPTOP: {"host": "h2", "user": "d", "os": "linux"}},
-    "games": {GAME: {"devices": [PC, LAPTOP], "paths": {PC: "C:/Saves/dq", LAPTOP: "/home/usuario/dq"},
-                     "process": "dq.exe", "keep_versions": 3}},
+BASE = {
+    "devices": {PC: {"name": PC, "host": "h1", "user": "u", "os": "windows"},
+                LAPTOP: {"name": LAPTOP, "host": "h2", "user": "d", "os": "linux"}},
+    "games": {GID: {"name": GAME, "devices": [PC, LAPTOP], "paths": {PC: "C:/Saves/dq", LAPTOP: "/home/usuario/dq"},
+                    "process": "dq.exe", "keep_versions": 3}},
 }
 NEW = {
     "devices": {"pc-1a2b3c4d": {"name": "Mi PC", "host": "h1", "user": "u", "os": "windows"},
@@ -49,53 +47,17 @@ def mod(base, path, value):
 
 
 # ---------- carga ----------
-def test_legacy_ids_are_slug_of_key_and_name_is_key():
-    assert slug_for(GAME) == GID
-    c = parse_config(LEGACY)
-    assert list(c.games) == [GID] and c.games[GID].name == GAME
-    assert list(c.devices) == [PC, LAPTOP] and c.devices[PC].name == PC
-    assert c.games[GID].devices == [PC, LAPTOP] and set(c.games[GID].paths) == {PC, LAPTOP}
-    assert c.games[GID].paths[PC] == "C:/Saves/dq"
-
-
-def test_legacy_with_free_device_names_resolves_references():
-    d = {"devices": {"Mi PC (salón)": LEGACY["devices"][PC], LAPTOP: LEGACY["devices"][LAPTOP]},
-         "games": {GAME: {"devices": ["Mi PC (salón)", LAPTOP],
-                          "paths": {"Mi PC (salón)": "C:/a", LAPTOP: "/x/y"}}}}
-    c = parse_config(d)
-    pid = slug_for("Mi PC (salón)")
-    assert c.devices[pid].name == "Mi PC (salón)" and c.games[GID].devices == [pid, LAPTOP]
-    assert set(c.games[GID].paths) == {pid, LAPTOP}
-
-
 def test_new_format_loads_as_is():
     c = parse_config(NEW)
     assert c.games["zelda-0a1b2c3d"].name == "Zelda" and c.devices["pc-1a2b3c4d"].name == "Mi PC"
     assert c.games["zelda-0a1b2c3d"].paths["pc-1a2b3c4d"] == "C:/Saves/z"
 
 
-def test_normalize_is_idempotent():
-    once = normalize_raw(LEGACY)
-    assert normalize_raw(once) == once
-    assert normalize_raw(NEW) == NEW
-
-
-def test_roundtrip_legacy_to_new_keeps_ids_and_data(tmp_path):
-    c = parse_config(LEGACY)
-    p = tmp_path / "c.yaml"
-    save_config(p, c)
-    raw = yaml.safe_load(p.read_text())
-    assert set(raw["games"]) == {GID} and raw["games"][GID]["name"] == GAME
-    assert raw["devices"][PC]["name"] == PC and raw["games"][GID]["devices"] == [PC, LAPTOP]
-    again = load_config(p)
-    assert again == c and again.model_dump() == c.model_dump()
-
-
-def test_loading_legacy_never_rewrites_file_but_saving_does(client, tmp_path):  # noqa: F811
+def test_loading_never_rewrites_file_but_saving_does(client, tmp_path):  # noqa: F811
     login(client)
     (tmp_path / "config").mkdir(parents=True, exist_ok=True)
     f = tmp_path / "config" / "config.yaml"
-    text = "# mi config\n" + yaml.safe_dump(LEGACY, allow_unicode=True)
+    text = "# mi config\n" + yaml.safe_dump(BASE, allow_unicode=True)
     f.write_text(text)
     got = client.get("/api/config").json()
     assert f.read_text() == text  # leer/arrancar no toca el fichero
@@ -173,34 +135,14 @@ def test_free_names_do_not_need_unique_ids_and_bad_names_fail():
 
 
 def test_game_id_hub_is_allowed_only_where_it_cannot_clash():
-    # un juego legado llamado "hub" conserva su carpeta data/hub/hub; un dispositivo no puede llamarse hub
-    d = copy.deepcopy(LEGACY)
-    d["games"]["hub"] = d["games"].pop(GAME)
+    # un juego con id "hub" conserva su carpeta data/hub/hub; un dispositivo no puede llamarse hub
+    d = copy.deepcopy(BASE)
+    d["games"]["hub"] = d["games"].pop(GID)
     assert "hub" in parse_config(d).games
 
 
-# ---------- id generado ----------
-def test_generate_id_properties():
-    taken = set()
-    for name in ["Zelda", "Pokémon 🎮", "", "日本語", "a/b c", "  ", "X" * 100, "hub", "My_Game-2"]:
-        i = generate_id(name, taken)
-        assert ID_RE.fullmatch(i) and i != "hub" and i not in taken, (name, i)
-        assert re.fullmatch(r"[a-z0-9_-]+-[0-9a-f]{8}", i), i
-        taken.add(i)
-    assert generate_id("Zelda").startswith("zelda-") and generate_id("🎮", kind="juego").startswith("juego-")
-    assert generate_id("", kind="dispositivo").startswith("dispositivo-")
-    assert generate_id("Pokémon").startswith("pokemon-")
-    assert generate_id("X" * 100).split("-")[0] == "x" * 40
-
-
-def test_generate_id_is_random_unique_and_avoids_collisions(monkeypatch):
-    assert len({generate_id("Zelda") for _ in range(200)}) == 200
-    seq = iter(["aaaaaaaa", "aaaaaaaa", "bbbbbbbb"])
-    monkeypatch.setattr("app.config.secrets.token_hex", lambda n: next(seq))
-    assert generate_id("Zelda", taken={"ZELDA-aaaaaaaa"}) == "zelda-bbbbbbbb"  # colisión (sin mayúsculas): reintenta
-
-
-def test_generated_id_is_stable_when_renaming():
+# ---------- el id no depende del nombre ----------
+def test_id_is_stable_when_renaming():
     c = parse_config(NEW)
     gid = next(iter(c.games))
     c.games[gid].name = "Otro nombre"
@@ -228,7 +170,7 @@ class Disk:
         self.roots = {PC: tmp / "pc", LAPTOP: tmp / "laptop"}
         self.pc_dir, self.lap_dir = self.roots[PC] / "C:/Saves/dq", self.roots[LAPTOP] / "home/usuario/dq"
         self.hub = self.data / "hub" / GID
-        self.cfg = parse_config(LEGACY)
+        self.cfg = parse_config(BASE)
         for d in (self.pc_dir, self.lap_dir, self.hub):
             d.mkdir(parents=True)
             (d / "s.sav").write_text("v1")
@@ -363,19 +305,17 @@ def test_scheduler_cycle_uses_ids_and_records_names(tmp_path, monkeypatch):
     assert busy["games"] == {gid: "skipped"} and busy["message"] == "Zelda: omitido (ya en curso)"
 
 
-def test_history_annotate_new_old_and_unknown():
+def test_history_annotate_current_and_deleted():
     cfg = parse_config(NEW)
     gid = "zelda-0a1b2c3d"
     mk = lambda games: {"id": "e", "started": "2026-01-01T00:00:00+00:00", "games": games}  # noqa: E731
     new_e = mk({gid: {"result": "ok", "message": "", "name": "Nombre viejo"}})
-    old_by_name = mk({"Zelda": {"result": "ok", "message": ""}})
-    old_unknown = mk({"Juego borrado": {"result": "error", "message": "x"}})
     deleted_new = mk({"gone-00000000": {"result": "ok", "message": "", "name": "Era este"}})
-    a = history.annotate([new_e, old_by_name, old_unknown, deleted_new], cfg.games)
+    no_name = mk({"Zelda": {"result": "ok", "message": ""}})   # clave que no es un id actual: no se mapea por nombre
+    a = history.annotate([new_e, deleted_new, no_name], cfg.games)
     assert a[0]["games"][gid]["name"] == "Zelda" and a[0]["games"][gid]["id"] == gid  # nombre actual
-    assert a[1]["games"]["Zelda"] == {"result": "ok", "message": "", "id": gid, "name": "Zelda"}  # mapeado
-    assert a[2]["games"]["Juego borrado"]["name"] == "Juego borrado" and a[2]["games"]["Juego borrado"]["id"] is None
-    assert a[3]["games"]["gone-00000000"]["name"] == "Era este"
+    assert a[1]["games"]["gone-00000000"]["name"] == "Era este" and a[1]["games"]["gone-00000000"]["id"] is None
+    assert a[2]["games"]["Zelda"] == {"result": "ok", "message": "", "id": None, "name": "Zelda"}
     assert new_e["games"][gid]["name"] == "Nombre viejo"  # no muta la entrada original
 
 
@@ -491,14 +431,6 @@ def test_api_rename_keeps_data_reachable(api, tmp_path):
     assert d["empty"] is True  # ya guardado
 
 
-def test_api_status_legacy_file_keyed_by_id_with_name(api, tmp_path):
-    sd = tmp_path / "data" / "status"
-    sd.mkdir(parents=True)
-    (sd / f"{GID}.json").write_text(json.dumps({"game": GAME, "result": "ok", "message": "m"}))
-    got = api.get("/api/status").json()[GID]
-    assert got["game"] == GID and got["name"] == GAME
-
-
 def test_api_conflict_resolution_device_by_name(api, tmp_path):
     gid = "zelda-0a1b2c3d"
     roots = {"pc": tmp_path / "pc/C:/Saves/z", "lap": tmp_path / "laptop/home/usuario/z"}
@@ -513,14 +445,13 @@ def test_api_conflict_resolution_device_by_name(api, tmp_path):
     assert api.post("/api/sync/Zelda", json={"resolution": "device:"}).status_code == 422
 
 
-def test_api_history_annotated_with_legacy_names(api):
+def test_api_history_annotated_with_names(api):
     now = datetime.now(timezone.utc)
-    history.append(history.make_entry(now, 1, "scheduled", "ok", {"Zelda": {"result": "ok", "message": ""}}, ""), now=now)
     history.append(history.make_entry(now, 1, "scheduled", "ok",
-                                      {"zelda-0a1b2c3d": {"result": "ok", "message": "", "name": "Zelda"}}, ""), now=now)
+                                      {"zelda-0a1b2c3d": {"result": "ok", "message": "", "name": "Nombre viejo"}}, ""), now=now)
     es = api.get("/api/scheduler/history").json()["entries"]
-    assert [e["games"][k]["name"] for e, k in zip(es, ["zelda-0a1b2c3d", "Zelda"])] == ["Zelda", "Zelda"]
-    assert es[1]["games"]["Zelda"]["id"] == "zelda-0a1b2c3d"
+    g = es[0]["games"]["zelda-0a1b2c3d"]
+    assert g["name"] == "Zelda" and g["id"] == "zelda-0a1b2c3d"   # nombre actual de la config
 
 
 def test_api_validate_reports_id_paths_and_test_device_without_name(api):
@@ -534,7 +465,7 @@ def test_api_validate_reports_id_paths_and_test_device_without_name(api):
 def _legacy_api(client, tmp_path):
     login(client)
     (tmp_path / "config").mkdir(parents=True, exist_ok=True)
-    (tmp_path / "config" / "config.yaml").write_text(yaml.safe_dump(LEGACY, allow_unicode=True))
+    (tmp_path / "config" / "config.yaml").write_text(yaml.safe_dump(BASE, allow_unicode=True))
     return client
 
 

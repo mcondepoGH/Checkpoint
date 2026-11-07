@@ -30,8 +30,8 @@ export default function ConflictDialog({ game, conflict, busy, onCancel, onResol
   const [choosing, setChoosing] = useState(false);
   const [pick, setPick] = useState('');
   const label = (s) => (s.hub ? 'Hub (copia en Checkpoint)' : s.name);
-  // El origen se identifica por su id (el nombre solo se muestra); `id` falta en estados antiguos: el backend admite ambos.
-  const sid = (s) => s.id || s.name;
+  // El origen se identifica por su id (el nombre solo se muestra).
+  const sid = (s) => s.id;
   const value = (s) => (s.hub ? 'hub' : `device:${sid(s)}`);
   const expect = Object.fromEntries(sides.map((s) => [sid(s), s.hash]));
 

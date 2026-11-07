@@ -53,11 +53,6 @@ test('config antigua sin campo local: dispositivos remotos intactos', () => {
   assert.deepEqual(toConfig(fromConfig(REMOTE_ONLY)), REMOTE_ONLY);
 });
 
-test('valores heredados steamos -> linux también en local', () => {
-  const c = { devices: { 'x-1': { name: 'X', local: true, os: 'steamos' } }, games: {} };
-  assert.equal(toConfig(fromConfig(c)).devices['x-1'].os, 'linux');
-});
-
 test('marcar la casilla: local + SO de la plataforma; host/usuario se conservan pero no se envían', () => {
   const d = fromConfig(REMOTE_ONLY);
   const dev = d.devices[0];

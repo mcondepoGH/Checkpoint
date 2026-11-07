@@ -3,7 +3,6 @@ import os
 import subprocess
 import sys
 import threading
-import types
 
 import pytest
 

@@ -1,8 +1,6 @@
 """Conflictos, baseline y resolución: casos de decisión de _do_sync."""
 import asyncio
 import json
-import time
-from datetime import datetime, timezone
 
 import pytest
 import yaml
@@ -12,7 +10,8 @@ from app.config import parse_config, validate_config
 from app.scheduler import Scheduler, validate_settings
 from app.sync import (SyncAbort, decide, fingerprint, list_versions, load_baseline, pick_resolution, run_sync,
                       save_baseline)
-from app.transport import LocalTransport, TransportError
+from app.transport import TransportError
+from fakes import LocalTransport
 from test_sync import CFG, Env, read
 
 
@@ -394,8 +393,8 @@ def test_decide_pure():
 
 # ---- config / scheduler ----
 def test_game_on_conflict_validation():
-    base = {"devices": {"pc": {"host": "h", "user": "u", "os": "linux"}, "l": {"host": "h2", "user": "u", "os": "linux"}},
-            "games": {"g": {"devices": ["pc", "l"], "paths": {"pc": "/a", "l": "/b"}}}}
+    base = {"devices": {"pc": {"name": "pc", "host": "h", "user": "u", "os": "linux"}, "l": {"name": "l", "host": "h2", "user": "u", "os": "linux"}},
+            "games": {"g": {"name": "g", "devices": ["pc", "l"], "paths": {"pc": "/a", "l": "/b"}}}}
     assert parse_config(base).games["g"].on_conflict is None  # config antigua: sin override
     base["games"]["g"]["on_conflict"] = "newest"
     assert parse_config(base).games["g"].on_conflict == "newest"
@@ -422,9 +421,9 @@ def test_scheduler_on_conflict_validation_and_default(tmp_path, monkeypatch):
 def _sched(env, monkeypatch, **cfg_extra):
     monkeypatch.setattr(settings, "DATA_DIR", env.data)
     cfg = parse_config({
-        "devices": {"pc": {"host": "h1", "user": "u", "os": "windows"},
-                    "laptop": {"host": "h2", "user": "d", "os": "linux"}},
-        "games": {"g": {"devices": ["pc", "laptop"], "paths": {"pc": "C:/Saves/g", "laptop": "/home/usuario/g"},
+        "devices": {"pc": {"name": "pc", "host": "h1", "user": "u", "os": "windows"},
+                    "laptop": {"name": "laptop", "host": "h2", "user": "d", "os": "linux"}},
+        "games": {"g": {"name": "g", "devices": ["pc", "laptop"], "paths": {"pc": "C:/Saves/g", "laptop": "/home/usuario/g"},
                         **cfg_extra}}})
 
     def runner(cfg_, game, dry, log, **kw):
@@ -471,8 +470,8 @@ def test_api_resolution_passthrough_and_validation(tmp_path, monkeypatch):
     (tmp_path / "static/index.html").write_text("x")
     (tmp_path / "config").mkdir()
     (tmp_path / "config/config.yaml").write_text(yaml.safe_dump({
-        "devices": {"pc": {"host": "h", "user": "u", "os": "linux"}, "l": {"host": "h2", "user": "u", "os": "linux"}},
-        "games": {"g": {"devices": ["pc", "l"], "paths": {"pc": "/a", "l": "/b"}}}}))
+        "devices": {"pc": {"name": "pc", "host": "h", "user": "u", "os": "linux"}, "l": {"name": "l", "host": "h2", "user": "u", "os": "linux"}},
+        "games": {"g": {"name": "g", "devices": ["pc", "l"], "paths": {"pc": "/a", "l": "/b"}}}}))
     seen = {}
 
     def fake(cfg, game, dry, log=None, **kw):
@@ -487,13 +486,13 @@ def test_api_resolution_passthrough_and_validation(tmp_path, monkeypatch):
     assert c.post("/api/sync/g", json={"resolution": "device:pc", "expect": 3}).status_code == 422
     r = c.post("/api/sync/g", json={"resolution": "device:pc", "expect": {"pc": "abc"}, "dry_run": True})
     assert r.status_code == 200
-    for _ in range(50):
-        if seen:
-            break
-        time.sleep(0.1)
+    # El hilo de la ejecución usa el run_sync parcheado: esperar a su evento "done" (no a un sleep)
+    # para que no sobreviva al monkeypatch.
+    assert "event: done" in c.get(f"/api/runs/{r.json()['run_id']}/stream").text
     assert seen["resolution"] == "device:pc" and seen["expect"] == {"pc": "abc"} and seen["dry"] is True
     r = c.post("/api/sync/g", json={})  # compatible: sin cuerpo útil
-    assert r.status_code in (200, 409)
+    assert r.status_code == 200
+    assert "event: done" in c.get(f"/api/runs/{r.json()['run_id']}/stream").text
 
 
 def test_cli_conflict_exit_code(env, monkeypatch, capsys):

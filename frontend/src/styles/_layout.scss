@@ -29,6 +29,7 @@
   border: 1px solid var(--border); border-radius: 10px; background: var(--bg); font-size: .9rem; }
 .app { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
 .content { max-width: 1000px; width: 100%; box-sizing: border-box; margin: 0 auto; padding: v.$gap var(--pad-r) v.$gap var(--pad-l); flex: 1; display: flex; flex-direction: column; }
+.app-footer { text-align: center; font-size: .75rem; padding: .5rem var(--pad-r) .75rem var(--pad-l); }
 .content > section.fill { flex: 1; display: flex; flex-direction: column; }
 
 // Móvil: cabecera de una sola fila (~52 px): icono, pestañas con etiqueta corta y herramientas solo con icono.
