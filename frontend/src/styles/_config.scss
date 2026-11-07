@@ -5,6 +5,8 @@
 // Tarjeta de formulario (fieldset semántico: agrupa los campos de un dispositivo/juego).
 .cfg-card { margin: 0; min-width: 0; gap: .75rem;
   .cfg-title { font-family: v.$display; font-size: .85rem; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); padding: 0 .35rem; } }
+// Tarjeta que sigue a las de sincronización automática (p. ej. Versiones guardadas): misma separación que entre ellas.
+.autosync + .cfg-card { margin-top: v.$gap; }
 
 .alert.warn { border-color: var(--warn); color: var(--warn); }
 .alert.info { margin: 0; font-size: .85rem; }
