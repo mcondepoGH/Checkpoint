@@ -20,8 +20,8 @@ from app.transport import LocalTransport
 
 from test_api import client, login  # noqa: F401  (fixture)
 
-GAME = "Dragon Quest VII"
-GID = "Dragon-Quest-VII-163561c8"  # slug_for(GAME): la carpeta que ya existe en disco para este juego
+GAME = "Mi Juego VII"
+GID = "Mi-Juego-VII-28d4413f"  # slug_for(GAME): la carpeta que ya existe en disco para este juego
 PC, LAPTOP = "pc", "laptop"
 
 LEGACY = {

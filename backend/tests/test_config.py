@@ -116,8 +116,8 @@ def test_atomic_roundtrip(tmp_path):
     assert [f.name for f in tmp_path.iterdir()] == ["config.yaml"]  # sin temporales
 
 
-FREE = ["Dragon Quest VII: Dimensión", "Mi PC (salón)", "Nintendo Switch & Co", "It's \"x\"", "Pokémon 🎮",
-        "Dragon-Quest-VII", "A.B", "👩\u200d💻 Dev", "a" * 64]
+FREE = ["Mi Juego: Edición", "Mi PC (salón)", "Nintendo Switch & Co", "It's \"x\"", "Pokémon 🎮",
+        "Mi-Juego-VII", "A.B", "👩\u200d💻 Dev", "a" * 64]
 
 
 @pytest.mark.parametrize("n", FREE)
@@ -143,7 +143,7 @@ def test_bad_free_names(n):
 
 
 def test_slug_legacy_identical_and_safe():
-    for n in ["Dragon-Quest-VII", "Omarchy", "MiJuego", "a_b-1", "g"]:
+    for n in ["Mi-Juego-VII", "MiPC", "MiJuego", "a_b-1", "g"]:
         assert slug_for(n) == n
     import re
     for n in FREE[:5] + ["../x", "con", "🎮", "日本語"]:
@@ -155,9 +155,9 @@ def test_slug_legacy_identical_and_safe():
 
 
 def test_slug_collisions_and_dupes_rejected():
-    for dup in ("dragon quest", "DRAGON QUEST"):
+    for dup in ("mi juego", "MI JUEGO"):
         d = mod()
-        d["games"]["Dragon Quest"] = d["games"]["g"]
+        d["games"]["Mi Juego"] = d["games"]["g"]
         d["games"][dup] = d["games"]["g"]
         with pytest.raises(ValidationError):
             parse_config(d)
@@ -179,8 +179,8 @@ def test_device_named_hub_reserved():
 
 def test_yaml_roundtrip_special_names(tmp_path):
     d = mod()
-    d["games"]["Dragon Quest VII: Dimensión"] = d["games"].pop("g")
-    d["games"]["123"] = dict(d["games"]["Dragon Quest VII: Dimensión"])
+    d["games"]["Mi Juego: Edición"] = d["games"].pop("g")
+    d["games"]["123"] = dict(d["games"]["Mi Juego: Edición"])
     p = tmp_path / "c.yaml"
     save_config(p, parse_config(d))
-    assert {g.name for g in load_config(p).games.values()} == {"Dragon Quest VII: Dimensión", "123"}
+    assert {g.name for g in load_config(p).games.values()} == {"Mi Juego: Edición", "123"}

@@ -364,7 +364,7 @@ def test_lock_prevents_overlap(env):
 
 def test_free_names_use_slug_paths_only(tmp_path):
     from app.config import slug_for
-    gn, an, bn = "Dragon Quest VII: Dimensión", "Mi PC (salón)", "Switch & Co"
+    gn, an, bn = "Mi Juego: Edición", "Mi PC (salón)", "Switch & Co"
     g, a, b = slug_for(gn), slug_for(an), slug_for(bn)  # formato antiguo: ids = slug_for(nombre)
     cfg = parse_config({
         "devices": {an: {"host": "h1", "user": "u", "os": "windows"}, bn: {"host": "h2", "user": "d", "os": "linux"}},

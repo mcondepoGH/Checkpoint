@@ -19,7 +19,7 @@ export default function GameCard({ game, devices, errors, localError, keepError,
     <fieldset className="card cfg-card">
       <legend className="cfg-title">{title}</legend>
       <Field label="Nombre" hint={NAME_HINT} error={localError || errors.name || errors['']}>
-        {(p) => <input {...p} value={game.name} onChange={set('name')} maxLength={NAME_MAX} placeholder="p. ej. Dragon Quest VII: Dimensión" autoComplete="off" spellCheck="false" />}
+        {(p) => <input {...p} value={game.name} onChange={set('name')} maxLength={NAME_MAX} placeholder="p. ej. Mi Juego: Edición" autoComplete="off" spellCheck="false" />}
       </Field>
       {errors.devices && <div className="alert error" role="alert">{errors.devices}</div>}
       <div className="two">
