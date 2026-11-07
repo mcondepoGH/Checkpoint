@@ -2,6 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { api, ApiError } from './api.js';
 import logo from './assets/logo-icon.svg';
 import Icon from './components/Icon.jsx';
+import UpdateBadge from './components/UpdateBadge.jsx';
+import UpdateDialog from './components/UpdateDialog.jsx';
 import Login from './pages/Login.jsx';
 import Settings from './pages/Settings.jsx';
 import Sync from './pages/Sync.jsx';
@@ -34,6 +36,8 @@ export default function App() {
   const [latest, setLatest] = useState(null); // última versión de config.yaml anunciada por el servidor (SSE)
   const [dirty, setDirty] = useState(false); // borrador de Configuración con cambios sin guardar
   const [error, setError] = useState('');
+  const [updates, setUpdates] = useState(null); // estado de /api/updates; un fallo aquí nunca molesta
+  const [showUpdate, setShowUpdate] = useState(false);
   const [theme, cycleTheme] = useTheme();
   const config = loaded.config;
 
@@ -67,6 +71,15 @@ export default function App() {
     return () => es.close();
   }, [authed]);
 
+  // Comprobación de versión nueva: al entrar y cada 6 h (el backend cachea y no repite peticiones a GitHub).
+  useEffect(() => {
+    if (!authed) return undefined;
+    const check = () => api('/api/updates').then(setUpdates).catch(() => {});
+    check();
+    const t = setInterval(check, 6 * 3600 * 1000);
+    return () => clearInterval(t);
+  }, [authed]);
+
   const stale = latest !== null && latest !== loaded.version;
   // Sin borrador pendiente se recarga solo; con borrador, Configuración avisa y no pisa nada.
   useEffect(() => { if (stale && !dirty) loadConfig(); }, [stale, dirty, loadConfig]);
@@ -90,6 +103,7 @@ export default function App() {
           ))}
         </nav>
         <div className="spacer" />
+        <UpdateBadge info={updates} onOpen={() => setShowUpdate(true)} />
         <button className="btn ghost tool" onClick={cycleTheme} title="Cambiar tema" aria-label={`Cambiar tema (actual: ${theme})`}>
           <Icon name="theme" /><span className="lbl">Tema: {theme}</span>
         </button>
@@ -102,11 +116,12 @@ export default function App() {
         <div hidden={tab !== 'settings'}>
           <Settings loaded={loaded} stale={stale && dirty} configError={loaded.error} runtime={loaded.runtime} platform={loaded.platform}
             onApplied={(r) => { setLoaded((l) => ({ ...l, version: r.version, config: r.config, error: null })); setLatest(r.version); }}
-            onReload={() => loadConfig()} onDirty={setDirty} />
+            onReload={() => loadConfig()} onDirty={setDirty} updates={updates} onUpdates={setUpdates} />
         </div>
         {tab === 'sync' && <Sync config={config} onGoSettings={() => setTab('settings')} />}
         {tab === 'versions' && <Versions config={config} onGoSettings={() => setTab('settings')} />}
       </main>
+      {showUpdate && updates && <UpdateDialog info={updates} onClose={() => setShowUpdate(false)} />}
     </div>
   );
 }
