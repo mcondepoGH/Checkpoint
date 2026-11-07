@@ -18,13 +18,14 @@ from starlette.concurrency import run_in_threadpool
 from . import settings
 from . import bootstrap
 from . import history
+from . import runtime
 from .auth import Auth
-from .config import Config, ConfigError, Device, resolve_ref, validate_config
+from .config import LOCAL_DOCKER_MSG, Config, ConfigError, Device, normalize_path, resolve_ref, validate_config
 from .configstore import Conflict, ConfigStore, InvalidConfig, parse_text, config_events_gen, diff_configs, render_yaml
 from .redact import redact
 from .scheduler import Scheduler
 from .sync import SyncAbort, count_versions, list_versions, restore_version, run_sync, valid_resolution
-from .transport import TransportError, get_transport
+from .transport import TransportError, get_transport, local_folder_status
 
 COOKIE = "checkpoint_session"
 # index.html nunca se cachea: así un despliegue nuevo se ve al recargar (los assets con hash sí se cachean).
@@ -129,7 +130,8 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     @app.get("/api/config", dependencies=[Depends(require)])
     def get_config():
         snap = store.snapshot()
-        return {"version": snap.version, "config": snap.as_dict(), "error": snap.error}
+        # `runtime` (docker|native) y `platform` (linux|windows|macos): lo único del sistema que se expone.
+        return {"version": snap.version, "config": snap.as_dict(), "error": snap.error, **runtime.info()}
 
     @app.get("/api/config/status", dependencies=[Depends(require)])
     def config_status():
@@ -219,7 +221,31 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             dev = Device.model_validate(raw)
         except ValidationError as e:
             return {"ok": False, "message": "datos del dispositivo inválidos: " + _errs(e)}
+        if dev.local:
+            return await run_in_threadpool(_test_local, dev, body)
         return await run_in_threadpool(_test_conn, dev)
+
+    def _test_local(dev: Device, body: dict):
+        """«Este equipo»: sin SSH. Comprueba las carpetas de saves que se indiquen (`paths`: lista de rutas)."""
+        if runtime.running_in_docker():
+            return {"ok": False, "message": LOCAL_DOCKER_MSG}
+        paths = body.get("paths", [])
+        if not isinstance(paths, list) or len(paths) > 50 or not all(isinstance(p, str) for p in paths):
+            return {"ok": False, "message": "paths debe ser una lista de rutas (máx. 50)"}
+        if not paths:
+            return local_folder_status(None)
+        results = []
+        for raw_path in paths:
+            try:
+                norm = normalize_path(dev.os, raw_path)
+            except ValueError as e:
+                results.append((raw_path, {"ok": False, "message": str(e)}))
+                continue
+            results.append((norm, local_folder_status(norm)))
+        if len(results) == 1:
+            return results[0][1]
+        return {"ok": all(r["ok"] for _, r in results),
+                "message": "\n".join(f"{p}: {r['message']}" for p, r in results)}
 
     def _test_conn(dev: Device):
         first = False
