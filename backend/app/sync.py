@@ -1,5 +1,4 @@
 """Lógica de sincronización de un juego entre dos dispositivos y el hub."""
-import fcntl
 import hashlib
 import json
 import os
@@ -12,7 +11,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
-from . import settings
+from . import locking, settings
 from .config import Config, ConfigError, resolve_ref
 from .redact import redact
 from .transport import Transport, TransportError, get_transport
@@ -135,20 +134,11 @@ def prune_versions(data_dir: Path, game: str, keep: int, log=lambda m: None, pro
 @contextmanager
 def _game_lock(data_dir: Path, gs: str):
     """Mismo lock por juego que run_sync; falla si hay otra operación en curso."""
-    locks = Path(data_dir) / "locks"
-    locks.mkdir(parents=True, exist_ok=True)
-    f = open(locks / f"{gs}.lock", "w")
     try:
-        try:
-            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            raise SyncAbort("ya hay una operación de este juego en curso")
-        try:
+        with locking.locked(Path(data_dir) / "locks" / f"{gs}.lock"):
             yield
-        finally:
-            fcntl.flock(f, fcntl.LOCK_UN)
-    finally:
-        f.close()
+    except locking.LockBusy:
+        raise SyncAbort("ya hay una operación de este juego en curso")
 
 
 def _new_version_dir(data_dir: Path, game: str) -> Path:
@@ -356,14 +346,11 @@ def run_sync(cfg: Config, game: str, dry_run: bool = False, data_dir: Optional[P
     status = {"game": game, "name": g.name, "dry_run": dry_run, "started": started.isoformat(timespec="seconds"),
               "result": "error", "message": "", "log": logfile.name}
 
-    locks = data_dir / "locks"
-    locks.mkdir(parents=True, exist_ok=True)
-    lockf = open(locks / f"{gs}.lock", "w")
     try:
-        try:
-            fcntl.flock(lockf, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            raise SyncAbort("ya hay una sincronización de este juego en curso")
+        handle = locking.acquire(data_dir / "locks" / f"{gs}.lock")
+    except locking.LockBusy:
+        raise SyncAbort("ya hay una sincronización de este juego en curso")
+    try:
         try:
             _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution, expect, conflict_policy)
         except SyncAbort as e:
@@ -376,8 +363,7 @@ def run_sync(cfg: Config, game: str, dry_run: bool = False, data_dir: Optional[P
             status["result"], status["message"] = "error", f"{type(e).__name__}: {e}"
             L(f"ERROR inesperado: {type(e).__name__}: {e}")
     finally:
-        fcntl.flock(lockf, fcntl.LOCK_UN)
-        lockf.close()
+        handle.release()
     status["finished"] = datetime.now().isoformat(timespec="seconds")
     sd = data_dir / "status"
     sd.mkdir(parents=True, exist_ok=True)
