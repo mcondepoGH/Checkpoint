@@ -60,11 +60,78 @@ Requisitos: Docker y Docker Compose.
 
 El prefijo antiguo `SAVESYNC_*` sigue aceptándose (obsoleto). Si la contraseña lleva `$`, ponla entre comillas simples.
 
+## Instalación sin Docker
+
+Modo «nativo»: Checkpoint corre directamente en un equipo. Es la única forma de usar el dispositivo **«Este equipo»** (ver más abajo).
+
+**Requisitos**: Python 3.12, Node.js (solo para compilar la web) y, si vas a sincronizar dispositivos remotos, `rsync` y el cliente OpenSSH (`ssh`, `ssh-keygen`, `ssh-keyscan`) en el `PATH`. Con «Este equipo» como único tipo de dispositivo no hacen falta.
+
+```bash
+git clone https://github.com/mcondepoGH/Checkpoint.git && cd Checkpoint
+python3 -m venv .venv && . .venv/bin/activate
+pip install -r backend/requirements.txt
+(cd frontend && npm ci && npm run build)            # genera frontend/dist, que se sirve solo
+export CHECKPOINT_USER=usuario CHECKPOINT_PASSWORD='cámbiala'
+cd backend && python -m app.cli serve               # http://127.0.0.1:8088
+```
+
+Equivale a `python -m uvicorn app.main:app_factory --factory --port 8088`, pero `serve` además comprueba las credenciales y escucha solo en `127.0.0.1` por defecto (usa `--host 0.0.0.0` o `CHECKPOINT_HOST` para abrirlo a la red; ver [Seguridad](#seguridad)).
+
+Sin Docker las carpetas no son `/config`, `/data` y `/keys`, sino (se crean solas):
+
+| Sistema | Carpeta base (`config/`, `data/`, `keys/` dentro) |
+|---|---|
+| Linux | `$XDG_DATA_HOME/checkpoint` o `~/.local/share/checkpoint` |
+| macOS | `~/Library/Application Support/checkpoint` |
+| Windows | `%APPDATA%\checkpoint` |
+
+Variables para cambiarlo (las de Docker siguen igual): `CHECKPOINT_HOME_DIR` (carpeta base), o una a una `CHECKPOINT_CONFIG` (fichero `config.yaml`), `CHECKPOINT_DATA`, `CHECKPOINT_SSH_KEY`, `CHECKPOINT_KNOWN_HOSTS` y `CHECKPOINT_STATIC` (web compilada; por defecto `frontend/dist`). También `CHECKPOINT_HOST` y `CHECKPOINT_PORT` para `serve`.
+
+Cómo se decide si es Docker o nativo: la imagen fija `CHECKPOINT_IN_DOCKER=1`; si no, se mira si existe `/.dockerenv` o `/run/.containerenv`. `CHECKPOINT_RUNTIME=docker|native` fuerza el resultado.
+
+Arranque al iniciar sesión en Linux (unidad de usuario de systemd, `~/.config/systemd/user/checkpoint.service`; ajusta las rutas):
+
+```ini
+[Unit]
+Description=Checkpoint
+
+[Service]
+WorkingDirectory=/home/usuario/Checkpoint/backend
+EnvironmentFile=/home/usuario/.config/checkpoint.env     # CHECKPOINT_USER=... y CHECKPOINT_PASSWORD=...
+ExecStart=/home/usuario/Checkpoint/.venv/bin/python -m app.cli serve
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
+```
+
+```bash
+chmod 600 ~/.config/checkpoint.env && systemctl --user enable --now checkpoint
+```
+
+### «Este equipo»
+
+En modo nativo, cada dispositivo puede marcarse como **Este equipo**: el mismo equipo donde corre Checkpoint. Se omite todo SSH (host, usuario, puerto, clave) y el motor lee y escribe directamente en sus carpetas, con las mismas garantías que en remoto (copia a temporal, huellas, escritura atómica con carpeta nueva y renombrado, fecha de modificación conservada, proceso abierto, conflictos, versiones). Solo puede haber uno. En vez de «Probar conexión» hay **Comprobar carpeta**, que verifica que la ruta existe (o se puede crear) y es legible y escribible. Los enlaces simbólicos dentro de la carpeta de saves no se siguen ni se sincronizan.
+
+**En Docker la casilla no aparece** (allí «este equipo» sería el contenedor) y un `config.yaml` con `local: true` se rechaza con el error «“Este equipo” solo está disponible cuando Checkpoint se ejecuta sin Docker».
+
+```yaml
+devices:
+  pc-1a2b3c4d:     {name: "Mi PC", local: true, os: linux}      # sin host, user ni port
+  laptop-5e6f7a8b: {name: "Portátil", host: 192.0.2.11, user: usuario, os: linux, port: 22}
+```
+
+### Plataformas probadas
+
+- **Linux**: probado (suite automática de pruebas, incluido el motor de sincronización con «Este equipo» sobre el sistema de ficheros real, y un arranque real con `serve`).
+- **macOS y Windows nativo**: **experimental, no verificado**. El código contempla `pgrep`/`tasklist`, el bloqueo con `msvcrt` y las rutas `C:/...`, pero solo se ha comprobado con simulaciones. Con Windows como equipo anfitrión, además, `rsync` no existe de serie, así que los dispositivos remotos no están soportados ahí; «Este equipo» sí está pensado para funcionar.
+- El acceso por SSH a dispositivos remotos no se ha probado en esta rama contra un servidor SSH real (las pruebas lo simulan); es el mismo código que antes.
+
 ## Primeros pasos
 
-1. En **Configuración**, copia la **clave pública SSH** (botón Copiar).
+1. En **Configuración**, copia la **clave pública SSH** (botón Copiar). Solo hace falta si vas a usar dispositivos remotos.
 2. Añádela a `authorized_keys` de cada dispositivo. El botón **?** junto a la clave muestra los comandos para Linux y Windows, incluida la activación del servidor SSH.
-3. Añade los **dispositivos** (nombre, host, puerto, usuario, sistema) y pulsa **Probar conexión**. La primera vez se guarda la huella del host.
+3. Añade los **dispositivos** (nombre, host, puerto, usuario, sistema) y pulsa **Probar conexión**. La primera vez se guarda la huella del host. Sin Docker puedes marcar uno como **Este equipo** (sin SSH).
 4. Añade los **juegos**: elige dos dispositivos y la carpeta de guardado en cada uno (ruta absoluta, por ejemplo `/home/usuario/.local/share/Juego/Saves` o `C:\Users\Usuario\AppData\Local\Juego\Saves`).
 5. Ve a **Sincronizar**. Prueba primero con **Dry-run** y después sin él.
 
@@ -114,13 +181,15 @@ La clave de cada juego y dispositivo es su **ID interno**, que no cambia nunca; 
 - La clave privada vive en `keys/` y no debe compartirse ni subirse a ningún repositorio.
 - Si cambia la huella de un dispositivo, la conexión falla; revisa la entrada de `keys/known_hosts` antes de borrarla.
 - Usa una cuenta limitada en los dispositivos siempre que sea posible.
+- Sin Docker, `serve` escucha en `127.0.0.1`: ábrelo a la red solo si lo necesitas. «Este equipo» da acceso al sistema de ficheros de quien ejecuta Checkpoint, con sus permisos; no lo ejecutes como administrador/root.
 
 ## Desarrollo
 
 ```bash
 cd backend && python3 -m venv .venv && . .venv/bin/activate
-pip install -r requirements.txt pytest httpx && pytest
+pip install -r requirements.txt -r requirements-dev.txt && pytest
 cd ../frontend && npm install && npm run dev     # desarrollo
+npm test                                         # pruebas de node (borrador y tarjeta de dispositivo)
 npm run build                                    # producción
 ```
 

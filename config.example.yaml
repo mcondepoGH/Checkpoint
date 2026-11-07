@@ -5,6 +5,8 @@ max_versions: 20             # versiones guardadas por juego (0 = sin límite); 
 devices:
   pc-1a2b3c4d:     {name: "Mi PC", host: 192.0.2.10, user: usuario, os: windows, port: 22}
   laptop-5e6f7a8b: {name: "Portátil", host: 192.0.2.11, user: usuario, os: linux, port: 22}
+  # Sin Docker, un dispositivo puede ser el propio equipo donde corre Checkpoint (sin SSH; máximo uno):
+  # escritorio-9c8d7e6f: {name: "Este equipo", local: true, os: linux}
 games:
   ejemplo-0a1b2c3d:
     name: "Ejemplo"
