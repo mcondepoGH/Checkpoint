@@ -100,8 +100,8 @@ export default function App() {
       <main className="content">
         {error && <div className="alert error" role="alert">{error}</div>}
         <div hidden={tab !== 'settings'}>
-          <Settings loaded={loaded} stale={stale && dirty} configError={loaded.error}
-            onApplied={(r) => { setLoaded({ version: r.version, config: r.config, error: null }); setLatest(r.version); }}
+          <Settings loaded={loaded} stale={stale && dirty} configError={loaded.error} runtime={loaded.runtime} platform={loaded.platform}
+            onApplied={(r) => { setLoaded((l) => ({ ...l, version: r.version, config: r.config, error: null })); setLatest(r.version); }}
             onReload={() => loadConfig()} onDirty={setDirty} />
         </div>
         {tab === 'sync' && <Sync config={config} onGoSettings={() => setTab('settings')} />}

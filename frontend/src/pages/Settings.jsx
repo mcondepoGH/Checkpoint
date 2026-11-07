@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import {
-  MAX_VERSIONS_LIMIT, VERSIONS_HINT, blankDevice, blankGame, deviceId, baseKeyOf, errorsFor, fromConfig, gamesUsing, idOf, localErrors, nameOf, removeDevice, renamed, toConfig,
+  MAX_VERSIONS_LIMIT, VERSIONS_HINT, blankDevice, blankGame, canOfferLocal, deviceId, baseKeyOf, errorsFor, fromConfig, gamesUsing, idOf, localErrors, nameOf, pathsOf, removeDevice, renamed, toConfig,
 } from '../draft.js';
 import Field from '../components/Field.jsx';
 import DeviceCard from '../components/DeviceCard.jsx';
@@ -17,7 +17,7 @@ import DiffView from '../components/DiffView.jsx';
 
 // Pantalla única de Configuración: dispositivos y juegos como tarjetas, validación en vivo con el
 // validador del backend, vista previa de cambios antes de guardar.
-export default function Settings({ loaded, stale, configError, onApplied, onReload, onDirty }) {
+export default function Settings({ loaded, stale, configError, runtime, platform, onApplied, onReload, onDirty }) {
   const [draft, setDraft] = useState(() => fromConfig(loaded.config));
   const [errors, setErrors] = useState({});
   const [validating, setValidating] = useState(false);
@@ -37,7 +37,7 @@ export default function Settings({ loaded, stale, configError, onApplied, onRelo
     setStaleDiff(null);
   }
 
-  const local = useMemo(() => localErrors(draft), [draft]);
+  const local = useMemo(() => localErrors(draft, runtime), [draft, runtime]);
   const payload = useMemo(() => toConfig(draft), [draft]);
   const payloadKey = JSON.stringify(payload);
   const baseKey = useMemo(() => baseKeyOf(loaded.config), [loaded.config]);
@@ -84,7 +84,10 @@ export default function Settings({ loaded, stale, configError, onApplied, onRelo
     try {
       r = await api('/api/devices/test', {
         method: 'POST',
-        body: { device: { name: dev.name || 'prueba', host: dev.host, user: dev.user, os: dev.os, port: Number(dev.port) || dev.port } },
+        // «Este equipo»: sin SSH; se comprueban las carpetas de saves de los juegos que lo usan.
+        body: dev.local
+          ? { device: { name: dev.name || 'prueba', local: true, os: dev.os }, paths: pathsOf(draft, dev.key) }
+          : { device: { name: dev.name || 'prueba', host: dev.host, user: dev.user, os: dev.os, port: Number(dev.port) || dev.port } },
       });
     } catch (e) { r = { ok: false, message: e.message }; }
     setTests((t) => ({ ...t, [dev.key]: r }));
@@ -148,7 +151,8 @@ export default function Settings({ loaded, stale, configError, onApplied, onRelo
       {generalError && <div className="alert error" role="alert">{generalError}</div>}
       <div role="status" aria-live="polite">{msg && <div className="alert ok">{msg}</div>}</div>
 
-      <PublicKey />
+      {/* La clave SSH solo importa si hay (o puede haber) dispositivos remotos. */}
+      {(draft.devices.length === 0 || draft.devices.some((d) => !d.local)) && <PublicKey />}
 
       <AutoSync />
 
@@ -168,7 +172,8 @@ export default function Settings({ loaded, stale, configError, onApplied, onRelo
       </div>
       <div className="grid">
         {draft.devices.map((d) => (
-          <DeviceCard key={d.key} dev={d} errors={devErrs(d)} localError={local[d.key]} test={tests[d.key]}
+          <DeviceCard key={d.key} dev={d} errors={devErrs(d)} localError={local[d.key]} localFlagError={local[`local-${d.key}`]}
+            canLocal={canOfferLocal(draft, runtime, d.key)} runtime={runtime} platform={platform} test={tests[d.key]}
             idText={idOf(d, 'dispositivo')} renamed={renamed(d)}
             onChange={(p) => patch('devices', d.key, p)} onTest={() => testDevice(d)} onRemove={() => delDevice(d)} />
         ))}

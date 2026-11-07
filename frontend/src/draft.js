@@ -33,7 +33,25 @@ export const OS_OPTIONS = [['windows', 'Windows'], ['linux', 'Linux']]
 // Valor heredado de config.yaml: se muestra como Linux (equivale a él) y se guarda como tal.
 const LEGACY_OS = { steamos: 'linux' };;
 
-export const blankDevice = () => ({ key: uid(), id: null, salt: hex8(), name: '', host: '', port: '22', user: '', os: 'linux' });
+export const blankDevice = () => ({ key: uid(), id: null, salt: hex8(), name: '', local: false, host: '', port: '22', user: '', os: 'linux' });
+
+// «Este equipo»: el dispositivo es la máquina donde corre Checkpoint (sin SSH). Solo existe fuera de Docker
+// (runtime === 'native', lo informa /api/config) y como máximo uno.
+export const LOCAL_LABEL = 'Este equipo';
+export const LOCAL_DOCKER_MSG = '“Este equipo” solo está disponible cuando Checkpoint se ejecuta sin Docker';
+export const LOCAL_ONE_MSG = 'Solo puede haber un dispositivo “Este equipo”';
+export const LOCAL_HELP = 'Es el equipo donde se ejecuta Checkpoint: se accede directamente a sus carpetas, sin SSH.';
+// SO que se autorrellena al marcarlo: el de la plataforma que informa el backend (macOS usa rutas POSIX = linux).
+export const localOs = (platform) => (platform === 'windows' ? 'windows' : 'linux');
+// ¿Se ofrece la casilla en este dispositivo? Solo en modo nativo y si no hay ya otro «Este equipo».
+export const canOfferLocal = (draft, runtime, devKey) =>
+  runtime === 'native' && !draft.devices.some((d) => d.local && d.key !== devKey);
+// Cambio de borrador al marcar/desmarcar «Este equipo». Host/usuario/puerto se conservan en el borrador (por si
+// se desmarca) pero no se envían ni se guardan mientras sea local; el SO se autorrellena con el de la plataforma.
+export const localPatch = (on, platform) => (on ? { local: true, os: localOs(platform) } : { local: false });
+// Rutas de los saves que usan un dispositivo (para «Comprobar carpeta»).
+export const pathsOf = (draft, devKey) => draft.games.flatMap((g) => [
+  g.a === devKey && g.pathA ? g.pathA : null, g.b === devKey && g.pathB ? g.pathB : null].filter(Boolean));
 export const blankGame = () => ({ key: uid(), id: null, salt: hex8(), name: '', a: '', b: '', pathA: '', pathB: '', process: '', keep: '', onConflict: '' });
 
 // Versiones guardadas por juego: global (por defecto) y override por juego (vacío = usar el global). 0 = sin límite.
@@ -43,8 +61,8 @@ export const VERSIONS_HINT = '0 = sin límite; al superarlo se borran las más a
 
 export function fromConfig(cfg) {
   const devices = Object.entries(cfg?.devices || {}).map(([id, d]) => ({
-    key: id, id, name: d.name ?? id, orig: d.name ?? id, host: d.host, port: String(d.port ?? 22), user: d.user,
-    os: LEGACY_OS[d.os] || d.os,
+    key: id, id, name: d.name ?? id, orig: d.name ?? id, local: d.local === true,
+    host: d.host ?? '', port: String(d.port ?? 22), user: d.user ?? '', os: LEGACY_OS[d.os] || d.os,
   }));
   const keyOf = (id) => devices.find((d) => d.id === id)?.key || '';
   const games = Object.entries(cfg?.games || {}).map(([id, g]) => ({
@@ -79,8 +97,13 @@ const nameKey = (n) => cleanName(n).toLowerCase();
 const versionsError = (v) => (/^\d+$/.test(String(v).trim()) && Number(v) <= MAX_VERSIONS_LIMIT
   ? undefined : `Debe ser un número entero entre 0 y ${MAX_VERSIONS_LIMIT} (0 = sin límite)`);
 
-export function localErrors(draft) {
+export function localErrors(draft, runtime) {
   const errs = {};
+  const locals = draft.devices.filter((d) => d.local);
+  locals.forEach((d, i) => {
+    if (runtime === 'docker') errs[`local-${d.key}`] = LOCAL_DOCKER_MSG;
+    else if (i > 0) errs[`local-${d.key}`] = LOCAL_ONE_MSG;
+  });
   const gv = versionsError(draft.maxVersions);
   if (gv) errs.maxVersions = gv;
   for (const g of draft.games) {
@@ -105,9 +128,10 @@ export function localErrors(draft) {
 export function toConfig(draft) {
   const devices = {};
   for (const d of draft.devices) {
-    devices[idOf(d, 'dispositivo')] = {
-      name: cleanName(d.name), host: d.host, user: d.user, os: LEGACY_OS[d.os] || d.os, port: num(d.port),
-    };
+    const os = LEGACY_OS[d.os] || d.os;
+    devices[idOf(d, 'dispositivo')] = d.local
+      ? { name: cleanName(d.name), local: true, os }
+      : { name: cleanName(d.name), host: d.host, user: d.user, os, port: num(d.port) };
   }
   const games = {};
   for (const g of draft.games) {
@@ -129,7 +153,7 @@ export function toConfig(draft) {
 // Clave canónica de la config tal como la enviaría el formulario sin tocar nada.
 export const baseKeyOf = (config) => JSON.stringify(toConfig(fromConfig(config)));
 // ¿Hay cambios pendientes? Solo si el borrador difiere de la config cargada o hay errores locales.
-export const isDirty = (draft, config) => JSON.stringify(toConfig(draft)) !== baseKeyOf(config) || Object.keys(localErrors(draft)).length > 0;
+export const isDirty = (draft, config, runtime) => JSON.stringify(toConfig(draft)) !== baseKeyOf(config) || Object.keys(localErrors(draft, runtime)).length > 0;
 
 export const gamesUsing = (draft, devKey) =>
   draft.games.filter((g) => g.a === devKey || g.b === devKey).map((g) => g.name || '(sin nombre)');

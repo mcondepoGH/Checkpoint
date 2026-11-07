@@ -13,3 +13,8 @@
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 :where(button, input, select, textarea, summary):focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+
+// Casilla «Este equipo» de una tarjeta de dispositivo: casilla + ayuda corta debajo.
+.local-opt { display: flex; flex-direction: column; gap: .2rem;
+  label.check { color: var(--text); font-weight: 600; }
+  small { padding-left: 1.55rem; } }
