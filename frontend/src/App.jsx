@@ -4,7 +4,7 @@ import logo from './assets/logo-icon.svg';
 import Icon from './components/Icon.jsx';
 import UpdateBadge from './components/UpdateBadge.jsx';
 import UpdateDialog from './components/UpdateDialog.jsx';
-import { updatesApplicable } from './updates.js';
+import { installedVersion, updatesApplicable } from './updates.js';
 import Login from './pages/Login.jsx';
 import Settings from './pages/Settings.jsx';
 import Sync from './pages/Sync.jsx';
@@ -126,6 +126,7 @@ export default function App() {
         {tab === 'sync' && <Sync config={config} onGoSettings={() => setTab('settings')} />}
         {tab === 'versions' && <Versions config={config} onGoSettings={() => setTab('settings')} />}
       </main>
+      {installedVersion(updates) && <footer className="app-footer muted">Checkpoint {installedVersion(updates)}</footer>}
       {showUpdate && updatesApplicable(updates) && <UpdateDialog info={updates} onClose={() => setShowUpdate(false)} />}
     </div>
   );

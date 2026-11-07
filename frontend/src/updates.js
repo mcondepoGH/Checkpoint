@@ -28,8 +28,10 @@ export function isPrerelease(info) {
   return !!(info && info.prerelease === true);
 }
 
-export function versionLabel(info) {
-  return info && info.ultima ? `${info.ultima}${isPrerelease(info) ? ' (preliminar)' : ''}` : '';
+// Versión instalada para el pie de página ('' si aún no se conoce o es una compilación de desarrollo).
+export function installedVersion(info) {
+  const v = info && typeof info.actual === 'string' ? info.actual.trim() : '';
+  return v && v !== 'desconocida' ? v : '';
 }
 
 export function updateSummary(info) {

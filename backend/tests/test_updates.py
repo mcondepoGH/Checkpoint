@@ -208,16 +208,14 @@ def api(tmp_path, monkeypatch):
 
 def test_endpoints_require_session(api):
     assert api.get("/api/updates").status_code == 401
-    assert api.get("/api/version").status_code == 401
     assert api.put("/api/updates", json={"enabled": False}).status_code == 401
     assert api.calls == []
 
 
 def test_endpoints(api):
     login(api)
-    assert api.get("/api/version").json() == {"version": "0.4.2"}
     s = api.get("/api/updates").json()
-    assert s["hay_actualizacion"] is True and s["ultima"] == "0.5.0" and s["habilitado"] is True
+    assert s["hay_actualizacion"] is True and s["ultima"] == "0.5.0" and s["habilitado"] is True and s["actual"] == "0.4.2"
     r = api.put("/api/updates", json={"enabled": False})
     assert r.status_code == 200 and r.json()["habilitado"] is False
     n = len(api.calls)

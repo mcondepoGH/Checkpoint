@@ -131,11 +131,6 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         # `runtime` (docker|native) y `platform` (linux|windows|macos): lo único del sistema que se expone.
         return {"version": snap.version, "config": snap.as_dict(), "error": snap.error, **runtime.info()}
 
-    @app.get("/api/config/status", dependencies=[Depends(require)])
-    def config_status():
-        snap = store.snapshot()
-        return {"version": snap.version, "error": snap.error}
-
     @app.get("/api/config/events", dependencies=[Depends(require)])
     def config_events():
         return StreamingResponse(config_events_gen(store), media_type="text/event-stream",
@@ -292,10 +287,6 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
 
     # ---- versión y actualizaciones (solo detección) ----
     checker = updates.UpdateChecker()
-
-    @app.get("/api/version", dependencies=[Depends(require)])
-    def get_version():
-        return {"version": updates.installed_version()}
 
     @app.get("/api/updates", dependencies=[Depends(require)])
     def get_updates(refresh: bool = False):

@@ -256,7 +256,7 @@ def test_api_flow(client):
     settings.CONFIG_PATH.write_text(settings.CONFIG_PATH.read_text() + "\n# a mano\n")
     r = client.put("/api/config", json={"config": d2, "base_version": v1})
     assert r.status_code == 409 and r.json()["current_version"] != v1
-    assert client.get("/api/config/status").json()["version"] == r.json()["current_version"]
+    assert client.get("/api/config").json()["version"] == r.json()["current_version"]
     # guardar bien, listar copias, restaurar
     v2 = r.json()["current_version"]
     assert client.put("/api/config", json={"config": d2, "base_version": v2}).status_code == 200

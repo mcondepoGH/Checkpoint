@@ -36,7 +36,7 @@ def test_api_requires_session(client):
                  ("post", "/api/sync/x"), ("get", "/api/versions/x"), ("get", "/api/runs/x/stream"),
                  ("post", "/api/devices/test"), ("post", "/api/config/validate"),
                  ("post", "/api/config/diff"), ("post", "/api/config/yaml"),
-                 ("get", "/api/config/status"), ("get", "/api/config/events"),
+                 ("get", "/api/config/events"),
                  ("get", "/api/config/backups"), ("post", "/api/config/restore")]:
         assert getattr(client, m)(p).status_code == 401, p
     assert client.get("/").status_code == 200  # solo shell de login

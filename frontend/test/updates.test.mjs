@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { updatesApplicable, showBadge, safeUrl, updateSummary, channelOf, isPrerelease, versionLabel, CHANNEL_OPTIONS } from '../src/updates.js';
+import { updatesApplicable, showBadge, safeUrl, updateSummary, channelOf, isPrerelease, installedVersion, CHANNEL_OPTIONS } from '../src/updates.js';
 
 const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src');
 const NEW = { actual: '0.4.2', ultima: '0.5.0', hay_actualizacion: true, habilitado: true, notas: 'Novedades <b>x</b>', url: 'https://github.com/o/r/releases/tag/v0.5.0', comprobado_en: '2026-01-01T10:00:00+00:00', error: null, canal: 'stable', prerelease: false };
@@ -48,7 +48,8 @@ test('canal y marca preliminar: lógica pura', () => {
   for (const x of [null, {}, { canal: 'raro' }]) assert.equal(channelOf(x), 'stable');
   assert.equal(isPrerelease(PRE), true); assert.equal(isPrerelease(NEW), false); assert.equal(isPrerelease(null), false);
   assert.equal(isPrerelease({ prerelease: 'true' }), false);
-  assert.equal(versionLabel(PRE), '0.6.0-rc.1 (preliminar)'); assert.equal(versionLabel(NEW), '0.5.0'); assert.equal(versionLabel(null), '');
+  assert.equal(installedVersion(NEW), NEW.actual); assert.equal(installedVersion({ actual: 'desconocida' }), '');
+  assert.equal(installedVersion(null), ''); assert.equal(installedVersion({}), '');
   assert.deepEqual(CHANNEL_OPTIONS.map((o) => o.value), ['stable', 'beta']);
   assert.match(updateSummary(PRE), /preliminar/); assert.ok(!/preliminar/.test(updateSummary(NEW)));
 });

@@ -73,3 +73,8 @@ def test_contract_history_entries(api):
 def test_non_dict_body_is_400_not_500(api, path, body):
     r = api.post(path, content=body, headers={"content-type": "application/json"})
     assert r.status_code == 400, (path, body, r.status_code)
+
+
+def test_removed_endpoints_are_gone(api):
+    for p in ("/api/version", "/api/config/status"):
+        assert api.get(p).status_code == 404, p
