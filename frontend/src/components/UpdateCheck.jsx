@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { api } from '../api.js';
-import { updateSummary, channelOf, CHANNEL_OPTIONS, CHANNEL_HELP } from '../updates.js';
+import { updatesApplicable, updateSummary, channelOf, CHANNEL_OPTIONS, CHANNEL_HELP } from '../updates.js';
 
 // Tarjeta de Configuración: activar/desactivar la comprobación de versiones nuevas y forzarla a mano.
 export default function UpdateCheck({ info, onInfo }) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState('');
+  if (info && !updatesApplicable(info)) return null; // Docker sin forzar: ni tarjeta ni selector de canal
   const enabled = info ? info.habilitado !== false : true;
 
   const toggle = async (value) => {

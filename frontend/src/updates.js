@@ -1,8 +1,14 @@
 // Lógica pura de la comprobación de actualizaciones (sin React): fácil de probar.
 
-// La insignia solo aparece si la comprobación está activa y el backend dice que hay versión nueva.
+// El backend dice `aplicable: false` cuando la comprobación no va con este entorno (Docker, salvo forzado).
+// Mientras no hay respuesta (info null) tampoco se muestra nada: así la tarjeta no parpadea.
+export function updatesApplicable(info) {
+  return !!info && info.aplicable !== false;
+}
+
+// La insignia solo aparece si la comprobación es aplicable y está activa, y el backend dice que hay versión nueva.
 export function showBadge(info) {
-  return !!(info && info.habilitado !== false && info.hay_actualizacion === true);
+  return !!(info && info.aplicable !== false && info.habilitado !== false && info.hay_actualizacion === true);
 }
 
 // Solo se enlazan URLs https (las notas vienen de fuera: nunca se confía en el esquema).
