@@ -2,7 +2,15 @@
 import shutil
 from pathlib import Path
 
+import yaml
+
+from app.config import atomic_write
 from app.transport import Transport, TransportError
+
+
+def save_config(path, cfg):
+    """Escribe una Config como YAML (la app guarda con ConfigStore; los tests, así)."""
+    atomic_write(Path(path), yaml.safe_dump(cfg.model_dump(exclude_none=True), sort_keys=False, allow_unicode=True))
 
 
 class LocalTransport(Transport):

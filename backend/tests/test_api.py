@@ -8,8 +8,8 @@ from app.main import create_app
 from app.redact import redact
 
 PW = "correct horse"
-CFG = {"devices": {"a": {"host": "10.0.0.1", "user": "u", "os": "linux"},
-                   "b": {"host": "10.0.0.2", "user": "u", "os": "windows"}},
+CFG = {"devices": {"a": {"name": "Equipo a", "host": "10.0.0.1", "user": "u", "os": "linux"},
+                   "b": {"name": "Equipo b", "host": "10.0.0.2", "user": "u", "os": "windows"}},
        "games": {}}
 
 
@@ -52,7 +52,7 @@ def test_login_cookie_flags_and_config_roundtrip(client):
     assert r.status_code == 200 and r.json()["changed"] is True
     got = client.get("/api/config").json()
     assert got["config"]["devices"]["a"]["host"] == "10.0.0.1" and got["error"] is None
-    bad = {"devices": {"a": {"host": "x y", "user": "u", "os": "linux"}}}
+    bad = {"devices": {"a": {"name": "Equipo a", "host": "x y", "user": "u", "os": "linux"}}}
     r = client.put("/api/config", json={"config": bad, "base_version": got["version"]})
     assert r.status_code == 422 and "devices.a.host" in r.json()["errors"]
     assert client.get("/api/config").json()["config"]["devices"]["a"]["host"] == "10.0.0.1"  # intacto
@@ -129,7 +129,7 @@ def test_scheduler_history_endpoint(client):
 
 def test_versions_limit_endpoint(client, tmp_path):
     login(client)
-    cfg = dict(CFG, max_versions=7, games={"g": {"devices": ["a", "b"], "paths": {"a": "/x/y", "b": "C:/z"}}})
+    cfg = dict(CFG, max_versions=7, games={"g": {"name": "Juego g", "devices": ["a", "b"], "paths": {"a": "/x/y", "b": "C:/z"}}})
     client.sauth  # noqa
     (tmp_path / "config").mkdir(parents=True, exist_ok=True)
     import yaml

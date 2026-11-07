@@ -8,9 +8,9 @@ from app.sync import SyncAbort, fingerprint, list_versions, load_baseline, resto
 from fakes import LocalTransport
 
 CFG = parse_config({
-    "devices": {"pc": {"host": "h1", "user": "u", "os": "windows"},
-                "laptop": {"host": "h2", "user": "d", "os": "linux"}},
-    "games": {"g": {"devices": ["pc", "laptop"],
+    "devices": {"pc": {"name": "pc", "host": "h1", "user": "u", "os": "windows"},
+                "laptop": {"name": "laptop", "host": "h2", "user": "d", "os": "linux"}},
+    "games": {"g": {"name": "g", "devices": ["pc", "laptop"],
                     "paths": {"pc": "C:/Saves/g", "laptop": "/home/usuario/g"},
                     "process": "g.exe", "keep_versions": 2}},
 })
@@ -154,12 +154,12 @@ def _names(env, game="g"):
 
 
 def _cfg(max_versions=20, keep=None):
-    g = {"devices": ["pc", "laptop"], "paths": {"pc": "C:/Saves/g", "laptop": "/home/usuario/g"}}
+    g = {"name": "g", "devices": ["pc", "laptop"], "paths": {"pc": "C:/Saves/g", "laptop": "/home/usuario/g"}}
     if keep is not None:
         g["keep_versions"] = keep
     return parse_config({"max_versions": max_versions, "devices": {
-        "pc": {"host": "h1", "user": "u", "os": "windows"},
-        "laptop": {"host": "h2", "user": "d", "os": "linux"}}, "games": {"g": g}})
+        "pc": {"name": "pc", "host": "h1", "user": "u", "os": "windows"},
+        "laptop": {"name": "laptop", "host": "h2", "user": "d", "os": "linux"}}, "games": {"g": g}})
 
 
 def _sync_with(env, cfg, dry=False, **kw):
@@ -294,9 +294,9 @@ def test_prune_stays_inside_game_dir_ignores_symlinks(env, tmp_path):
 
 
 def test_config_without_max_versions_uses_default(env):
-    cfg = parse_config({"devices": {"pc": {"host": "h1", "user": "u", "os": "windows"},
-                                    "laptop": {"host": "h2", "user": "d", "os": "linux"}},
-                        "games": {"g": {"devices": ["pc", "laptop"],
+    cfg = parse_config({"devices": {"pc": {"name": "pc", "host": "h1", "user": "u", "os": "windows"},
+                                    "laptop": {"name": "laptop", "host": "h2", "user": "d", "os": "linux"}},
+                        "games": {"g": {"name": "g", "devices": ["pc", "laptop"],
                                         "paths": {"pc": "C:/Saves/g", "laptop": "/home/usuario/g"}}}})
     assert cfg.versions_limit("g") == 20
     for i in range(1, 26):
@@ -320,10 +320,9 @@ def test_restore_after_prune_still_works(env):
 
 def test_restore_blocked_while_game_locked(env):
     import fcntl
-    from app.config import slug_for
     _mkver(env, OLD[0])
     (env.data / "locks").mkdir(parents=True, exist_ok=True)
-    with open(env.data / "locks" / f"{slug_for('g')}.lock", "w") as f:
+    with open(env.data / "locks" / "g.lock", "w") as f:
         fcntl.flock(f, fcntl.LOCK_EX)
         with pytest.raises(SyncAbort):
             restore_version(_cfg(), "g", OLD[0], "pc", env.data)
@@ -362,13 +361,13 @@ def test_lock_prevents_overlap(env):
     f.close()
 
 
-def test_free_names_use_slug_paths_only(tmp_path):
-    from app.config import slug_for
-    gn, an, bn = "Mi Juego: Edición", "Mi PC (salón)", "Switch & Co"
-    g, a, b = slug_for(gn), slug_for(an), slug_for(bn)  # formato antiguo: ids = slug_for(nombre)
+def test_free_names_use_id_paths_only(tmp_path):
+    gn, an, bn = "Mi Juego: Edición", "Mi PC (salón)", "Consola & Co"
+    g, a, b = "juego-1a2b3c4d", "pc-5e6f7a8b", "consola-9c0d1e2f"  # los ids no se derivan del nombre
     cfg = parse_config({
-        "devices": {an: {"host": "h1", "user": "u", "os": "windows"}, bn: {"host": "h2", "user": "d", "os": "linux"}},
-        "games": {gn: {"devices": [an, bn], "paths": {an: "C:/S/g", bn: "/home/d/g"}, "keep_versions": 2}},
+        "devices": {a: {"name": an, "host": "h1", "user": "u", "os": "windows"},
+                    b: {"name": bn, "host": "h2", "user": "d", "os": "linux"}},
+        "games": {g: {"name": gn, "devices": [a, b], "paths": {a: "C:/S/g", b: "/home/d/g"}, "keep_versions": 2}},
     })
     pc, laptop, data = tmp_path / "pc", tmp_path / "laptop", tmp_path / "data"
     (pc / "C:/S/g").mkdir(parents=True)

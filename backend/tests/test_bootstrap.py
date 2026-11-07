@@ -108,13 +108,13 @@ def test_keyscan_uses_arg_list_no_shell(monkeypatch):
 def test_changed_host_key_gives_clear_error():
     p = subprocess.CompletedProcess(
         [], 255, b"", b"@@@ WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED! @@@\nHost key verification failed.")
-    msg = _err(p, Device(host="10.0.0.5", user="u", os="linux"))
+    msg = _err(p, Device(name="Equipo", host="10.0.0.5", user="u", os="linux"))
     assert "CAMBIADO" in msg and "No se sobrescribe" in msg
 
 
 def test_check_marks_first_use_and_fails_if_keyscan_fails(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "KNOWN_HOSTS", str(tmp_path / "known_hosts"))
-    dev = Device(host="10.0.0.5", user="u", os="linux")
+    dev = Device(name="Equipo", host="10.0.0.5", user="u", os="linux")
     monkeypatch.setattr(bootstrap, "_keyscan", lambda h, p: SCAN)
     monkeypatch.setattr("app.transport._run",
                         lambda a, timeout=0, stdin=None: subprocess.CompletedProcess(a, 0, b"ok", b""))

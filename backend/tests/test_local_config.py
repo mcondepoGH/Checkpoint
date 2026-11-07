@@ -2,9 +2,9 @@
 import pytest
 import yaml
 
-from app.config import (LOCAL_DOCKER_MSG, LOCAL_NO_REMOTE_MSG, LOCAL_ONE_MSG, load_yaml, parse_config,
-                        save_config, validate_config)
+from app.config import LOCAL_DOCKER_MSG, LOCAL_NO_REMOTE_MSG, LOCAL_ONE_MSG, load_yaml, parse_config, validate_config
 from app.configstore import diff_configs, parse_text, render_yaml
+from fakes import save_config
 
 REMOTE = {"name": "Laptop", "host": "192.0.2.10", "user": "usuario", "os": "linux", "port": 2222}
 
@@ -159,10 +159,10 @@ def test_yaml_con_local_y_clave_repetida_sigue_detectando():
         load_yaml("devices:\n  a: {local: true}\n  a: {local: true}\n")
 
 
-def test_sin_local_en_configs_existentes_compat_total():
-    d = {"devices": {"pc": {"host": "h1", "user": "u", "os": "windows"},
-                     "laptop": {"host": "h2", "user": "d", "os": "steamos", "port": 2200}},
-         "games": {"g": {"devices": ["pc", "laptop"], "paths": {"pc": "C:/S/g", "laptop": "/h/g"}}}}
+def test_sin_local_los_dispositivos_son_remotos():
+    d = {"devices": {"pc": {"name": "A", "host": "h1", "user": "u", "os": "windows"},
+                     "laptop": {"name": "B", "host": "h2", "user": "d", "os": "linux", "port": 2200}},
+         "games": {"g": {"name": "G", "devices": ["pc", "laptop"], "paths": {"pc": "C:/S/g", "laptop": "/h/g"}}}}
     c = parse_config(d)
     assert all(not dv.local for dv in c.devices.values())
-    assert c.devices[next(k for k in c.devices if c.devices[k].name == "laptop")].port == 2200
+    assert c.devices["laptop"].port == 2200 and c.devices["pc"].port == 22

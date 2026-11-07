@@ -1,12 +1,13 @@
 import pytest
 from pydantic import ValidationError
 
-from app.config import load_config, name_error, normalize_path, parse_config, save_config, slug_for
+from app.config import MISSING_NAME_MSG, load_config, name_error, normalize_path, parse_config, validate_config
+from fakes import save_config
 
 BASE = {
-    "devices": {"pc": {"host": "192.0.2.10", "user": "u", "os": "windows"},
-                "laptop": {"host": "192.0.2.11", "user": "laptop", "os": "linux"}},
-    "games": {"g": {"devices": ["pc", "laptop"],
+    "devices": {"pc": {"name": "Equipo A", "host": "192.0.2.10", "user": "u", "os": "windows"},
+                "laptop": {"name": "Equipo B", "host": "192.0.2.11", "user": "laptop", "os": "linux"}},
+    "games": {"g": {"name": "Juego de prueba", "devices": ["pc", "laptop"],
                     "paths": {"pc": "C:\\Users\\u\\Saves", "laptop": "/home/usuario/saves"},
                     "process": "game.exe"}},
 }
@@ -64,9 +65,23 @@ def test_invalid(bad):
         parse_config(bad)
 
 
-def test_legacy_os_alias_still_valid():
-    c = parse_config(mod(devices__laptop__os="steamos"))
-    assert c.devices["laptop"].os == "steamos"
+def test_steamos_is_no_longer_an_os():
+    with pytest.raises(ValidationError):
+        parse_config(mod(devices__laptop__os="steamos"))
+    _, e = validate_config(mod(devices__laptop__os="steamos"))
+    assert "devices.laptop.os" in e
+
+
+@pytest.mark.parametrize("section,key", [("devices", "pc"), ("games", "g")])
+def test_name_is_required_with_clear_error(section, key):
+    d = mod()
+    del d[section][key]["name"]
+    with pytest.raises(ValidationError, match="name"):
+        parse_config(d)
+    cfg, e = validate_config(d)
+    assert cfg is None and e[f"{section}.{key}.name"] == MISSING_NAME_MSG
+    d[section][key]["name"] = None
+    assert validate_config(d)[1][f"{section}.{key}.name"] == MISSING_NAME_MSG
 
 
 def test_versions_limit_global_override_and_zero():
@@ -93,7 +108,7 @@ def test_save_roundtrip_without_override(tmp_path):
     assert load_config(tmp_path / "c.yaml").max_versions == 9
 
 
-def test_bad_names():
+def test_bad_ids():
     d = mod()
     d["games"]["../x"] = d["games"].pop("g")
     with pytest.raises(ValidationError):
@@ -123,52 +138,31 @@ FREE = ["Mi Juego: Edición", "Mi PC (salón)", "Nintendo Switch & Co", "It's \"
 @pytest.mark.parametrize("n", FREE)
 def test_free_names_ok(n):
     assert name_error(n) is None
-    d = mod()
-    d["devices"][n] = d["devices"].pop("pc")
-    d["games"]["g"]["devices"] = [n, "laptop"]
-    d["games"]["g"]["paths"] = {n: "C:/a", "laptop": "/x/y"}
-    d["games"][n] = d["games"].pop("g")
-    c = parse_config(d)  # formato antiguo: el id es slug_for(clave) y el nombre la clave
-    assert c.devices[slug_for(n)].name == n and c.games[slug_for(n)].name == n
+    d = mod(devices__pc__name=n, games__g__name=n + "!" if len(n) < 64 else "otro")
+    c = parse_config(d)
+    assert c.devices["pc"].name == n and "pc" in c.devices and "g" in c.games
 
 
 @pytest.mark.parametrize("n", ["", "   ", " x", "x ", "a  b", "a/b", "a\\b", "../x", "..", "...", "a\nb", "a\x00b",
                               "a\tb", "a\u00a0b", "a\u2028b", "a" * 65, 5, None])
 def test_bad_free_names(n):
     assert name_error(n)
-    d = mod()
-    d["games"][n] = d["games"].pop("g")
     with pytest.raises(ValidationError):
-        parse_config(d)
+        parse_config(mod(games__g__name=n))
 
 
-def test_slug_legacy_identical_and_safe():
-    for n in ["Mi-Juego-VII", "MiPC", "MiJuego", "a_b-1", "g"]:
-        assert slug_for(n) == n
-    import re
-    for n in FREE[:5] + ["../x", "con", "🎮", "日本語"]:
-        s = slug_for(n)
-        assert re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]*", s), s
-        assert slug_for(n) == s  # estable
-    assert slug_for("A B") != slug_for("A-B") == "A-B"
-    assert slug_for("🎮").startswith("item-")
-
-
-def test_slug_collisions_and_dupes_rejected():
-    for dup in ("mi juego", "MI JUEGO"):
+def test_duplicate_names_rejected_case_insensitive():
+    for dup in ("juego de prueba", "JUEGO DE PRUEBA"):
         d = mod()
-        d["games"]["Mi Juego"] = d["games"]["g"]
-        d["games"][dup] = d["games"]["g"]
+        d["games"]["g2"] = {**d["games"]["g"], "name": dup}
         with pytest.raises(ValidationError):
             parse_config(d)
     d = mod()
-    d["games"]["A B"] = d["games"]["g"]
-    d["games"]["A-B"] = d["games"]["g"]  # slugs distintos: válido
-    c = parse_config(d)  # ids distintos aunque los nombres se parezcan
-    assert {g.name for g in c.games.values()} >= {"A B", "A-B"} and slug_for("A B") in c.games
+    d["games"]["g2"] = {**d["games"]["g"], "name": "Juego de prueba 2"}
+    assert set(parse_config(d).games) == {"g", "g2"}
 
 
-def test_device_named_hub_reserved():
+def test_device_id_hub_reserved():
     d = mod()
     d["devices"]["hub"] = d["devices"].pop("pc")
     d["games"]["g"]["devices"] = ["hub", "laptop"]
@@ -178,9 +172,8 @@ def test_device_named_hub_reserved():
 
 
 def test_yaml_roundtrip_special_names(tmp_path):
-    d = mod()
-    d["games"]["Mi Juego: Edición"] = d["games"].pop("g")
-    d["games"]["123"] = dict(d["games"]["Mi Juego: Edición"])
+    d = mod(games__g__name="Mi Juego: Edición")
+    d["games"]["123"] = {**d["games"]["g"], "name": "123"}
     p = tmp_path / "c.yaml"
     save_config(p, parse_config(d))
     assert {g.name for g in load_config(p).games.values()} == {"Mi Juego: Edición", "123"}
