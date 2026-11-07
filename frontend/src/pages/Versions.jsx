@@ -23,9 +23,9 @@ export default function Versions({ config, onGoSettings }) {
 
   return (
     <section className={list.length === 0 ? 'fill' : undefined}>
-      <div className="row between">
+      <div className="row between versions-head">
         <h2>Versiones</h2>
-        <select value={game} onChange={(e) => { setGame(e.target.value); setMsg(null); }}>
+        <select aria-label="Juego" value={game} onChange={(e) => { setGame(e.target.value); setMsg(null); }}>
           {games.map((g) => <option key={g} value={g}>{config.games[g].name}</option>)}
         </select>
       </div>
@@ -48,8 +48,8 @@ export default function Versions({ config, onGoSettings }) {
           <div className="card" key={v.version}>
             <h3>{v.version}</h3>
             {v.sources.map((s) => (
-              <div className="row between" key={s.source}>
-                <span><b>{s.name || s.source}</b> · {s.files} ficheros · {s.mtime}</span>
+              <div className="row between version-src" key={s.source}>
+                <span className="version-info"><b>{s.name || s.source}</b> · {s.files} ficheros · {s.mtime}</span>
                 <button className="btn" onClick={() => restore(v.version, s.source, s.name || s.source)}>Restaurar</button>
               </div>
             ))}
