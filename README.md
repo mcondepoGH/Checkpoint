@@ -55,6 +55,9 @@ Requisitos: Docker y Docker Compose.
 | `CHECKPOINT_AUTO_ENABLED` | `0` | Valor inicial de la sync automática |
 | `CHECKPOINT_AUTO_INTERVAL_HOURS` | `24` | Valor inicial del intervalo |
 | `CHECKPOINT_AUTO_ON_CONFLICT` | `skip` | Valor inicial ante conflictos en la sync automática (`skip` o `newest`) |
+| `CHECKPOINT_UPDATE_CHECK` | `1` | Valor inicial de la comprobación de versiones nuevas (`0` la desactiva; lo guardado en la UI prevalece) |
+| `CHECKPOINT_UPDATE_REPO` | `mcondepoGH/Checkpoint` | Repositorio de GitHub (`dueño/repo`) cuyas Releases se consultan |
+| `CHECKPOINT_UPDATE_CACHE_HOURS` | `6` | Horas que se reutiliza el resultado antes de volver a consultar (mínimo 0.25) |
 | `CHECKPOINT_COOKIE_SECURE` / `CHECKPOINT_TRUST_PROXY` | `0` | Pon `1` tras un proxy inverso con HTTPS |
 | `TZ`, `PUID`, `PGID` | `Europe/Madrid`, `1000` | Zona horaria y usuario del contenedor |
 
@@ -139,6 +142,15 @@ devices:
 
 En **Configuración > Sincronización automática** activa la opción y elige cada cuántas horas se ejecuta (de 0.25 a 168). Cada ciclo sincroniza todos los juegos; si uno falla, los demás continúan. Debajo se muestra el **Registro de ejecuciones** con resultado por juego y detalle al hacer clic. Los ajustes guardados en la UI prevalecen sobre las variables de entorno.
 
+## Nuevas versiones
+
+Checkpoint comprueba si hay una versión nueva consultando las Releases públicas de GitHub (solo HTTPS, solo versiones estables: se ignoran borradores y pre-releases). Si la hay, aparece la insignia **Nueva versión disponible** en la cabecera, con la versión instalada, la nueva y sus notas. Por ahora no actualiza nada: para actualizar, reconstruye la imagen y vuelve a levantar el contenedor.
+
+- La versión instalada sale del fichero `VERSION` de la raíz del repositorio (la imagen lo incluye). Sin él, o en desarrollo, es «desconocida» y no se ofrece ninguna actualización.
+- El resultado se guarda en memoria y en `data/update_cache.json` durante `CHECKPOINT_UPDATE_CACHE_HOURS`. Un fallo de red es silencioso: se conserva el último resultado y se reintenta pasados unos minutos.
+- Se desactiva en **Configuración > Comprobar actualizaciones** (o con `CHECKPOINT_UPDATE_CHECK=0` como valor inicial). Desactivada, no se hace ninguna petición a internet. El botón **Comprobar ahora** fuerza la consulta (máximo una por minuto).
+- API (requiere sesión): `GET /api/version`, `GET /api/updates[?refresh=true]` y `PUT /api/updates` con `{"enabled": true|false}`.
+
 ## Conflictos
 
 Hay conflicto cuando los dos dispositivos han cambiado desde la última sincronización y su contenido es distinto (o, en la primera sincronización, ya difiere). Checkpoint nunca lo decide por la fecha a ciegas.
@@ -189,7 +201,7 @@ La clave de cada juego y dispositivo es su **ID interno**, que no cambia nunca; 
 cd backend && python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt -r requirements-dev.txt && pytest
 cd ../frontend && npm install && npm run dev     # desarrollo
-npm test                                         # pruebas de node (borrador y tarjeta de dispositivo)
+npm test                                         # pruebas de node (borrador, tarjeta de dispositivo y avisos de versión)
 npm run build                                    # producción
 ```
 
