@@ -8,6 +8,7 @@ import DeviceCard from '../components/DeviceCard.jsx';
 import GameCard from '../components/GameCard.jsx';
 import PublicKey from '../components/PublicKey.jsx';
 import AutoSync from '../components/AutoSync.jsx';
+import UpdateCheck from '../components/UpdateCheck.jsx';
 import SaveDialog from '../components/SaveDialog.jsx';
 import YamlDialog from '../components/YamlDialog.jsx';
 import BackupsDialog from '../components/BackupsDialog.jsx';
@@ -17,7 +18,7 @@ import DiffView from '../components/DiffView.jsx';
 
 // Pantalla única de Configuración: dispositivos y juegos como tarjetas, validación en vivo con el
 // validador del backend, vista previa de cambios antes de guardar.
-export default function Settings({ loaded, stale, configError, runtime, platform, onApplied, onReload, onDirty }) {
+export default function Settings({ loaded, stale, configError, runtime, platform, onApplied, onReload, onDirty, updates, onUpdates }) {
   const [draft, setDraft] = useState(() => fromConfig(loaded.config));
   const [errors, setErrors] = useState({});
   const [validating, setValidating] = useState(false);
@@ -155,6 +156,8 @@ export default function Settings({ loaded, stale, configError, runtime, platform
       {(draft.devices.length === 0 || draft.devices.some((d) => !d.local)) && <PublicKey />}
 
       <AutoSync />
+
+      <UpdateCheck info={updates} onInfo={onUpdates} />
 
       <fieldset className="card cfg-card">
         <legend className="cfg-title">Versiones guardadas</legend>

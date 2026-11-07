@@ -76,3 +76,13 @@ try:
     AUTO_INTERVAL_HOURS = float(_env("AUTO_INTERVAL_HOURS", "24"))
 except ValueError:
     AUTO_INTERVAL_HOURS = 24.0
+
+# Comprobación de nuevas versiones (solo lectura, GitHub Releases). UPDATE_CHECK y UPDATE_CHANNEL
+# («stable» o «beta»; otro valor -> stable) son los valores iniciales; lo guardado desde la UI prevalece.
+UPDATE_CHECK = _env("UPDATE_CHECK", "1").strip().lower() not in ("0", "false", "no", "off")
+UPDATE_CHANNEL = "beta" if _env("UPDATE_CHANNEL", "stable").strip().lower() == "beta" else "stable"
+UPDATE_REPO = _env("UPDATE_REPO", "mcondepoGH/Checkpoint").strip()
+try:
+    UPDATE_CACHE_HOURS = max(0.25, float(_env("UPDATE_CACHE_HOURS", "6")))
+except ValueError:
+    UPDATE_CACHE_HOURS = 6.0
