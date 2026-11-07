@@ -56,6 +56,7 @@ Requisitos: Docker y Docker Compose.
 | `CHECKPOINT_AUTO_INTERVAL_HOURS` | `24` | Valor inicial del intervalo |
 | `CHECKPOINT_AUTO_ON_CONFLICT` | `skip` | Valor inicial ante conflictos en la sync automática (`skip` o `newest`) |
 | `CHECKPOINT_UPDATE_CHECK` | `1` | Valor inicial de la comprobación de versiones nuevas (`0` la desactiva; lo guardado en la UI prevalece) |
+| `CHECKPOINT_UPDATE_CHANNEL` | `stable` | Canal inicial de versiones: `stable` o `beta` (pruebas; otro valor se trata como `stable`; lo guardado en la UI prevalece) |
 | `CHECKPOINT_UPDATE_REPO` | `mcondepoGH/Checkpoint` | Repositorio de GitHub (`dueño/repo`) cuyas Releases se consultan |
 | `CHECKPOINT_UPDATE_CACHE_HOURS` | `6` | Horas que se reutiliza el resultado antes de volver a consultar (mínimo 0.25) |
 | `CHECKPOINT_COOKIE_SECURE` / `CHECKPOINT_TRUST_PROXY` | `0` | Pon `1` tras un proxy inverso con HTTPS |
@@ -144,12 +145,14 @@ En **Configuración > Sincronización automática** activa la opción y elige ca
 
 ## Nuevas versiones
 
-Checkpoint comprueba si hay una versión nueva consultando las Releases públicas de GitHub (solo HTTPS, solo versiones estables: se ignoran borradores y pre-releases). Si la hay, aparece la insignia **Nueva versión disponible** en la cabecera, con la versión instalada, la nueva y sus notas. Por ahora no actualiza nada: para actualizar, reconstruye la imagen y vuelve a levantar el contenedor.
+Checkpoint comprueba si hay una versión nueva consultando las Releases públicas de GitHub (solo HTTPS, por defecto solo versiones estables: se ignoran borradores y pre-releases). Si la hay, aparece la insignia **Nueva versión disponible** en la cabecera, con la versión instalada, la nueva y sus notas. Por ahora no actualiza nada: para actualizar, reconstruye la imagen y vuelve a levantar el contenedor.
 
 - La versión instalada sale del fichero `VERSION` de la raíz del repositorio (la imagen lo incluye). Sin él, o en desarrollo, es «desconocida» y no se ofrece ninguna actualización.
 - El resultado se guarda en memoria y en `data/update_cache.json` durante `CHECKPOINT_UPDATE_CACHE_HOURS`. Un fallo de red es silencioso: se conserva el último resultado y se reintenta pasados unos minutos.
 - Se desactiva en **Configuración > Comprobar actualizaciones** (o con `CHECKPOINT_UPDATE_CHECK=0` como valor inicial). Desactivada, no se hace ninguna petición a internet. El botón **Comprobar ahora** fuerza la consulta (máximo una por minuto).
-- API (requiere sesión): `GET /api/version`, `GET /api/updates[?refresh=true]` y `PUT /api/updates` con `{"enabled": true|false}`.
+- **Canal** (Configuración > Comprobar actualizaciones): **Estable** (por defecto) solo ofrece Releases normales; **Pruebas** (`beta`) ofrece también pre-releases (nunca borradores), que pueden fallar. En Pruebas se ofrece la versión más alta entre estables y preliminares, con el orden de semver: `0.5.0-rc.1` < `0.5.0-rc.2` < `0.5.0`. Un tag con sufijo (`-rc.1`) cuenta como preliminar aunque GitHub no lo marque. Cambiar de canal descarta el resultado guardado y vuelve a consultar. Nunca se ofrece bajar de versión: desde una preliminar en canal Estable solo se avisa cuando haya una estable mayor. La insignia y el diálogo marcan «preliminar» cuando procede.
+- La etiqueta de imagen `beta` llegará con la fase de publicación; hoy el canal solo cambia qué avisos se muestran.
+- API (requiere sesión): `GET /api/version`, `GET /api/updates[?refresh=true]` (incluye `canal` y `prerelease`, si la versión ofrecida es preliminar) y `PUT /api/updates` con `{"enabled": true|false, "channel": "stable"|"beta"}` (parcial: basta uno de los dos; valor no válido, 422).
 
 ## Conflictos
 

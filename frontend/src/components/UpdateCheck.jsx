@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { api } from '../api.js';
-import { updateSummary } from '../updates.js';
+import { updateSummary, channelOf, CHANNEL_OPTIONS, CHANNEL_HELP } from '../updates.js';
 
 // Tarjeta de Configuración: activar/desactivar la comprobación de versiones nuevas y forzarla a mano.
 export default function UpdateCheck({ info, onInfo }) {
@@ -11,6 +11,11 @@ export default function UpdateCheck({ info, onInfo }) {
   const toggle = async (value) => {
     setBusy(true); setMsg('');
     try { onInfo(await api('/api/updates', { method: 'PUT', body: { enabled: value } })); }
+    catch (e) { setMsg(e.message); } finally { setBusy(false); }
+  };
+  const setChannel = async (value) => {
+    setBusy(true); setMsg('');
+    try { onInfo(await api('/api/updates', { method: 'PUT', body: { channel: value } })); }
     catch (e) { setMsg(e.message); } finally { setBusy(false); }
   };
   const refresh = async () => {
@@ -31,6 +36,14 @@ export default function UpdateCheck({ info, onInfo }) {
         <span className="track" aria-hidden="true"><i /></span>
         <span>{enabled ? 'Activada' : 'Desactivada'}</span>
       </label>
+      <div className="update-channel">
+        <label htmlFor="update-channel">Canal</label>
+        <select id="update-channel" value={channelOf(info)} disabled={busy || !enabled} onChange={(e) => setChannel(e.target.value)}
+          aria-describedby="update-channel-help">
+          {CHANNEL_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+        </select>
+      </div>
+      <p id="update-channel-help" className="muted">{CHANNEL_HELP}</p>
       {info && <p className="muted" role="status">{updateSummary(info)}</p>}
       <div className="row">
         <button className="btn ghost" onClick={refresh} disabled={busy || !enabled}>Comprobar ahora</button>
