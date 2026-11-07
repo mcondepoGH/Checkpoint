@@ -1,0 +1,14 @@
+frontend/node_modules
+frontend/dist
+data
+keys
+config
+**/__pycache__
+**/.pytest_cache
+.env
+.git
+.venv
+.env.*
+*.log
+*.bak*
+.DS_Store

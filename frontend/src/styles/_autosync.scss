@@ -1,0 +1,44 @@
+@use 'variables' as v;
+
+// Tarjeta de sincronización automática (pantalla de Configuración).
+.autosync { margin-top: v.$gap; gap: .75rem; max-width: 640px;
+  h3 { margin: 0; }
+  p { margin: 0; }
+  .block { display: block; margin-top: .25rem; }
+  .alert.inline { display: inline-block; margin: 0; }
+  .autosync-grid { display: grid; gap: .75rem; grid-template-columns: minmax(0, 14rem) 1fr; align-items: end; }
+  .presets { display: flex; flex-wrap: wrap; gap: .4rem; }
+  .preset { padding: .4rem .8rem; border-radius: 99px;
+    &[aria-pressed='true'] { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 12px -3px var(--accent); } }
+  .autosync-status { color: var(--muted); font-size: .95rem; line-height: 1.7; }
+  @media (max-width: v.$bp-sm) { .autosync-grid { grid-template-columns: 1fr; } }
+}
+
+// Registro de ejecuciones: lista compacta con altura acotada y detalle expandible por ciclo.
+.autosync-log { gap: .6rem;
+  .runlog { list-style: none; margin: 0; padding: 0; max-height: 22rem; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--bg);
+    > li + li { border-top: 1px solid var(--border); } }
+  details { &[open] { background: rgba(34, 211, 238, .04); }
+    summary { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) auto auto; gap: .6rem; align-items: center; padding: .5rem .75rem; cursor: pointer; font-size: .9rem; list-style: none;
+      &::-webkit-details-marker { display: none; }
+      &:hover { background: rgba(34, 211, 238, .06); }
+      &:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; } }
+    .trig { color: var(--muted); }
+    .dur { color: var(--muted); font-variant-numeric: tabular-nums; } }
+  .detail { padding: .25rem .75rem .75rem; display: grid; gap: .4rem;
+    .msg { margin: 0; font-size: .88rem; word-break: break-word; &.is-error { color: var(--danger); } } }
+  .games { list-style: none; margin: 0; padding: 0; display: grid; gap: .3rem;
+    li { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; font-size: .88rem; }
+    small { word-break: break-word; } }
+  @media (max-width: v.$bp-sm) { details summary { grid-template-columns: 1fr auto; .trig, .dur { font-size: .8rem; } } }
+}
+
+// Interruptor accesible (checkbox real con role=switch; el control visual es decorativo).
+.switch { position: relative; display: inline-flex; align-items: center; gap: .6rem; cursor: pointer; width: fit-content;
+  input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+  .track { width: 2.8rem; height: 1.5rem; border-radius: 99px; background: var(--bg); border: 1px solid var(--border); position: relative; transition: border-color .2s, box-shadow .2s;
+    i { position: absolute; top: 2px; left: 2px; width: 1.1rem; height: 1.1rem; border-radius: 50%; background: var(--muted); transition: transform .2s, background .2s; } }
+  input:checked + .track { border-color: var(--accent); box-shadow: 0 0 12px -2px var(--accent);
+    i { transform: translateX(1.3rem); background: var(--accent); } }
+  input:focus-visible + .track { outline: 2px solid var(--primary); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .track, .track i { transition: none; } } }

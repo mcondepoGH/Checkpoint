@@ -1,0 +1,49 @@
+@use 'variables' as v;
+
+.section-head { margin-top: 1.5rem; h3 { margin: 0; } }
+
+// Tarjeta de formulario (fieldset semántico: agrupa los campos de un dispositivo/juego).
+.cfg-card { margin: 0; min-width: 0; gap: .75rem;
+  .cfg-title { font-family: v.$display; font-size: .85rem; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); padding: 0 .35rem; } }
+
+.alert.warn { border-color: var(--warn); color: var(--warn); }
+.diffbox { margin-top: .5rem; color: var(--text); }
+
+.pubkey { margin-top: v.$gap; summary { cursor: pointer; font-weight: 600; } }
+.keyhelp { margin: .5rem 0;
+  .keyhelp-head { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; justify-content: space-between; }
+  .keyhelp-intro { flex: 1 1 14rem; min-width: 0; p { margin: 0; } }
+  .chip { flex: none; width: 2rem; height: 2rem; padding: 0; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; line-height: 1;
+    &[aria-expanded='true'] { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 10px -2px var(--glow); }
+    &:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(34, 211, 238, .22), 0 0 14px -2px var(--accent); } }
+  .keyhelp-panel { margin-top: .75rem; padding: .75rem; width: 100%; box-sizing: border-box; border: 1px solid var(--accent); border-radius: 10px; background: var(--surface); box-shadow: 0 0 16px -8px var(--glow); }
+  .tab.active { border-color: var(--accent); box-shadow: 0 0 10px -2px var(--glow); color: var(--accent); }
+  .codeblock { display: flex; gap: .5rem; align-items: flex-start;
+    pre { flex: 1; margin: 0; padding: .5rem .75rem; overflow-x: auto; border: 1px solid var(--border); border-radius: 8px; background: rgba(0, 0, 0, .35); font-size: .85rem; }
+    code { word-break: normal; } } }
+
+// Barra de acciones fija al pie.
+.actionbar {
+  position: sticky; bottom: 0; z-index: 4; display: flex; gap: .5rem; align-items: center; flex-wrap: wrap;
+  margin: 1.5rem calc(-1 * v.$gap) calc(-1 * v.$gap); padding: .75rem v.$gap;
+  background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px); border-top: 1px solid var(--accent); box-shadow: 0 -6px 24px -10px var(--glow);
+}
+
+.dialog { width: min(480px, 100%);
+  &.wide { width: min(720px, 100%); } }
+.yaml { font-family: v.$mono; font-size: .8rem; white-space: pre; overflow: auto; }
+.backups { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .5rem; }
+
+.diff { display: flex; flex-direction: column; gap: .75rem;
+  h4 { margin: 0 0 .25rem; }
+  ul { margin: 0; padding-left: 1.25rem; }
+  .add > b { color: var(--ok); }
+  .del > b { color: var(--danger); }
+  .chg > b { color: var(--warn); } }
+
+@media (max-width: v.$bp-sm) {
+  .actionbar { .btn { flex: 1 1 auto; } }
+}
+
+.keyhelp .keyhelp-panel h4 { margin: 1rem 0 .25rem; color: var(--accent); }
+.keyhelp .codeblock pre { white-space: pre-wrap; word-break: break-all; }

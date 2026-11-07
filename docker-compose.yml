@@ -1,0 +1,26 @@
+services:
+  savesync:
+    build:
+      context: .
+      args:
+        PUID: ${PUID:-1000}   # uid/gid dueño de ./config, ./keys y ./data
+        PGID: ${PGID:-1000}
+    image: savesync:latest
+    container_name: savesync
+    restart: unless-stopped
+    ports:
+      - "${SAVESYNC_PORT:-8088}:8088"
+    environment:
+      TZ: ${TZ:-Europe/Madrid}
+      SAVESYNC_USER: ${SAVESYNC_USER:?define SAVESYNC_USER en .env}
+      SAVESYNC_PASSWORD: ${SAVESYNC_PASSWORD:?define SAVESYNC_PASSWORD en .env}  # en claro; se hashea en memoria
+      SAVESYNC_SESSION_HOURS: ${SAVESYNC_SESSION_HOURS:-12}
+      SAVESYNC_COOKIE_SECURE: ${SAVESYNC_COOKIE_SECURE:-0}   # 1 si accedes por HTTPS (proxy inverso)
+      SAVESYNC_TRUST_PROXY: ${SAVESYNC_TRUST_PROXY:-0}       # 1 si hay proxy inverso delante
+      SAVESYNC_AUTO_ENABLED: ${SAVESYNC_AUTO_ENABLED:-0}     # sync automática: valor inicial (la UI prevalece)
+      SAVESYNC_AUTO_INTERVAL_HOURS: ${SAVESYNC_AUTO_INTERVAL_HOURS:-24}
+      SAVESYNC_AUTO_RUN_ON_START: ${SAVESYNC_AUTO_RUN_ON_START:-0}
+    volumes:
+      - ./config:/config
+      - ./keys:/keys           # id_ed25519 (se genera sola) + known_hosts (primer uso)
+      - ./data:/data           # hub, versions, logs

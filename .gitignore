@@ -1,0 +1,31 @@
+# Secretos
+.env
+.env.*
+!.env.example
+keys/*
+!keys/.gitkeep
+*.pem
+*.key
+id_ed25519*
+known_hosts
+
+# Config y estado local
+config/config.yaml
+data/*
+!data/.gitkeep
+status/
+scheduler*.json
+
+# Build y dependencias
+frontend/node_modules/
+frontend/dist/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Varios
+*.log
+*.bak*
+.DS_Store

@@ -1,0 +1,27 @@
+@use 'variables' as v;
+
+* { box-sizing: border-box; }
+html { background: var(--bg); }
+body {
+  margin: 0; min-height: 100vh; color: var(--text); font: 500 17px/1.45 v.$font;
+  background: var(--page-bg), var(--bg); background-attachment: fixed;
+}
+h1, h2, h3 { margin: 0 0 .5rem; font-family: v.$display; letter-spacing: .04em; }
+h2 { font-size: 1.35rem; text-transform: uppercase;
+  background: linear-gradient(90deg, var(--accent), var(--primary), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+h3 { font-size: 1rem; }
+code, pre { font-family: v.$mono; }
+code { font-size: .85em; word-break: break-all; }
+.muted { color: var(--muted); margin: .25rem 0; }
+.spacer { flex: 1; }
+.center { min-height: 100vh; display: grid; place-items: center; padding: v.$gap; }
+::selection { background: var(--primary); color: var(--primary-text); }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+@keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 0 0 var(--glow); } 50% { box-shadow: 0 0 18px 2px var(--glow); } }
+@keyframes slide { from { background-position: 0 0; } to { background-position: 40px 0; } }
+@keyframes blink { 50% { opacity: .35; } }
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }

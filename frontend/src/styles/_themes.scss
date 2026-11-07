@@ -1,0 +1,14 @@
+@use 'sass:map';
+@use 'variables' as v;
+
+@mixin emit($name) {
+  @each $k, $val in map.get(v.$themes, $name) {
+    --#{$k}: #{$val};
+  }
+}
+
+// Sin preferencia explícita el tema por defecto es el oscuro gaming.
+:root { @include emit(dark); color-scheme: dark; }
+@media (prefers-color-scheme: light) { :root:not([data-theme='dark']):not([data-theme='light']) { @include emit(light); color-scheme: light; } }
+:root[data-theme='dark'] { @include emit(dark); color-scheme: dark; }
+:root[data-theme='light'] { @include emit(light); color-scheme: light; }

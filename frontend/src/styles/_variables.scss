@@ -1,0 +1,20 @@
+$radius: 14px;
+$gap: 1rem;
+$bp-sm: 640px;
+$font: 'Rajdhani', 'Orbitron', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+$display: 'Orbitron', 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
+$mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+// Tema gaming: oscuro con acentos neón (cian / magenta / violeta). Sin fuentes externas: pila de sistema.
+$themes: (
+  light: (bg: #eef0fb, surface: #ffffff, surface-2: #f4f1ff, text: #1a1535, muted: #5d5a85, border: #cfc9f0,
+          primary: #6d28d9, primary-text: #ffffff, accent: #0891b2, accent-2: #c026d3,
+          danger: #d11a4a, ok: #0f9d58, warn: #b45309, glow: rgba(109, 40, 217, .28),
+          log-bg: #120d2b, log-text: #5eead4,
+          page-bg: (radial-gradient(900px 500px at 10% -10%, rgba(109, 40, 217, .14), transparent 60%), radial-gradient(800px 500px at 100% 0%, rgba(8, 145, 178, .14), transparent 60%))),
+  dark: (bg: #07061a, surface: #11102b, surface-2: #181640, text: #e9e7ff, muted: #9c98c9, border: #2c2a63,
+         primary: #8b5cf6, primary-text: #ffffff, accent: #22d3ee, accent-2: #f43f9e,
+         danger: #ff4d79, ok: #34f5a0, warn: #ffc247, glow: rgba(139, 92, 246, .45),
+         log-bg: #03020d, log-text: #4ff5c4,
+         page-bg: (radial-gradient(900px 500px at 8% -10%, rgba(139, 92, 246, .22), transparent 60%), radial-gradient(800px 500px at 100% 0%, rgba(34, 211, 238, .14), transparent 60%), radial-gradient(700px 600px at 50% 120%, rgba(244, 63, 158, .12), transparent 60%))),
+);
