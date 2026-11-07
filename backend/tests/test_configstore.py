@@ -7,7 +7,7 @@ import pytest
 
 from app import configstore, settings
 from app.config import parse_config, validate_config
-from app.configstore import Conflict, ConfigStore, InvalidConfig, config_events_gen, diff_configs, render_yaml
+from app.configstore import Conflict, ConfigStore, InvalidConfig, config_events_gen, diff_configs
 
 from test_api import CFG, client, login  # noqa: F401  (fixture)
 

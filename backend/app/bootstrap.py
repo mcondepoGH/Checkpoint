@@ -164,6 +164,6 @@ _CHANGED_RE = re.compile(r"HOST IDENTIFICATION HAS CHANGED|Host key verification
 
 def explain_ssh_error(stderr: str, host: str, port) -> str:
     """Si el fallo de ssh es por cambio de host key, devuelve un aviso claro; si no, el texto original."""
-    if "HOST IDENTIFICATION HAS CHANGED" in stderr or _CHANGED_RE.search(stderr):
+    if _CHANGED_RE.search(stderr):
         return CHANGED_MSG.format(host=host, port=port)
     return stderr

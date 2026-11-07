@@ -162,7 +162,7 @@ class Scheduler:
                 continue
             self.current = game
             m = ""
-            policy = getattr(cfg.games[game], "on_conflict", None) or self.cfg.get("on_conflict", "skip")
+            policy = cfg.games[game].on_conflict or self.cfg.get("on_conflict", "skip")
             try:
                 st = self.runner(cfg, game, False, log=lambda m: None, conflict_policy=policy)
                 res[game] = st["result"]

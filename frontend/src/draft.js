@@ -22,16 +22,13 @@ export const idPrefix = (name, kind) => {
     .replace(/[^a-z0-9_-]+/g, '-').slice(0, 40).replace(/^[-_]+|[-_]+$/g, '');
   return base || kind;
 };
-// Espejo de generate_id (backend/app/config.py).
-export const newId = (name, kind = 'juego') => `${idPrefix(name, kind)}-${hex8()}`;
-export const ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 
 // Id con el que se guardará el elemento: el real si existe; si no, prefijo del nombre actual + su salt.
 export const idOf = (item, kind) => item.id || `${idPrefix(item.name, kind)}-${item.salt}`;
 
 export const OS_OPTIONS = [['windows', 'Windows'], ['linux', 'Linux']]
 // Valor heredado de config.yaml: se muestra como Linux (equivale a él) y se guarda como tal.
-const LEGACY_OS = { steamos: 'linux' };;
+const LEGACY_OS = { steamos: 'linux' };
 
 export const blankDevice = () => ({ key: uid(), id: null, salt: hex8(), name: '', local: false, host: '', port: '22', user: '', os: 'linux' });
 

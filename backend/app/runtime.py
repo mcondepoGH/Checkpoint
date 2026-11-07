@@ -44,10 +44,5 @@ def platform_name() -> str:
     return "linux"
 
 
-def default_device_os() -> str:
-    """Valor de `os` de un dispositivo config para esta plataforma (macOS usa semántica POSIX = 'linux')."""
-    return "windows" if platform_name() == "windows" else "linux"
-
-
 def info() -> dict:
     return {"runtime": runtime_name(), "platform": platform_name()}

@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128"><defs>
-<linearGradient id="mc1g" x1="0" y1="0" x2="128" y2="128" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#22d3ee"/><stop offset=".5" stop-color="#8b5cf6"/><stop offset="1" stop-color="#e879f9"/></linearGradient>
-<linearGradient id="mc1t" x1="150" y1="0" x2="470" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#22d3ee"/><stop offset=".55" stop-color="#8b5cf6"/><stop offset="1" stop-color="#e879f9"/></linearGradient>
-<filter id="mc1f" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
-</defs><g transform="translate(64 64) scale(.9) translate(-64 -64)"><path d="M64 8L112.5 36V92L64 120L15.5 92V36Z" fill="none" stroke="#0f172a" stroke-width="5" stroke-linejoin="round"/>
-<g fill="none" stroke="#0f172a" stroke-width="12" stroke-linecap="round"><path d="M87.9 44.3A29.5 29.5 0 1 0 87.9 83.7"/></g>
-<path d="M96.8 91.8L99.3 71.1L79.0 75.7Z" fill="#0f172a" stroke="#0f172a" stroke-width="2" stroke-linejoin="round"/></g></svg>

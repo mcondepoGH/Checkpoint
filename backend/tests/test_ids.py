@@ -12,7 +12,7 @@ import yaml
 from app import cli, history, settings
 from app.config import (ConfigError, ID_RE, generate_id, load_config, normalize_raw, parse_config, resolve_ref,
                         save_config, slug_for, validate_config)
-from app.configstore import ConfigStore, diff_configs, render_yaml
+from app.configstore import diff_configs, render_yaml
 from app.scheduler import Scheduler
 from app.sync import (SyncAbort, count_versions, fingerprint, list_versions, load_baseline, resolve_game,
                       restore_version, run_sync, save_baseline)

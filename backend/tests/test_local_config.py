@@ -2,7 +2,7 @@
 import pytest
 import yaml
 
-from app.config import (LOCAL_DOCKER_MSG, LOCAL_NO_REMOTE_MSG, LOCAL_ONE_MSG, Config, load_yaml, parse_config,
+from app.config import (LOCAL_DOCKER_MSG, LOCAL_NO_REMOTE_MSG, LOCAL_ONE_MSG, load_yaml, parse_config,
                         save_config, validate_config)
 from app.configstore import diff_configs, parse_text, render_yaml
 

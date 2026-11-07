@@ -9,7 +9,6 @@ from fastapi.testclient import TestClient
 from app import settings
 from app.auth import Auth
 from app.main import create_app
-from app.sync import fingerprint
 from app.transport import LocalDeviceTransport, LocalTransport
 
 PW = "correct horse"

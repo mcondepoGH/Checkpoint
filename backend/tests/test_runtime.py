@@ -57,12 +57,11 @@ def test_override_invalido_se_ignora(monkeypatch):
     assert runtime.runtime_name() == "docker"
 
 
-@pytest.mark.parametrize("plat,esperado,os_", [("linux", "linux", "linux"), ("win32", "windows", "windows"),
-                                              ("cygwin", "windows", "windows"), ("darwin", "macos", "linux"),
-                                              ("freebsd13", "linux", "linux")])
-def test_plataforma(monkeypatch, plat, esperado, os_):
+@pytest.mark.parametrize("plat,esperado", [("linux", "linux"), ("win32", "windows"), ("cygwin", "windows"),
+                                           ("darwin", "macos"), ("freebsd13", "linux")])
+def test_plataforma(monkeypatch, plat, esperado):
     monkeypatch.setattr(sys, "platform", plat)
-    assert runtime.platform_name() == esperado and runtime.default_device_os() == os_
+    assert runtime.platform_name() == esperado
 
 
 def test_info_solo_runtime_y_plataforma():

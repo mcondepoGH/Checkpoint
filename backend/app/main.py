@@ -1,15 +1,12 @@
 """API FastAPI. Motivo de FastAPI: pydantic ya valida la config y SSE/streaming vienen incluidos."""
 import asyncio
 import json
-import queue
 import threading
 import time
 import uuid
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import Dict, List, Optional
 
-import os
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import ValidationError
