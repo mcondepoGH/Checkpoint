@@ -16,7 +16,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
 from . import settings
-from .config import DEFAULT_MAX_VERSIONS, Config, atomic_write, validate_config
+from .config import DEFAULT_MAX_VERSIONS, Config, atomic_write, load_yaml, validate_config
 
 MAX_BACKUPS = 10
 BACKUP_PREFIX = "config.yaml.bak-"
@@ -58,7 +58,7 @@ class Snapshot:
 
 def parse_text(text: str):
     try:
-        data = yaml.safe_load(text)
+        data = load_yaml(text)
     except yaml.YAMLError as e:
         return None, f"YAML mal formado: {getattr(e, 'problem', None) or 'error de sintaxis'}"
     cfg, errors = validate_config(data)
@@ -140,9 +140,15 @@ def diff_configs(old: dict, new: dict) -> dict:
     d = {s: _section_diff(old.get(s) or {}, new.get(s) or {}) for s in ("devices", "games")}
     # Ajustes generales (valores sueltos): misma forma que las secciones para reutilizar la vista previa.
     ov, nv = old.get("max_versions", DEFAULT_MAX_VERSIONS), new.get("max_versions", DEFAULT_MAX_VERSIONS)
+    # Las secciones van por id (un renombrado es un cambio de `name`, no una baja y un alta); `names` da el
+    # nombre visible de cada id (el nuevo si existe; si no, el que tenía).
+    d["names"] = {s: {i: (v.get("name") if isinstance(v, dict) and v.get("name") else i)
+                      for i, v in {**(old.get(s) or {}), **(new.get(s) or {})}.items()}
+                  for s in ("devices", "games")}
     d["general"] = {"added": [], "removed": [],
                     "changed": {"General": {"max_versions": {"old": ov, "new": nv}}} if ov != nv else {}}
-    d["empty"] = not any(v["added"] or v["removed"] or v["changed"] for v in d.values() if isinstance(v, dict))
+    d["empty"] = not any(v["added"] or v["removed"] or v["changed"]
+                         for k, v in d.items() if isinstance(v, dict) and k != "names")
     return d
 
 

@@ -33,12 +33,15 @@ def short(msg, n: int = MSG_LEN) -> str:
 
 
 def make_entry(started: datetime, duration: float, trigger: str, result: str, games: dict, message: str = "") -> dict:
-    """`games`: {juego: {"result": ..., "message": ...}}. Valores desconocidos se normalizan."""
+    """`games`: {id del juego: {"result": ..., "message": ..., "name": ...}}. Valores desconocidos se normalizan.
+    Se guarda el id (clave estable) y el nombre que tenía entonces (legible aunque el juego se renombre o borre)."""
     gs = {}
     for g, d in games.items():
         r = d.get("result") if isinstance(d, dict) else d
         gs[str(g)] = {"result": r if r in RESULTS else "error",
                       "message": short(d.get("message", "")) if isinstance(d, dict) else ""}
+        if isinstance(d, dict) and isinstance(d.get("name"), str) and d["name"]:
+            gs[str(g)]["name"] = short(d["name"], 64)
     return {"id": uuid.uuid4().hex[:12],
             "started": started.astimezone(timezone.utc).isoformat(timespec="seconds"),
             "duration": round(max(0.0, float(duration)), 1),
@@ -95,6 +98,29 @@ def append(entry: dict, now: Optional[datetime] = None) -> None:
         tmp = p.with_name(f".{p.name}.tmp")
         tmp.write_text("".join(json.dumps(e, ensure_ascii=False) + "\n" for e in entries), encoding="utf-8")
         os.replace(tmp, p)
+
+
+def annotate(entries: List[dict], games: dict) -> List[dict]:
+    """Copia de `entries` donde cada juego lleva `id` (o None) y `name` legibles. `games` = {id: Game} actual.
+
+    Entradas nuevas: clave = id, `name` guardado (se actualiza al nombre actual si el juego sigue existiendo).
+    Entradas antiguas (clave = nombre): si coincide con el id o el nombre de un juego actual se mapea; si no,
+    se muestra el nombre tal cual con id None."""
+    by_name = {g.name: i for i, g in games.items()}
+    out = []
+    for e in entries:
+        gs = {}
+        for key, d in e["games"].items():
+            d = dict(d) if isinstance(d, dict) else {"result": d}
+            if key in games:
+                gid, name = key, games[key].name
+            elif key in by_name:  # historial antiguo: la clave era el nombre
+                gid, name = by_name[key], key
+            else:
+                gid, name = None, d.get("name") or key
+            gs[key] = {**d, "id": gid, "name": name}
+        out.append({**e, "games": gs})
+    return out
 
 
 def read(limit: int = 50) -> List[dict]:

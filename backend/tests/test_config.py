@@ -128,8 +128,8 @@ def test_free_names_ok(n):
     d["games"]["g"]["devices"] = [n, "laptop"]
     d["games"]["g"]["paths"] = {n: "C:/a", "laptop": "/x/y"}
     d["games"][n] = d["games"].pop("g")
-    c = parse_config(d)
-    assert n in c.devices and n in c.games
+    c = parse_config(d)  # formato antiguo: el id es slug_for(clave) y el nombre la clave
+    assert c.devices[slug_for(n)].name == n and c.games[slug_for(n)].name == n
 
 
 @pytest.mark.parametrize("n", ["", "   ", " x", "x ", "a  b", "a/b", "a\\b", "../x", "..", "...", "a\nb", "a\x00b",
@@ -164,7 +164,8 @@ def test_slug_collisions_and_dupes_rejected():
     d = mod()
     d["games"]["A B"] = d["games"]["g"]
     d["games"]["A-B"] = d["games"]["g"]  # slugs distintos: válido
-    assert "A B" in parse_config(d).games
+    c = parse_config(d)  # ids distintos aunque los nombres se parezcan
+    assert {g.name for g in c.games.values()} >= {"A B", "A-B"} and slug_for("A B") in c.games
 
 
 def test_device_named_hub_reserved():
@@ -182,4 +183,4 @@ def test_yaml_roundtrip_special_names(tmp_path):
     d["games"]["123"] = dict(d["games"]["Dragon Quest VII: Dimensión"])
     p = tmp_path / "c.yaml"
     save_config(p, parse_config(d))
-    assert set(load_config(p).games) == {"Dragon Quest VII: Dimensión", "123"}
+    assert {g.name for g in load_config(p).games.values()} == {"Dragon Quest VII: Dimensión", "123"}

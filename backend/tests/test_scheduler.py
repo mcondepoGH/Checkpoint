@@ -1,4 +1,5 @@
 import asyncio
+from types import SimpleNamespace
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -40,7 +41,7 @@ def sched(tmp_path, monkeypatch):
     calls = []
 
     class Cfg:
-        games = {"a": 1, "b": 2, "c": 3}
+        games = {k: SimpleNamespace(name=k.upper(), on_conflict=None) for k in "abc"}
 
     def runner(cfg, game, dry, log, **kw):  # kw: conflict_policy
         calls.append((game, dry))

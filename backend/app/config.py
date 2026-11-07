@@ -2,6 +2,7 @@
 import hashlib
 import os
 import re
+import secrets
 import tempfile
 import unicodedata
 from pathlib import Path
@@ -16,6 +17,8 @@ NAME_MAX = 64
 NAME_HELP = (f"1 a {NAME_MAX} caracteres: se admiten espacios (sin dobles ni al principio/final), "
              "símbolos, acentos y emojis; no se admiten / \\ ni caracteres de control")
 RESERVED_SLUGS = ("hub",)  # el hub se guarda con ese nombre junto a los dispositivos
+# Identificador interno (clave en config.yaml): estable e inmutable; nunca se deriva del nombre tras crearlo.
+ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
 HOST_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.:\-]{0,252}$")
 USER_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.\-]{0,31}$")
 PROC_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_. \-]{0,63}$")
@@ -58,7 +61,8 @@ def name_error(name) -> Optional[str]:
 
 
 def slug_for(name: str) -> str:
-    """Identificador seguro para rutas de disco y ficheros del hub.
+    """Id de un elemento del formato ANTIGUO (indexado por nombre). Solo se usa para migrarlo en memoria:
+    los elementos nuevos reciben un id aleatorio (`generate_id`) y nunca se vuelve a derivar del nombre.
 
     Nombre antiguo válido (letras, números, _ y -) -> el propio nombre (conserva datos existentes).
     Resto -> parte ASCII + hash corto del nombre original (estable, sin colisiones "A B" vs "A-B").
@@ -69,6 +73,37 @@ def slug_for(name: str) -> str:
     base = re.sub(r"[^A-Za-z0-9_-]+", "-", base)[:40].strip("-_")
     digest = hashlib.sha1(unicodedata.normalize("NFC", name).encode("utf-8")).hexdigest()[:8]
     return f"{base or 'item'}-{digest}"
+
+
+def generate_id(name: str, taken=(), kind: str = "juego") -> str:
+    """Identificador nuevo para un elemento creado: parte ASCII del nombre + '-' + 8 hex aleatorios.
+
+    Se genera UNA vez al crear el elemento; renombrarlo no lo cambia. Único (sin distinguir mayúsculas)
+    entre `taken` y distinto de 'hub'. Espejo de `newId` en frontend/src/draft.js.
+    """
+    base = unicodedata.normalize("NFKD", str(name or "")).encode("ascii", "ignore").decode().lower()
+    base = re.sub(r"[^a-z0-9_-]+", "-", base)[:40].strip("-_") or kind
+    low = {str(t).casefold() for t in taken}
+    while True:
+        cand = f"{base}-{secrets.token_hex(4)}"
+        if cand.casefold() not in low and cand.casefold() not in RESERVED_SLUGS:
+            return cand
+
+
+def resolve_ref(items, ref):
+    """Id del elemento de `items` ({id: objeto con .name}) al que apunta `ref` (id o nombre).
+
+    None si no existe. Lanza ConfigError si `ref` es ambiguo (coincide con varios elementos)."""
+    if not isinstance(ref, str) or not ref:
+        return None
+    hits = [i for i, it in items.items() if i == ref or getattr(it, "name", None) == ref]
+    if not hits:
+        low = ref.casefold()
+        hits = [i for i, it in items.items() if str(getattr(it, "name", "")).casefold() == low]
+    if len(hits) > 1:
+        raise ConfigError(f"{ref!r} es ambiguo: coincide con " + ", ".join(
+            f"{getattr(items[i], 'name', i)!r} (id {i})" for i in hits) + "; usa el id")
+    return hits[0] if hits else None
 
 
 def normalize_path(os_name: str, p: str) -> str:
@@ -98,6 +133,7 @@ def normalize_path(os_name: str, p: str) -> str:
 
 class Device(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    name: str = ""  # etiqueta visible y editable; la clave del mapa es el id
     host: str
     user: str
     os: str
@@ -134,8 +170,9 @@ class Device(BaseModel):
 
 class Game(BaseModel):
     model_config = ConfigDict(extra="forbid")
-    devices: List[str]
-    paths: Dict[str, str]
+    name: str = ""  # etiqueta visible y editable; la clave del mapa es el id
+    devices: List[str]  # ids de dispositivo
+    paths: Dict[str, str]  # id de dispositivo -> ruta
     process: Optional[str] = None
     # Override del máximo global `max_versions` para este juego; ausente = usar el global. 0 = sin límite.
     keep_versions: Optional[StrictInt] = None
@@ -166,8 +203,57 @@ class Game(BaseModel):
         return v
 
 
+def normalize_raw(data):
+    """Convierte el formato antiguo (secciones indexadas por nombre, sin campo `name`) al formato con ids.
+
+    Un elemento sin `name` es legado: su id es `slug_for(clave)` (igual que siempre, así las carpetas de
+    data/ no cambian) y su nombre la clave antigua. Las referencias por nombre en game.devices/paths se
+    resuelven a ids. Idempotente; no valida (eso lo hacen el esquema y semantic_errors)."""
+    if not isinstance(data, dict):
+        return data
+    out = dict(data)
+    legacy = {}  # sección -> {nombre antiguo: id}
+    for sec in ("devices", "games"):
+        items = data.get(sec)
+        if not isinstance(items, dict):
+            continue
+        new, legacy[sec] = {}, {}
+        for k, v in items.items():
+            if isinstance(k, str) and isinstance(v, dict) and "name" not in v:
+                nid = slug_for(k)
+                if nid in items or nid in new:  # choca con otra clave: se deja la clave tal cual (error de validación)
+                    nid = k
+                legacy[sec][k] = nid
+                new[nid] = {"name": k, **v}
+            else:
+                new[k] = v
+        out[sec] = new
+
+    def ref(sec, r):
+        if not isinstance(r, str):
+            return r
+        ids = out.get(sec) or {}
+        # una clave que ya es id de un elemento no legado manda; si no, se resuelve el nombre antiguo
+        if r in ids and r not in legacy.get(sec, {}).values():
+            return r
+        return legacy.get(sec, {}).get(r, r)
+
+    games = out.get("games")
+    if isinstance(games, dict) and legacy.get("devices") is not None:
+        for gid, g in list(games.items()):
+            if not isinstance(g, dict):
+                continue
+            g = dict(g)
+            if isinstance(g.get("devices"), list):
+                g["devices"] = [ref("devices", d) for d in g["devices"]]
+            if isinstance(g.get("paths"), dict):
+                g["paths"] = {ref("devices", d): p for d, p in g["paths"].items()}
+            games[gid] = g
+    return out
+
+
 def semantic_errors(devices, games) -> List[Tuple[str, str]]:
-    """Reglas cruzadas sobre datos crudos (dicts). Devuelve [(ruta_de_campo, mensaje)].
+    """Reglas cruzadas sobre datos crudos (dicts) ya en formato con ids. Devuelve [(ruta_de_campo, mensaje)].
 
     Trabaja sobre datos sin validar a propósito: así el validador en vivo informa de
     estos errores aunque otro campo ya falle en el esquema.
@@ -175,27 +261,35 @@ def semantic_errors(devices, games) -> List[Tuple[str, str]]:
     errs: List[Tuple[str, str]] = []
     devices = devices if isinstance(devices, dict) else {}
     games = games if isinstance(games, dict) else {}
-    def check_names(names, prefix, reserved=()):
-        seen_n, seen_s = {}, {}
-        for n in names:
+
+    def check_items(items, prefix, reserved=()):
+        seen_n, seen_i = {}, {}
+        for i, it in items.items():
+            if not isinstance(i, str) or not ID_RE.fullmatch(i):
+                errs.append((f"{prefix}.{i}", "id interno inválido: 1 a 64 caracteres entre letras, números, _ y -"))
+                continue
+            if i.casefold() in reserved:
+                errs.append((f"{prefix}.{i}", "id reservado"))
+                continue
+            if i.casefold() in seen_i:
+                errs.append((f"{prefix}.{i}", f"id repetido o igual (sin distinguir mayúsculas) a {seen_i[i.casefold()]!r}"))
+                continue
+            seen_i[i.casefold()] = i
+            n = it.get("name") if isinstance(it, dict) else None
+            if not isinstance(it, dict):
+                continue
             e = name_error(n)
             if e:
-                errs.append((f"{prefix}.{n}", e))
+                errs.append((f"{prefix}.{i}.name", e))
                 continue
-            sl = slug_for(n)
-            if sl.casefold() in reserved:
-                errs.append((f"{prefix}.{n}", "nombre reservado"))
-                continue
-            key = n.casefold()
-            other = seen_n.get(key) or seen_s.get(sl.casefold())
+            other = seen_n.get(n.casefold())
             if other:
-                errs.append((f"{prefix}.{n}", f"nombre repetido o demasiado parecido a {other!r}"))
+                errs.append((f"{prefix}.{i}.name", f"nombre repetido (sin distinguir mayúsculas): {other!r}"))
                 continue
-            seen_n[key] = n
-            seen_s[sl.casefold()] = n
+            seen_n[n.casefold()] = n
 
-    check_names(devices, "devices", RESERVED_SLUGS)
-    check_names(games, "games")
+    check_items(devices, "devices", RESERVED_SLUGS)
+    check_items(games, "games")
     for gname, g in games.items():
         gp = f"games.{gname}"
         if not isinstance(g, dict):
@@ -210,7 +304,7 @@ def semantic_errors(devices, games) -> List[Tuple[str, str]]:
             if not d:
                 errs.append((f"{gp}.devices.{i}", "elige un dispositivo"))
             elif d not in devices:
-                errs.append((f"{gp}.devices.{i}", f"dispositivo desconocido: {d!r}"))
+                errs.append((f"{gp}.devices.{i}", f"dispositivo desconocido (id inexistente): {d!r}"))
             else:
                 ok_devs.append(d)
         if devs[0] and devs[0] == devs[1]:
@@ -221,7 +315,8 @@ def semantic_errors(devices, games) -> List[Tuple[str, str]]:
             paths = {}
         for k in paths:
             if k not in devs:
-                errs.append((f"{gp}.paths.{k}", "sobra: este dispositivo no es del juego"))
+                errs.append((f"{gp}.paths.{k}", "sobra: este dispositivo no es del juego"
+                             if k in devices else "id de dispositivo inexistente"))
         for d in ok_devs:
             if d not in paths or paths[d] in (None, ""):
                 errs.append((f"{gp}.paths.{d}", "falta la ruta del save"))
@@ -250,8 +345,13 @@ class Config(BaseModel):
             raise ValueError(f"max_versions {MAX_VERSIONS_MSG}")
         return v
 
+    @model_validator(mode="before")
+    @classmethod
+    def _legacy(cls, data):
+        return normalize_raw(data)
+
     def versions_limit(self, game: str) -> int:
-        """Límite efectivo de versiones del juego: su override o el global. 0 = sin límite."""
+        """Límite efectivo de versiones del juego (por id): su override o el global. 0 = sin límite."""
         k = self.games[game].keep_versions
         return self.max_versions if k is None else k
 
@@ -295,6 +395,7 @@ def validate_config(data) -> Tuple[Optional[Config], Dict[str, str]]:
         return None, {"": "config debe ser un mapa YAML"}
     errors: Dict[str, str] = {}
     cfg = None
+    data = normalize_raw(data)
     try:
         cfg = Config.model_validate(data)
     except ValidationError as e:
@@ -311,11 +412,38 @@ def validate_config(data) -> Tuple[Optional[Config], Dict[str, str]]:
     return (cfg if not errors else None), errors
 
 
+class _UniqueKeyLoader(yaml.SafeLoader):
+    """SafeLoader que rechaza claves repetidas en un mapa (PyYAML se queda en silencio con la última)."""
+
+    def construct_mapping(self, node, deep=False):
+        seen = set()
+        for k_node, _v in node.value:
+            k = self.construct_object(k_node, deep=True)
+            try:
+                dup = k in seen
+            except TypeError:
+                continue
+            if dup:
+                raise yaml.constructor.ConstructorError(
+                    None, None, f"clave repetida: {k!r} (los ids no pueden repetirse)", k_node.start_mark)
+            seen.add(k)
+        return super().construct_mapping(node, deep)
+
+
+def load_yaml(text: str):
+    """yaml.safe_load con detección de claves repetidas."""
+    return yaml.load(text, Loader=_UniqueKeyLoader)
+
+
 def load_config(path: Path) -> Config:
     path = Path(path)
     if not path.exists():
         return Config()
-    return parse_config(yaml.safe_load(path.read_text(encoding="utf-8")))
+    try:
+        data = load_yaml(path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as e:
+        raise ConfigError(f"YAML mal formado: {getattr(e, 'problem', None) or 'error de sintaxis'}")
+    return parse_config(data)
 
 
 def atomic_write(path: Path, text: str, mode: Optional[int] = None) -> None:

@@ -152,12 +152,13 @@ class Scheduler:
         """Sincroniza todos los juegos (modo normal), uno tras otro. Salta los que ya están en curso."""
         cfg = self.get_cfg()
         res, msgs, det = {}, [], {}
-        for game in cfg.games:
+        for game in cfg.games:  # `game` es el id; en mensajes y logs se muestra el nombre
+            name = cfg.games[game].name
             if self.busy(game):
                 res[game] = "skipped"
-                msgs.append(f"{game}: omitido (ya en curso)")
-                det[game] = {"result": "skipped", "message": "ya en curso"}
-                log.info("auto-sync juego=%s resultado=skipped (ya en curso)", game)
+                msgs.append(f"{name}: omitido (ya en curso)")
+                det[game] = {"result": "skipped", "message": "ya en curso", "name": name}
+                log.info("auto-sync juego=%s resultado=skipped (ya en curso)", name)
                 continue
             self.current = game
             m = ""
@@ -167,21 +168,21 @@ class Scheduler:
                 res[game] = st["result"]
                 if st["result"] == "conflict":
                     m = "omitido por conflicto: " + st.get("message", "")
-                    msgs.append(f"{game}: {m}")
+                    msgs.append(f"{name}: {m}")
                 elif st["result"] != "ok":
                     m = st.get("message", "")
-                    msgs.append(f"{game}: {m}")
+                    msgs.append(f"{name}: {m}")
             except SyncAbort as e:
                 res[game], m = "aborted", str(e)
-                msgs.append(f"{game}: {e}")
+                msgs.append(f"{name}: {e}")
             except Exception as e:  # un juego roto no frena a los demás
                 res[game], m = "error", f"{type(e).__name__}: {e}"
-                msgs.append(f"{game}: {m}")
+                msgs.append(f"{name}: {m}")
             finally:
                 self.current = None
-            det[game] = {"result": res[game], "message": history.short(m)}
+            det[game] = {"result": res[game], "message": history.short(m), "name": name}
             (log.error if res[game] == "error" else log.info)(
-                "auto-sync juego=%s resultado=%s%s", game, res[game], f" ({history.short(m, 120)})" if m else "")
+                "auto-sync juego=%s resultado=%s%s", name, res[game], f" ({history.short(m, 120)})" if m else "")
         vals = set(res.values())
         result = ("error" if "error" in vals else "aborted" if "aborted" in vals
                   else "partial" if "partial" in vals else "conflict" if "conflict" in vals

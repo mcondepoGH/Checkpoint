@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
 from . import settings
-from .config import Config, slug_for
+from .config import Config, ConfigError, resolve_ref
 from .redact import redact
 from .transport import Transport, TransportError, get_transport
 
@@ -75,8 +75,10 @@ def _version_key(name: str):
     return (stamp, int(n) if n.isdigit() else 0)
 
 
-def list_versions(data_dir: Path, game: str) -> List[dict]:
-    base = Path(data_dir) / "versions" / slug_for(game)
+def list_versions(data_dir: Path, game: str, names: Optional[Dict[str, str]] = None) -> List[dict]:
+    """Versiones guardadas de `game` (id). `names` ({id de origen: nombre}) añade el nombre visible a cada origen."""
+    names = names or {}
+    base = Path(data_dir) / "versions" / game
     out = []
     if base.is_dir():
         for d in sorted(base.iterdir(), key=lambda d: _version_key(d.name), reverse=True):
@@ -85,13 +87,14 @@ def list_versions(data_dir: Path, game: str) -> List[dict]:
                 for s in sorted(d.iterdir()):
                     if s.is_dir():
                         fp = fingerprint(s)
-                        sources.append({"source": s.name, "files": fp.files, "mtime": _fmt(fp.mtime)})
+                        sources.append({"source": s.name, "name": names.get(s.name, s.name),
+                                        "files": fp.files, "mtime": _fmt(fp.mtime)})
                 out.append({"version": d.name, "sources": sources})
     return out
 
 
 def count_versions(data_dir: Path, game: str) -> int:
-    base = Path(data_dir) / "versions" / slug_for(game)
+    base = Path(data_dir) / "versions" / game
     if not base.is_dir():
         return 0
     return sum(1 for d in base.iterdir() if d.is_dir() and not d.is_symlink() and VERSION_RE.match(d.name))
@@ -106,7 +109,7 @@ def prune_versions(data_dir: Path, game: str, keep: int, log=lambda m: None, pro
     """
     if keep <= 0:
         return []
-    base = Path(data_dir) / "versions" / slug_for(game)
+    base = Path(data_dir) / "versions" / game
     root = (Path(data_dir) / "versions").resolve()
     if base.is_symlink() or not base.is_dir() or base.resolve().parent != root:
         return []
@@ -149,7 +152,7 @@ def _game_lock(data_dir: Path, gs: str):
 
 
 def _new_version_dir(data_dir: Path, game: str) -> Path:
-    base = Path(data_dir) / "versions" / slug_for(game)
+    base = Path(data_dir) / "versions" / game
     base.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
     d, i = base / stamp, 0
@@ -161,8 +164,8 @@ def _new_version_dir(data_dir: Path, game: str) -> Path:
 
 
 def _src(k: str) -> str:
-    """Carpeta de un origen (dispositivo o hub) dentro de una versión."""
-    return k if k == "hub" else slug_for(k)
+    """Carpeta de un origen (id de dispositivo o 'hub') dentro de una versión: el propio id."""
+    return k
 
 
 def _replace_dir(src: Path, dst: Path):
@@ -189,7 +192,7 @@ CLOCK_TOLERANCE = 2
 
 # ---- baseline: huella que cada participante tenía tras la última sync completa ----
 def _state_path(data_dir: Path, game: str) -> Path:
-    return Path(data_dir) / "state" / f"{slug_for(game)}.json"
+    return Path(data_dir) / "state" / f"{game}.json"
 
 
 def load_baseline(data_dir: Path, game: str) -> Dict[str, Optional[str]]:
@@ -260,7 +263,8 @@ def decide(fps: Dict[str, Fingerprint], base: Dict[str, Optional[str]]) -> dict:
     return {"kind": "conflict", "sides": nonempty, "reason": "no-baseline"}
 
 
-def pick_resolution(resolution: str, sides: List[str], fps: Dict[str, Fingerprint]) -> Optional[str]:
+def pick_resolution(resolution: str, sides: List[str], fps: Dict[str, Fingerprint],
+                    dn: Callable[[str], str] = lambda k: k) -> Optional[str]:
     """Elige ganador para un conflicto. None = indeterminado (relojes demasiado parecidos).
     Lanza SyncAbort si `resolution` no es válida."""
     if resolution == "newest":
@@ -277,9 +281,9 @@ def pick_resolution(resolution: str, sides: List[str], fps: Dict[str, Fingerprin
     else:
         raise SyncAbort(f"resolución inválida: {resolution!r}")
     if name not in fps:
-        raise SyncAbort(f"{name} no está disponible para resolver (offline o desconocido)")
+        raise SyncAbort(f"{dn(name)} no está disponible para resolver (offline o desconocido)")
     if fps[name].empty:
-        raise SyncAbort(f"{name} no tiene datos: no puede ganar")
+        raise SyncAbort(f"{dn(name)} no tiene datos: no puede ganar")
     return name
 
 
@@ -288,8 +292,31 @@ def valid_resolution(value) -> bool:
                                        (value.startswith("device:") and len(value) > 7))
 
 
-def _side(k: str, fp: Fingerprint) -> dict:
-    return {"name": k, "hub": k == "hub", "mtime": fp.mtime, "size": fp.size, "files": fp.files, "hash": fp.hash}
+def _side(k: str, fp: Fingerprint, name: Optional[str] = None) -> dict:
+    """Un lado de un conflicto: `id` es el origen (id de dispositivo o 'hub'), `name` lo que se muestra."""
+    return {"id": k, "name": name or k, "hub": k == "hub", "mtime": fp.mtime, "size": fp.size, "files": fp.files, "hash": fp.hash}
+
+
+def resolve_game(cfg: Config, ref) -> str:
+    """Id del juego al que apunta `ref` (id o nombre). SyncAbort si no existe o es ambiguo."""
+    try:
+        gid = resolve_ref(cfg.games, ref)
+    except ConfigError as e:
+        raise SyncAbort(str(e))
+    if gid is None:
+        raise SyncAbort(f"juego desconocido: {ref}")
+    return gid
+
+
+def _origin_id(cfg: Config, gid: str, ref):
+    """Id de origen de `ref` (id o nombre de uno de los dispositivos del juego, o 'hub'); si no, `ref` tal cual."""
+    if ref == "hub" or not isinstance(ref, str):
+        return ref
+    devs = {d: cfg.devices[d] for d in cfg.games[gid].devices if d in cfg.devices}
+    try:
+        return resolve_ref(devs, ref) or ref
+    except ConfigError as e:
+        raise SyncAbort(str(e))
 
 
 def run_sync(cfg: Config, game: str, dry_run: bool = False, data_dir: Optional[Path] = None,
@@ -299,19 +326,23 @@ def run_sync(cfg: Config, game: str, dry_run: bool = False, data_dir: Optional[P
              conflict_policy: Optional[str] = None) -> dict:
     """Devuelve dict de estado. Lanza SyncAbort si no se pudo ejecutar.
 
-    resolution: 'newest' | 'hub' | 'device:<nombre>' (sync manual, resuelve un conflicto).
-    expect: {origen: hash} que el usuario vio al elegir; si ya no coincide se devuelve el conflicto nuevo.
+    game: id del juego o su nombre (se resuelve a id; todo lo interno usa el id).
+    resolution: 'newest' | 'hub' | 'device:<id o nombre>' (sync manual, resuelve un conflicto).
+    expect: {origen (id o nombre): hash} que el usuario vio al elegir; si ya no coincide se devuelve el conflicto nuevo.
     conflict_policy: 'skip' | 'newest' (sync automática); sin ninguno de los dos, un conflicto se devuelve sin tocar nada."""
     data_dir = Path(data_dir or settings.DATA_DIR)
-    if not isinstance(game, str) or game not in cfg.games:
-        raise SyncAbort(f"juego desconocido: {game}")
+    game = resolve_game(cfg, game)
     if resolution is not None and not valid_resolution(resolution):
         raise SyncAbort(f"resolución inválida: {resolution!r}")
+    if resolution is not None and resolution.startswith("device:"):
+        resolution = "device:" + _origin_id(cfg, game, resolution[len("device:"):])
+    if expect:
+        expect = {_origin_id(cfg, game, k): v for k, v in expect.items()}
     if conflict_policy is not None and conflict_policy not in ON_CONFLICT:
         raise SyncAbort(f"política de conflicto inválida: {conflict_policy!r}")
     g = cfg.games[game]
     started = datetime.now()
-    gs = slug_for(game)  # el nombre visible nunca se usa como ruta de disco
+    gs = game  # el id interno es la única clave de rutas de disco; el nombre es solo la etiqueta
     logdir = data_dir / "logs" / gs
     logdir.mkdir(parents=True, exist_ok=True)
     logfile = logdir / (started.strftime("%Y-%m-%d_%H%M%S") + ".log")
@@ -322,7 +353,7 @@ def run_sync(cfg: Config, game: str, dry_run: bool = False, data_dir: Optional[P
             f.write(line + "\n")
         log(line)
 
-    status = {"game": game, "dry_run": dry_run, "started": started.isoformat(timespec="seconds"),
+    status = {"game": game, "name": g.name, "dry_run": dry_run, "started": started.isoformat(timespec="seconds"),
               "result": "error", "message": "", "log": logfile.name}
 
     locks = data_dir / "locks"
@@ -363,25 +394,35 @@ def run_sync(cfg: Config, game: str, dry_run: bool = False, data_dir: Optional[P
     return status
 
 
-def _check_process(g, tr, online, L=None):
+def _check_process(g, tr, online, L=None, dn=lambda k: k):
     if not g.process:
         return
     for n in online:
         try:
             running = tr[n].process_running(g.process)
         except TransportError as e:
-            raise SyncAbort(f"no se pudo comprobar el proceso en {n}: {e}")
+            raise SyncAbort(f"no se pudo comprobar el proceso en {dn(n)}: {e}")
         if running:
-            raise SyncAbort(f"{g.process} está abierto en {n}")
+            raise SyncAbort(f"{g.process} está abierto en {dn(n)}")
     if L:
         L(f"{g.process} no está abierto")
 
 
 def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=None, expect=None,
              conflict_policy=None):
-    labels = list(g.devices)
+    def resolution_text(r):  # 'device:<id>' -> 'device:<nombre>' para los logs
+        return "device:" + dn(r[7:]) if isinstance(r, str) and r.startswith("device:") else r
+
+    labels = list(g.devices)  # ids de dispositivo; en mensajes se muestra siempre el nombre
+
+    def dn(k):
+        return k if k == "hub" else (cfg.devices[k].name if k in cfg.devices else k)
+
+    def dns(ks):
+        return ", ".join(dn(k) for k in ks)
+
     tr = {n: (transports or {}).get(n) or get_transport(cfg.devices[n]) for n in labels}
-    L(f"sync {game} {'(dry-run) ' if dry_run else ''}entre {labels[0]} y {labels[1]}")
+    L(f"sync {g.name} {'(dry-run) ' if dry_run else ''}entre {dn(labels[0])} y {dn(labels[1])}")
 
     # 1. Conectividad: un dispositivo offline se compara solo con el hub; si no responde ninguno, no se toca nada.
     online, offline = [], []
@@ -389,44 +430,44 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
         try:
             tr[n].check()
             if getattr(tr[n], "first_use", False):
-                L(f"{n}: host key guardada (primer uso)")
-            L(f"{n}: conexión OK")
+                L(f"{dn(n)}: host key guardada (primer uso)")
+            L(f"{dn(n)}: conexión OK")
             online.append(n)
         except TransportError as e:
-            L(f"{n}: no responde ({e})")
+            L(f"{dn(n)}: no responde ({e})")
             offline.append(n)
     status["offline"] = offline
     if not online:
-        raise SyncAbort(f"{' y '.join(offline)} no responden; no se toca nada")
+        raise SyncAbort(f"{' y '.join(dn(k) for k in offline)} no responden; no se toca nada")
     if offline:
-        L(f"{', '.join(offline)} offline: se compara {online[0]} solo con el hub")
+        L(f"{dns(offline)} offline: se compara {dn(online[0])} solo con el hub")
 
     # 2. Proceso abierto.
-    _check_process(g, tr, online, L)
+    _check_process(g, tr, online, L, dn)
 
     with tempfile.TemporaryDirectory(prefix="checkpoint-") as td:
         tmp = Path(td)
         dirs: Dict[str, Path] = {}
         # 3. Descarga a temporal.
         for n in online:
-            d = tmp / slug_for(n)
+            d = tmp / n
             d.mkdir()
             if tr[n].exists(g.paths[n]):
-                L(f"{n}: descargando {g.paths[n]}")
+                L(f"{dn(n)}: descargando {g.paths[n]}")
                 tr[n].pull(g.paths[n], d)
             else:
-                L(f"{n}: la ruta no existe todavía (se trata como vacía)")
+                L(f"{dn(n)}: la ruta no existe todavía (se trata como vacía)")
             dirs[n] = d
-        hub = data_dir / "hub" / slug_for(game)
+        hub = data_dir / "hub" / game
         dirs["hub"] = hub
 
         fps = {k: fingerprint(v) for k, v in dirs.items()}
         for k, fp in fps.items():
-            L(f"{k}: {fp.files} ficheros, hash {(fp.hash or '-')[:12]}, mtime máx {_fmt(fp.mtime)}")
+            L(f"{dn(k)}: {fp.files} ficheros, hash {(fp.hash or '-')[:12]}, mtime máx {_fmt(fp.mtime)}")
 
         raw = load_baseline(data_dir, game)
         base = {k: raw[_src(k)] for k in fps if _src(k) in raw}
-        L("baseline: " + ", ".join(f"{k}={'sí' if k in base else 'no'}" for k in fps))
+        L("baseline: " + ", ".join(f"{dn(k)}={'sí' if k in base else 'no'}" for k in fps))
 
         def remember(h):  # tras una sync completa todos los participantes en línea tienen `h`
             if not dry_run:
@@ -450,33 +491,33 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
                 stale = [k for k, h in (expect or {}).items() if k in fps and fps[k].hash != h]
                 if stale:
                     why = "stale"
-                    L(f"los datos cambiaron desde que se mostró el conflicto ({', '.join(stale)}); elige de nuevo")
+                    L(f"los datos cambiaron desde que se mostró el conflicto ({dns(stale)}); elige de nuevo")
                 else:
-                    winner = pick_resolution(resolution, sides, fps)
+                    winner = pick_resolution(resolution, sides, fps, dn)
                     if winner is None:
                         why = "indeterminate"
                     else:
-                        L(f"conflicto resuelto manualmente ({resolution}): gana {winner}")
+                        L(f"conflicto resuelto manualmente ({resolution_text(resolution)}): gana {dn(winner)}")
             elif conflict_policy == "newest":
                 winner = pick_resolution("newest", sides, fps)
                 if winner is None:
                     why = "indeterminate"
                 else:
-                    L(f"conflicto resuelto por política 'newest': gana {winner}")
+                    L(f"conflicto resuelto por política 'newest': gana {dn(winner)}")
             if winner is None:
                 reason = why or d["reason"]
                 status["conflict"] = {"reason": reason, "policy": conflict_policy,
-                                      "sides": [_side(k, fps[k]) for k in sides]}
+                                      "sides": [_side(k, fps[k], dn(k)) for k in sides]}
                 text = {"indeterminate": "los relojes difieren menos de "
                                          f"{CLOCK_TOLERANCE} s: no se puede saber cuál es más reciente",
                         "stale": "los datos cambiaron desde que se mostró el conflicto",
                         "no-baseline": "primera sincronización con contenidos distintos",
                         "inconsistent": "los contenidos difieren sin cambios registrados",
                         "both-changed": "ambos lados cambiaron desde la última sincronización"}[reason]
-                status.update(result="conflict", message=f"conflicto en {', '.join(sides)}: {text}")
+                status.update(result="conflict", message=f"conflicto en {dns(sides)}: {text}")
                 L(f"CONFLICTO: {text}")
                 for k in sides:
-                    L(f"  {k}: {_fmt(fps[k].mtime)}, {fps[k].size} bytes, {fps[k].files} ficheros")
+                    L(f"  {dn(k)}: {_fmt(fps[k].mtime)}, {fps[k].size} bytes, {fps[k].files} ficheros")
                 L("no se modifica nada" + (" (política: omitir)" if conflict_policy == "skip" else ""))
                 return
         else:
@@ -484,18 +525,18 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
 
         wh = fps[winner].hash
         targets = [k for k in fps if fps[k].hash != wh]
-        L(f"ganador: {winner}")
+        L(f"ganador: {dn(winner)}")
         for k in targets:
             extra = "" if fps[k].empty else " (versión anterior se guarda)"
-            L(f"plan: {winner} -> {k}{extra}")
+            L(f"plan: {dn(winner)} -> {dn(k)}{extra}")
         status["winner"], status["targets"] = winner, targets
         if dry_run:
-            status.update(result="dry-run", message=f"ganador {winner}; destinos {', '.join(targets)}")
+            status.update(result="dry-run", message=f"ganador {dn(winner)}; destinos {dns(targets)}")
             L("dry-run: no se modifica nada")
             return
 
         # 4. Re-comprobar el proceso justo antes de escribir (puede haberse abierto durante la descarga).
-        _check_process(g, tr, online)
+        _check_process(g, tr, online, dn=dn)
 
         # 5. Guardar versiones perdedoras (siempre antes de sobrescribir).
         new_version = None
@@ -505,7 +546,7 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
             for k in targets:
                 if not fps[k].empty:
                     shutil.copytree(dirs[k], vdir / _src(k))
-                    L(f"versión guardada: {vdir.name}/{_src(k)}")
+                    L(f"versión guardada: {vdir.name}/{dn(k)}")
         # 6. Escribir: primero el hub (local, atómico), luego los dispositivos. Un fallo en un dispositivo
         #    no impide intentar el otro; el resultado es 'partial' y NO se actualiza ningún baseline.
         src = dirs[winner]
@@ -517,24 +558,24 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
             if k == "hub":
                 continue
             extras = relfiles(dirs[k]) - relfiles(src)
-            L(f"{k}: enviando")
+            L(f"{dn(k)}: enviando")
             try:
                 tr[k].push(src, g.paths[k], extras)
             except TransportError as e:
                 failed[k] = str(e)
-                L(f"ERROR enviando a {k}: {e}")
+                L(f"ERROR enviando a {dn(k)}: {e}")
         if failed:
             ok = [k for k in targets if k not in failed]
             status.update(result="partial", failed=sorted(failed),
-                          message=f"ganador {winner}; actualizados {', '.join(ok) or 'ninguno'}; "
-                                  f"fallaron {', '.join(f'{k} ({m})' for k, m in failed.items())}")
+                          message=f"ganador {dn(winner)}; actualizados {dns(ok) or 'ninguno'}; "
+                                  f"fallaron {', '.join(f'{dn(k)} ({m})' for k, m in failed.items())}")
             L("sincronización PARCIAL: baseline sin actualizar; se completará en la próxima ejecución")
             return
         remember(wh)
         # 7. Poda (solo tras éxito, no en dry-run; dentro del lock del juego).
         prune_versions(data_dir, game, cfg.versions_limit(game), L, protect=new_version)
-        note = f" ({', '.join(offline)} offline: pendiente)" if offline else ""
-        status.update(result="ok", message=f"ganador {winner}; actualizados {', '.join(targets)}{note}")
+        note = f" ({dns(offline)} offline: pendiente)" if offline else ""
+        status.update(result="ok", message=f"ganador {dn(winner)}; actualizados {dns(targets)}{note}")
         L("sincronización completada")
 
 
@@ -542,10 +583,12 @@ def restore_version(cfg: Config, game: str, version: str, source: str, data_dir:
     """Copia una versión al hub con mtime=ahora; el siguiente sync la propaga.
     La copia actual del hub se guarda antes como versión."""
     data_dir = Path(data_dir)
-    if game not in cfg.games or not VERSION_RE.match(version) \
-            or source not in {_src(d) for d in (*cfg.games[game].devices, "hub")}:
+    game = resolve_game(cfg, game)
+    if VERSION_RE.match(version):
+        source = _origin_id(cfg, game, source)
+    if not VERSION_RE.match(version) or source not in {_src(d) for d in (*cfg.games[game].devices, "hub")}:
         raise SyncAbort("versión/origen inválido")
-    gs = slug_for(game)
+    gs = game
     with _game_lock(data_dir, gs):
         src = data_dir / "versions" / gs / version / source
         if not src.is_dir():
@@ -567,4 +610,5 @@ def restore_version(cfg: Config, game: str, version: str, source: str, data_dir:
         _replace_dir(tmp, hub)
         shutil.rmtree(tmp)
         prune_versions(data_dir, game, cfg.versions_limit(game), protect=new_version)
-    return f"hub restaurado desde {version}/{source}; ejecuta Sincronizar para propagarlo"
+    src_name = source if source == "hub" else cfg.devices[source].name
+    return f"hub restaurado desde {version}/{src_name}; ejecuta Sincronizar para propagarlo"

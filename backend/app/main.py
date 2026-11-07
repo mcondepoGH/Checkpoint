@@ -19,7 +19,7 @@ from . import settings
 from . import bootstrap
 from . import history
 from .auth import Auth
-from .config import Config, Device, validate_config
+from .config import Config, ConfigError, Device, resolve_ref, validate_config
 from .configstore import Conflict, ConfigStore, InvalidConfig, parse_text, config_events_gen, diff_configs, render_yaml
 from .redact import redact
 from .scheduler import Scheduler
@@ -30,9 +30,10 @@ COOKIE = "checkpoint_session"
 
 
 class Run:
-    def __init__(self, game, dry_run):
+    def __init__(self, game, dry_run, name=None):
         self.id = uuid.uuid4().hex[:12]
-        self.game, self.dry_run = game, dry_run
+        self.game, self.dry_run = game, dry_run  # `game` es el id interno del juego
+        self.name = name or game
         self.lines: List[str] = []
         self.done = False
         self.status: Optional[dict] = None
@@ -209,8 +210,11 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     async def test_device(request: Request):
         """Prueba la conexión con los datos del formulario (aunque aún no estén guardados)."""
         body = await body_json(request)
+        raw = body.get("device")
+        if isinstance(raw, dict) and "name" not in raw:
+            raw = {**raw, "name": "prueba"}  # el nombre no influye en la conexión
         try:
-            dev = Device.model_validate(body.get("device"))
+            dev = Device.model_validate(raw)
         except ValidationError as e:
             return {"ok": False, "message": "datos del dispositivo inválidos: " + _errs(e)}
         return await run_in_threadpool(_test_conn, dev)
@@ -262,14 +266,26 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
 
     @app.get("/api/scheduler/history", dependencies=[Depends(require)])
     def get_scheduler_history(limit: int = Query(50, ge=1, le=200)):
-        return {"entries": history.read(limit)}
+        snap = store.snapshot()
+        games = snap.cfg.games if snap.cfg else {}
+        return {"entries": history.annotate(history.read(limit), games)}
+
+    def game_id(ref: str) -> str:
+        """Id del juego a partir de la ruta (id o nombre). 404 si no existe, 409 si es ambiguo."""
+        cfg = _cfg()
+        try:
+            gid = resolve_ref(cfg.games, ref)
+        except ConfigError as e:
+            raise HTTPException(409, str(e))
+        if gid is None:
+            raise HTTPException(404, "juego desconocido")
+        return gid
 
     # ---- sync ----
     @app.post("/api/sync/{game}", dependencies=[Depends(require)])
     async def start_sync(game: str, request: Request):
         cfg = _cfg()
-        if game not in cfg.games:
-            raise HTTPException(404, "juego desconocido")
+        game = game_id(game)
         try:
             body = await request.json()
         except Exception:
@@ -279,14 +295,14 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         dry = bool(body.get("dry_run", False))
         resolution = body.get("resolution")
         if resolution is not None and not valid_resolution(resolution):
-            raise HTTPException(422, "resolution debe ser 'newest', 'hub' o 'device:<nombre>'")
+            raise HTTPException(422, "resolution debe ser 'newest', 'hub' o 'device:<id o nombre>'")
         expect = body.get("expect")
         if expect is not None and not (isinstance(expect, dict) and all(
                 isinstance(k, str) and (v is None or isinstance(v, str)) for k, v in expect.items())):
             raise HTTPException(422, "expect debe ser un mapa origen -> hash")
         if scheduler.current == game or any(r.game == game and not r.done for r in runs.values()):
             raise HTTPException(409, "ya hay una ejecución en curso de este juego")
-        run = Run(game, dry)
+        run = Run(game, dry, cfg.games[game].name)
         runs[run.id] = run
         for old in [k for k, v in runs.items() if v.done][:-20]:
             runs.pop(old, None)
@@ -296,7 +312,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
                 run.status = run_sync(cfg, game, dry, log=run.lines.append, resolution=resolution, expect=expect)
             except SyncAbort as e:
                 run.lines.append(redact(f"ABORTADO: {e}"))
-                run.status = {"result": "aborted", "message": str(e)}
+                run.status = {"result": "aborted", "message": str(e), "game": game, "name": cfg.games[game].name}
             finally:
                 run.done = True
 
@@ -331,8 +347,12 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             for f in sd.glob("*.json"):
                 try:
                     st = json.loads(f.read_text())
-                    # El fichero se llama como el slug; la clave pública es el nombre visible.
-                    out[st["game"] if isinstance(st.get("game"), str) else f.stem] = st
+                    # El fichero se llama como el id del juego: esa es la clave. Los ficheros antiguos
+                    # guardaban el nombre en "game": se conserva como "name" y "game" pasa a ser el id.
+                    if isinstance(st.get("game"), str) and st["game"] != f.stem:
+                        st.setdefault("name", st["game"])
+                    st["game"] = f.stem
+                    out[f.stem] = st
                 except Exception:
                     pass
         return out
@@ -340,15 +360,14 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     # ---- versiones ----
     @app.get("/api/versions/{game}", dependencies=[Depends(require)])
     def versions(game: str):
-        if game not in _cfg().games:
-            raise HTTPException(404, "juego desconocido")
-        return list_versions(settings.DATA_DIR, game)
+        cfg = _cfg()
+        game = game_id(game)
+        return list_versions(settings.DATA_DIR, game, {k: d.name for k, d in cfg.devices.items()})
 
     @app.get("/api/versions/{game}/limit", dependencies=[Depends(require)])
     def versions_limit(game: str):
         cfg = _cfg()
-        if game not in cfg.games:
-            raise HTTPException(404, "juego desconocido")
+        game = game_id(game)
         return {"max": cfg.versions_limit(game), "count": count_versions(settings.DATA_DIR, game),
                 "override": cfg.games[game].keep_versions is not None}
 

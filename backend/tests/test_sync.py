@@ -364,10 +364,11 @@ def test_lock_prevents_overlap(env):
 
 def test_free_names_use_slug_paths_only(tmp_path):
     from app.config import slug_for
-    g, a, b = "Dragon Quest VII: Dimensión", "Mi PC (salón)", "Switch & Co"
+    gn, an, bn = "Dragon Quest VII: Dimensión", "Mi PC (salón)", "Switch & Co"
+    g, a, b = slug_for(gn), slug_for(an), slug_for(bn)  # formato antiguo: ids = slug_for(nombre)
     cfg = parse_config({
-        "devices": {a: {"host": "h1", "user": "u", "os": "windows"}, b: {"host": "h2", "user": "d", "os": "linux"}},
-        "games": {g: {"devices": [a, b], "paths": {a: "C:/S/g", b: "/home/d/g"}, "keep_versions": 2}},
+        "devices": {an: {"host": "h1", "user": "u", "os": "windows"}, bn: {"host": "h2", "user": "d", "os": "linux"}},
+        "games": {gn: {"devices": [an, bn], "paths": {an: "C:/S/g", bn: "/home/d/g"}, "keep_versions": 2}},
     })
     pc, laptop, data = tmp_path / "pc", tmp_path / "laptop", tmp_path / "data"
     (pc / "C:/S/g").mkdir(parents=True)
@@ -378,14 +379,14 @@ def test_free_names_use_slug_paths_only(tmp_path):
     tr = {a: LocalTransport(pc), b: LocalTransport(laptop)}
     st = run_sync(cfg, g, False, data, lambda m: None, tr, conflict_policy="newest")
     assert st["result"] == "ok"
-    slug = slug_for(g)
+    slug = g
     assert (data / "hub" / slug / "s.sav").read_text() == "new"
     assert (data / "status" / f"{slug}.json").exists() and (data / "locks" / f"{slug}.lock").exists()
     # nada con el nombre crudo en disco
     for sub in data.rglob("*"):
         assert not any(c in sub.relative_to(data).as_posix().replace("/", "") for c in ":() &")
     v = list_versions(data, g)
-    assert len(v) == 1 and v[0]["sources"][0]["source"] == slug_for(a)
+    assert len(v) == 1 and v[0]["sources"][0]["source"] == a
     msg = restore_version(cfg, g, v[0]["version"], v[0]["sources"][0]["source"], data)
     assert "hub restaurado" in msg
     assert (data / "hub" / slug / "s.sav").read_text() == "old"
