@@ -397,10 +397,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             for f in sd.glob("*.json"):
                 try:
                     st = json.loads(f.read_text())
-                    # El fichero se llama como el id del juego: esa es la clave. Los ficheros antiguos
-                    # guardaban el nombre en "game": se conserva como "name" y "game" pasa a ser el id.
-                    if isinstance(st.get("game"), str) and st["game"] != f.stem:
-                        st.setdefault("name", st["game"])
+                    # El fichero se llama como el id del juego: esa es la clave y el valor de "game".
                     st["game"] = f.stem
                     # La UI pinta `name`: siempre el nombre actual de la config (nunca el id).
                     if f.stem in games and games[f.stem].name:

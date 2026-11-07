@@ -305,19 +305,17 @@ def test_scheduler_cycle_uses_ids_and_records_names(tmp_path, monkeypatch):
     assert busy["games"] == {gid: "skipped"} and busy["message"] == "Zelda: omitido (ya en curso)"
 
 
-def test_history_annotate_new_old_and_unknown():
+def test_history_annotate_current_and_deleted():
     cfg = parse_config(NEW)
     gid = "zelda-0a1b2c3d"
     mk = lambda games: {"id": "e", "started": "2026-01-01T00:00:00+00:00", "games": games}  # noqa: E731
     new_e = mk({gid: {"result": "ok", "message": "", "name": "Nombre viejo"}})
-    old_by_name = mk({"Zelda": {"result": "ok", "message": ""}})
-    old_unknown = mk({"Juego borrado": {"result": "error", "message": "x"}})
     deleted_new = mk({"gone-00000000": {"result": "ok", "message": "", "name": "Era este"}})
-    a = history.annotate([new_e, old_by_name, old_unknown, deleted_new], cfg.games)
+    no_name = mk({"Zelda": {"result": "ok", "message": ""}})   # clave que no es un id actual: no se mapea por nombre
+    a = history.annotate([new_e, deleted_new, no_name], cfg.games)
     assert a[0]["games"][gid]["name"] == "Zelda" and a[0]["games"][gid]["id"] == gid  # nombre actual
-    assert a[1]["games"]["Zelda"] == {"result": "ok", "message": "", "id": gid, "name": "Zelda"}  # mapeado
-    assert a[2]["games"]["Juego borrado"]["name"] == "Juego borrado" and a[2]["games"]["Juego borrado"]["id"] is None
-    assert a[3]["games"]["gone-00000000"]["name"] == "Era este"
+    assert a[1]["games"]["gone-00000000"]["name"] == "Era este" and a[1]["games"]["gone-00000000"]["id"] is None
+    assert a[2]["games"]["Zelda"] == {"result": "ok", "message": "", "id": None, "name": "Zelda"}
     assert new_e["games"][gid]["name"] == "Nombre viejo"  # no muta la entrada original
 
 
@@ -433,14 +431,6 @@ def test_api_rename_keeps_data_reachable(api, tmp_path):
     assert d["empty"] is True  # ya guardado
 
 
-def test_api_status_legacy_file_keyed_by_id_with_name(api, tmp_path):
-    sd = tmp_path / "data" / "status"
-    sd.mkdir(parents=True)
-    (sd / f"{GID}.json").write_text(json.dumps({"game": GAME, "result": "ok", "message": "m"}))
-    got = api.get("/api/status").json()[GID]
-    assert got["game"] == GID and got["name"] == GAME
-
-
 def test_api_conflict_resolution_device_by_name(api, tmp_path):
     gid = "zelda-0a1b2c3d"
     roots = {"pc": tmp_path / "pc/C:/Saves/z", "lap": tmp_path / "laptop/home/usuario/z"}
@@ -455,14 +445,13 @@ def test_api_conflict_resolution_device_by_name(api, tmp_path):
     assert api.post("/api/sync/Zelda", json={"resolution": "device:"}).status_code == 422
 
 
-def test_api_history_annotated_with_legacy_names(api):
+def test_api_history_annotated_with_names(api):
     now = datetime.now(timezone.utc)
-    history.append(history.make_entry(now, 1, "scheduled", "ok", {"Zelda": {"result": "ok", "message": ""}}, ""), now=now)
     history.append(history.make_entry(now, 1, "scheduled", "ok",
-                                      {"zelda-0a1b2c3d": {"result": "ok", "message": "", "name": "Zelda"}}, ""), now=now)
+                                      {"zelda-0a1b2c3d": {"result": "ok", "message": "", "name": "Nombre viejo"}}, ""), now=now)
     es = api.get("/api/scheduler/history").json()["entries"]
-    assert [e["games"][k]["name"] for e, k in zip(es, ["zelda-0a1b2c3d", "Zelda"])] == ["Zelda", "Zelda"]
-    assert es[1]["games"]["Zelda"]["id"] == "zelda-0a1b2c3d"
+    g = es[0]["games"]["zelda-0a1b2c3d"]
+    assert g["name"] == "Zelda" and g["id"] == "zelda-0a1b2c3d"   # nombre actual de la config
 
 
 def test_api_validate_reports_id_paths_and_test_device_without_name(api):

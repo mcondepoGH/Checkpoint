@@ -29,7 +29,6 @@ NOTES_MAX = 6000       # caracteres de notas que se devuelven
 MAX_BODY = 1_000_000   # bytes máximos de respuesta
 SETTINGS_FILE = "updates.json"
 CACHE_FILE = "update_cache.json"
-_VER_RE = re.compile(r"^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?$")
 _SEMVER_RE = re.compile(r"^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z.-]+)?$")
 CHANNELS = ("stable", "beta")
 DEFAULT_CHANNEL = "stable"
@@ -39,14 +38,6 @@ def normalize_channel(v) -> str:
     """Valor desconocido -> 'stable'."""
     v = v.strip().lower() if isinstance(v, str) else ""
     return v if v in CHANNELS else DEFAULT_CHANNEL
-
-
-def parse_version(s) -> Optional[tuple]:
-    """'v1.2.3' -> (1, 2, 3). Pre-releases ('-rc1'), etiquetas no numéricas o más de 3 partes -> None."""
-    if not isinstance(s, str):
-        return None
-    m = _VER_RE.match(s.strip())
-    return tuple(int(x or 0) for x in m.groups()) if m else None
 
 
 def parse_semver(s) -> Optional[tuple]:
@@ -208,8 +199,7 @@ class UpdateChecker:
     # ---- estado ----
     @staticmethod
     def _same(c, repo, channel) -> bool:
-        # Una caché sin «channel» (fase 1) era del canal estable.
-        return bool(c) and c.get("repo") == repo and c.get("channel", DEFAULT_CHANNEL) == channel
+        return bool(c) and c.get("repo") == repo and c.get("channel") == channel
 
     def _do_fetch(self, repo, channel, now):
         old = self._cache if self._same(self._cache, repo, channel) else {}

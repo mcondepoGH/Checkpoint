@@ -32,14 +32,6 @@ def env(tmp_path, monkeypatch):
     return make, t, calls
 
 
-def test_parse_version():
-    assert updates.parse_version("v1.2.3") == (1, 2, 3)
-    assert updates.parse_version("1.2") == (1, 2, 0)
-    assert updates.parse_version("0.10.0") > updates.parse_version("0.9.9")
-    for bad in ("1.0.0-rc1", "abc", "", None, "desconocida", "1.2.3.4", "v"):
-        assert updates.parse_version(bad) is None
-
-
 def test_stable_channel_ignores_prereleases_and_drafts(env):
     make, _, _ = env
     c = make([rel("v0.9.0", prerelease=True), rel("v0.8.0", draft=True), rel("v0.5.0"), rel("v0.4.9"), rel("v0.5.0-rc1")])
@@ -286,15 +278,12 @@ def test_channel_change_invalidates_cache(env):
     assert c2.state()["ultima"] is None
 
 
-def test_phase1_cache_without_channel_counts_as_stable(env):
+def test_cache_without_channel_is_not_reused(env):
     make, _, calls = env
-    c = make([rel("v0.5.0")])
-    c.state()
+    make([rel("v0.5.0")]).state()
     p = settings.DATA_DIR / updates.CACHE_FILE
     d = json.loads(p.read_text()); d.pop("channel"); p.write_text(json.dumps(d))
     c2 = make([rel("v0.6.0")])
-    assert c2.state()["ultima"] == "0.5.0" and len(calls) == 1      # válida para stable
-    c2.set_channel("beta")
     assert c2.state()["ultima"] == "0.6.0" and len(calls) == 2
 
 
