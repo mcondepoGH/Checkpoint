@@ -201,7 +201,8 @@ def test_installed_version_file(tmp_path, monkeypatch):
 
 
 def test_repo_version_file_matches_semver():
-    assert updates.parse_version(updates.installed_version()) is not None
+    v = updates.installed_version()
+    assert updates.parse_semver(v) is not None and updates.format_semver(v) == v   # admite pre-release (1.0.0-rc.1)
 
 
 # ---- endpoints ----
@@ -405,3 +406,4 @@ def test_put_validation_is_atomic(api):
         assert r.status_code == 422, body
     s = api.get("/api/updates").json()
     assert s["canal"] == "stable" and s["habilitado"] is True     # nada se aplicó a medias
+
