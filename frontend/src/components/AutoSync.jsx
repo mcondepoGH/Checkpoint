@@ -111,7 +111,6 @@ export default function AutoSync() {
           </select>
         )}
       </Field>
-      <p className="muted">Hay conflicto cuando los dos dispositivos han cambiado desde la última sincronización y su contenido es distinto. Cada juego puede sustituir este ajuste en Configuración. En la sincronización manual siempre se pregunta.</p>
 
       <div className="row">
         <button type="button" className="btn primary" disabled={busy || !dirty || !!localErr} onClick={save}>Guardar</button>
