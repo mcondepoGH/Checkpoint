@@ -1,24 +1,16 @@
 services:
   checkpoint:
-    build:
-      context: .
-      args:
-        PUID: ${PUID:-1000}   # uid/gid dueño de ./config, ./keys y ./data
-        PGID: ${PGID:-1000}
-    # Para usar la imagen publicada en vez de construirla: quita `build` y pon image: ghcr.io/<owner>/checkpoint:latest
-    image: checkpoint:latest
+    # latest = última versión estable. Alternativas: :beta (versiones preliminares) o :X.Y.Z (versión fija).
+    image: ghcr.io/mcondepogh/checkpoint:latest
     container_name: checkpoint
     restart: unless-stopped
     ports:
-      - "${CHECKPOINT_PORT:-8088}:8088"
+      - "8088:8088"   # para otro puerto del equipo, cambia solo el primero (p. ej. "9000:8088")
     environment:
-      TZ: ${TZ:-UTC}
+      # Obligatorias (definidas en .env). Las opcionales se añaden aquí; ver README.
       CHECKPOINT_USER: ${CHECKPOINT_USER:?define CHECKPOINT_USER en .env}
-      CHECKPOINT_PASSWORD: ${CHECKPOINT_PASSWORD:?define CHECKPOINT_PASSWORD en .env}  # en claro; se hashea en memoria
-      CHECKPOINT_SESSION_HOURS: ${CHECKPOINT_SESSION_HOURS:-12}
-      CHECKPOINT_COOKIE_SECURE: ${CHECKPOINT_COOKIE_SECURE:-0}   # 1 si accedes por HTTPS (proxy inverso)
-      CHECKPOINT_TRUST_PROXY: ${CHECKPOINT_TRUST_PROXY:-0}       # 1 si hay proxy inverso delante
+      CHECKPOINT_PASSWORD: ${CHECKPOINT_PASSWORD:?define CHECKPOINT_PASSWORD en .env}
     volumes:
       - ./config:/config
-      - ./keys:/keys           # id_ed25519 (se genera sola) + known_hosts (primer uso)
-      - ./data:/data           # hub, versions, logs
+      - ./keys:/keys   # clave SSH (se genera sola) y known_hosts
+      - ./data:/data   # copias, versiones y logs
