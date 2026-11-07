@@ -11,7 +11,8 @@ from app.config import parse_config, validate_config
 from app.scheduler import Scheduler, validate_settings
 from app.sync import (SyncAbort, decide, fingerprint, list_versions, load_baseline, pick_resolution, run_sync,
                       save_baseline)
-from app.transport import LocalTransport, TransportError
+from app.transport import TransportError
+from fakes import LocalTransport
 from test_sync import CFG, Env, read
 
 

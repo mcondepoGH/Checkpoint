@@ -9,7 +9,8 @@ from fastapi.testclient import TestClient
 from app import settings
 from app.auth import Auth
 from app.main import create_app
-from app.transport import LocalDeviceTransport, LocalTransport
+from app.transport import LocalDeviceTransport
+from fakes import LocalTransport
 
 PW = "correct horse"
 PC, LAP = "pc-1a2b3c4d", "laptop-5e6f7a8b"

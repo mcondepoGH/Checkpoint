@@ -5,7 +5,7 @@ import pytest
 
 from app.config import parse_config
 from app.sync import SyncAbort, fingerprint, list_versions, load_baseline, restore_version, run_sync, save_baseline
-from app.transport import LocalTransport
+from fakes import LocalTransport
 
 CFG = parse_config({
     "devices": {"pc": {"host": "h1", "user": "u", "os": "windows"},

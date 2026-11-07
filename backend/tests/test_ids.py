@@ -16,7 +16,7 @@ from app.configstore import diff_configs, render_yaml
 from app.scheduler import Scheduler
 from app.sync import (SyncAbort, count_versions, fingerprint, list_versions, load_baseline, resolve_game,
                       restore_version, run_sync, save_baseline)
-from app.transport import LocalTransport
+from fakes import LocalTransport
 
 from test_api import client, login  # noqa: F401  (fixture)
 
