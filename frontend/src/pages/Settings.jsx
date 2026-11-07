@@ -9,6 +9,7 @@ import GameCard from '../components/GameCard.jsx';
 import PublicKey from '../components/PublicKey.jsx';
 import AutoSync from '../components/AutoSync.jsx';
 import UpdateCheck from '../components/UpdateCheck.jsx';
+import { updatesApplicable } from '../updates.js';
 import SaveDialog from '../components/SaveDialog.jsx';
 import YamlDialog from '../components/YamlDialog.jsx';
 import BackupsDialog from '../components/BackupsDialog.jsx';
@@ -157,7 +158,7 @@ export default function Settings({ loaded, stale, configError, runtime, platform
 
       <AutoSync />
 
-      <UpdateCheck info={updates} onInfo={onUpdates} />
+      {updatesApplicable(updates) && <UpdateCheck info={updates} onInfo={onUpdates} />}
 
       <fieldset className="card cfg-card">
         <legend className="cfg-title">Versiones guardadas</legend>

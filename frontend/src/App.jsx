@@ -4,6 +4,7 @@ import logo from './assets/logo-icon.svg';
 import Icon from './components/Icon.jsx';
 import UpdateBadge from './components/UpdateBadge.jsx';
 import UpdateDialog from './components/UpdateDialog.jsx';
+import { updatesApplicable } from './updates.js';
 import Login from './pages/Login.jsx';
 import Settings from './pages/Settings.jsx';
 import Sync from './pages/Sync.jsx';
@@ -74,10 +75,14 @@ export default function App() {
   // Comprobación de versión nueva: al entrar y cada 6 h (el backend cachea y no repite peticiones a GitHub).
   useEffect(() => {
     if (!authed) return undefined;
-    const check = () => api('/api/updates').then(setUpdates).catch(() => {});
+    let t = null;
+    const check = () => api('/api/updates').then((r) => {
+      setUpdates(r);
+      if (r && r.aplicable === false && t) { clearInterval(t); t = null; } // no aplica (Docker): sin más consultas
+    }).catch(() => {});
     check();
-    const t = setInterval(check, 6 * 3600 * 1000);
-    return () => clearInterval(t);
+    t = setInterval(check, 6 * 3600 * 1000);
+    return () => { if (t) clearInterval(t); };
   }, [authed]);
 
   const stale = latest !== null && latest !== loaded.version;
@@ -121,7 +126,7 @@ export default function App() {
         {tab === 'sync' && <Sync config={config} onGoSettings={() => setTab('settings')} />}
         {tab === 'versions' && <Versions config={config} onGoSettings={() => setTab('settings')} />}
       </main>
-      {showUpdate && updates && <UpdateDialog info={updates} onClose={() => setShowUpdate(false)} />}
+      {showUpdate && updatesApplicable(updates) && <UpdateDialog info={updates} onClose={() => setShowUpdate(false)} />}
     </div>
   );
 }

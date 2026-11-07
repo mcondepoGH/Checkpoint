@@ -55,7 +55,7 @@ Requisitos: Docker y Docker Compose.
 | `CHECKPOINT_AUTO_ENABLED` | `0` | Valor inicial de la sync automática |
 | `CHECKPOINT_AUTO_INTERVAL_HOURS` | `24` | Valor inicial del intervalo |
 | `CHECKPOINT_AUTO_ON_CONFLICT` | `skip` | Valor inicial ante conflictos en la sync automática (`skip` o `newest`) |
-| `CHECKPOINT_UPDATE_CHECK` | `1` | Valor inicial de la comprobación de versiones nuevas (`0` la desactiva; lo guardado en la UI prevalece) |
+| `CHECKPOINT_UPDATE_CHECK` | sin definir (`1` como valor inicial) | Sin Docker, valor inicial de la comprobación de versiones nuevas (`0` la desactiva; lo guardado en la UI prevalece). En Docker la comprobación está desactivada salvo que la definas explícitamente a `1` |
 | `CHECKPOINT_UPDATE_CHANNEL` | `stable` | Canal inicial de versiones: `stable` o `beta` (pruebas; otro valor se trata como `stable`; lo guardado en la UI prevalece) |
 | `CHECKPOINT_UPDATE_REPO` | `mcondepoGH/Checkpoint` | Repositorio de GitHub (`dueño/repo`) cuyas Releases se consultan |
 | `CHECKPOINT_UPDATE_CACHE_HOURS` | `6` | Horas que se reutiliza el resultado antes de volver a consultar (mínimo 0.25) |
@@ -145,14 +145,16 @@ En **Configuración > Sincronización automática** activa la opción y elige ca
 
 ## Nuevas versiones
 
-Checkpoint comprueba si hay una versión nueva consultando las Releases públicas de GitHub (solo HTTPS, por defecto solo versiones estables: se ignoran borradores y pre-releases). Si la hay, aparece la insignia **Nueva versión disponible** en la cabecera, con la versión instalada, la nueva y sus notas. Por ahora no actualiza nada: para actualizar, reconstruye la imagen y vuelve a levantar el contenedor.
+Checkpoint comprueba si hay una versión nueva consultando las Releases públicas de GitHub (solo HTTPS, por defecto solo versiones estables: se ignoran borradores y pre-releases). Si la hay, aparece la insignia **Nueva versión disponible** en la cabecera, con la versión instalada, la nueva y sus notas. Por ahora no actualiza nada: en Docker, reconstruye la imagen y vuelve a levantar el contenedor; en instalación nativa, descarga la nueva versión y reinicia.
+
+**Solo en instalación nativa.** Con Docker la comprobación está **desactivada por defecto**: no hace ninguna petición a internet, no lee ni escribe caché, y no aparecen la insignia ni la tarjeta «Comprobar actualizaciones» (allí se actualiza a mano, reconstruyendo la imagen). Para activarla en Docker, define `CHECKPOINT_UPDATE_CHECK=1` en el entorno del contenedor (debe estar definida explícitamente con un valor verdadero: `1`, `true`, `yes` u `on`; sin definir, o con `0`, sigue desactivada). Sin Docker (Linux, y el futuro `.exe` de Windows) está activa siempre. Cómo se decide Docker o nativo: ver «Instalación sin Docker».
 
 - La versión instalada sale del fichero `VERSION` de la raíz del repositorio (la imagen lo incluye). Sin él, o en desarrollo, es «desconocida» y no se ofrece ninguna actualización.
 - El resultado se guarda en memoria y en `data/update_cache.json` durante `CHECKPOINT_UPDATE_CACHE_HOURS`. Un fallo de red es silencioso: se conserva el último resultado y se reintenta pasados unos minutos.
-- Se desactiva en **Configuración > Comprobar actualizaciones** (o con `CHECKPOINT_UPDATE_CHECK=0` como valor inicial). Desactivada, no se hace ninguna petición a internet. El botón **Comprobar ahora** fuerza la consulta (máximo una por minuto).
+- Se desactiva en **Configuración > Comprobar actualizaciones** (o con `CHECKPOINT_UPDATE_CHECK=0` como valor inicial, sin Docker). Desactivada, no se hace ninguna petición a internet. El botón **Comprobar ahora** fuerza la consulta (máximo una por minuto).
 - **Canal** (Configuración > Comprobar actualizaciones): **Estable** (por defecto) solo ofrece Releases normales; **Pruebas** (`beta`) ofrece también pre-releases (nunca borradores), que pueden fallar. En Pruebas se ofrece la versión más alta entre estables y preliminares, con el orden de semver: `0.5.0-rc.1` < `0.5.0-rc.2` < `0.5.0`. Un tag con sufijo (`-rc.1`) cuenta como preliminar aunque GitHub no lo marque. Cambiar de canal descarta el resultado guardado y vuelve a consultar. Nunca se ofrece bajar de versión: desde una preliminar en canal Estable solo se avisa cuando haya una estable mayor. La insignia y el diálogo marcan «preliminar» cuando procede.
 - La etiqueta de imagen `beta` la publica el workflow de release (ver «Publicación de versiones»); el canal solo cambia qué avisos se muestran, no la imagen que ejecutas.
-- API (requiere sesión): `GET /api/version`, `GET /api/updates[?refresh=true]` (incluye `canal` y `prerelease`, si la versión ofrecida es preliminar) y `PUT /api/updates` con `{"enabled": true|false, "channel": "stable"|"beta"}` (parcial: basta uno de los dos; valor no válido, 422).
+- API (requiere sesión): `GET /api/version`, `GET /api/updates[?refresh=true]` (incluye `aplicable`, `canal` y `prerelease`, si la versión ofrecida es preliminar) y `PUT /api/updates` con `{"enabled": true|false, "channel": "stable"|"beta"}` (parcial: basta uno de los dos; valor no válido, 422). En Docker sin forzar, `GET` devuelve `aplicable: false` con campos neutros (sin error, sin red) y `PUT` responde 409.
 
 ## Publicación de versiones
 

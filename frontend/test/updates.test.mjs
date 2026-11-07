@@ -5,7 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { showBadge, safeUrl, updateSummary, channelOf, isPrerelease, versionLabel, CHANNEL_OPTIONS } from '../src/updates.js';
+import { updatesApplicable, showBadge, safeUrl, updateSummary, channelOf, isPrerelease, versionLabel, CHANNEL_OPTIONS } from '../src/updates.js';
 
 const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src');
 const NEW = { actual: '0.4.2', ultima: '0.5.0', hay_actualizacion: true, habilitado: true, notas: 'Novedades <b>x</b>', url: 'https://github.com/o/r/releases/tag/v0.5.0', comprobado_en: '2026-01-01T10:00:00+00:00', error: null, canal: 'stable', prerelease: false };
@@ -19,6 +19,16 @@ test('showBadge: solo con actualización y comprobación activa', () => {
   assert.equal(showBadge(null), false);
   assert.equal(showBadge(undefined), false);
   assert.equal(showBadge({}), false);
+});
+
+test('aplicable false (Docker): sin insignia ni tarjeta; null = aún sin respuesta', () => {
+  const NA = { ...NEW, aplicable: false };
+  assert.equal(showBadge(NA), false);
+  assert.equal(showBadge({ ...NEW, aplicable: true }), true);
+  assert.equal(updatesApplicable(NA), false);
+  assert.equal(updatesApplicable(null), false);       // sin respuesta: oculto, sin parpadeo
+  assert.equal(updatesApplicable(NEW), true);          // backend sin el campo: se trata como aplicable
+  assert.equal(updatesApplicable({ ...NEW, aplicable: true }), true);
 });
 
 test('safeUrl: solo https', () => {
@@ -122,4 +132,11 @@ test('UpdateBadge y UpdateDialog marcan «preliminar» solo cuando aplica', { sk
   assert.match(dp, /pre-tag/); assert.match(dp, /puede fallar/);
   const dn = r(mod.UpdateDialog, { info: NEW, onClose() {} });
   assert.ok(!/preliminar/.test(dn));
+});
+
+test('aplicable false: UpdateBadge y UpdateCheck no pintan nada', { skip }, () => {
+  const NA = { ...NEW, aplicable: false, habilitado: false };
+  assert.equal(r(mod.UpdateBadge, { info: { ...NEW, aplicable: false }, onOpen() {} }), '');
+  assert.equal(r(mod.UpdateCheck, { info: NA, onInfo() {} }), '');
+  assert.match(r(mod.UpdateCheck, { info: { ...NEW, aplicable: true }, onInfo() {} }), /Comprobar actualizaciones/);
 });

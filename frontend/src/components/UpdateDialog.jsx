@@ -15,7 +15,7 @@ export default function UpdateDialog({ info, onClose }) {
       {pre && <p className="alert warn">Es una versión preliminar del canal de pruebas: puede fallar.</p>}
       {info.notas ? <><h4>Novedades</h4><div className="update-notes" tabIndex={0}>{info.notas}</div></> : <p className="muted">Esta versión no incluye notas.</p>}
       {url && <p><a href={url} target="_blank" rel="noopener noreferrer">Ver la versión en GitHub</a></p>}
-      <p className="muted">Para actualizar, reconstruye la imagen de Checkpoint y vuelve a levantar el contenedor.</p>
+      <p className="muted">Checkpoint no se actualiza solo. En Docker, reconstruye la imagen y vuelve a levantar el contenedor; en una instalación nativa, descarga la nueva versión y reinicia Checkpoint.</p>
       <div className="row end"><button className="btn" onClick={onClose}>Cerrar</button></div>
     </Modal>
   );
