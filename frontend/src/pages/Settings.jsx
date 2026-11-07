@@ -11,6 +11,7 @@ import AutoSync from '../components/AutoSync.jsx';
 import SaveDialog from '../components/SaveDialog.jsx';
 import YamlDialog from '../components/YamlDialog.jsx';
 import BackupsDialog from '../components/BackupsDialog.jsx';
+import Icon from '../components/Icon.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import DiffView from '../components/DiffView.jsx';
 
@@ -110,8 +111,18 @@ export default function Settings({ loaded, stale, configError, onApplied, onRelo
   const gameErrs = (g) => errorsFor(errors, `games.${idOf(g, 'juego')}`);
   const generalError = errors[''];
 
+  // Chip de errores de la barra: salta al primer campo con error (o a la alerta general) y le da el foco.
+  const rootRef = useRef(null);
+  const errorCount = Math.max(Object.keys(errors).length, Object.keys(local).length);
+  const jumpToError = () => {
+    const el = rootRef.current?.querySelector('.field.has-error :is(input, select), .alert.error[role="alert"]');
+    if (!el) return;
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    if (typeof el.focus === 'function' && el.matches('input, select')) el.focus({ preventScroll: true });
+  };
+
   return (
-    <section aria-labelledby="cfg-title">
+    <section aria-labelledby="cfg-title" ref={rootRef}>
       <h2 id="cfg-title">Configuración</h2>
 
       {configError && <div className="alert error" role="alert">
@@ -180,13 +191,26 @@ export default function Settings({ loaded, stale, configError, onApplied, onRelo
       </div>
 
       <div className="actionbar" role="group" aria-label="Acciones de configuración">
-        <span className="muted" aria-live="polite">
-          {validating ? 'Validando…' : hasErrors ? 'Hay errores por corregir' : dirty ? 'Cambios sin guardar' : 'Sin cambios'}
-        </span>
+        {hasErrors && !validating ? (
+          <button type="button" className="ab-chip error" onClick={jumpToError}
+            aria-label={`${errorCount || 1} errores por corregir: ir al primero`}>
+            <Icon name="alert" /><b>{errorCount || 1}</b><span className="ab-long">Hay errores por corregir</span>
+          </button>
+        ) : (
+          <span className={`ab-chip${dirty ? ' dirty' : ''}`} aria-live="polite">
+            {validating ? 'Validando…' : dirty ? <><span className="ab-long">Cambios sin guardar</span><span className="ab-short">Sin guardar</span></> : 'Sin cambios'}
+          </span>
+        )}
         <span className="spacer" />
-        <button type="button" className="btn ghost" onClick={() => setDialog({ kind: 'backups' })}>Restaurar versión anterior</button>
-        <button type="button" className="btn ghost" onClick={() => setDialog({ kind: 'yaml', config: payload })} disabled={hasErrors}>Ver YAML</button>
-        <button type="button" className="btn" disabled={!dirty} onClick={() => { setDraft(fromConfig(loaded.config)); setMsg(''); }}>Descartar</button>
+        <button type="button" className="btn ghost ab-tool" title="Restaurar versión anterior" aria-label="Restaurar versión anterior" onClick={() => setDialog({ kind: 'backups' })}>
+          <Icon name="history" /><span className="lbl">Restaurar versión anterior</span>
+        </button>
+        <button type="button" className="btn ghost ab-tool" title="Ver YAML" aria-label="Ver YAML" onClick={() => setDialog({ kind: 'yaml', config: payload })} disabled={hasErrors}>
+          <Icon name="code" /><span className="lbl">Ver YAML</span>
+        </button>
+        <button type="button" className="btn ab-tool" title="Descartar cambios" aria-label="Descartar cambios" disabled={!dirty} onClick={() => { setDraft(fromConfig(loaded.config)); setMsg(''); }}>
+          <Icon name="undo" /><span className="lbl">Descartar</span>
+        </button>
         <button type="button" className="btn primary" disabled={!canSave} onClick={openSave}>Guardar…</button>
       </div>
 

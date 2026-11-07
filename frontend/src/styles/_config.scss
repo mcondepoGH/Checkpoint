@@ -27,10 +27,16 @@
 // Barra de acciones fija al pie.
 .actionbar {
   position: sticky; bottom: 0; z-index: 4; display: flex; gap: .5rem; align-items: center; flex-wrap: wrap;
-  margin: 1.5rem calc(-1 * v.$gap) calc(-1 * v.$gap); padding: .75rem v.$gap;
+  margin: 1.5rem calc(-1 * var(--pad-r)) calc(-1 * v.$gap) calc(-1 * var(--pad-l)); padding: .75rem var(--pad-r) .75rem var(--pad-l);
   background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(8px); border-top: 1px solid var(--accent); box-shadow: 0 -6px 24px -10px var(--glow);
 }
-
+.ab-chip { color: var(--muted); font-size: 1rem; background: none; border: 0; padding: 0; font-family: inherit;
+  &.dirty { color: var(--text); }
+  .ab-short, .ico { display: none; } }
+button.ab-chip { cursor: pointer; display: inline-flex; align-items: center; gap: .4rem; color: var(--danger); font-weight: 700;
+  b { font-weight: 700; } .ico { width: 18px; height: 18px; }
+  &:hover { text-decoration: underline; } }
+.ab-tool .ico { display: none; }
 .dialog { width: min(480px, 100%);
   &.wide { width: min(720px, 100%); } }
 .yaml { font-family: v.$mono; font-size: .8rem; white-space: pre; overflow: auto; }
@@ -43,8 +49,24 @@
   .del > b { color: var(--danger); }
   .chg > b { color: var(--warn); } }
 
+// Móvil: una sola fila de ~56 px. Estado como chip; acciones secundarias solo con icono; Guardar principal.
 @media (max-width: v.$bp-sm) {
-  .actionbar { .btn { flex: 1 1 auto; } }
+  .actionbar { flex-wrap: nowrap; gap: .35rem; min-height: 56px; margin-top: 1rem; margin-bottom: -.75rem;
+    padding-top: .4rem; padding-bottom: calc(.4rem + var(--sb)); }
+  .ab-chip { flex: 0 1 auto; min-width: 0; font-size: .85rem; line-height: 1.15; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    &.dirty { color: var(--warn); }
+    .ab-long { display: none; } .ab-short { display: inline; } }
+  button.ab-chip { min-height: v.$touch; padding: 0 .65rem; border: 1px solid var(--danger); border-radius: 99px; background: rgba(255, 77, 121, .08);
+    .ico { display: inline; } .ab-long { display: none; } &:hover { text-decoration: none; } }
+  .actionbar .spacer { display: block; flex: 1 1 0; min-width: 0; }
+  .ab-tool { flex: none; width: v.$touch; min-width: v.$touch; height: v.$touch; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+    .ico { display: inline; } .lbl { display: none; } }
+  .actionbar .btn.primary { flex: none; min-height: v.$touch; padding: 0 1rem; }
+}
+@media (max-width: v.$bp-xs) {
+  .actionbar { gap: .2rem; padding-left: max(.5rem, var(--sl)); padding-right: max(.5rem, var(--sr)); }
+  .ab-chip { font-size: .78rem; }
+  .actionbar .btn.primary { padding: 0 .75rem; }
 }
 
 .keyhelp .keyhelp-panel { padding: 1.25rem;
