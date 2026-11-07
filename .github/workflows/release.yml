@@ -1,0 +1,88 @@
+name: Release
+
+# Publica la imagen en GHCR y crea la GitHub Release al subir un tag vX.Y.Z[-sufijo].
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write   # crear la Release
+  packages: write   # publicar en ghcr.io
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Comprobar que VERSION coincide con el tag
+        id: v
+        env:
+          TAG: ${{ github.ref_name }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          file="$(tr -d '[:space:]' < VERSION)"
+          if [ "$file" != "$version" ]; then
+            echo "::error::VERSION ($file) no coincide con el tag $TAG (esperado $version). Actualiza VERSION, haz commit y vuelve a crear el tag."
+            exit 1
+          fi
+          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+            echo "::error::El tag $TAG no tiene formato vX.Y.Z[-sufijo]."
+            exit 1
+          fi
+          # Con sufijo (-rc.1, -beta.2...) es pre-release.
+          case "$version" in *-*) pre=true ;; *) pre=false ;; esac
+          {
+            echo "version=$version"
+            echo "prerelease=$pre"
+            echo "image=ghcr.io/${OWNER,,}/checkpoint"
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Etiquetas de imagen
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.v.outputs.image }}
+          flavor: latest=false
+          tags: |
+            type=raw,value=v${{ steps.v.outputs.version }}
+            type=raw,value=${{ steps.v.outputs.version }}
+            type=raw,value=latest,enable=${{ steps.v.outputs.prerelease == 'false' }}
+            type=raw,value=beta,enable=${{ steps.v.outputs.prerelease == 'true' }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Solo amd64. Para arm64 añade `docker/setup-qemu-action@v3` antes de buildx
+          # y usa: platforms: linux/amd64,linux/arm64 (el build bajo QEMU es lento).
+          platforms: linux/amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Crear la GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.ref_name }}
+          PRE: ${{ steps.v.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          flags=(--verify-tag --generate-notes --title "$TAG")
+          if [ "$PRE" = "true" ]; then flags+=(--prerelease); else flags+=(--latest); fi
+          gh release create "$TAG" "${flags[@]}"
