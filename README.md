@@ -24,10 +24,10 @@ Checkpoint mantiene sincronizadas las partidas guardadas de un juego entre dos d
 
 - **Dispositivos**: equipos con servidor SSH (Windows o Linux). Checkpoint entra con una clave que genera él mismo.
 - **Juegos**: cada juego enlaza dos dispositivos y la carpeta de guardado en cada uno. Los nombres de dispositivos y juegos son libres (hasta 64 caracteres, con espacios, acentos y emojis; sin `/` ni `\`).
-- **Sincronizar**: Checkpoint descarga ambos guardados, compara fechas de modificación y propaga el más reciente. Antes de sobrescribir guarda la copia perdedora como versión.
+- **Sincronizar**: Checkpoint descarga los guardados, recuerda cuál era el estado tras la última sincronización y propaga el lado que ha cambiado. Si solo un dispositivo está conectado, lo compara con la copia del hub. Antes de sobrescribir guarda la copia perdedora como versión.
 - **Versiones**: se conservan las últimas N de cada juego (`max_versions` global, 20 por defecto, 0 = sin límite; `keep_versions` lo sustituye en un juego) y se pueden restaurar desde la UI.
 
-Para que "gana el más reciente" funcione, mantén la hora sincronizada (NTP) en el servidor y en los dispositivos.
+Solo la opción «gana el más reciente» de los conflictos usa fechas de modificación: mantén la hora sincronizada (NTP) en el servidor y en los dispositivos.
 
 ## Instalación
 
@@ -54,6 +54,7 @@ Requisitos: Docker y Docker Compose.
 | `CHECKPOINT_PORT` | `8088` | Puerto publicado |
 | `CHECKPOINT_AUTO_ENABLED` | `0` | Valor inicial de la sync automática |
 | `CHECKPOINT_AUTO_INTERVAL_HOURS` | `24` | Valor inicial del intervalo |
+| `CHECKPOINT_AUTO_ON_CONFLICT` | `skip` | Valor inicial ante conflictos en la sync automática (`skip` o `newest`) |
 | `CHECKPOINT_COOKIE_SECURE` / `CHECKPOINT_TRUST_PROXY` | `0` | Pon `1` tras un proxy inverso con HTTPS |
 | `TZ`, `PUID`, `PGID` | `Europe/Madrid`, `1000` | Zona horaria y usuario del contenedor |
 
@@ -70,6 +71,15 @@ El prefijo antiguo `SAVESYNC_*` sigue aceptándose (obsoleto). Si la contraseña
 ## Sincronización automática
 
 En **Configuración > Sincronización automática** activa la opción y elige cada cuántas horas se ejecuta (de 0.25 a 168). Cada ciclo sincroniza todos los juegos; si uno falla, los demás continúan. Debajo se muestra el **Registro de ejecuciones** con resultado por juego y detalle al hacer clic. Los ajustes guardados en la UI prevalecen sobre las variables de entorno.
+
+## Conflictos
+
+Hay conflicto cuando los dos dispositivos han cambiado desde la última sincronización y su contenido es distinto (o, en la primera sincronización, ya difiere). Checkpoint nunca lo decide por la fecha a ciegas.
+
+- **Sincronización automática**: `on_conflict` en Configuración > Sincronización automática. `skip` (por defecto) no guarda nada y marca el juego como «Conflicto»; `newest` hace ganar el save más reciente (si las fechas difieren menos de 2 s, se omite). Un juego puede sustituirlo con `on_conflict` en `config.yaml`.
+- **Sincronización manual**: siempre pregunta. Un popup ofrece cancelar, «Gana el más reciente» o elegir qué dispositivo gana, con fecha y tamaño de cada uno. En la CLI: `checkpoint sync JUEGO --resolve newest|device:NOMBRE` (sale con código 3 si hay conflicto).
+
+En todos los casos la copia perdedora se guarda antes en versiones. La primera sincronización tras actualizar solo tiene el hub como referencia: si ambos lados difieren, se trata como conflicto.
 
 ## Configuración
 

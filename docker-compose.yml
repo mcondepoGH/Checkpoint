@@ -20,6 +20,7 @@ services:
       CHECKPOINT_AUTO_ENABLED: ${CHECKPOINT_AUTO_ENABLED:-${SAVESYNC_AUTO_ENABLED:-0}}     # sync automática: valor inicial (la UI prevalece)
       CHECKPOINT_AUTO_INTERVAL_HOURS: ${CHECKPOINT_AUTO_INTERVAL_HOURS:-${SAVESYNC_AUTO_INTERVAL_HOURS:-24}}
       CHECKPOINT_AUTO_RUN_ON_START: ${CHECKPOINT_AUTO_RUN_ON_START:-${SAVESYNC_AUTO_RUN_ON_START:-0}}
+      CHECKPOINT_AUTO_ON_CONFLICT: ${CHECKPOINT_AUTO_ON_CONFLICT:-skip}   # skip | newest (la UI prevalece)
     volumes:
       - ./config:/config
       - ./keys:/keys           # id_ed25519 (se genera sola) + known_hosts (primer uso)
