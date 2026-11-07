@@ -99,7 +99,7 @@ test('UpdateDialog: versiones, notas escapadas, enlace https y sin botón de act
   assert.match(h, /0\.4\.2/); assert.match(h, /0\.5\.0/);
   assert.match(h, /&lt;b&gt;x&lt;\/b&gt;/); assert.ok(!h.includes('<b>x</b>'));
   assert.match(h, /href="https:\/\/github\.com\/o\/r\/releases\/tag\/v0\.5\.0"/);
-  assert.match(h, /reconstruye la imagen/i);
+  assert.match(h, /recompila la web/i);
   const bad = r(mod.UpdateDialog, { info: { ...NEW, url: 'javascript:alert(1)' }, onClose() {} });
   assert.ok(!bad.includes('javascript:'));
 });

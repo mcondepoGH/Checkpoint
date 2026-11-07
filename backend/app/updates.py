@@ -82,7 +82,7 @@ def _version_files():
 
 
 def installed_version() -> str:
-    """Única fuente de verdad: el fichero VERSION. Admite sufijo de pre-release (0.5.0-rc.1). Sin fichero o valor no válido (modo desarrollo) -> 'desconocida'."""
+    """Única fuente de verdad: el fichero VERSION. Admite sufijo de pre-release (1.0.0-rc.1). Sin fichero o valor no válido (modo desarrollo) -> 'desconocida'."""
     for f in _version_files():
         try:
             raw = f.read_text(encoding="utf-8").strip()
@@ -116,7 +116,7 @@ def fetch_releases(repo: str) -> list:
 
 def pick_latest(releases, channel: str = DEFAULT_CHANNEL) -> Optional[dict]:
     """Versión más alta ofrecible. stable: sin borradores ni pre-releases (marcadas o por sufijo del tag).
-    beta: también pre-releases; gana la más alta de todas (0.5.0 > 0.5.0-rc.2 > 0.5.0-rc.1)."""
+    beta: también pre-releases; gana la más alta de todas (1.0.0 > 1.0.0-rc.2 > 1.0.0-rc.1)."""
     beta = normalize_channel(channel) == "beta"
     best, best_k = None, None
     for r in releases or []:

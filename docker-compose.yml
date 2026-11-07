@@ -5,6 +5,7 @@ services:
       args:
         PUID: ${PUID:-1000}   # uid/gid dueño de ./config, ./keys y ./data
         PGID: ${PGID:-1000}
+    # Para usar la imagen publicada en vez de construirla: quita `build` y pon image: ghcr.io/<owner>/checkpoint:latest
     image: checkpoint:latest
     container_name: checkpoint
     restart: unless-stopped
