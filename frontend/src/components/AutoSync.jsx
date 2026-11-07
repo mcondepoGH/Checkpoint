@@ -117,7 +117,7 @@ export default function AutoSync() {
         <p className="autosync-status" aria-live="polite">
           Última ejecución: {fmtDateTime(saved.last_run)}
           {ls && <> <span className={`badge ${RESULT_CLASS[ls.result] || ''}`}>{RESULT_TEXT[ls.result] || ls.result}</span></>}
-          {' · '}Próxima: {saved.enabled ? fmt(saved.next_run) : 'desactivada'}
+          {' · '}Próxima: {saved.enabled ? fmtDateTime(saved.next_run) : 'desactivada'}
           {ls?.message && <small className="muted block">{ls.message}</small>}
         </p>
       )}
