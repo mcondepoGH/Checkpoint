@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import EmptyState from '../components/EmptyState.jsx';
+import { labelOf } from '../names.js';
 import ConflictDialog from '../components/ConflictDialog.jsx';
 
 const RES_TXT = { conflict: 'Conflicto', partial: 'Parcial' };
@@ -56,8 +57,8 @@ function LastRun({ s, devName }) {
 export default function Sync({ config, onGoSettings }) {
   // Las claves de config.games/status son ids internos; en pantalla siempre el nombre.
   const games = Object.keys(config.games);
-  const devName = (id) => config.devices[id]?.name || id;
-  const gameName = (id) => config.games[id]?.name || id;
+  const devName = (id) => labelOf(config.devices, id);
+  const gameName = (id) => labelOf(config.games, id);
   const [dry, setDry] = useState({});
   const [status, setStatus] = useState({});
   const [active, setActive] = useState(null); // {game, lines, done}
@@ -122,7 +123,7 @@ export default function Sync({ config, onGoSettings }) {
           const running = active && active.game === g && !active.done;
           return (
             <div className="card" key={g}>
-              <h3 title={`ID interno: ${g}`}>{config.games[g].name} {running ? <span className="badge running">en curso</span> : badge(s)}</h3>
+              <h3 title={`ID interno: ${g}`}>{gameName(g)} {running ? <span className="badge running">en curso</span> : badge(s)}</h3>
               <p className="muted">{config.games[g].devices.map(devName).join(' ⇄ ')}</p>
               <div className={`meter ${running ? 'running' : (s?.result || '')}`} role="progressbar" aria-label={`Estado de ${gameName(g)}`}><i /></div>
               <LastRun s={s} devName={devName} />

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import {
-  MAX_VERSIONS_LIMIT, VERSIONS_HINT, blankDevice, blankGame, deviceId, errorsFor, fromConfig, gamesUsing, idOf, localErrors, nameOf, removeDevice, renamed, toConfig,
+  MAX_VERSIONS_LIMIT, VERSIONS_HINT, blankDevice, blankGame, deviceId, baseKeyOf, errorsFor, fromConfig, gamesUsing, idOf, localErrors, nameOf, removeDevice, renamed, toConfig,
 } from '../draft.js';
 import Field from '../components/Field.jsx';
 import DeviceCard from '../components/DeviceCard.jsx';
@@ -27,13 +27,20 @@ export default function Settings({ loaded, stale, configError, onApplied, onRelo
   const [busy, setBusy] = useState(false);
   const [staleDiff, setStaleDiff] = useState(null);
 
-  // Cada versión nueva cargada (inicio, guardado, recarga) reinicia el borrador.
-  useEffect(() => { setDraft(fromConfig(loaded.config)); setStaleDiff(null); }, [loaded.version]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Cada versión nueva cargada (inicio, guardado, recarga) reinicia el borrador. Se hace durante el render
+  // (no en un efecto): así nunca se compara un borrador viejo (p. ej. el vacío previo a la carga) con la
+  // config nueva, lo que marcaba "Cambios sin guardar" sin tocar nada.
+  const [draftVersion, setDraftVersion] = useState(loaded.version);
+  if (draftVersion !== loaded.version) {
+    setDraftVersion(loaded.version);
+    setDraft(fromConfig(loaded.config));
+    setStaleDiff(null);
+  }
 
   const local = useMemo(() => localErrors(draft), [draft]);
   const payload = useMemo(() => toConfig(draft), [draft]);
   const payloadKey = JSON.stringify(payload);
-  const baseKey = useMemo(() => JSON.stringify(toConfig(fromConfig(loaded.config))), [loaded.config]);
+  const baseKey = useMemo(() => baseKeyOf(loaded.config), [loaded.config]);
   const dirty = payloadKey !== baseKey || Object.keys(local).length > 0;
   const hasLocal = Object.keys(local).length > 0;
 

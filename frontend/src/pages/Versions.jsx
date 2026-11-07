@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
+import { labelOf } from '../names.js';
 import EmptyState from '../components/EmptyState.jsx';
 
 export default function Versions({ config, onGoSettings }) {
@@ -26,7 +27,7 @@ export default function Versions({ config, onGoSettings }) {
       <div className="row between versions-head">
         <h2>Versiones</h2>
         <select aria-label="Juego" value={game} onChange={(e) => { setGame(e.target.value); setMsg(null); }}>
-          {games.map((g) => <option key={g} value={g}>{config.games[g].name}</option>)}
+          {games.map((g) => <option key={g} value={g}>{labelOf(config.games, g)}</option>)}
         </select>
       </div>
       {limit && game && (
