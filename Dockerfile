@@ -19,6 +19,7 @@ COPY backend/requirements.txt ./
 # bcrypt, pyyaml y pydantic-core publican wheels musllinux (x86_64 y arm64)
 RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/app ./app
+COPY VERSION ./VERSION
 COPY --from=web /web/dist ./static
 # La CLI baja a checkpoint si se invoca como root (docker exec), para no crear ficheros de root en /data.
 RUN printf '#!/bin/sh\nif [ "$(id -u)" = "0" ]; then exec su-exec checkpoint python -m app.cli "$@"; fi\nexec python -m app.cli "$@"\n' > /usr/local/bin/checkpoint && chmod +x /usr/local/bin/checkpoint \

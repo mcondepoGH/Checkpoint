@@ -19,6 +19,7 @@ from . import settings
 from . import bootstrap
 from . import history
 from . import runtime
+from . import updates
 from .auth import Auth
 from .config import LOCAL_DOCKER_MSG, Config, ConfigError, Device, normalize_path, resolve_ref, validate_config
 from .configstore import Conflict, ConfigStore, InvalidConfig, parse_text, config_events_gen, diff_configs, render_yaml
@@ -291,6 +292,26 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             return scheduler.update(body)
         except ValueError as e:
             return JSONResponse({"detail": "ajustes no válidos", "errors": e.args[0]}, status_code=422)
+
+    # ---- versión y actualizaciones (solo detección) ----
+    checker = updates.UpdateChecker()
+
+    @app.get("/api/version", dependencies=[Depends(require)])
+    def get_version():
+        return {"version": updates.installed_version()}
+
+    @app.get("/api/updates", dependencies=[Depends(require)])
+    def get_updates(refresh: bool = False):
+        return checker.state(refresh=refresh)
+
+    @app.put("/api/updates", dependencies=[Depends(require)])
+    async def put_updates(request: Request):
+        body = await body_json(request)
+        if not isinstance(body.get("enabled"), bool):
+            return JSONResponse({"detail": "ajustes no válidos", "errors": {"enabled": "debe ser verdadero o falso"}},
+                                status_code=422)
+        checker.set_enabled(body["enabled"])
+        return await run_in_threadpool(checker.state)
 
     @app.get("/api/scheduler/history", dependencies=[Depends(require)])
     def get_scheduler_history(limit: int = Query(50, ge=1, le=200)):
