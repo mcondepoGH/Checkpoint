@@ -7,15 +7,17 @@ export default function Versions({ config, onGoSettings }) {
   const [game, setGame] = useState(games[0] || '');
   const [list, setList] = useState([]);
   const [msg, setMsg] = useState(null);
+  const [limit, setLimit] = useState(null);
 
   const load = (g) => g ? api(`/api/versions/${encodeURIComponent(g)}`).then(setList).catch((e) => setMsg({ error: true, text: e.message })) : setList([]);
-  useEffect(() => { load(game); }, [game]);
+  const loadLimit = (g) => (g ? api(`/api/versions/${encodeURIComponent(g)}/limit`).then(setLimit).catch(() => setLimit(null)) : setLimit(null));
+  useEffect(() => { load(game); loadLimit(game); }, [game, config]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const restore = async (version, source) => {
     if (!window.confirm(`¿Restaurar ${version}/${source} en el hub? La copia actual del hub se guarda como versión.`)) return;
     try {
       const r = await api(`/api/versions/${encodeURIComponent(game)}/restore`, { method: 'POST', body: { version, source } });
-      setMsg({ text: r.message }); load(game);
+      setMsg({ text: r.message }); load(game); loadLimit(game);
     } catch (e) { setMsg({ error: true, text: e.message }); }
   };
 
@@ -27,6 +29,11 @@ export default function Versions({ config, onGoSettings }) {
           {games.map((g) => <option key={g}>{g}</option>)}
         </select>
       </div>
+      {limit && game && (
+        <p className="muted versions-limit">
+          {limit.max === 0 ? `${limit.count} (sin límite)` : `${limit.count} de máx. ${limit.max}`}{limit.override ? ' (ajuste de este juego)' : ' (ajuste global)'}
+        </p>
+      )}
       {msg && <div className={`alert ${msg.error ? 'error' : 'ok'}`}>{msg.text}</div>}
       {list.length === 0 && (games.length === 0 ? (
         <EmptyState variant="page" icon="🎮" title="Sin juegos configurados"

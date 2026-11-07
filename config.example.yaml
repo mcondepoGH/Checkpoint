@@ -1,3 +1,4 @@
+max_versions: 20             # versiones guardadas por juego (0 = sin límite); al superarlo se borran las más antiguas
 devices:
   pc:   {host: 192.0.2.10, user: usuario, os: windows, port: 22}
   laptop: {host: 192.0.2.11, user: usuario, os: linux, port: 22}
@@ -8,4 +9,4 @@ games:
       pc: "C:/Users/usuario/AppData/Local/Ejemplo/Saves"
       laptop: "/home/usuario/.local/share/Ejemplo/Saves"
     process: "ejemplo.exe"     # opcional: no copiar si está abierto
-    keep_versions: 5
+    keep_versions: 5           # opcional: sustituye a max_versions solo para este juego (0 = sin límite)

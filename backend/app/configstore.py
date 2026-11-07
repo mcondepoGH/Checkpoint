@@ -16,7 +16,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
 from . import settings
-from .config import Config, atomic_write, validate_config
+from .config import DEFAULT_MAX_VERSIONS, Config, atomic_write, validate_config
 
 MAX_BACKUPS = 10
 BACKUP_PREFIX = "config.yaml.bak-"
@@ -138,6 +138,10 @@ def _section_diff(old: dict, new: dict) -> dict:
 
 def diff_configs(old: dict, new: dict) -> dict:
     d = {s: _section_diff(old.get(s) or {}, new.get(s) or {}) for s in ("devices", "games")}
+    # Ajustes generales (valores sueltos): misma forma que las secciones para reutilizar la vista previa.
+    ov, nv = old.get("max_versions", DEFAULT_MAX_VERSIONS), new.get("max_versions", DEFAULT_MAX_VERSIONS)
+    d["general"] = {"added": [], "removed": [],
+                    "changed": {"General": {"max_versions": {"old": ov, "new": nv}}} if ov != nv else {}}
     d["empty"] = not any(v["added"] or v["removed"] or v["changed"] for v in d.values() if isinstance(v, dict))
     return d
 

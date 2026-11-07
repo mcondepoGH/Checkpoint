@@ -1,8 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import {
-  blankDevice, blankGame, errorsFor, fromConfig, gamesUsing, localErrors, nameOf, removeDevice, toConfig,
+  MAX_VERSIONS_LIMIT, VERSIONS_HINT, blankDevice, blankGame, cleanName, errorsFor, fromConfig, gamesUsing, localErrors, nameOf, removeDevice, toConfig,
 } from '../draft.js';
+import Field from '../components/Field.jsx';
 import DeviceCard from '../components/DeviceCard.jsx';
 import GameCard from '../components/GameCard.jsx';
 import PublicKey from '../components/PublicKey.jsx';
@@ -104,8 +105,8 @@ export default function Settings({ loaded, stale, configError, onApplied, onRelo
     catch (e) { setMsg(e.message); }
   };
 
-  const devErrs = (d) => errorsFor(errors, `devices.${d.name}`);
-  const gameErrs = (g) => errorsFor(errors, `games.${g.name}`);
+  const devErrs = (d) => errorsFor(errors, `devices.${cleanName(d.name)}`);
+  const gameErrs = (g) => errorsFor(errors, `games.${cleanName(g.name)}`);
   const generalError = errors[''];
 
   return (
@@ -131,6 +132,14 @@ export default function Settings({ loaded, stale, configError, onApplied, onRelo
       <PublicKey />
 
       <AutoSync />
+
+      <fieldset className="card cfg-card">
+        <legend className="cfg-title">Versiones guardadas</legend>
+        <Field label="Máx. de versiones por juego" hint={VERSIONS_HINT} error={local.maxVersions || errors.max_versions}>
+          {(p) => <input {...p} type="number" inputMode="numeric" min="0" max={MAX_VERSIONS_LIMIT} step="1"
+            value={draft.maxVersions} onChange={(e) => setDraft((d) => ({ ...d, maxVersions: e.target.value }))} />}
+        </Field>
+      </fieldset>
 
       <div className="row between section-head">
         <h3>Dispositivos</h3>
@@ -160,7 +169,7 @@ export default function Settings({ loaded, stale, configError, onApplied, onRelo
       {draft.devices.filter((d) => d.name).length < 2 && <p className="muted">Define (y nombra) al menos dos dispositivos para añadir juegos.</p>}
       <div className="grid">
         {draft.games.map((g) => (
-          <GameCard key={g.id} game={g} devices={draft.devices} errors={gameErrs(g)} localError={local[g.id]}
+          <GameCard key={g.id} game={g} devices={draft.devices} errors={gameErrs(g)} localError={local[g.id]} keepError={local[`keep-${g.id}`]} globalMax={draft.maxVersions}
             nameA={nameOf(draft, g.a)} nameB={nameOf(draft, g.b)}
             onChange={(p) => patch('games', g.id, p)}
             onRemove={() => setDraft((d) => ({ ...d, games: d.games.filter((x) => x.id !== g.id) }))} />

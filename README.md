@@ -23,9 +23,9 @@ Checkpoint mantiene sincronizadas las partidas guardadas de un juego entre dos d
 ```
 
 - **Dispositivos**: equipos con servidor SSH (Windows o Linux). Checkpoint entra con una clave que genera él mismo.
-- **Juegos**: cada juego enlaza dos dispositivos y la carpeta de guardado en cada uno.
+- **Juegos**: cada juego enlaza dos dispositivos y la carpeta de guardado en cada uno. Los nombres de dispositivos y juegos son libres (hasta 64 caracteres, con espacios, acentos y emojis; sin `/` ni `\`).
 - **Sincronizar**: Checkpoint descarga ambos guardados, compara fechas de modificación y propaga el más reciente. Antes de sobrescribir guarda la copia perdedora como versión.
-- **Versiones**: se conservan las últimas N de cada juego y se pueden restaurar desde la UI.
+- **Versiones**: se conservan las últimas N de cada juego (`max_versions` global, 20 por defecto, 0 = sin límite; `keep_versions` lo sustituye en un juego) y se pueden restaurar desde la UI.
 
 Para que "gana el más reciente" funcione, mantén la hora sincronizada (NTP) en el servidor y en los dispositivos.
 
@@ -91,7 +91,7 @@ games:
     paths:
       pc: "C:/Users/usuario/AppData/Local/Ejemplo/Saves"
       laptop: "/home/usuario/.local/share/Ejemplo/Saves"
-    keep_versions: 5
+    keep_versions: 5           # opcional: sustituye a max_versions para este juego
 ```
 
 ## Seguridad

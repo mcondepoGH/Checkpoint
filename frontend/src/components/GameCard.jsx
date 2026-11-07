@@ -1,7 +1,8 @@
 import React from 'react';
 import Field from './Field.jsx';
+import { MAX_VERSIONS_LIMIT, NAME_HINT, NAME_MAX, VERSIONS_HINT } from '../draft.js';
 
-export default function GameCard({ game, devices, errors, localError, nameA, nameB, onChange, onRemove }) {
+export default function GameCard({ game, devices, errors, localError, keepError, globalMax, nameA, nameB, onChange, onRemove }) {
   const set = (k) => (e) => onChange({ [k]: e.target.value });
   const title = game.name || 'Juego nuevo';
   // Solo dispositivos con nombre; el elegido en el otro selector no se ofrece.
@@ -16,8 +17,8 @@ export default function GameCard({ game, devices, errors, localError, nameA, nam
   return (
     <fieldset className="card cfg-card">
       <legend className="cfg-title">{title}</legend>
-      <Field label="Nombre" error={localError || errors['']}>
-        {(p) => <input {...p} value={game.name} onChange={set('name')} maxLength={32} autoComplete="off" spellCheck="false" />}
+      <Field label="Nombre" hint={NAME_HINT} error={localError || errors['']}>
+        {(p) => <input {...p} value={game.name} onChange={set('name')} maxLength={NAME_MAX} placeholder="p. ej. Dragon Quest VII: Dimensión" autoComplete="off" spellCheck="false" />}
       </Field>
       {errors.devices && <div className="alert error" role="alert">{errors.devices}</div>}
       <div className="two">
@@ -38,8 +39,8 @@ export default function GameCard({ game, devices, errors, localError, nameA, nam
         <Field label="Proceso (opcional)" hint="No copia si está abierto" error={errors.process}>
           {(p) => <input {...p} value={game.process} onChange={set('process')} placeholder="juego.exe" autoComplete="off" spellCheck="false" />}
         </Field>
-        <Field label="Versiones a conservar" hint="1 a 100" error={errors.keep_versions}>
-          {(p) => <input {...p} type="number" inputMode="numeric" min="1" max="100" value={game.keep} onChange={set('keep')} />}
+        <Field label="Máx. de versiones (este juego)" hint={`Vacío = usar el global (${globalMax}). ${VERSIONS_HINT}`} error={keepError || errors.keep_versions}>
+          {(p) => <input {...p} type="number" inputMode="numeric" min="0" max={MAX_VERSIONS_LIMIT} step="1" value={game.keep} onChange={set('keep')} placeholder={String(globalMax)} />}
         </Field>
       </div>
       <div className="row end">

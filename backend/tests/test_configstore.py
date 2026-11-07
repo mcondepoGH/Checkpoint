@@ -51,7 +51,7 @@ def test_validate_errors_by_field_path():
     d = {"devices": {"pc": {"host": "x y", "user": "u", "os": "linux", "port": 70000},
                      "laptop": {"host": "h", "user": "u", "os": "linux"}},
          "games": {"ejemplo": {"devices": ["pc", "laptop"], "paths": {"pc": "rel", "laptop": "/x/y"},
-                               "process": "a;b", "keep_versions": 0}}}
+                               "process": "a;b", "keep_versions": -1}}}
     cfg, errs = validate_config(d)
     assert cfg is None
     assert set(errs) >= {"devices.pc.host", "devices.pc.port", "games.ejemplo.process",

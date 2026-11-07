@@ -1,6 +1,6 @@
 import React from 'react';
 import Field from './Field.jsx';
-import { OS_OPTIONS } from '../draft.js';
+import { NAME_HINT, NAME_MAX, OS_OPTIONS } from '../draft.js';
 
 export default function DeviceCard({ dev, errors, localError, test, onChange, onTest, onRemove }) {
   const set = (k) => (e) => onChange({ [k]: e.target.value });
@@ -8,8 +8,8 @@ export default function DeviceCard({ dev, errors, localError, test, onChange, on
   return (
     <fieldset className="card cfg-card">
       <legend className="cfg-title">{title}</legend>
-      <Field label="Nombre" error={localError || errors['']}>
-        {(p) => <input {...p} value={dev.name} onChange={set('name')} maxLength={32} autoComplete="off" spellCheck="false" />}
+      <Field label="Nombre" hint={NAME_HINT} error={localError || errors['']}>
+        {(p) => <input {...p} value={dev.name} onChange={set('name')} maxLength={NAME_MAX} placeholder="p. ej. Mi PC (salón)" autoComplete="off" spellCheck="false" />}
       </Field>
       <div className="two">
         <Field label="Host / IP" error={errors.host}>

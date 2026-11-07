@@ -23,7 +23,7 @@ from .config import Config, Device, validate_config
 from .configstore import Conflict, ConfigStore, InvalidConfig, parse_text, config_events_gen, diff_configs, render_yaml
 from .redact import redact
 from .scheduler import Scheduler
-from .sync import SyncAbort, list_versions, restore_version, run_sync
+from .sync import SyncAbort, count_versions, list_versions, restore_version, run_sync
 from .transport import TransportError, get_transport
 
 COOKIE = "checkpoint_session"
@@ -321,7 +321,9 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         if sd.is_dir():
             for f in sd.glob("*.json"):
                 try:
-                    out[f.stem] = json.loads(f.read_text())
+                    st = json.loads(f.read_text())
+                    # El fichero se llama como el slug; la clave pública es el nombre visible.
+                    out[st["game"] if isinstance(st.get("game"), str) else f.stem] = st
                 except Exception:
                     pass
         return out
@@ -332,6 +334,14 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         if game not in _cfg().games:
             raise HTTPException(404, "juego desconocido")
         return list_versions(settings.DATA_DIR, game)
+
+    @app.get("/api/versions/{game}/limit", dependencies=[Depends(require)])
+    def versions_limit(game: str):
+        cfg = _cfg()
+        if game not in cfg.games:
+            raise HTTPException(404, "juego desconocido")
+        return {"max": cfg.versions_limit(game), "count": count_versions(settings.DATA_DIR, game),
+                "override": cfg.games[game].keep_versions is not None}
 
     @app.post("/api/versions/{game}/restore", dependencies=[Depends(require)])
     async def restore(game: str, request: Request):

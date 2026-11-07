@@ -8,7 +8,7 @@ const fmt = (v) => {
   return String(v);
 };
 
-const SECTIONS = [['devices', 'Dispositivos'], ['games', 'Juegos']];
+const SECTIONS = [['general', 'General'], ['devices', 'Dispositivos'], ['games', 'Juegos']];
 
 // Vista previa de cambios calculada por el backend (/api/config/diff).
 export default function DiffView({ diff }) {

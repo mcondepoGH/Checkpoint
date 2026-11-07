@@ -125,3 +125,16 @@ def test_scheduler_history_endpoint(client):
     assert client.get("/api/scheduler/history?limit=3").json()["entries"][2]["message"] == "e202"
     for bad in ("0", "201", "-1", "abc"):
         assert client.get(f"/api/scheduler/history?limit={bad}").status_code == 422, bad
+
+
+def test_versions_limit_endpoint(client, tmp_path):
+    login(client)
+    cfg = dict(CFG, max_versions=7, games={"g": {"devices": ["a", "b"], "paths": {"a": "/x/y", "b": "C:/z"}}})
+    client.sauth  # noqa
+    (tmp_path / "config").mkdir(parents=True, exist_ok=True)
+    import yaml
+    (tmp_path / "config" / "config.yaml").write_text(yaml.safe_dump(cfg))
+    (tmp_path / "data" / "versions" / "g" / "2026-01-01_100000" / "a").mkdir(parents=True)
+    r = client.get("/api/versions/g/limit")
+    assert r.status_code == 200 and r.json() == {"max": 7, "count": 1, "override": False}
+    assert client.get("/api/versions/nope/limit").status_code == 404

@@ -1,14 +1,21 @@
 """Modelo y validación de config.yaml; escritura atómica."""
+import hashlib
 import os
 import re
 import tempfile
+import unicodedata
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictInt, ValidationError, field_validator, model_validator
 
+# Formato antiguo de nombre; sigue siendo válido y su slug es el propio nombre.
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$")
+NAME_MAX = 64
+NAME_HELP = (f"1 a {NAME_MAX} caracteres: se admiten espacios (sin dobles ni al principio/final), "
+             "símbolos, acentos y emojis; no se admiten / \\ ni caracteres de control")
+RESERVED_SLUGS = ("hub",)  # el hub se guarda con ese nombre junto a los dispositivos
 HOST_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.:\-]{0,252}$")
 USER_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.\-]{0,31}$")
 PROC_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_. \-]{0,63}$")
@@ -16,10 +23,51 @@ PROC_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_. \-]{0,63}$")
 PATH_CHARS_RE = re.compile(r"^[\w .\-/()\[\]+,@~=#{}]+$")
 # "steamos" es un alias heredado de "linux": se sigue aceptando para no romper configs existentes, pero la UI ya no lo ofrece.
 OSES = ("windows", "steamos", "linux")
+# Versiones guardadas por juego: 0 = sin límite.
+DEFAULT_MAX_VERSIONS = 20
+MAX_VERSIONS_LIMIT = 1000
+MAX_VERSIONS_MSG = f"debe ser un número entero entre 0 y {MAX_VERSIONS_LIMIT} (0 = sin límite)"
 
 
 class ConfigError(ValueError):
     pass
+
+
+def name_error(name) -> Optional[str]:
+    """Mensaje de error si `name` no es un nombre visible válido; None si lo es."""
+    if not isinstance(name, str):
+        return f"nombre inválido: debe ser texto ({NAME_HELP})"
+    if not name.strip():
+        return "el nombre es obligatorio"
+    if name != name.strip() or "  " in name:
+        return "nombre inválido: sin espacios al principio ni al final ni dobles"
+    if len(name) > NAME_MAX:
+        return f"nombre demasiado largo (máx. {NAME_MAX} caracteres)"
+    if "/" in name or "\\" in name:
+        return "nombre inválido: no se admiten / ni \\"
+    for ch in name:
+        cat = unicodedata.category(ch)
+        if ch == "\u200d":  # unión de emojis compuestos
+            continue
+        if cat[0] == "C" or cat in ("Zl", "Zp") or (cat == "Zs" and ch != " "):
+            return "nombre inválido: sin caracteres de control ni espacios especiales"
+    if not name.strip("."):
+        return "nombre inválido: no puede ser solo puntos"
+    return None
+
+
+def slug_for(name: str) -> str:
+    """Identificador seguro para rutas de disco y ficheros del hub.
+
+    Nombre antiguo válido (letras, números, _ y -) -> el propio nombre (conserva datos existentes).
+    Resto -> parte ASCII + hash corto del nombre original (estable, sin colisiones "A B" vs "A-B").
+    """
+    if NAME_RE.fullmatch(name):
+        return name
+    base = unicodedata.normalize("NFKD", name).encode("ascii", "ignore").decode()
+    base = re.sub(r"[^A-Za-z0-9_-]+", "-", base)[:40].strip("-_")
+    digest = hashlib.sha1(unicodedata.normalize("NFC", name).encode("utf-8")).hexdigest()[:8]
+    return f"{base or 'item'}-{digest}"
 
 
 def normalize_path(os_name: str, p: str) -> str:
@@ -88,7 +136,8 @@ class Game(BaseModel):
     devices: List[str]
     paths: Dict[str, str]
     process: Optional[str] = None
-    keep_versions: int = Field(default=5)
+    # Override del máximo global `max_versions` para este juego; ausente = usar el global. 0 = sin límite.
+    keep_versions: Optional[StrictInt] = None
 
     @field_validator("process")
     @classmethod
@@ -102,8 +151,8 @@ class Game(BaseModel):
     @field_validator("keep_versions")
     @classmethod
     def _keep(cls, v):
-        if not 1 <= v <= 100:
-            raise ValueError("keep_versions debe estar entre 1 y 100")
+        if v is not None and not 0 <= v <= MAX_VERSIONS_LIMIT:
+            raise ValueError(f"keep_versions {MAX_VERSIONS_MSG}")
         return v
 
 
@@ -116,13 +165,29 @@ def semantic_errors(devices, games) -> List[Tuple[str, str]]:
     errs: List[Tuple[str, str]] = []
     devices = devices if isinstance(devices, dict) else {}
     games = games if isinstance(games, dict) else {}
-    for n in devices:
-        if not isinstance(n, str) or not NAME_RE.match(n):
-            errs.append((f"devices.{n}", "nombre inválido: letras, números, _ y - (máx. 32)"))
+    def check_names(names, prefix, reserved=()):
+        seen_n, seen_s = {}, {}
+        for n in names:
+            e = name_error(n)
+            if e:
+                errs.append((f"{prefix}.{n}", e))
+                continue
+            sl = slug_for(n)
+            if sl.casefold() in reserved:
+                errs.append((f"{prefix}.{n}", "nombre reservado"))
+                continue
+            key = n.casefold()
+            other = seen_n.get(key) or seen_s.get(sl.casefold())
+            if other:
+                errs.append((f"{prefix}.{n}", f"nombre repetido o demasiado parecido a {other!r}"))
+                continue
+            seen_n[key] = n
+            seen_s[sl.casefold()] = n
+
+    check_names(devices, "devices", RESERVED_SLUGS)
+    check_names(games, "games")
     for gname, g in games.items():
         gp = f"games.{gname}"
-        if not isinstance(gname, str) or not NAME_RE.match(gname):
-            errs.append((gp, "nombre inválido: letras, números, _ y - (máx. 32)"))
         if not isinstance(g, dict):
             continue
         devs = g.get("devices")
@@ -164,8 +229,21 @@ def semantic_errors(devices, games) -> List[Tuple[str, str]]:
 
 class Config(BaseModel):
     model_config = ConfigDict(extra="forbid")
+    max_versions: StrictInt = DEFAULT_MAX_VERSIONS  # máximo de versiones por juego (global)
     devices: Dict[str, Device] = {}
     games: Dict[str, Game] = {}
+
+    @field_validator("max_versions")
+    @classmethod
+    def _maxv(cls, v):
+        if not 0 <= v <= MAX_VERSIONS_LIMIT:
+            raise ValueError(f"max_versions {MAX_VERSIONS_MSG}")
+        return v
+
+    def versions_limit(self, game: str) -> int:
+        """Límite efectivo de versiones del juego: su override o el global. 0 = sin límite."""
+        k = self.games[game].keep_versions
+        return self.max_versions if k is None else k
 
     @model_validator(mode="after")
     def _cross(self):
@@ -191,6 +269,7 @@ _PYD_MSG = {
     "missing": "campo obligatorio",
     "int_parsing": "debe ser un número entero",
     "int_type": "debe ser un número entero",
+    "int_from_float": "debe ser un número entero",
     "string_type": "debe ser texto",
     "extra_forbidden": "campo no permitido",
     "dict_type": "debe ser un mapa",
