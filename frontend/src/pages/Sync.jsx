@@ -2,6 +2,47 @@ import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import EmptyState from '../components/EmptyState.jsx';
 
+// Fecha ISO -> {time, date}; null si no se puede interpretar.
+function splitWhen(iso) {
+  const d = iso ? new Date(iso) : null;
+  if (!d || Number.isNaN(d.getTime())) return null;
+  return {
+    time: d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    date: d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
+  };
+}
+
+// Ganador y dispositivos: campos del estado o, si faltan, se extraen del mensaje "ganador X; actualizados A, B".
+function parseRun(s) {
+  const m = /^ganador\s+([^;]+?);\s*(actualizados|destinos)\s+(.+)$/.exec(s.message || '');
+  const winner = s.winner || (m && m[1].trim()) || '';
+  const list = Array.isArray(s.targets) && s.targets.length ? s.targets : (m ? m[3].split(',').map((x) => x.trim()).filter(Boolean) : []);
+  const planned = s.dry_run || (m && m[2] === 'destinos') || s.result === 'dry-run';
+  return { winner, list, planned, structured: !!(winner || list.length) };
+}
+
+function LastRun({ s }) {
+  if (!s) return <EmptyState variant="inline" icon="⏳" title="Sin ejecuciones" text="Aún no se ha sincronizado este juego." />;
+  const when = splitWhen(s.finished);
+  const { winner, list, planned, structured } = parseRun(s);
+  return (
+    <dl className="lastrun">
+      <div className="lr-row">
+        <dt>Última sync</dt>
+        <dd>{when ? <><strong className="lr-time">{when.time}</strong><span className="lr-date">{when.date}</span></>
+                  : <span>{s.finished?.replace('T', ' ') || '—'}</span>}
+          {s.dry_run && <span className="lr-tag">dry-run</span>}</dd>
+      </div>
+      {winner && <div className="lr-row"><dt>Ganador</dt><dd><span className="pill win">{winner}</span></dd></div>}
+      {list.length > 0 && (
+        <div className="lr-row"><dt>{planned ? 'Destinos' : 'Actualizados'}</dt>
+          <dd className="pills">{list.map((d) => <span className="pill" key={d}>{d}</span>)}</dd></div>
+      )}
+      {!structured && s.message && <div className="lr-row"><dt>Detalle</dt><dd className="lr-msg">{s.message}</dd></div>}
+    </dl>
+  );
+}
+
 export default function Sync({ config, onGoSettings }) {
   const games = Object.keys(config.games);
   const [dry, setDry] = useState({});
@@ -49,8 +90,7 @@ export default function Sync({ config, onGoSettings }) {
               <h3>{g} {running ? <span className="badge running">en curso</span> : badge(s)}</h3>
               <p className="muted">{config.games[g].devices.join(' ⇄ ')}</p>
               <div className={`meter ${running ? 'running' : (s?.result || '')}`} role="progressbar" aria-label={`Estado de ${g}`}><i /></div>
-              {s ? <p className="muted">Última: {s.finished?.replace('T', ' ')}{s.dry_run ? ' (dry-run)' : ''}<br />{s.message}</p>
-                 : <p className="muted">Sin ejecuciones.</p>}
+              <LastRun s={s} />
               <label className="check"><input type="checkbox" checked={!!dry[g]} onChange={(e) => setDry({ ...dry, [g]: e.target.checked })} /> Dry-run</label>
               <button className="btn primary" disabled={running} onClick={() => run(g)}>{running ? 'En curso…' : 'Sincronizar'}</button>
             </div>

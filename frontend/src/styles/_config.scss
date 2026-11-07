@@ -45,5 +45,18 @@
   .actionbar { .btn { flex: 1 1 auto; } }
 }
 
-.keyhelp .keyhelp-panel h4 { margin: 1rem 0 .25rem; color: var(--accent); }
+.keyhelp .keyhelp-panel { padding: 1.25rem;
+  p { margin: 0 0 .5rem; } }
+.keyhelp .keyhelp-lead { margin-bottom: 1.25rem; }
+.keyhelp .keysteps, .keyhelp .keysubsteps { list-style: none; margin: 0 0 1rem; padding: 0; display: flex; flex-direction: column; gap: 1rem; }
+.keyhelp .keystep { display: flex; gap: .85rem; padding: 1rem; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2);
+  h4 { margin: 0 0 .15rem; color: var(--accent); font-size: 1.05rem; } }
+.keyhelp .keystep-body { flex: 1; min-width: 0; }
+.keyhelp .keystep-n { flex: none; width: 1.9rem; height: 1.9rem; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-family: v.$display; font-weight: 700; color: var(--primary-text); background: linear-gradient(135deg, var(--primary), var(--accent-2)); box-shadow: 0 0 12px -2px var(--glow); }
+.keyhelp .keytabs { display: flex; flex-wrap: wrap; gap: .5rem; margin: .5rem 0 .75rem;
+  &.sub { margin-top: 0; padding-left: .75rem; border-left: 2px solid var(--accent-2); } }
+.keyhelp .keypanel { padding: .25rem 0 0; }
+.keyhelp .keysub { padding: .75rem; border: 1px solid var(--border); border-radius: 10px; background: var(--surface);
+  h5 { margin: 0 0 .15rem; font-size: .95rem; display: flex; align-items: center; gap: .5rem; } }
+.keyhelp .keysub-n { flex: none; width: 1.3rem; height: 1.3rem; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: .75rem; color: var(--accent); border: 1px solid var(--accent); }
 .keyhelp .codeblock pre { white-space: pre-wrap; word-break: break-all; }

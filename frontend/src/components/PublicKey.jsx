@@ -31,27 +31,77 @@ function CodeBlock({ text }) {
   );
 }
 
-function osSteps(os, k) {
-  if (os === 'Linux') {
+const LINUX_KEY = (k) => `mkdir -p ~/.ssh && chmod 700 ~/.ssh\necho "${k}" >> ~/.ssh/authorized_keys\nchmod 600 ~/.ssh/authorized_keys`;
+
+// Cada paso: [título corto, una línea de explicación, comando]
+function osSteps(os, distro, k) {
+  if (os === 'Windows') {
     return [
-      ['Activar el servidor SSH, Debian / Ubuntu y derivadas (el servicio se llama ssh)', 'sudo apt install openssh-server && sudo systemctl enable --now ssh'],
-      ['Activar el servidor SSH, Arch Linux y derivadas (el servicio se llama sshd)', 'sudo pacman -S --needed openssh && sudo systemctl enable --now sshd'],
-      ['Activar el servidor SSH, Fedora y derivadas (el servicio se llama sshd). Si la cuenta no tiene contraseña, fija una antes con passwd', 'sudo systemctl enable --now sshd'],
-      ['Firewall (solo si está activo): ufw, o firewalld', 'sudo ufw allow 22/tcp\n# firewalld:\nsudo firewall-cmd --permanent --add-service=ssh && sudo firewall-cmd --reload'],
-      ['Añadir la clave a authorized_keys', `mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo "${k}" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`],
+      ['Activar el servidor OpenSSH', 'En PowerShell abierto como administrador.', 'Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0\nStart-Service sshd; Set-Service sshd -StartupType Automatic'],
+      ['Pegar la clave (usuario normal)', 'En PowerShell, con el usuario con el que se conectará Checkpoint.', `New-Item -ItemType Directory -Force "$env:USERPROFILE\\.ssh" | Out-Null\nAdd-Content -Path "$env:USERPROFILE\\.ssh\\authorized_keys" -Value '${k}'`],
+      ['Pegar la clave (usuario administrador)', 'Si ese usuario es administrador, la clave va en otro fichero. PowerShell como administrador.', `Add-Content -Path "C:\\ProgramData\\ssh\\administrators_authorized_keys" -Value '${k}'\nicacls "C:\\ProgramData\\ssh\\administrators_authorized_keys" /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F"`],
+    ];
+  }
+  if (distro === 'Arch Linux') {
+    return [
+      ['Instalar y activar el servidor SSH', 'En una terminal. El servicio se llama sshd.', 'sudo pacman -S --needed openssh\nsudo systemctl enable --now sshd'],
+      ['Abrir el puerto 22 (solo si hay firewall)', 'Arch no trae firewall activo por defecto. Usa el que tengas.', '# ufw\nsudo ufw allow 22/tcp\n# firewalld\nsudo firewall-cmd --permanent --add-service=ssh && sudo firewall-cmd --reload'],
+      ['Pegar la clave en authorized_keys', 'Como el usuario con el que se conectará Checkpoint (sin sudo).', LINUX_KEY(k)],
     ];
   }
   return [
-    ['Activar el servidor OpenSSH (PowerShell como administrador; o Configuración > Aplicaciones > Características opcionales > Servidor OpenSSH)', 'Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0\nStart-Service sshd; Set-Service sshd -StartupType Automatic'],
-    ['Usuario normal: añadir la clave a su authorized_keys (PowerShell)', `New-Item -ItemType Directory -Force "$env:USERPROFILE\\.ssh" | Out-Null\nAdd-Content -Path "$env:USERPROFILE\\.ssh\\authorized_keys" -Value '${k}'`],
-    ['Usuario administrador: la clave va en otro fichero (PowerShell como administrador)', `Add-Content -Path "C:\\ProgramData\\ssh\\administrators_authorized_keys" -Value '${k}'\nicacls "C:\\ProgramData\\ssh\\administrators_authorized_keys" /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F"`],
+    ['Instalar y activar el servidor SSH', 'En una terminal. El servicio se llama ssh.', 'sudo apt update && sudo apt install -y openssh-server\nsudo systemctl enable --now ssh'],
+    ['Abrir el puerto 22 (solo si ufw está activo)', 'Comprueba antes con sudo ufw status.', 'sudo ufw allow 22/tcp'],
+    ['Pegar la clave en authorized_keys', 'Como el usuario con el que se conectará Checkpoint (sin sudo).', LINUX_KEY(k)],
   ];
 }
 
+// Pestañas accesibles: flechas, Inicio y Fin; tabindex itinerante.
+function Tabs({ label, idBase, items, value, onChange, small }) {
+  const refs = useRef({});
+  const onKey = (e) => {
+    const i = items.indexOf(value);
+    let n = -1;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') n = (i + 1) % items.length;
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') n = (i - 1 + items.length) % items.length;
+    else if (e.key === 'Home') n = 0;
+    else if (e.key === 'End') n = items.length - 1;
+    if (n < 0) return;
+    e.preventDefault();
+    onChange(items[n]);
+    refs.current[items[n]]?.focus();
+  };
+  return (
+    <div role="tablist" aria-label={label} className={'keytabs' + (small ? ' sub' : '')} onKeyDown={onKey}>
+      {items.map((o) => (
+        <button key={o} ref={(el) => { refs.current[o] = el; }} type="button" role="tab" id={`${idBase}-tab-${o}`} aria-selected={value === o} aria-controls={`${idBase}-panel`} tabIndex={value === o ? 0 : -1} className={'btn tab' + (value === o ? ' active' : '')} onClick={() => onChange(o)}>{o}</button>
+      ))}
+    </div>
+  );
+}
+
+function Step({ n, title, hint, children }) {
+  return (
+    <li className="keystep">
+      <span className="keystep-n" aria-hidden="true">{n}</span>
+      <div className="keystep-body">
+        <h4>{title}</h4>
+        {hint && <p className="muted">{hint}</p>}
+        {children}
+      </div>
+    </li>
+  );
+}
+
+const SYSTEMS = ['Windows', 'Linux'];
+const DISTROS = ['Debian / Ubuntu', 'Arch Linux'];
+
 function KeyHelp({ pubKey, children }) {
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState('Linux');
+  const [sys, setSys] = useState('Linux');
+  const [distro, setDistro] = useState(DISTROS[0]);
   const k = pubKey || PH;
+  const steps = osSteps(sys, distro, k);
   return (
     <div className="keyhelp">
       <div className="keyhelp-head">
@@ -60,32 +110,34 @@ function KeyHelp({ pubKey, children }) {
       </div>
       {open && (
         <div id="keyhelp-panel" className="keyhelp-panel">
-          <h4>1. Para qué sirve</h4>
-          <p className="muted">Checkpoint genera su propia clave SSH. Checkpoint (el servidor) la usa para entrar por SSH, sin contraseña, a cada dispositivo (PC con Windows, equipo Linux) y copiar sus partidas. Hay que dar de alta la parte <strong>pública</strong> en cada dispositivo.</p>
-
-          <h4>2. En esta web: copia la clave</h4>
-          <p className="muted">Pulsa <strong>Copiar</strong> bajo la caja de la clave pública. Es la clave de Checkpoint (no hay que generar ninguna en tu PC).</p>
-
-          <h4>3. En el dispositivo remoto: pégala en authorized_keys</h4>
-          <p className="muted">Haz esto en cada dispositivo al que Checkpoint se conecta. Elige su sistema:</p>
-          <div role="tablist" aria-label="Sistema del dispositivo remoto" className="row">
-            {['Linux', 'Windows'].map((o) => (
-              <button key={o} type="button" role="tab" aria-selected={tab === o} className={'btn tab' + (tab === o ? ' active' : '')} onClick={() => setTab(o)}>{o}</button>
-            ))}
-          </div>
-          <div role="tabpanel">
-            {!pubKey && <p className="muted">Aún no hay clave visible: sustituye <code>{PH}</code> por la clave copiada.</p>}
-            {osSteps(tab, k).map(([label, cmd]) => (
-              <div key={label}><p className="muted">{label}</p><CodeBlock text={cmd} /></div>
-            ))}
-            <p className="muted">La línea resultante en <code>authorized_keys</code> es una sola línea:</p>
-            <CodeBlock text="ssh-ed25519 AAAAC3Nza...XXXX checkpoint" />
-            {tab === 'Windows' && <p className="muted">Deja el shell por defecto (cmd.exe) y usa un usuario local.</p>}
-          </div>
-
-          <h4>4. Comprueba la conexión</h4>
-          <p className="muted">En esta web, en la tarjeta del dispositivo, pulsa <strong>Probar conexión</strong>. Debe responder <code>conexión OK</code>. La primera vez guarda la huella del dispositivo.</p>
-
+          <p className="muted keyhelp-lead">Checkpoint usa su propia clave SSH para entrar, sin contraseña, a cada dispositivo y copiar sus partidas. Hay que dar de alta la parte <strong>pública</strong> en cada dispositivo.</p>
+          <ol className="keysteps">
+            <Step n={1} title="Copia la clave" hint="En esta web.">
+              <p className="muted">Pulsa <strong>Copiar</strong> bajo la caja de la clave pública. Es la clave de Checkpoint: no hay que generar ninguna en tu PC.</p>
+            </Step>
+            <Step n={2} title="Pégala en el dispositivo remoto" hint="En cada dispositivo al que se conecta Checkpoint. Elige su sistema.">
+              <Tabs label="Sistema del dispositivo remoto" idBase="ks-sys" items={SYSTEMS} value={sys} onChange={setSys} />
+              {sys === 'Linux' && <Tabs label="Distribución Linux" idBase="ks-distro" items={DISTROS} value={distro} onChange={setDistro} small />}
+              <div role="tabpanel" id={sys === 'Linux' ? 'ks-distro-panel' : 'ks-sys-panel'} aria-labelledby={sys === 'Linux' ? `ks-distro-tab-${distro}` : 'ks-sys-tab-Windows'} className="keypanel">
+                {!pubKey && <p className="muted">Aún no hay clave visible: sustituye <code>{PH}</code> por la clave copiada.</p>}
+                <ol className="keysubsteps">
+                  {steps.map(([title, hint, cmd], i) => (
+                    <li key={title} className="keysub">
+                      <h5><span className="keysub-n" aria-hidden="true">{String.fromCharCode(97 + i)}</span>{title}</h5>
+                      <p className="muted">{hint}</p>
+                      <CodeBlock text={cmd} />
+                    </li>
+                  ))}
+                </ol>
+                <p className="muted">En <code>authorized_keys</code> la clave ocupa una sola línea, con este aspecto:</p>
+                <CodeBlock text="ssh-ed25519 AAAAC3Nza...XXXX checkpoint" />
+                {sys === 'Windows' && <p className="muted">Deja el shell por defecto (cmd.exe) y usa un usuario local.</p>}
+              </div>
+            </Step>
+            <Step n={3} title="Comprueba la conexión" hint="En esta web.">
+              <p className="muted">En la tarjeta del dispositivo, pulsa <strong>Probar conexión</strong>. Debe responder <code>conexión OK</code>. La primera vez guarda la huella del dispositivo.</p>
+            </Step>
+          </ol>
           <div className="alert warn">Pega solo la clave pública (una línea que empieza por <code>ssh-ed25519</code>). NUNCA una clave privada.</div>
         </div>
       )}
