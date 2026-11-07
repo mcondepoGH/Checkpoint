@@ -307,10 +307,19 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     @app.put("/api/updates", dependencies=[Depends(require)])
     async def put_updates(request: Request):
         body = await body_json(request)
-        if not isinstance(body.get("enabled"), bool):
-            return JSONResponse({"detail": "ajustes no válidos", "errors": {"enabled": "debe ser verdadero o falso"}},
-                                status_code=422)
-        checker.set_enabled(body["enabled"])
+        errors = {}
+        if "enabled" in body and not isinstance(body["enabled"], bool):
+            errors["enabled"] = "debe ser verdadero o falso"
+        if "channel" in body and body["channel"] not in updates.CHANNELS:
+            errors["channel"] = "debe ser «stable» o «beta»"
+        if not errors and "enabled" not in body and "channel" not in body:
+            errors["enabled"] = "indica «enabled» o «channel»"
+        if errors:
+            return JSONResponse({"detail": "ajustes no válidos", "errors": errors}, status_code=422)
+        if "enabled" in body:
+            checker.set_enabled(body["enabled"])
+        if "channel" in body:
+            checker.set_channel(body["channel"])
         return await run_in_threadpool(checker.state)
 
     @app.get("/api/scheduler/history", dependencies=[Depends(require)])

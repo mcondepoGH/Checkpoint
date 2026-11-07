@@ -237,3 +237,171 @@ def test_endpoints(api):
     assert api.get("/api/updates?refresh=1").json()["hay_actualizacion"] is False
     assert len(api.calls) == n
     assert api.put("/api/updates", json={"enabled": "si"}).status_code == 422
+
+
+# ---- canal de pruebas (beta) ----
+def test_semver_prerelease_order():
+    k = updates.parse_semver
+    order = ["0.5.0-alpha", "0.5.0-alpha.1", "0.5.0-alpha.beta", "0.5.0-beta", "0.5.0-beta.2", "0.5.0-beta.11",
+             "0.5.0-rc.1", "0.5.0-rc.2", "0.5.0", "0.5.1-rc.1", "0.5.1", "0.10.0"]
+    keys = [k(v) for v in order]
+    assert all(x is not None for x in keys)
+    assert keys == sorted(keys) and len(set(keys)) == len(keys)
+    assert k("0.5.0-rc.1") < k("0.5.0") and k("0.5.0-rc.2") > k("0.5.0-rc.1")
+    assert k("0.5.0-rc.10") > k("0.5.0-rc.9")          # numéricos como número
+    assert k("0.5.0-1") < k("0.5.0-a")                  # numérico < alfanumérico
+    assert k("v0.5.0+build7") == k("0.5.0")             # la build se ignora
+    for bad in ("0.5.0-", "0.5.0-rc..1", "0.5.0-01", "x", "", None, "1.2.3.4", "0.5.0-rc_1"):
+        assert k(bad) is None
+    assert updates.format_semver("v0.5.0-rc.1+b") == "0.5.0-rc.1" and updates.format_semver("1.2") == "1.2.0"
+
+
+def test_pick_latest_channels():
+    rels = [rel("v0.5.0-rc.2", prerelease=True), rel("v0.5.0-rc.1", prerelease=True), rel("v0.4.9"),
+            rel("v0.9.0", draft=True), rel("v0.6.0-beta.1", prerelease=True)]
+    assert updates.pick_latest(rels)["version"] == "0.4.9"
+    assert updates.pick_latest(rels, "stable")["version"] == "0.4.9"
+    b = updates.pick_latest(rels, "beta")
+    assert b["version"] == "0.6.0-beta.1" and b["prerelease"] is True
+    # la estable 0.5.0 gana a sus propios rc; borradores nunca
+    b = updates.pick_latest(rels + [rel("v0.5.0")], "beta")
+    assert b["version"] == "0.6.0-beta.1"
+    b = updates.pick_latest([rel("v0.5.0"), rel("v0.5.0-rc.2", prerelease=True)], "beta")
+    assert b["version"] == "0.5.0" and b["prerelease"] is False
+    assert updates.pick_latest([rel("v0.9.0", draft=True)], "beta") is None
+    # sufijo en el tag aunque GitHub no la marque como pre-release: no es estable
+    assert updates.pick_latest([rel("v0.7.0-rc.1")], "stable") is None
+    assert updates.pick_latest([rel("v0.7.0-rc.1")], "beta")["prerelease"] is True
+    # desconocido -> stable
+    assert updates.pick_latest(rels, "raro")["version"] == "0.4.9"
+
+
+def test_beta_state_offers_prerelease(env):
+    make, _, _ = env
+    c = make([rel("v0.5.0-rc.1", prerelease=True), rel("v0.4.2")])
+    assert c.state()["hay_actualizacion"] is False and c.state()["canal"] == "stable"
+    c.set_channel("beta")
+    s = c.state()
+    assert s["canal"] == "beta" and s["ultima"] == "0.5.0-rc.1" and s["prerelease"] is True and s["hay_actualizacion"] is True
+
+
+def test_channel_change_invalidates_cache(env):
+    make, t, calls = env
+    c = make([rel("v0.5.0-rc.1", prerelease=True), rel("v0.4.5")])
+    assert c.state()["ultima"] == "0.4.5" and len(calls) == 1
+    c.set_channel("beta")
+    assert c.state()["ultima"] == "0.5.0-rc.1" and len(calls) == 2   # sin esperar al TTL
+    c.set_channel("stable")
+    assert c.state()["ultima"] == "0.4.5" and len(calls) == 3
+    # tras un fallo de red en el cambio no se arrastra el resultado del otro canal
+    c.set_channel("beta")
+    c2 = make(exc=OSError("x"))
+    t[0] += 1
+    c2._cache = None
+    assert c2.state()["ultima"] is None
+
+
+def test_phase1_cache_without_channel_counts_as_stable(env):
+    make, _, calls = env
+    c = make([rel("v0.5.0")])
+    c.state()
+    p = settings.DATA_DIR / updates.CACHE_FILE
+    d = json.loads(p.read_text()); d.pop("channel"); p.write_text(json.dumps(d))
+    c2 = make([rel("v0.6.0")])
+    assert c2.state()["ultima"] == "0.5.0" and len(calls) == 1      # válida para stable
+    c2.set_channel("beta")
+    assert c2.state()["ultima"] == "0.6.0" and len(calls) == 2
+
+
+def test_no_downgrade(env, monkeypatch):
+    make0, _, _ = env
+
+    def make(rels):
+        (settings.DATA_DIR / updates.CACHE_FILE).unlink(missing_ok=True)   # cada caso parte sin caché
+        return make0(rels)
+    monkeypatch.setattr(updates, "installed_version", lambda: "0.5.0-rc.1")
+    # en una pre-release y canal estable: la estable menor no se ofrece
+    assert make([rel("v0.4.9")]).state()["hay_actualizacion"] is False
+    # la estable mayor sí
+    assert make([rel("v0.5.0")]).state()["hay_actualizacion"] is True
+    # beta: el siguiente rc sí, el mismo no, el anterior no
+    c = make([rel("v0.5.0-rc.2", prerelease=True)]); c.set_channel("beta")
+    assert c.state()["hay_actualizacion"] is True
+    c = make([rel("v0.5.0-rc.1", prerelease=True)]); c.set_channel("beta")
+    assert c.state()["hay_actualizacion"] is False
+    c = make([rel("v0.4.0", ), rel("v0.5.0-beta.3", prerelease=True)]); c.set_channel("beta")
+    assert c.state()["hay_actualizacion"] is False
+    # estable instalada 0.5.0 no baja a una pre-release menor
+    monkeypatch.setattr(updates, "installed_version", lambda: "0.5.0")
+    c = make([rel("v0.5.0-rc.9", prerelease=True)]); c.set_channel("beta")
+    assert c.state()["hay_actualizacion"] is False
+
+
+def test_installed_version_accepts_prerelease(tmp_path, monkeypatch):
+    f = tmp_path / "VERSION"
+    f.write_text("v0.5.0-rc.1\n")
+    monkeypatch.setenv("CHECKPOINT_VERSION_FILE", str(f))
+    assert updates.installed_version() == "0.5.0-rc.1"
+
+
+def test_channel_persist_env_default_and_validation(env, monkeypatch):
+    make, _, _ = env
+    monkeypatch.setattr(settings, "UPDATE_CHANNEL", "beta")
+    c = make([rel("v0.5.0")])
+    assert c.channel() == "beta"                       # valor inicial por entorno
+    c.set_channel("stable")
+    assert make([]).channel() == "stable"              # lo guardado prevalece sobre el entorno
+    assert json.loads((settings.DATA_DIR / updates.SETTINGS_FILE).read_text()) == {"channel": "stable"}
+    with pytest.raises(ValueError):
+        c.set_channel("nightly")
+    monkeypatch.setattr(settings, "UPDATE_CHANNEL", "raro")
+    (settings.DATA_DIR / updates.SETTINGS_FILE).unlink()
+    assert make([]).channel() == "stable"              # entorno desconocido -> stable
+    (settings.DATA_DIR / updates.SETTINGS_FILE).write_text('{"channel": 7}')
+    assert make([]).channel() == "stable"              # fichero corrupto -> stable
+
+
+def test_enabled_and_channel_do_not_clobber_each_other(env):
+    make, _, _ = env
+    c = make([rel("v0.5.0")])
+    c.set_channel("beta"); c.set_enabled(False)
+    c2 = make([])
+    assert c2.channel() == "beta" and c2.enabled() is False
+    c2.set_channel("stable")
+    assert c2.enabled() is False
+
+
+def test_settings_env_channel_parsing(monkeypatch):
+    import importlib
+    for raw, exp in (("beta", "beta"), (" BETA ", "beta"), ("stable", "stable"), ("xx", "stable"), ("", "stable")):
+        monkeypatch.setenv("CHECKPOINT_UPDATE_CHANNEL", raw)
+        importlib.reload(settings)
+        assert settings.UPDATE_CHANNEL == exp
+    monkeypatch.delenv("CHECKPOINT_UPDATE_CHANNEL")
+    importlib.reload(settings)
+    assert settings.UPDATE_CHANNEL == "stable"
+
+
+def test_endpoints_channel(api, monkeypatch):
+    monkeypatch.setattr(updates, "fetch_releases", lambda repo: [rel("v0.5.0"), rel("v0.6.0-rc.1", prerelease=True)])
+    login(api)
+    s = api.get("/api/updates").json()
+    assert s["canal"] == "stable" and s["prerelease"] is False and s["ultima"] == "0.5.0"
+    r = api.put("/api/updates", json={"channel": "beta"})            # parcial: no toca «enabled»
+    assert r.status_code == 200
+    j = r.json()
+    assert j["canal"] == "beta" and j["habilitado"] is True and j["ultima"] == "0.6.0-rc.1" and j["prerelease"] is True
+    r = api.put("/api/updates", json={"enabled": False})              # parcial: no toca «channel»
+    assert r.json()["canal"] == "beta" and r.json()["habilitado"] is False
+    r = api.put("/api/updates", json={"enabled": True, "channel": "stable"})
+    assert r.json()["canal"] == "stable" and r.json()["habilitado"] is True and r.json()["prerelease"] is False
+
+
+def test_put_validation_is_atomic(api):
+    login(api)
+    for body in ({"channel": "nightly"}, {"channel": 3}, {"channel": None}, {}, {"enabled": "si", "channel": "beta"},
+                 {"enabled": False, "channel": "x"}):
+        r = api.put("/api/updates", json=body)
+        assert r.status_code == 422, body
+    s = api.get("/api/updates").json()
+    assert s["canal"] == "stable" and s["habilitado"] is True     # nada se aplicó a medias
