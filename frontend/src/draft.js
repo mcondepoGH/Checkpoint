@@ -4,14 +4,16 @@
 let seq = 0;
 const uid = () => `i${++seq}`;
 
-export const OS_OPTIONS = [['windows', 'Windows'], ['steamos', 'SteamOS'], ['linux', 'Linux']];
+export const OS_OPTIONS = [['windows', 'Windows'], ['linux', 'Linux']]
+// Valor heredado de config.yaml: se muestra como Linux (equivale a él) y se guarda como tal.
+const LEGACY_OS = { steamos: 'linux' };;
 
 export const blankDevice = () => ({ id: uid(), name: '', host: '', port: '22', user: '', os: 'linux' });
 export const blankGame = () => ({ id: uid(), name: '', a: '', b: '', pathA: '', pathB: '', process: '', keep: '5' });
 
 export function fromConfig(cfg) {
   const devices = Object.entries(cfg?.devices || {}).map(([name, d]) => ({
-    id: uid(), name, host: d.host, port: String(d.port ?? 22), user: d.user, os: d.os,
+    id: uid(), name, host: d.host, port: String(d.port ?? 22), user: d.user, os: LEGACY_OS[d.os] || d.os,
   }));
   const idOf = (n) => devices.find((d) => d.name === n)?.id || '';
   const games = Object.entries(cfg?.games || {}).map(([name, g]) => ({
@@ -46,7 +48,7 @@ export function toConfig(draft) {
   const devices = {};
   for (const d of draft.devices) {
     if (bad[d.id]) continue;
-    devices[d.name] = { host: d.host, user: d.user, os: d.os, port: num(d.port) };
+    devices[d.name] = { host: d.host, user: d.user, os: LEGACY_OS[d.os] || d.os, port: num(d.port) };
   }
   const games = {};
   for (const g of draft.games) {

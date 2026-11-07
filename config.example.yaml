@@ -1,11 +1,11 @@
 devices:
   pc:   {host: 192.0.2.10, user: usuario, os: windows, port: 22}
-  deck: {host: 192.0.2.11, user: deck, os: steamos, port: 22}
+  laptop: {host: 192.0.2.11, user: usuario, os: linux, port: 22}
 games:
   ejemplo:
-    devices: [pc, deck]        # exactamente dos, distintos (la pantalla Configuración conserva estos comentarios al guardar)
+    devices: [pc, laptop]        # exactamente dos, distintos (la pantalla Configuración conserva estos comentarios al guardar)
     paths:
       pc: "C:/Users/usuario/AppData/Local/Ejemplo/Saves"
-      deck: "/home/deck/.local/share/Steam/steamapps/compatdata/1234567/pfx/drive_c/users/steamuser/AppData/Local/Ejemplo/Saves"
+      laptop: "/home/usuario/.local/share/Ejemplo/Saves"
     process: "ejemplo.exe"     # opcional: no copiar si está abierto
     keep_versions: 5

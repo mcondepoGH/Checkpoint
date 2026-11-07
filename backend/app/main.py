@@ -26,7 +26,7 @@ from .scheduler import Scheduler
 from .sync import SyncAbort, list_versions, restore_version, run_sync
 from .transport import TransportError, get_transport
 
-COOKIE = "savesync_session"
+COOKIE = "checkpoint_session"
 
 
 class Run:

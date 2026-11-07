@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import logo from '../assets/logo-icon.svg';
 import { api } from '../api.js';
 
 export default function Login({ onDone, theme, cycleTheme }) {
@@ -18,7 +19,7 @@ export default function Login({ onDone, theme, cycleTheme }) {
   return (
     <div className="center">
       <form className="card login" onSubmit={submit}>
-        <h1>savesync</h1>
+        <h1><img src={logo} alt="" aria-hidden="true" className="login-logo" />Checkpoint</h1>
         <label>Usuario
           <input value={user} onChange={(e) => setUser(e.target.value)} autoComplete="username" autoFocus required />
         </label>

@@ -147,32 +147,51 @@ def test_plain_password_not_kept():
     assert "s3cret pass" not in repr(vars(a))
 
 
-@pytest.mark.parametrize("env", [{}, {"SAVESYNC_USER": "admin"}, {"SAVESYNC_PASSWORD": "x"},
-                                 {"SAVESYNC_USER": "", "SAVESYNC_PASSWORD": "x"}])
+@pytest.mark.parametrize("env", [{}, {"CHECKPOINT_USER": "admin"}, {"CHECKPOINT_PASSWORD": "x"},
+                                 {"CHECKPOINT_USER": "", "CHECKPOINT_PASSWORD": "x"}])
 def test_missing_var_gives_clear_error(env):
-    with pytest.raises(RuntimeError, match="Faltan SAVESYNC_USER / SAVESYNC_PASSWORD"):
+    with pytest.raises(RuntimeError, match="Faltan CHECKPOINT_USER / CHECKPOINT_PASSWORD"):
         Auth.from_env(env, rounds=4)
 
 
 def test_create_app_from_env(monkeypatch):
-    monkeypatch.setenv("SAVESYNC_USER", "admin")
-    monkeypatch.setenv("SAVESYNC_PASSWORD", "claro-123")
+    monkeypatch.setenv("CHECKPOINT_USER", "admin")
+    monkeypatch.setenv("CHECKPOINT_PASSWORD", "claro-123")
     c = TestClient(create_app())
     assert c.post("/api/login", json={"user": "admin", "password": "claro-123"}).status_code == 200
     assert c.post("/api/login", json={"user": "admin", "password": "mala"}).status_code == 401
 
 
 def test_create_app_without_vars_fails(monkeypatch):
+    monkeypatch.delenv("CHECKPOINT_USER", raising=False)
+    monkeypatch.delenv("CHECKPOINT_PASSWORD", raising=False)
     monkeypatch.delenv("SAVESYNC_USER", raising=False)
     monkeypatch.delenv("SAVESYNC_PASSWORD", raising=False)
-    with pytest.raises(RuntimeError, match="Faltan SAVESYNC_USER"):
+    with pytest.raises(RuntimeError, match="Faltan CHECKPOINT_USER"):
         create_app()
+
+
+def test_env_fallback_to_legacy_savesync_prefix(monkeypatch):
+    from app import settings
+    for k in ("USER", "PASSWORD", "PORT"):
+        monkeypatch.delenv("CHECKPOINT_" + k, raising=False)
+        monkeypatch.delenv("SAVESYNC_" + k, raising=False)
+    assert settings.env("PORT", "8088") == "8088"
+    monkeypatch.setenv("SAVESYNC_PORT", "9000")
+    assert settings.env("PORT", "8088") == "9000"           # solo el nombre antiguo
+    monkeypatch.setenv("CHECKPOINT_PORT", "9100")
+    assert settings.env("PORT", "8088") == "9100"           # el nuevo prevalece
+    monkeypatch.setenv("SAVESYNC_USER", "viejo")
+    monkeypatch.setenv("SAVESYNC_PASSWORD", "clave-vieja")
+    c = TestClient(create_app())
+    assert c.post("/api/login", json={"user": "viejo", "password": "clave-vieja"}).status_code == 200
+    assert "checkpoint_session" in c.cookies
 
 
 def test_password_not_logged(monkeypatch, caplog, capsys):
     from app.redact import redact
-    monkeypatch.setenv("SAVESYNC_USER", "admin")
-    monkeypatch.setenv("SAVESYNC_PASSWORD", "claro-123456")
+    monkeypatch.setenv("CHECKPOINT_USER", "admin")
+    monkeypatch.setenv("CHECKPOINT_PASSWORD", "claro-123456")
     with caplog.at_level("DEBUG"):
         c = TestClient(create_app())
         c.post("/api/login", json={"user": "admin", "password": "claro-123456"})

@@ -5,9 +5,9 @@ from app.config import load_config, normalize_path, parse_config, save_config
 
 BASE = {
     "devices": {"pc": {"host": "192.0.2.10", "user": "u", "os": "windows"},
-                "deck": {"host": "192.0.2.11", "user": "deck", "os": "steamos"}},
-    "games": {"g": {"devices": ["pc", "deck"],
-                    "paths": {"pc": "C:\\Users\\u\\Saves", "deck": "/home/deck/saves"},
+                "laptop": {"host": "192.0.2.11", "user": "laptop", "os": "linux"}},
+    "games": {"g": {"devices": ["pc", "laptop"],
+                    "paths": {"pc": "C:\\Users\\u\\Saves", "laptop": "/home/usuario/saves"},
                     "process": "game.exe"}},
 }
 
@@ -35,13 +35,13 @@ def test_valid_and_normalizes():
     mod(games__g__devices=["pc"]),
     mod(games__g__devices=["pc", "nope"]),
     mod(games__g__paths={"pc": "C:/a", "other": "/x"}),
-    mod(games__g__paths={"pc": "C:/a/../b", "deck": "/x/y"}),
-    mod(games__g__paths={"pc": "C:/a", "deck": "rel/path"}),
-    mod(games__g__paths={"pc": "C:/a", "deck": "/x; rm -rf /"}),
-    mod(games__g__paths={"pc": "C:/a", "deck": "/x/$(id)"}),
-    mod(games__g__paths={"pc": "C:/a&calc", "deck": "/x/y"}),
-    mod(games__g__paths={"pc": "relative", "deck": "/x/y"}),
-    mod(games__g__paths={"pc": "C:/", "deck": "/x/y"}),
+    mod(games__g__paths={"pc": "C:/a/../b", "laptop": "/x/y"}),
+    mod(games__g__paths={"pc": "C:/a", "laptop": "rel/path"}),
+    mod(games__g__paths={"pc": "C:/a", "laptop": "/x; rm -rf /"}),
+    mod(games__g__paths={"pc": "C:/a", "laptop": "/x/$(id)"}),
+    mod(games__g__paths={"pc": "C:/a&calc", "laptop": "/x/y"}),
+    mod(games__g__paths={"pc": "relative", "laptop": "/x/y"}),
+    mod(games__g__paths={"pc": "C:/", "laptop": "/x/y"}),
     mod(games__g__process="a;b"),
     mod(games__g__keep_versions=0),
     mod(devices__pc__host="-oProxyCommand=x"),
@@ -52,6 +52,11 @@ def test_valid_and_normalizes():
 def test_invalid(bad):
     with pytest.raises(ValidationError):
         parse_config(bad)
+
+
+def test_legacy_os_alias_still_valid():
+    c = parse_config(mod(devices__laptop__os="steamos"))
+    assert c.devices["laptop"].os == "steamos"
 
 
 def test_bad_names():
@@ -67,7 +72,7 @@ def test_extra_keys_rejected():
 
 
 def test_normalize_posix():
-    assert normalize_path("steamos", "/a//b/./c/") == "/a/b/c"
+    assert normalize_path("linux", "/a//b/./c/") == "/a/b/c"
 
 
 def test_atomic_roundtrip(tmp_path):

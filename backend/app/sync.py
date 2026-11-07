@@ -197,7 +197,7 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status):
                 raise SyncAbort(f"{g.process} está abierto en {n}")
         L(f"{g.process} no está abierto")
 
-    with tempfile.TemporaryDirectory(prefix="savesync-") as td:
+    with tempfile.TemporaryDirectory(prefix="checkpoint-") as td:
         tmp = Path(td)
         dirs: Dict[str, Path] = {}
         # 3. Descarga a temporal.

@@ -18,7 +18,7 @@
 .login { width: min(400px, 100%); gap: .9rem; padding: 1.75rem; box-shadow: 0 0 40px -8px var(--glow);
   h1 { text-align: center; font-size: 1.8rem; text-transform: uppercase; margin: 0;
     background: linear-gradient(90deg, var(--accent), var(--primary), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-  h1::before { content: '🎮'; display: block; font-size: 2.4rem; -webkit-text-fill-color: initial; filter: drop-shadow(0 0 10px var(--glow)); } }
+  .login-logo { display: block; width: clamp(64px, 22vw, 88px); height: auto; margin: 0 auto .5rem; } }
 .grid { display: grid; gap: v.$gap; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); margin-top: v.$gap; }
 
 label { font-size: .95rem; color: var(--muted); }

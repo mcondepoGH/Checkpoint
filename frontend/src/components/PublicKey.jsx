@@ -36,7 +36,7 @@ function osSteps(os, k) {
     return [
       ['Activar el servidor SSH, Debian / Ubuntu y derivadas (el servicio se llama ssh)', 'sudo apt install openssh-server && sudo systemctl enable --now ssh'],
       ['Activar el servidor SSH, Arch Linux y derivadas (el servicio se llama sshd)', 'sudo pacman -S --needed openssh && sudo systemctl enable --now sshd'],
-      ['Activar el servidor SSH, Fedora y Steam Deck (el servicio se llama sshd). En Steam Deck, en modo escritorio, fija antes una contraseña con passwd si no tiene', 'sudo systemctl enable --now sshd'],
+      ['Activar el servidor SSH, Fedora y derivadas (el servicio se llama sshd). Si la cuenta no tiene contraseña, fija una antes con passwd', 'sudo systemctl enable --now sshd'],
       ['Firewall (solo si está activo): ufw, o firewalld', 'sudo ufw allow 22/tcp\n# firewalld:\nsudo firewall-cmd --permanent --add-service=ssh && sudo firewall-cmd --reload'],
       ['Añadir la clave a authorized_keys', `mkdir -p ~/.ssh && chmod 700 ~/.ssh && echo "${k}" >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys`],
     ];
@@ -61,13 +61,13 @@ function KeyHelp({ pubKey, children }) {
       {open && (
         <div id="keyhelp-panel" className="keyhelp-panel">
           <h4>1. Para qué sirve</h4>
-          <p className="muted">savesync genera su propia clave SSH. savesync (el servidor) la usa para entrar por SSH, sin contraseña, a cada dispositivo (PC, Steam Deck) y copiar sus partidas. Hay que dar de alta la parte <strong>pública</strong> en cada dispositivo.</p>
+          <p className="muted">Checkpoint genera su propia clave SSH. Checkpoint (el servidor) la usa para entrar por SSH, sin contraseña, a cada dispositivo (PC con Windows, equipo Linux) y copiar sus partidas. Hay que dar de alta la parte <strong>pública</strong> en cada dispositivo.</p>
 
           <h4>2. En esta web: copia la clave</h4>
-          <p className="muted">Pulsa <strong>Copiar</strong> bajo la caja de la clave pública. Es la clave de savesync (no hay que generar ninguna en tu PC).</p>
+          <p className="muted">Pulsa <strong>Copiar</strong> bajo la caja de la clave pública. Es la clave de Checkpoint (no hay que generar ninguna en tu PC).</p>
 
           <h4>3. En el dispositivo remoto: pégala en authorized_keys</h4>
-          <p className="muted">Haz esto en cada dispositivo al que savesync se conecta. Elige su sistema:</p>
+          <p className="muted">Haz esto en cada dispositivo al que Checkpoint se conecta. Elige su sistema:</p>
           <div role="tablist" aria-label="Sistema del dispositivo remoto" className="row">
             {['Linux', 'Windows'].map((o) => (
               <button key={o} type="button" role="tab" aria-selected={tab === o} className={'btn tab' + (tab === o ? ' active' : '')} onClick={() => setTab(o)}>{o}</button>
@@ -79,7 +79,7 @@ function KeyHelp({ pubKey, children }) {
               <div key={label}><p className="muted">{label}</p><CodeBlock text={cmd} /></div>
             ))}
             <p className="muted">La línea resultante en <code>authorized_keys</code> es una sola línea:</p>
-            <CodeBlock text="ssh-ed25519 AAAAC3Nza...XXXX savesync" />
+            <CodeBlock text="ssh-ed25519 AAAAC3Nza...XXXX checkpoint" />
             {tab === 'Windows' && <p className="muted">Deja el shell por defecto (cmd.exe) y usa un usuario local.</p>}
           </div>
 

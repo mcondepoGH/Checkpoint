@@ -14,6 +14,7 @@ USER_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.\-]{0,31}$")
 PROC_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_. \-]{0,63}$")
 # Caracteres permitidos en rutas: nada de metacaracteres de shell/cmd.
 PATH_CHARS_RE = re.compile(r"^[\w .\-/()\[\]+,@~=#{}]+$")
+# "steamos" es un alias heredado de "linux": se sigue aceptando para no romper configs existentes, pero la UI ya no lo ofrece.
 OSES = ("windows", "steamos", "linux")
 
 

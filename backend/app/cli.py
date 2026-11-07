@@ -1,4 +1,4 @@
-"""CLI: savesync sync <juego> [--dry-run] | list | versions <juego>"""
+"""CLI: checkpoint sync <juego> [--dry-run] | list | versions <juego>"""
 import argparse
 import sys
 
@@ -8,7 +8,7 @@ from .sync import SyncAbort, list_versions, run_sync
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(prog="savesync")
+    ap = argparse.ArgumentParser(prog="checkpoint")
     sub = ap.add_subparsers(dest="cmd", required=True)
     s = sub.add_parser("sync")
     s.add_argument("game")

@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { api, ApiError } from './api.js';
+import logo from './assets/logo-icon.svg';
 import Login from './pages/Login.jsx';
 import Settings from './pages/Settings.jsx';
 import Sync from './pages/Sync.jsx';
@@ -78,7 +79,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <strong className="brand">savesync</strong>
+        <strong className="brand"><img src={logo} alt="" aria-hidden="true" className="brand-logo" />Checkpoint</strong>
         <nav className="tabs" aria-label="Secciones">
           {TABS.map(([id, label]) => (
             <button key={id} className={tab === id ? 'tab active' : 'tab'} aria-current={tab === id ? 'page' : undefined} onClick={() => setTab(id)}>{label}</button>

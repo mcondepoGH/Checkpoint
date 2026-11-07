@@ -19,8 +19,8 @@ from .sync import SyncAbort, run_sync
 
 MIN_HOURS, MAX_HOURS = 0.25, 168.0
 FILE = "scheduler.json"
-log = logging.getLogger("savesync.scheduler")
-_root = logging.getLogger("savesync")
+log = logging.getLogger("checkpoint.scheduler")
+_root = logging.getLogger("checkpoint")
 if not _root.handlers and not logging.getLogger().handlers:  # uvicorn no configura loggers de la app: sin esto el INFO se pierde
     _h = logging.StreamHandler()
     _h.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))

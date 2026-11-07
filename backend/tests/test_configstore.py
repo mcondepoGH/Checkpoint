@@ -49,15 +49,15 @@ def test_validate_ok():
 
 def test_validate_errors_by_field_path():
     d = {"devices": {"pc": {"host": "x y", "user": "u", "os": "linux", "port": 70000},
-                     "deck": {"host": "h", "user": "u", "os": "steamos"}},
-         "games": {"ejemplo": {"devices": ["pc", "deck"], "paths": {"pc": "rel", "deck": "/x/y"},
+                     "laptop": {"host": "h", "user": "u", "os": "linux"}},
+         "games": {"ejemplo": {"devices": ["pc", "laptop"], "paths": {"pc": "rel", "laptop": "/x/y"},
                                "process": "a;b", "keep_versions": 0}}}
     cfg, errs = validate_config(d)
     assert cfg is None
     assert set(errs) >= {"devices.pc.host", "devices.pc.port", "games.ejemplo.process",
                          "games.ejemplo.keep_versions", "games.ejemplo.paths.pc"}
     assert "absoluta" in errs["games.ejemplo.paths.pc"]
-    assert "games.ejemplo.paths.deck" not in errs
+    assert "games.ejemplo.paths.laptop" not in errs
 
 
 def test_validate_incomplete_game_and_duplicates():
@@ -92,7 +92,7 @@ def test_save_preserves_comments_and_backs_up(env):
     snap = store.snapshot()
     d = draft_of(store)
     d["devices"]["a"]["host"] = "10.0.0.9"
-    d["devices"]["c"] = {"host": "10.0.0.3", "user": "u", "os": "steamos", "port": 22}
+    d["devices"]["c"] = {"host": "10.0.0.3", "user": "u", "os": "linux", "port": 22}
     res = store.save(snap.version, validate_config(d)[0])
     assert res["changed"] and res["backup"] == "config.yaml.bak-2026-01-01_120000"
     text = settings.CONFIG_PATH.read_text()
@@ -280,6 +280,6 @@ def test_device_test_endpoint_validates(client):
 
 def test_no_secrets_in_config_responses(client, monkeypatch):
     login(client)
-    monkeypatch.setenv("SAVESYNC_PASSWORD", "supersecretvalue")
+    monkeypatch.setenv("CHECKPOINT_PASSWORD", "supersecretvalue")
     body = client.get("/api/config").text + client.get("/api/config/backups").text
     assert "supersecretvalue" not in body and "PRIVATE KEY" not in body

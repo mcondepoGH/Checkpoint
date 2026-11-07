@@ -18,7 +18,7 @@ class Auth:
     def __init__(self, user: str, password: str, session_hours: float = None, clock=time.time,
                  rounds: int = 12):
         if not user or not password:
-            raise RuntimeError("Faltan SAVESYNC_USER / SAVESYNC_PASSWORD")
+            raise RuntimeError("Faltan CHECKPOINT_USER / CHECKPOINT_PASSWORD")
         self.user = user
         self.pw_hash = bcrypt.hashpw(password.encode()[:72], bcrypt.gensalt(rounds))
         self.ttl = (session_hours if session_hours is not None else settings.SESSION_HOURS) * 3600
@@ -32,7 +32,7 @@ class Auth:
     @classmethod
     def from_env(cls, env=None, **kw) -> "Auth":
         env = os.environ if env is None else env
-        return cls(env.get("SAVESYNC_USER", ""), env.get("SAVESYNC_PASSWORD", ""), **kw)
+        return cls(settings.env("USER", "", env), settings.env("PASSWORD", "", env), **kw)
 
     def wait_time(self, ip: str) -> int:
         with self.lock:

@@ -13,7 +13,7 @@ from typing import Optional
 from . import settings
 from .config import HOST_RE
 
-log = logging.getLogger("savesync")
+log = logging.getLogger("checkpoint")
 _lock = threading.Lock()
 
 EMPTY_CONFIG = "devices: {}\ngames: {}\n"
@@ -58,7 +58,7 @@ def ensure_ssh_key(key: str = None) -> bool:
         key.parent.mkdir(parents=True, exist_ok=True)
         _pub_path(key).unlink(missing_ok=True)  # .pub huérfana: ssh-keygen preguntaría si sobrescribir
         try:
-            p = subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", "savesync",
+            p = subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", "checkpoint",
                                 "-f", str(key)], capture_output=True, timeout=30)
         except (OSError, subprocess.TimeoutExpired) as e:
             raise BootstrapError(f"no se pudo generar la clave SSH: {e}")
