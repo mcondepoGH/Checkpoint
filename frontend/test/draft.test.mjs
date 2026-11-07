@@ -104,3 +104,10 @@ test('Configuración reinicia el borrador durante el render, no en un efecto', (
   assert.doesNotMatch(src, /useEffect\(\(\) => \{ setDraft\(fromConfig/);
   assert.match(src, /if \(draftVersion !== loaded\.version\) \{/);
 });
+
+test('hasChanges: borrador distinto o errores locales', async () => {
+  const { hasChanges } = await import('../src/draft.js');
+  assert.equal(hasChanges('a', 'a', {}), false);
+  assert.equal(hasChanges('a', 'b', {}), true);
+  assert.equal(hasChanges('a', 'a', { x: 'err' }), true);
+});

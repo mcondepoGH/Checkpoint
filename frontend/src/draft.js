@@ -148,7 +148,8 @@ export function toConfig(draft) {
 // Clave canónica de la config tal como la enviaría el formulario sin tocar nada.
 export const baseKeyOf = (config) => JSON.stringify(toConfig(fromConfig(config)));
 // ¿Hay cambios pendientes? Solo si el borrador difiere de la config cargada o hay errores locales.
-export const isDirty = (draft, config, runtime) => JSON.stringify(toConfig(draft)) !== baseKeyOf(config) || Object.keys(localErrors(draft, runtime)).length > 0;
+export const hasChanges = (payloadKey, baseKey, local) => payloadKey !== baseKey || Object.keys(local).length > 0;
+export const isDirty = (draft, config, runtime) => hasChanges(JSON.stringify(toConfig(draft)), baseKeyOf(config), localErrors(draft, runtime));
 
 export const gamesUsing = (draft, devKey) =>
   draft.games.filter((g) => g.a === devKey || g.b === devKey).map((g) => g.name || '(sin nombre)');

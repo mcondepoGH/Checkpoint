@@ -9,24 +9,19 @@ export default function UpdateCheck({ info, onInfo }) {
   if (info && !updatesApplicable(info)) return null; // Docker sin forzar: ni tarjeta ni selector de canal
   const enabled = info ? info.habilitado !== false : true;
 
-  const toggle = async (value) => {
+  // Ejecuta una acción con el indicador de trabajo y muestra su error, si lo hay.
+  const act = async (fn) => {
     setBusy(true); setMsg('');
-    try { onInfo(await api('/api/updates', { method: 'PUT', body: { enabled: value } })); }
-    catch (e) { setMsg(e.message); } finally { setBusy(false); }
+    try { await fn(); } catch (e) { setMsg(e.message); } finally { setBusy(false); }
   };
-  const setChannel = async (value) => {
-    setBusy(true); setMsg('');
-    try { onInfo(await api('/api/updates', { method: 'PUT', body: { channel: value } })); }
-    catch (e) { setMsg(e.message); } finally { setBusy(false); }
-  };
-  const refresh = async () => {
-    setBusy(true); setMsg('');
-    try {
-      const r = await api('/api/updates?refresh=true');
-      onInfo(r);
-      if (r.limitado) setMsg('Acabas de comprobarlo; espera un minuto para volver a hacerlo.');
-    } catch (e) { setMsg(e.message); } finally { setBusy(false); }
-  };
+  const put = (body) => act(async () => onInfo(await api('/api/updates', { method: 'PUT', body })));
+  const toggle = (value) => put({ enabled: value });
+  const setChannel = (value) => put({ channel: value });
+  const refresh = () => act(async () => {
+    const r = await api('/api/updates?refresh=true');
+    onInfo(r);
+    if (r.limitado) setMsg('Acabas de comprobarlo; espera un minuto para volver a hacerlo.');
+  });
 
   return (
     <section className="card" aria-labelledby="updates-title">

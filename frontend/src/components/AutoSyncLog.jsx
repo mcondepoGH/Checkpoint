@@ -1,12 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { api } from '../api.js';
 import EmptyState from './EmptyState.jsx';
+import { fmtDateTime, RESULT_CLASS, RESULT_TEXT } from '../format.js';
 
-const RES = { ok: 'ok', error: 'error', aborted: 'aborted', skipped: 'aborted', conflict: 'conflict', partial: 'aborted' };
-const RES_TXT = { ok: 'correcta', error: 'error', aborted: 'abortada', skipped: 'omitida', conflict: 'omitido por conflicto', partial: 'parcial' };
 const TRIG_TXT = { scheduled: 'Programada', startup: 'Arranque' };
 
-const fmtDate = (iso) => (iso ? new Date(iso).toLocaleString() : '—');
 const fmtDur = (s) => {
   if (!Number.isFinite(s)) return '—';
   if (s < 60) return `${s.toFixed(s < 10 ? 1 : 0)} s`;
@@ -54,10 +52,10 @@ export default function AutoSyncLog() {
             <li key={e.id}>
               <details>
                 <summary>
-                  <span className="when">{fmtDate(e.started)}</span>
+                  <span className="when">{fmtDateTime(e.started)}</span>
                   <span className="trig">{TRIG_TXT[e.trigger] || e.trigger}</span>
                   <span className="dur">{fmtDur(e.duration)}</span>
-                  <span className={`badge ${RES[e.result] || ''}`}>{RES_TXT[e.result] || e.result}</span>
+                  <span className={`badge ${RESULT_CLASS[e.result] || ''}`}>{RESULT_TEXT[e.result] || e.result}</span>
                 </summary>
                 <div className="detail">
                   {e.message && <p className={`msg ${e.result === 'error' ? 'is-error' : ''}`}>{e.message}</p>}
@@ -66,7 +64,7 @@ export default function AutoSyncLog() {
                       {Object.entries(e.games).map(([g, d]) => (
                         <li key={g}>
                           <b>{d.name || g}</b>
-                          <span className={`badge ${RES[d.result] || ''}`}>{RES_TXT[d.result] || d.result}</span>
+                          <span className={`badge ${RESULT_CLASS[d.result] || ''}`}>{RESULT_TEXT[d.result] || d.result}</span>
                           {d.message && <small className="muted">{d.message}</small>}
                         </li>
                       ))}
