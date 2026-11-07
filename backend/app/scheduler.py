@@ -15,7 +15,7 @@ from typing import Callable, Optional
 from starlette.concurrency import run_in_threadpool
 
 from . import history, settings
-from .sync import SyncAbort, run_sync
+from .sync import ON_CONFLICT, SyncAbort, run_sync
 
 MIN_HOURS, MAX_HOURS = 0.25, 168.0
 FILE = "scheduler.json"
@@ -61,6 +61,11 @@ def validate_settings(body: dict, current: dict) -> dict:
             errors["interval_hours"] = f"debe estar entre {MIN_HOURS:g} y {MAX_HOURS:g} horas"
         else:
             out["interval_hours"] = float(v)
+    if "on_conflict" in body:
+        if body["on_conflict"] in ON_CONFLICT:
+            out["on_conflict"] = body["on_conflict"]
+        else:
+            errors["on_conflict"] = "debe ser 'skip' (omitir) o 'newest' (gana el más reciente)"
     if errors:
         raise ValueError(errors)
     return out
@@ -85,7 +90,8 @@ def env_defaults() -> dict:
     h = settings.AUTO_INTERVAL_HOURS
     if not (math.isfinite(h) and MIN_HOURS <= h <= MAX_HOURS):
         h = 24.0
-    return {"enabled": settings.AUTO_ENABLED, "interval_hours": h, "run_on_start": settings.AUTO_RUN_ON_START}
+    return {"enabled": settings.AUTO_ENABLED, "interval_hours": h, "run_on_start": settings.AUTO_RUN_ON_START,
+            "on_conflict": settings.AUTO_ON_CONFLICT if settings.AUTO_ON_CONFLICT in ON_CONFLICT else "skip"}
 
 
 class Scheduler:
@@ -155,10 +161,14 @@ class Scheduler:
                 continue
             self.current = game
             m = ""
+            policy = getattr(cfg.games[game], "on_conflict", None) or self.cfg.get("on_conflict", "skip")
             try:
-                st = self.runner(cfg, game, False, log=lambda m: None)
+                st = self.runner(cfg, game, False, log=lambda m: None, conflict_policy=policy)
                 res[game] = st["result"]
-                if st["result"] != "ok":
+                if st["result"] == "conflict":
+                    m = "omitido por conflicto: " + st.get("message", "")
+                    msgs.append(f"{game}: {m}")
+                elif st["result"] != "ok":
                     m = st.get("message", "")
                     msgs.append(f"{game}: {m}")
             except SyncAbort as e:
@@ -174,6 +184,7 @@ class Scheduler:
                 "auto-sync juego=%s resultado=%s%s", game, res[game], f" ({history.short(m, 120)})" if m else "")
         vals = set(res.values())
         result = ("error" if "error" in vals else "aborted" if "aborted" in vals
+                  else "partial" if "partial" in vals else "conflict" if "conflict" in vals
                   else "skipped" if vals == {"skipped"} else "ok")
         return {"result": result, "games": res, "message": "; ".join(msgs), "details": det}
 

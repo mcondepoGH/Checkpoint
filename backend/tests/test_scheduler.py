@@ -42,7 +42,7 @@ def sched(tmp_path, monkeypatch):
     class Cfg:
         games = {"a": 1, "b": 2, "c": 3}
 
-    def runner(cfg, game, dry, log):
+    def runner(cfg, game, dry, log, **kw):  # kw: conflict_policy
         calls.append((game, dry))
         if game == "b":
             raise SyncAbort("lock")

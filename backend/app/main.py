@@ -23,7 +23,7 @@ from .config import Config, Device, validate_config
 from .configstore import Conflict, ConfigStore, InvalidConfig, parse_text, config_events_gen, diff_configs, render_yaml
 from .redact import redact
 from .scheduler import Scheduler
-from .sync import SyncAbort, count_versions, list_versions, restore_version, run_sync
+from .sync import SyncAbort, count_versions, list_versions, restore_version, run_sync, valid_resolution
 from .transport import TransportError, get_transport
 
 COOKIE = "checkpoint_session"
@@ -274,7 +274,16 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             body = await request.json()
         except Exception:
             body = {}
+        if not isinstance(body, dict):
+            body = {}
         dry = bool(body.get("dry_run", False))
+        resolution = body.get("resolution")
+        if resolution is not None and not valid_resolution(resolution):
+            raise HTTPException(422, "resolution debe ser 'newest', 'hub' o 'device:<nombre>'")
+        expect = body.get("expect")
+        if expect is not None and not (isinstance(expect, dict) and all(
+                isinstance(k, str) and (v is None or isinstance(v, str)) for k, v in expect.items())):
+            raise HTTPException(422, "expect debe ser un mapa origen -> hash")
         if scheduler.current == game or any(r.game == game and not r.done for r in runs.values()):
             raise HTTPException(409, "ya hay una ejecución en curso de este juego")
         run = Run(game, dry)
@@ -284,7 +293,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
 
         def work():
             try:
-                run.status = run_sync(cfg, game, dry, log=run.lines.append)
+                run.status = run_sync(cfg, game, dry, log=run.lines.append, resolution=resolution, expect=expect)
             except SyncAbort as e:
                 run.lines.append(redact(f"ABORTADO: {e}"))
                 run.status = {"result": "aborted", "message": str(e)}

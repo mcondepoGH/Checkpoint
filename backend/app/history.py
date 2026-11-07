@@ -17,7 +17,7 @@ FILE = "scheduler-history.jsonl"
 MAX_ENTRIES = 200
 MAX_DAYS = 30
 MSG_LEN = 300
-RESULTS = {"ok", "error", "aborted", "skipped"}
+RESULTS = {"ok", "error", "aborted", "skipped", "conflict", "partial"}
 TRIGGERS = {"scheduled", "startup", "config-change"}
 
 _lock = threading.Lock()

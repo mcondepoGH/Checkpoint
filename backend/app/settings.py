@@ -30,6 +30,9 @@ SSH_TIMEOUT = int(_env("SSH_TIMEOUT", "8"))
 # Sincronización automática: valores iniciales; lo guardado desde la UI prevalece.
 AUTO_ENABLED = _env("AUTO_ENABLED", "0").strip().lower() in ("1", "true", "yes", "on")
 AUTO_RUN_ON_START = _env("AUTO_RUN_ON_START", "0").strip().lower() in ("1", "true", "yes", "on")
+AUTO_ON_CONFLICT = _env("AUTO_ON_CONFLICT", "skip").strip().lower()
+if AUTO_ON_CONFLICT not in ("skip", "newest"):
+    AUTO_ON_CONFLICT = "skip"
 try:
     AUTO_INTERVAL_HOURS = float(_env("AUTO_INTERVAL_HOURS", "24"))
 except ValueError:

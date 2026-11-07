@@ -23,6 +23,7 @@ PROC_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_. \-]{0,63}$")
 PATH_CHARS_RE = re.compile(r"^[\w .\-/()\[\]+,@~=#{}]+$")
 # "steamos" es un alias heredado de "linux": se sigue aceptando para no romper configs existentes, pero la UI ya no lo ofrece.
 OSES = ("windows", "steamos", "linux")
+ON_CONFLICT_VALUES = ("skip", "newest")
 # Versiones guardadas por juego: 0 = sin límite.
 DEFAULT_MAX_VERSIONS = 20
 MAX_VERSIONS_LIMIT = 1000
@@ -138,6 +139,15 @@ class Game(BaseModel):
     process: Optional[str] = None
     # Override del máximo global `max_versions` para este juego; ausente = usar el global. 0 = sin límite.
     keep_versions: Optional[StrictInt] = None
+    # Override por juego de la política de la sync automática ante conflictos; ausente = ajuste global.
+    on_conflict: Optional[str] = None
+
+    @field_validator("on_conflict")
+    @classmethod
+    def _onc(cls, v):
+        if v is not None and v not in ON_CONFLICT_VALUES:
+            raise ValueError("on_conflict debe ser 'skip' o 'newest'")
+        return v
 
     @field_validator("process")
     @classmethod
