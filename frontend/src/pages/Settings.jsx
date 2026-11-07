@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../api.js';
 import {
-  MAX_VERSIONS_LIMIT, VERSIONS_HINT, blankDevice, blankGame, cleanName, errorsFor, fromConfig, gamesUsing, localErrors, nameOf, removeDevice, toConfig,
+  MAX_VERSIONS_LIMIT, VERSIONS_HINT, blankDevice, blankGame, deviceId, errorsFor, fromConfig, gamesUsing, idOf, localErrors, nameOf, removeDevice, renamed, toConfig,
 } from '../draft.js';
 import Field from '../components/Field.jsx';
 import DeviceCard from '../components/DeviceCard.jsx';
@@ -60,26 +60,26 @@ export default function Settings({ loaded, stale, configError, onApplied, onRelo
     return () => clearTimeout(t);
   }, [payloadKey]);
 
-  const patch = (list, id, p) => setDraft((d) => ({ ...d, [list]: d[list].map((x) => (x.id === id ? { ...x, ...p } : x)) }));
+  const patch = (list, key, p) => setDraft((d) => ({ ...d, [list]: d[list].map((x) => (x.key === key ? { ...x, ...p } : x)) }));
 
   const delDevice = (dev) => {
-    const used = gamesUsing(draft, dev.id);
+    const used = gamesUsing(draft, dev.key);
     if (used.length && !window.confirm(
       `El dispositivo ${dev.name || '(sin nombre)'} lo usan: ${used.join(', ')}.\n` +
       'Esos juegos perderán este dispositivo y deberás elegir otro. ¿Eliminarlo?')) return;
-    setDraft((d) => removeDevice(d, dev.id));
+    setDraft((d) => removeDevice(d, dev.key));
   };
 
   const testDevice = async (dev) => {
-    setTests((t) => ({ ...t, [dev.id]: { busy: true } }));
+    setTests((t) => ({ ...t, [dev.key]: { busy: true } }));
     let r;
     try {
       r = await api('/api/devices/test', {
         method: 'POST',
-        body: { device: { host: dev.host, user: dev.user, os: dev.os, port: Number(dev.port) || dev.port } },
+        body: { device: { name: dev.name || 'prueba', host: dev.host, user: dev.user, os: dev.os, port: Number(dev.port) || dev.port } },
       });
     } catch (e) { r = { ok: false, message: e.message }; }
-    setTests((t) => ({ ...t, [dev.id]: r }));
+    setTests((t) => ({ ...t, [dev.key]: r }));
   };
 
   const hasErrors = Object.keys(errors).length > 0 || hasLocal;
@@ -105,8 +105,9 @@ export default function Settings({ loaded, stale, configError, onApplied, onRelo
     catch (e) { setMsg(e.message); }
   };
 
-  const devErrs = (d) => errorsFor(errors, `devices.${cleanName(d.name)}`);
-  const gameErrs = (g) => errorsFor(errors, `games.${cleanName(g.name)}`);
+  // Los errores del backend cuelgan del id interno: devices.<id>.<campo>
+  const devErrs = (d) => errorsFor(errors, `devices.${idOf(d, 'dispositivo')}`);
+  const gameErrs = (g) => errorsFor(errors, `games.${idOf(g, 'juego')}`);
   const generalError = errors[''];
 
   return (
@@ -149,8 +150,9 @@ export default function Settings({ loaded, stale, configError, onApplied, onRelo
       </div>
       <div className="grid">
         {draft.devices.map((d) => (
-          <DeviceCard key={d.id} dev={d} errors={devErrs(d)} localError={local[d.id]} test={tests[d.id]}
-            onChange={(p) => patch('devices', d.id, p)} onTest={() => testDevice(d)} onRemove={() => delDevice(d)} />
+          <DeviceCard key={d.key} dev={d} errors={devErrs(d)} localError={local[d.key]} test={tests[d.key]}
+            idText={idOf(d, 'dispositivo')} renamed={renamed(d)}
+            onChange={(p) => patch('devices', d.key, p)} onTest={() => testDevice(d)} onRemove={() => delDevice(d)} />
         ))}
       </div>
       {draft.devices.length === 0 && (
@@ -169,10 +171,11 @@ export default function Settings({ loaded, stale, configError, onApplied, onRelo
       {draft.devices.filter((d) => d.name).length < 2 && <p className="muted">Define (y nombra) al menos dos dispositivos para añadir juegos.</p>}
       <div className="grid">
         {draft.games.map((g) => (
-          <GameCard key={g.id} game={g} devices={draft.devices} errors={gameErrs(g)} localError={local[g.id]} keepError={local[`keep-${g.id}`]} globalMax={draft.maxVersions}
-            nameA={nameOf(draft, g.a)} nameB={nameOf(draft, g.b)}
-            onChange={(p) => patch('games', g.id, p)}
-            onRemove={() => setDraft((d) => ({ ...d, games: d.games.filter((x) => x.id !== g.id) }))} />
+          <GameCard key={g.key} game={g} devices={draft.devices} errors={gameErrs(g)} localError={local[g.key]} keepError={local[`keep-${g.key}`]} globalMax={draft.maxVersions}
+            nameA={nameOf(draft, g.a)} nameB={nameOf(draft, g.b)} idA={deviceId(draft, g.a)} idB={deviceId(draft, g.b)}
+            idText={idOf(g, 'juego')} renamed={renamed(g)}
+            onChange={(p) => patch('games', g.key, p)}
+            onRemove={() => setDraft((d) => ({ ...d, games: d.games.filter((x) => x.key !== g.key) }))} />
         ))}
       </div>
 

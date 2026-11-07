@@ -65,7 +65,7 @@ export default function AutoSyncLog() {
                     <ul className="games">
                       {Object.entries(e.games).map(([g, d]) => (
                         <li key={g}>
-                          <b>{g}</b>
+                          <b>{d.name || g}</b>
                           <span className={`badge ${RES[d.result] || ''}`}>{RES_TXT[d.result] || d.result}</span>
                           {d.message && <small className="muted">{d.message}</small>}
                         </li>

@@ -1,23 +1,24 @@
 import React from 'react';
 import Field from './Field.jsx';
 import { MAX_VERSIONS_LIMIT, NAME_HINT, NAME_MAX, VERSIONS_HINT } from '../draft.js';
+import IdNote from './IdNote.jsx';
 
-export default function GameCard({ game, devices, errors, localError, keepError, globalMax, nameA, nameB, onChange, onRemove }) {
+export default function GameCard({ game, devices, errors, localError, keepError, globalMax, nameA, nameB, idA, idB, idText, renamed, onChange, onRemove }) {
   const set = (k) => (e) => onChange({ [k]: e.target.value });
   const title = game.name || 'Juego nuevo';
   // Solo dispositivos con nombre; el elegido en el otro selector no se ofrece.
-  const options = (other) => devices.filter((d) => d.name && d.id !== other);
+  const options = (other) => devices.filter((d) => d.name && d.key !== other);
   const sel = (key, other) => (p) => (
     <select {...p} value={game[key]} onChange={set(key)}>
       <option value="">— elige —</option>
-      {options(other).map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
+      {options(other).map((d) => <option key={d.key} value={d.key}>{d.name}</option>)}
     </select>
   );
-  const pathErr = (n) => (n ? errors[`paths.${n}`] : undefined);
+  const pathErr = (id) => (id ? errors[`paths.${id}`] : undefined);
   return (
     <fieldset className="card cfg-card">
       <legend className="cfg-title">{title}</legend>
-      <Field label="Nombre" hint={NAME_HINT} error={localError || errors['']}>
+      <Field label="Nombre" hint={NAME_HINT} error={localError || errors.name || errors['']}>
         {(p) => <input {...p} value={game.name} onChange={set('name')} maxLength={NAME_MAX} placeholder="p. ej. Dragon Quest VII: Dimensión" autoComplete="off" spellCheck="false" />}
       </Field>
       {errors.devices && <div className="alert error" role="alert">{errors.devices}</div>}
@@ -26,12 +27,12 @@ export default function GameCard({ game, devices, errors, localError, keepError,
         <Field label="Dispositivo 2" error={errors['devices.1']}>{sel('b', game.a)}</Field>
       </div>
       {game.a && (
-        <Field label={`Ruta del save en ${nameA}`} error={pathErr(nameA)}>
+        <Field label={`Ruta del save en ${nameA}`} error={pathErr(idA)}>
           {(p) => <input {...p} value={game.pathA} onChange={set('pathA')} autoComplete="off" spellCheck="false" />}
         </Field>
       )}
       {game.b && (
-        <Field label={`Ruta del save en ${nameB}`} error={pathErr(nameB)}>
+        <Field label={`Ruta del save en ${nameB}`} error={pathErr(idB)}>
           {(p) => <input {...p} value={game.pathB} onChange={set('pathB')} autoComplete="off" spellCheck="false" />}
         </Field>
       )}
@@ -52,6 +53,7 @@ export default function GameCard({ game, devices, errors, localError, keepError,
           </select>
         )}
       </Field>
+      <IdNote id={idText} isNew={!game.id} renamed={renamed} />
       <div className="row end">
         <button type="button" className="btn danger" onClick={onRemove} aria-label={`Eliminar juego ${title}`}>Eliminar</button>
       </div>

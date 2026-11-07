@@ -13,8 +13,8 @@ export default function Versions({ config, onGoSettings }) {
   const loadLimit = (g) => (g ? api(`/api/versions/${encodeURIComponent(g)}/limit`).then(setLimit).catch(() => setLimit(null)) : setLimit(null));
   useEffect(() => { load(game); loadLimit(game); }, [game, config]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const restore = async (version, source) => {
-    if (!window.confirm(`¿Restaurar ${version}/${source} en el hub? La copia actual del hub se guarda como versión.`)) return;
+  const restore = async (version, source, sourceName) => {
+    if (!window.confirm(`¿Restaurar ${version}/${sourceName} en el hub? La copia actual del hub se guarda como versión.`)) return;
     try {
       const r = await api(`/api/versions/${encodeURIComponent(game)}/restore`, { method: 'POST', body: { version, source } });
       setMsg({ text: r.message }); load(game); loadLimit(game);
@@ -26,7 +26,7 @@ export default function Versions({ config, onGoSettings }) {
       <div className="row between">
         <h2>Versiones</h2>
         <select value={game} onChange={(e) => { setGame(e.target.value); setMsg(null); }}>
-          {games.map((g) => <option key={g}>{g}</option>)}
+          {games.map((g) => <option key={g} value={g}>{config.games[g].name}</option>)}
         </select>
       </div>
       {limit && game && (
@@ -49,8 +49,8 @@ export default function Versions({ config, onGoSettings }) {
             <h3>{v.version}</h3>
             {v.sources.map((s) => (
               <div className="row between" key={s.source}>
-                <span><b>{s.source}</b> · {s.files} ficheros · {s.mtime}</span>
-                <button className="btn" onClick={() => restore(v.version, s.source)}>Restaurar</button>
+                <span><b>{s.name || s.source}</b> · {s.files} ficheros · {s.mtime}</span>
+                <button className="btn" onClick={() => restore(v.version, s.source, s.name || s.source)}>Restaurar</button>
               </div>
             ))}
           </div>

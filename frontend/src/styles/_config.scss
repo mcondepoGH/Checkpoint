@@ -7,6 +7,8 @@
   .cfg-title { font-family: v.$display; font-size: .85rem; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); padding: 0 .35rem; } }
 
 .alert.warn { border-color: var(--warn); color: var(--warn); }
+.alert.info { margin: 0; font-size: .85rem; }
+.idnote { margin: 0; font-size: .8rem; overflow-wrap: anywhere; code { font-size: .95em; } }
 .diffbox { margin-top: .5rem; color: var(--text); }
 
 .pubkey { margin-top: v.$gap; summary { cursor: pointer; font-weight: 600; } }

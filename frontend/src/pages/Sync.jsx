@@ -24,10 +24,14 @@ function parseRun(s) {
   return { winner, list, planned, structured: !!(winner || list.length) };
 }
 
-function LastRun({ s }) {
+function LastRun({ s, devName }) {
   if (!s) return <EmptyState variant="inline" icon="⏳" title="Sin ejecuciones" text="Aún no se ha sincronizado este juego." />;
   const when = splitWhen(s.finished);
-  const { winner, list, planned, structured } = parseRun(s);
+  const parsed = parseRun(s);
+  // winner/targets/offline del estado son ids de dispositivo (los mensajes ya llevan nombres)
+  const winner = parsed.winner && devName(parsed.winner);
+  const list = parsed.list.map(devName);
+  const { planned, structured } = parsed;
   return (
     <dl className="lastrun">
       <div className="lr-row">
@@ -38,7 +42,7 @@ function LastRun({ s }) {
       </div>
       {s.result === 'conflict' && <div className="lr-row"><dt>Conflicto</dt><dd className="lr-msg">{s.message}</dd></div>}
       {s.result === 'partial' && <div className="lr-row"><dt>Parcial</dt><dd className="lr-msg">{s.message}</dd></div>}
-      {s.offline?.length > 0 && <div className="lr-row"><dt>Offline</dt><dd className="pills">{s.offline.map((d) => <span className="pill" key={d}>{d}</span>)}</dd></div>}
+      {s.offline?.length > 0 && <div className="lr-row"><dt>Offline</dt><dd className="pills">{s.offline.map((d) => <span className="pill" key={d}>{devName(d)}</span>)}</dd></div>}
       {winner && <div className="lr-row"><dt>Ganador</dt><dd><span className="pill win">{winner}</span></dd></div>}
       {list.length > 0 && (
         <div className="lr-row"><dt>{planned ? 'Destinos' : 'Actualizados'}</dt>
@@ -50,7 +54,10 @@ function LastRun({ s }) {
 }
 
 export default function Sync({ config, onGoSettings }) {
+  // Las claves de config.games/status son ids internos; en pantalla siempre el nombre.
   const games = Object.keys(config.games);
+  const devName = (id) => config.devices[id]?.name || id;
+  const gameName = (id) => config.games[id]?.name || id;
   const [dry, setDry] = useState({});
   const [status, setStatus] = useState({});
   const [active, setActive] = useState(null); // {game, lines, done}
@@ -115,10 +122,10 @@ export default function Sync({ config, onGoSettings }) {
           const running = active && active.game === g && !active.done;
           return (
             <div className="card" key={g}>
-              <h3>{g} {running ? <span className="badge running">en curso</span> : badge(s)}</h3>
-              <p className="muted">{config.games[g].devices.join(' ⇄ ')}</p>
-              <div className={`meter ${running ? 'running' : (s?.result || '')}`} role="progressbar" aria-label={`Estado de ${g}`}><i /></div>
-              <LastRun s={s} />
+              <h3 title={`ID interno: ${g}`}>{config.games[g].name} {running ? <span className="badge running">en curso</span> : badge(s)}</h3>
+              <p className="muted">{config.games[g].devices.map(devName).join(' ⇄ ')}</p>
+              <div className={`meter ${running ? 'running' : (s?.result || '')}`} role="progressbar" aria-label={`Estado de ${gameName(g)}`}><i /></div>
+              <LastRun s={s} devName={devName} />
               <label className="check"><input type="checkbox" checked={!!dry[g]} onChange={(e) => setDry({ ...dry, [g]: e.target.checked })} /> Dry-run</label>
               {s?.result === 'conflict' && !running && (
                 <div className="conflict-flag" role="alert">
@@ -132,12 +139,12 @@ export default function Sync({ config, onGoSettings }) {
         })}
       </div>
       {conflict && (
-        <ConflictDialog game={conflict.game} conflict={conflict.conflict} busy={resolving}
+        <ConflictDialog game={gameName(conflict.game)} conflict={conflict.conflict} busy={resolving}
           onCancel={() => setConflict(null)} onResolve={resolve} />
       )}
       {active && (
         <div className="card logcard">
-          <h3>Log: {active.game} {active.done ? '(terminado)' : '(en vivo)'}</h3>
+          <h3>Log: {gameName(active.game)} {active.done ? '(terminado)' : '(en vivo)'}</h3>
           <pre className="log" ref={logRef}>{active.lines.join('\n') || 'Esperando…'}</pre>
         </div>
       )}

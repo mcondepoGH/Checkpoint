@@ -30,8 +30,10 @@ export default function ConflictDialog({ game, conflict, busy, onCancel, onResol
   const [choosing, setChoosing] = useState(false);
   const [pick, setPick] = useState('');
   const label = (s) => (s.hub ? 'Hub (copia en Checkpoint)' : s.name);
-  const value = (s) => (s.hub ? 'hub' : `device:${s.name}`);
-  const expect = Object.fromEntries(sides.map((s) => [s.name, s.hash]));
+  // El origen se identifica por su id (el nombre solo se muestra); `id` falta en estados antiguos: el backend admite ambos.
+  const sid = (s) => s.id || s.name;
+  const value = (s) => (s.hub ? 'hub' : `device:${sid(s)}`);
+  const expect = Object.fromEntries(sides.map((s) => [sid(s), s.hash]));
 
   return (
     <Modal title={`Conflicto en ${game}`} onClose={onCancel} wide>
@@ -39,7 +41,7 @@ export default function ConflictDialog({ game, conflict, busy, onCancel, onResol
       {!choosing && (
         <ul className="conflict-sides" aria-label="Versiones en conflicto">
           {sides.map((s) => (
-            <li key={s.name}>
+            <li key={sid(s)}>
               <b>{label(s)}</b>
               <span>{fmtWhen(s.mtime)}</span>
               <span>{fmtSize(s.size)} · {s.files} {s.files === 1 ? 'fichero' : 'ficheros'}</span>
@@ -51,7 +53,7 @@ export default function ConflictDialog({ game, conflict, busy, onCancel, onResol
         <fieldset className="conflict-pick">
           <legend>¿Qué save debe ganar?</legend>
           {sides.map((s) => (
-            <label key={s.name} className={`conflict-opt${pick === value(s) ? ' on' : ''}`}>
+            <label key={sid(s)} className={`conflict-opt${pick === value(s) ? ' on' : ''}`}>
               <input type="radio" name="conflict-winner" value={value(s)} checked={pick === value(s)}
                 onChange={() => setPick(value(s))} />
               <span><b>{label(s)}</b><br />
