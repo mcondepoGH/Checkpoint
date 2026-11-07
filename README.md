@@ -77,7 +77,7 @@ En **Configuración > Sincronización automática** activa la opción y elige ca
 Hay conflicto cuando los dos dispositivos han cambiado desde la última sincronización y su contenido es distinto (o, en la primera sincronización, ya difiere). Checkpoint nunca lo decide por la fecha a ciegas.
 
 - **Sincronización automática**: `on_conflict` en Configuración > Sincronización automática. `skip` (por defecto) no guarda nada y marca el juego como «Conflicto»; `newest` hace ganar el save más reciente (si las fechas difieren menos de 2 s, se omite). Un juego puede sustituirlo con `on_conflict` en `config.yaml`.
-- **Sincronización manual**: siempre pregunta. Un popup ofrece cancelar, «Gana el más reciente» o elegir qué dispositivo gana, con fecha y tamaño de cada uno. En la CLI: `checkpoint sync JUEGO --resolve newest|device:NOMBRE` (sale con código 3 si hay conflicto).
+- **Sincronización manual**: siempre pregunta. Un popup ofrece cancelar, «Gana el más reciente» o elegir qué dispositivo gana, con fecha y tamaño de cada uno. En la CLI: `checkpoint sync JUEGO --resolve newest|device:DISPOSITIVO` (sale con código 3 si hay conflicto).
 
 En todos los casos la copia perdedora se guarda antes en versiones. La primera sincronización tras actualizar solo tiene el hub como referencia: si ambos lados difieren, se trata como conflicto.
 
@@ -93,16 +93,19 @@ Se crean solas al arrancar. `config.yaml` se edita desde la UI (valida, muestra 
 
 ```yaml
 devices:
-  pc:     {host: 192.0.2.10, user: usuario, os: windows, port: 22}
-  laptop: {host: 192.0.2.11, user: usuario, os: linux, port: 22}
+  pc-1a2b3c4d:     {name: "Mi PC", host: 192.0.2.10, user: usuario, os: windows, port: 22}
+  laptop-5e6f7a8b: {name: "Portátil", host: 192.0.2.11, user: usuario, os: linux, port: 22}
 games:
-  ejemplo:
-    devices: [pc, laptop]
+  ejemplo-0a1b2c3d:
+    name: "Ejemplo"
+    devices: [pc-1a2b3c4d, laptop-5e6f7a8b]
     paths:
-      pc: "C:/Users/usuario/AppData/Local/Ejemplo/Saves"
-      laptop: "/home/usuario/.local/share/Ejemplo/Saves"
+      pc-1a2b3c4d: "C:/Users/usuario/AppData/Local/Ejemplo/Saves"
+      laptop-5e6f7a8b: "/home/usuario/.local/share/Ejemplo/Saves"
     keep_versions: 5           # opcional: sustituye a max_versions para este juego
 ```
+
+La clave de cada juego y dispositivo es su **ID interno**, que no cambia nunca; `name` es solo una etiqueta y se puede renombrar libremente sin perder saves, versiones ni logs. La CLI y la API aceptan el ID o el nombre. Un `config.yaml` antiguo (indexado por nombre, sin `name`) sigue funcionando y se convierte al formato nuevo la primera vez que guardas desde la UI, conservando los datos.
 
 ## Seguridad
 

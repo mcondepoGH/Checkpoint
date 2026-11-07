@@ -1,13 +1,17 @@
+# Cada dispositivo y cada juego tiene un ID interno estable (la clave del mapa) y un `name` libre que se puede
+# cambiar cuando quieras: los saves, versiones y logs siguen ligados al ID, no al nombre.
+# Para un ID nuevo usa letras, números, _ y - (1 a 64); `hub` está reservado. No lo cambies una vez creado.
 max_versions: 20             # versiones guardadas por juego (0 = sin límite); al superarlo se borran las más antiguas
 devices:
-  pc:   {host: 192.0.2.10, user: usuario, os: windows, port: 22}
-  laptop: {host: 192.0.2.11, user: usuario, os: linux, port: 22}
+  pc-1a2b3c4d:     {name: "Mi PC", host: 192.0.2.10, user: usuario, os: windows, port: 22}
+  laptop-5e6f7a8b: {name: "Portátil", host: 192.0.2.11, user: usuario, os: linux, port: 22}
 games:
-  ejemplo:
-    devices: [pc, laptop]        # exactamente dos, distintos (la pantalla Configuración conserva estos comentarios al guardar)
+  ejemplo-0a1b2c3d:
+    name: "Ejemplo"
+    devices: [pc-1a2b3c4d, laptop-5e6f7a8b]   # IDs de dispositivo: exactamente dos, distintos (la pantalla Configuración conserva estos comentarios al guardar)
     paths:
-      pc: "C:/Users/usuario/AppData/Local/Ejemplo/Saves"
-      laptop: "/home/usuario/.local/share/Ejemplo/Saves"
+      pc-1a2b3c4d: "C:/Users/usuario/AppData/Local/Ejemplo/Saves"
+      laptop-5e6f7a8b: "/home/usuario/.local/share/Ejemplo/Saves"
     process: "ejemplo.exe"     # opcional: no copiar si está abierto
     keep_versions: 5           # opcional: sustituye a max_versions solo para este juego (0 = sin límite)
     on_conflict: skip          # opcional: skip | newest; sustituye al ajuste de la sync automática solo para este juego
