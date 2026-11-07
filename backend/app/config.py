@@ -24,7 +24,7 @@ PROC_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_. \-]{0,63}$")
 # Caracteres permitidos en rutas: nada de metacaracteres de shell/cmd.
 PATH_CHARS_RE = re.compile(r"^[\w .\-/()\[\]+,@~=#{}]+$")
 OSES = ("windows", "linux")
-ON_CONFLICT_VALUES = ("skip", "newest")
+ON_CONFLICT = ("skip", "newest")  # política ante conflictos de la sync automática
 # Versiones guardadas por juego: 0 = sin límite.
 DEFAULT_MAX_VERSIONS = 20
 MAX_VERSIONS_LIMIT = 1000
@@ -192,7 +192,7 @@ class Game(BaseModel):
     @field_validator("on_conflict")
     @classmethod
     def _onc(cls, v):
-        if v is not None and v not in ON_CONFLICT_VALUES:
+        if v is not None and v not in ON_CONFLICT:
             raise ValueError("on_conflict debe ser 'skip' o 'newest'")
         return v
 

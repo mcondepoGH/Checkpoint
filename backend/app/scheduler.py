@@ -14,7 +14,8 @@ from typing import Callable, Optional
 from starlette.concurrency import run_in_threadpool
 
 from . import history, settings
-from .sync import ON_CONFLICT, SyncAbort, run_sync
+from .config import ON_CONFLICT
+from .sync import SyncAbort, run_sync
 
 MIN_HOURS, MAX_HOURS = 0.25, 168.0
 FILE = "scheduler.json"

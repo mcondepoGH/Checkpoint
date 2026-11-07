@@ -257,18 +257,18 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             raise HTTPException(404, "clave SSH aún no generada")
         return {"public_key": pub}
 
-    def _cfg() -> Config:
+    def _config(error) -> Config:
         snap = store.snapshot()  # recarga si el fichero cambió; cada ejecución conserva la Config con la que empezó
         if snap.error:
-            raise HTTPException(500, f"config.yaml inválido: {snap.error}")
+            raise error(f"config.yaml inválido: {snap.error}")
         return snap.cfg
+
+    def _cfg() -> Config:
+        return _config(lambda msg: HTTPException(500, msg))
 
     # ---- sync automática ----
     def _auto_cfg() -> Config:
-        snap = store.snapshot()
-        if snap.error:
-            raise RuntimeError(f"config.yaml inválido: {snap.error}")
-        return snap.cfg
+        return _config(RuntimeError)
 
     scheduler = Scheduler(_auto_cfg, lambda g: any(r.game == g and not r.done for r in runs.values()))
     holder["scheduler"] = scheduler
@@ -391,7 +391,8 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     @app.get("/api/status", dependencies=[Depends(require)])
     def status():
         out = {}
-        games = store.snapshot().cfg.games if store.snapshot().cfg else {}
+        cfg = store.snapshot().cfg
+        games = cfg.games if cfg else {}
         sd = settings.DATA_DIR / "status"
         if sd.is_dir():
             for f in sd.glob("*.json"):

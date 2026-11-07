@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
 from . import locking, settings
-from .config import Config, ConfigError, resolve_ref
+from .config import ON_CONFLICT, Config, ConfigError, resolve_ref
 from .redact import redact
 from .transport import Transport, TransportError, get_transport
 
@@ -169,7 +169,6 @@ def _replace_dir(src: Path, dst: Path):
         shutil.rmtree(old)
 
 
-ON_CONFLICT = ("skip", "newest")
 # Diferencia de mtime por debajo de la cual no se puede decir cuál es "el más reciente" (deriva de reloj).
 CLOCK_TOLERANCE = 2
 
