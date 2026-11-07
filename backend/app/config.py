@@ -9,7 +9,10 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, StrictInt, ValidationError, field_validator, model_validator
+
+from .runtime import running_in_docker
+from pydantic import (BaseModel, ConfigDict, Field, StrictBool, StrictInt, ValidationError, field_validator, model_serializer,
+                      model_validator)
 
 # Formato antiguo de nombre; sigue siendo válido y su slug es el propio nombre.
 NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$")
@@ -131,26 +134,46 @@ def normalize_path(os_name: str, p: str) -> str:
     return prefix + "/".join(parts)
 
 
+LOCAL_DOCKER_MSG = "“Este equipo” solo está disponible cuando Checkpoint se ejecuta sin Docker"
+LOCAL_ONE_MSG = "solo puede haber un dispositivo “Este equipo”"
+LOCAL_NO_REMOTE_MSG = "no aplica a “Este equipo” (se accede directamente al sistema de ficheros local)"
+
+
 class Device(BaseModel):
+    """Dispositivo remoto (SSH: host, user, port) o `local: true` = el equipo donde corre Checkpoint
+    (sin SSH; solo fuera de Docker). Un dispositivo local no lleva host/user/port."""
     model_config = ConfigDict(extra="forbid")
     name: str = ""  # etiqueta visible y editable; la clave del mapa es el id
-    host: str
-    user: str
+    local: StrictBool = False
+    host: Optional[str] = Field(None, validate_default=True)
+    user: Optional[str] = Field(None, validate_default=True)
     os: str
-    port: int = 22
+    port: Optional[int] = Field(None, validate_default=True)
 
-    @field_validator("host")
+    @field_validator("host", "user", "port", mode="before")
     @classmethod
-    def _host(cls, v):
-        if not HOST_RE.match(v):
-            raise ValueError("host inválido")
+    def _remote_only(cls, v, info):
+        if info.data.get("local") is True:
+            if v not in (None, ""):
+                raise ValueError(LOCAL_NO_REMOTE_MSG)
+            return None
+        if info.field_name == "port" and v is None:
+            return 22
+        if v is None:
+            raise ValueError("campo obligatorio")
         return v
 
-    @field_validator("user")
+    @field_validator("host", "user", "port", mode="after")
     @classmethod
-    def _user(cls, v):
-        if not USER_RE.match(v):
+    def _check_remote(cls, v, info):
+        if v is None:
+            return v
+        if info.field_name == "host" and not HOST_RE.match(v):
+            raise ValueError("host inválido")
+        if info.field_name == "user" and not USER_RE.match(v):
             raise ValueError("user inválido")
+        if info.field_name == "port" and not 1 <= v <= 65535:
+            raise ValueError("puerto fuera de rango")
         return v
 
     @field_validator("os")
@@ -160,12 +183,15 @@ class Device(BaseModel):
             raise ValueError(f"os debe ser uno de {', '.join(OSES)}")
         return v
 
-    @field_validator("port")
-    @classmethod
-    def _port(cls, v):
-        if not 1 <= v <= 65535:
-            raise ValueError("puerto fuera de rango")
-        return v
+    @model_serializer(mode="wrap")
+    def _ser(self, handler):
+        d = handler(self)
+        if self.local:  # sin host/user/port
+            for k in ("host", "user", "port"):
+                d.pop(k, None)
+        else:  # compatibilidad: los dispositivos remotos se escriben igual que siempre
+            d.pop("local", None)
+        return d
 
 
 class Game(BaseModel):
@@ -290,6 +316,16 @@ def semantic_errors(devices, games) -> List[Tuple[str, str]]:
 
     check_items(devices, "devices", RESERVED_SLUGS)
     check_items(games, "games")
+    locals_ = [i for i, d in devices.items() if isinstance(d, dict) and d.get("local") is True]
+    if locals_ and running_in_docker():
+        for i in locals_:
+            errs.append((f"devices.{i}.local", LOCAL_DOCKER_MSG))
+    else:
+        for i in locals_[1:]:
+            errs.append((f"devices.{i}.local", LOCAL_ONE_MSG))
+    for i, d in devices.items():
+        if isinstance(d, dict) and "local" in d and not isinstance(d["local"], bool):
+            errs.append((f"devices.{i}.local", "debe ser true o false"))
     for gname, g in games.items():
         gp = f"games.{gname}"
         if not isinstance(g, dict):
