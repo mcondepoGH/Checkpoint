@@ -243,7 +243,8 @@ def test_prune_never_touches_other_games_or_hub(env):
     _conflict(env)
     env.write(env.hub, "keep.sav", "h", 500)
     save_baseline(env.data, "g", {"hub": fingerprint(env.hub).hash})
-    _sync_with(env, _cfg(max_versions=1))
+    # el hub con datos propios choca con el cambio de laptop: se resuelve con la política 'newest'
+    run_sync(_cfg(max_versions=1), "g", False, env.data, env.logs.append, env.tr(), conflict_policy="newest")
     assert len(_names(env)) == 1
     assert len(_names(env, "otro")) == 5
     assert (env.data / "versions" / "otro" / OLD[0] / "pc" / "s.sav").exists()

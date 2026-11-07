@@ -224,10 +224,15 @@ def decide(fps: Dict[str, Fingerprint], base: Dict[str, Optional[str]]) -> dict:
     """Decide qué participantes (dispositivos en línea + 'hub') mandan. Función pura.
 
     Devuelve {"kind": "same"|"winner"|"conflict", "winner": clave, "sides": [claves], "reason": str}.
-    - Un lado cambió si su hash actual != su baseline; si solo cambió uno (o varios con contenido idéntico), gana.
-    - Cambiaron varios con contenido distinto -> conflicto. Sin baseline para alguno y contenidos distintos -> conflicto.
-    - Sin baseline y los dos dispositivos coinciden entre sí: el hub (almacén pasivo) se considera desfasado.
-    - Un lado vacío nunca gana a uno con datos (se rellena); no depende del reloj.
+    `base[d]` = lo que el dispositivo d tenía (y el hub, igual) en su última sync; `base["hub"]` = lo que el hub
+    tenía tras la última escritura. Con baseline completo:
+    - un dispositivo cambió si su hash actual != su baseline; el hub cambió por fuera (p. ej. restaurar una
+      versión) si hash != base["hub"];
+    - un dispositivo que cambió sobre una base que el hub ya superó compite con el hub (conflicto);
+    - si compite un único contenido, gana; si compiten varios distintos, conflicto; si nadie cambió, el hub
+      (estado más reciente sincronizado) actualiza a los dispositivos rezagados.
+    Sin baseline y contenidos distintos con datos -> conflicto (nunca se decide por mtime). Un lado vacío nunca
+    gana a uno con datos (se rellena). Sin baseline y los dos dispositivos coinciden: el hub está desfasado.
     """
     if len({fp.hash for fp in fps.values()}) == 1:
         return {"kind": "same"}
@@ -235,14 +240,22 @@ def decide(fps: Dict[str, Fingerprint], base: Dict[str, Optional[str]]) -> dict:
     if len({fps[k].hash for k in nonempty}) == 1:
         return {"kind": "winner", "winner": _prefer_device(nonempty)}
     if all(k in base for k in fps):
-        changed = [k for k in nonempty if fps[k].hash != base[k]]
-        if len({fps[k].hash for k in changed}) == 1:
-            return {"kind": "winner", "winner": _prefer_device(changed)}
-        if changed:
-            return {"kind": "conflict", "sides": changed, "reason": "both-changed"}
+        devs = [k for k in fps if k != "hub"]
+        hub_h = fps["hub"].hash
+        changed = [k for k in devs if not fps[k].empty and fps[k].hash != base[k]]
+        holders = list(changed)
+        stale_base = any(hub_h is not None and fps[k].hash != hub_h and base[k] != hub_h for k in changed)
+        if not fps["hub"].empty and (stale_base or hub_h != base["hub"]):
+            holders.append("hub")
+        if holders:
+            if len({fps[k].hash for k in holders}) == 1:
+                return {"kind": "winner", "winner": _prefer_device(holders)}
+            return {"kind": "conflict", "sides": holders, "reason": "both-changed"}
+        if not fps["hub"].empty:  # nadie cambió: los dispositivos van por detrás del hub
+            return {"kind": "winner", "winner": "hub"}
         return {"kind": "conflict", "sides": nonempty, "reason": "inconsistent"}
     devs = [k for k in nonempty if k != "hub"]
-    if len(devs) > 1 and len({fps[k].hash for k in devs}) == 1:  # los dos dispositivos coinciden: el hub está desfasado
+    if len(devs) > 1 and len({fps[k].hash for k in devs}) == 1:
         return {"kind": "winner", "winner": devs[0]}
     return {"kind": "conflict", "sides": nonempty, "reason": "no-baseline"}
 
