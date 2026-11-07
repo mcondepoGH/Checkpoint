@@ -27,6 +27,8 @@ from .sync import SyncAbort, count_versions, list_versions, restore_version, run
 from .transport import TransportError, get_transport
 
 COOKIE = "checkpoint_session"
+# index.html nunca se cachea: así un despliegue nuevo se ve al recargar (los assets con hash sí se cachean).
+NO_CACHE = {"Cache-Control": "no-cache"}
 
 
 class Run:
@@ -342,6 +344,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     @app.get("/api/status", dependencies=[Depends(require)])
     def status():
         out = {}
+        games = store.snapshot().cfg.games if store.snapshot().cfg else {}
         sd = settings.DATA_DIR / "status"
         if sd.is_dir():
             for f in sd.glob("*.json"):
@@ -352,6 +355,11 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
                     if isinstance(st.get("game"), str) and st["game"] != f.stem:
                         st.setdefault("name", st["game"])
                     st["game"] = f.stem
+                    # La UI pinta `name`: siempre el nombre actual de la config (nunca el id).
+                    if f.stem in games and games[f.stem].name:
+                        st["name"] = games[f.stem].name
+                    elif st.get("name") in (None, "", f.stem):
+                        st.pop("name", None)
                     out[f.stem] = st
                 except Exception:
                     pass
@@ -391,10 +399,13 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         root = settings.STATIC_DIR.resolve()
         f = (root / path).resolve()
         if path and f.is_file() and root in f.parents:
-            return FileResponse(f)
+            # Los assets de Vite llevan hash en el nombre: cacheables para siempre. El resto, a revalidar.
+            if "assets" in f.relative_to(root).parts[:1]:
+                return FileResponse(f, headers={"Cache-Control": "public, max-age=31536000, immutable"})
+            return FileResponse(f, headers=NO_CACHE)
         idx = root / "index.html"
         if idx.is_file():
-            return FileResponse(idx)
+            return FileResponse(idx, headers=NO_CACHE)
         raise HTTPException(404, "frontend no construido")
 
     return app

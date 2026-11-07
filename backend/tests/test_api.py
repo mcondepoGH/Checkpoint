@@ -138,3 +138,15 @@ def test_versions_limit_endpoint(client, tmp_path):
     r = client.get("/api/versions/g/limit")
     assert r.status_code == 200 and r.json() == {"max": 7, "count": 1, "override": False}
     assert client.get("/api/versions/nope/limit").status_code == 404
+
+
+def test_spa_cache_headers(client, tmp_path):
+    (tmp_path / "static/assets").mkdir()
+    (tmp_path / "static/assets/app-abc123.js").write_text("x")
+    (tmp_path / "static/favicon.svg").write_text("<svg/>")
+    for p in ("/", "/index.html", "/ruta/spa"):
+        r = client.get(p)
+        assert r.status_code == 200 and r.headers["cache-control"] == "no-cache", p
+    r = client.get("/assets/app-abc123.js")
+    assert "immutable" in r.headers["cache-control"] and "max-age=31536000" in r.headers["cache-control"]
+    assert client.get("/favicon.svg").headers["cache-control"] == "no-cache"

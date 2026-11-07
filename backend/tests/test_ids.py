@@ -529,3 +529,28 @@ def test_api_validate_reports_id_paths_and_test_device_without_name(api):
     assert r["ok"] is False and "games.zelda-0a1b2c3d.devices.1" in r["errors"]
     r = api.post("/api/devices/test", json={"device": {"host": "-x", "user": "u", "os": "linux"}}).json()
     assert r["ok"] is False and "host" in r["message"]
+
+
+def _legacy_api(client, tmp_path):
+    login(client)
+    (tmp_path / "config").mkdir(parents=True, exist_ok=True)
+    (tmp_path / "config" / "config.yaml").write_text(yaml.safe_dump(LEGACY, allow_unicode=True))
+    return client
+
+
+def test_api_config_legacy_exposes_name_and_id(client, tmp_path):
+    api = _legacy_api(client, tmp_path)
+    games = api.get("/api/config").json()["config"]["games"]
+    assert list(games) == [GID] and games[GID]["name"] == GAME
+
+
+def test_api_status_name_is_current_config_name_not_id(client, tmp_path):
+    api = _legacy_api(client, tmp_path)
+    sd = tmp_path / "data" / "status"
+    sd.mkdir(parents=True)
+    # estado guardado con el id (o sin nombre) en lugar del nombre: la UI no debe verlo como título
+    (sd / f"{GID}.json").write_text(json.dumps({"game": GID, "name": GID, "result": "ok", "message": "m"}))
+    got = api.get("/api/status").json()[GID]
+    assert got["game"] == GID and got["name"] == GAME
+    (sd / f"{GID}.json").write_text(json.dumps({"result": "ok", "message": "m"}))
+    assert api.get("/api/status").json()[GID]["name"] == GAME
