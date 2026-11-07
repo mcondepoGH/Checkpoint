@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from app.config import parse_config
-from app.sync import SyncAbort, fingerprint, list_versions, restore_version, run_sync
+from app.sync import SyncAbort, fingerprint, list_versions, load_baseline, restore_version, run_sync, save_baseline
 from app.transport import LocalTransport
 
 CFG = parse_config({
@@ -35,8 +35,15 @@ class Env:
         f.write_text(content)
         os.utime(f, (mtime, mtime))
 
-    def sync(self, dry=False, **kw):
-        return run_sync(CFG, "g", dry, self.data, self.logs.append, self.tr(**kw))
+    def sync(self, dry=False, opts=None, **kw):
+        return run_sync(CFG, "g", dry, self.data, self.logs.append, self.tr(**kw), **(opts or {}))
+
+    def seed(self, content="base"):
+        """Estado ya sincronizado: mismo contenido en ambos dispositivos y el hub, con baseline."""
+        for d in (self.pc_dir, self.laptop_dir, self.hub):
+            self.write(d, "s.sav", content, 500)
+        h = fingerprint(self.pc_dir).hash
+        save_baseline(self.data, "g", {"pc": h, "laptop": h, "hub": h})
 
 
 @pytest.fixture
@@ -48,25 +55,28 @@ def read(d, name):
     return (d / name).read_text()
 
 
-def test_newest_wins_and_loser_versioned(env):
-    env.write(env.pc_dir, "s.sav", "old", 1000)
+def test_changed_side_wins_and_loser_versioned(env):
+    # Antes ganaba el mtime más reciente a ciegas; ahora gana el lado que cambió desde la última sync.
+    env.seed("old")
     env.write(env.laptop_dir, "s.sav", "new", 2000)
     st = env.sync()
     assert st["result"] == "ok" and st["winner"] == "laptop"
     assert read(env.pc_dir, "s.sav") == "new"
     assert read(env.hub, "s.sav") == "new"
     v = list_versions(env.data, "g")
-    assert len(v) == 1 and v[0]["sources"][0]["source"] == "pc"
+    assert len(v) == 1 and {x["source"] for x in v[0]["sources"]} == {"pc", "hub"}  # el hub ya tenía datos: se versiona
     assert read(env.data / "versions/g" / v[0]["version"] / "pc", "s.sav") == "old"
 
 
 def test_dry_run_changes_nothing(env):
-    env.write(env.pc_dir, "s.sav", "old", 1000)
+    env.seed("old")
     env.write(env.laptop_dir, "s.sav", "new", 2000)
+    before = load_baseline(env.data, "g")
     st = env.sync(dry=True)
     assert st["result"] == "dry-run"
     assert read(env.pc_dir, "s.sav") == "old"
-    assert not env.hub.exists()
+    assert read(env.hub, "s.sav") == "old"
+    assert load_baseline(env.data, "g") == before
     assert not (env.data / "versions").exists()
 
 
@@ -91,16 +101,16 @@ def test_extra_files_removed_on_loser(env):
     env.write(env.pc_dir, "keep.sav", "1", 3000)
     env.write(env.laptop_dir, "keep.sav", "0", 1000)
     env.write(env.laptop_dir, "stale.sav", "z", 1000)
-    env.sync()
+    env.sync(opts={"conflict_policy": "newest"})  # sin baseline: conflicto resuelto por la política
     assert not (env.laptop_dir / "stale.sav").exists()
     assert fingerprint(env.laptop_dir).hash == fingerprint(env.pc_dir).hash
 
 
-def test_device_down_touches_nothing(env):
+def test_both_devices_down_touches_nothing(env):
     env.write(env.pc_dir, "s.sav", "old", 1000)
     env.write(env.laptop_dir, "s.sav", "new", 2000)
-    st = env.sync(laptop={"down": True})
-    assert st["result"] == "aborted" and "laptop" in st["message"]
+    st = env.sync(pc={"down": True}, laptop={"down": True})
+    assert st["result"] == "aborted" and "laptop" in st["message"] and "pc" in st["message"]
     assert read(env.pc_dir, "s.sav") == "old"
     assert not env.hub.exists()
 
@@ -113,11 +123,12 @@ def test_process_running_aborts(env):
     assert read(env.pc_dir, "s.sav") == "old"
 
 
-def test_mtime_tie_different_content_aborts(env):
+def test_mtime_tie_different_content_is_conflict(env):
     env.write(env.pc_dir, "s.sav", "a", 1000)
     env.write(env.laptop_dir, "s.sav", "b", 1000)
     st = env.sync()
-    assert st["result"] == "aborted" and "empate" in st["message"]
+    assert st["result"] == "conflict"
+    assert read(env.pc_dir, "s.sav") == "a" and read(env.laptop_dir, "s.sav") == "b"
 
 
 def test_keep_versions_prunes(env):
@@ -126,7 +137,7 @@ def test_keep_versions_prunes(env):
         t += 100
         env.write(env.pc_dir, "s.sav", f"pc{i}", t)
         env.write(env.laptop_dir, "s.sav", f"dk{i}", t + 50)
-        env.sync()
+        env.sync(opts={"conflict_policy": "newest"})
         import time; time.sleep(1.1)  # nombres de versión por segundo
     assert len(list_versions(env.data, "g")) == 2
 
@@ -156,8 +167,11 @@ def _sync_with(env, cfg, dry=False, **kw):
 
 
 def _conflict(env):
-    env.write(env.pc_dir, "s.sav", "old", 1000)
-    env.write(env.laptop_dir, "s.sav", "new", 2000)
+    """Deja a laptop con un cambio nuevo sobre un estado ya sincronizado (pc queda como perdedor a versionar)."""
+    if not load_baseline(env.data, "g"):
+        env.seed("old")
+    n = len(list((env.data / "versions" / "g").glob("*"))) if (env.data / "versions" / "g").exists() else 0
+    env.write(env.laptop_dir, "s.sav", f"new{n}-{len(env.logs)}", 2000 + len(env.logs))
 
 
 OLD = [f"2026-01-0{i}_100000" for i in range(1, 6)]  # 01..05
@@ -208,7 +222,7 @@ def test_no_prune_if_sync_fails(env):
     for n in OLD:
         _mkver(env, n)
     _conflict(env)
-    assert _sync_with(env, _cfg(max_versions=1), laptop={"down": True})["result"] == "aborted"
+    assert _sync_with(env, _cfg(max_versions=1), pc={"down": True}, laptop={"down": True})["result"] == "aborted"
     assert len(_names(env)) == 5
 
 
@@ -226,8 +240,9 @@ def test_prune_never_touches_other_games_or_hub(env):
     for n in OLD:
         _mkver(env, n)
         _mkver(env, n, game="otro")
-    env.write(env.hub, "keep.sav", "h", 500)
     _conflict(env)
+    env.write(env.hub, "keep.sav", "h", 500)
+    save_baseline(env.data, "g", {"hub": fingerprint(env.hub).hash})
     _sync_with(env, _cfg(max_versions=1))
     assert len(_names(env)) == 1
     assert len(_names(env, "otro")) == 5
@@ -315,7 +330,7 @@ def test_restore_blocked_while_game_locked(env):
 
 
 def test_restore_then_sync_propagates(env):
-    env.write(env.pc_dir, "s.sav", "old", 1000)
+    env.seed("old")
     env.write(env.laptop_dir, "s.sav", "new", 2000)
     env.sync()
     ver = list_versions(env.data, "g")[0]["version"]
@@ -360,7 +375,7 @@ def test_free_names_use_slug_paths_only(tmp_path):
         (d / "s.sav").write_text(c)
         os.utime(d / "s.sav", (t, t))
     tr = {a: LocalTransport(pc), b: LocalTransport(laptop)}
-    st = run_sync(cfg, g, False, data, lambda m: None, tr)
+    st = run_sync(cfg, g, False, data, lambda m: None, tr, conflict_policy="newest")
     assert st["result"] == "ok"
     slug = slug_for(g)
     assert (data / "hub" / slug / "s.sav").read_text() == "new"

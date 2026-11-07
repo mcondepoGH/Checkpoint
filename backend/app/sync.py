@@ -29,6 +29,7 @@ class Fingerprint:
     hash: Optional[str]
     mtime: int
     files: int
+    size: int = 0
 
     @property
     def empty(self) -> bool:
@@ -40,7 +41,7 @@ def fingerprint(root: Path) -> Fingerprint:
     if not root.is_dir():
         return Fingerprint(None, 0, 0)
     entries = []
-    mt = 0
+    mt = size = 0
     for p in sorted(root.rglob("*")):
         if p.is_symlink() or not p.is_file():
             continue
@@ -49,10 +50,12 @@ def fingerprint(root: Path) -> Fingerprint:
             for chunk in iter(lambda: f.read(1 << 20), b""):
                 h.update(chunk)
         entries.append(f"{p.relative_to(root).as_posix()}\0{h.hexdigest()}")
-        mt = max(mt, int(p.stat().st_mtime))
+        st = p.stat()
+        mt = max(mt, int(st.st_mtime))
+        size += st.st_size
     if not entries:
         return Fingerprint(None, 0, 0)
-    return Fingerprint(hashlib.sha256("\n".join(entries).encode()).hexdigest(), mt, len(entries))
+    return Fingerprint(hashlib.sha256("\n".join(entries).encode()).hexdigest(), mt, len(entries), size)
 
 
 def relfiles(root: Path) -> set:
@@ -178,13 +181,121 @@ def _replace_dir(src: Path, dst: Path):
         shutil.rmtree(old)
 
 
+ON_CONFLICT = ("skip", "newest")
+DEFAULT_ON_CONFLICT = "skip"
+# Diferencia de mtime por debajo de la cual no se puede decir cuál es "el más reciente" (deriva de reloj).
+CLOCK_TOLERANCE = 2
+
+
+# ---- baseline: huella que cada participante tenía tras la última sync completa ----
+def _state_path(data_dir: Path, game: str) -> Path:
+    return Path(data_dir) / "state" / f"{slug_for(game)}.json"
+
+
+def load_baseline(data_dir: Path, game: str) -> Dict[str, Optional[str]]:
+    """{origen: hash|None}. None = estaba vacío. Sin fichero o ilegible = sin baseline (comportamiento seguro)."""
+    try:
+        raw = json.loads(_state_path(data_dir, game).read_text())
+        base = raw["base"]
+        if isinstance(base, dict) and all(v is None or isinstance(v, str) for v in base.values()):
+            return dict(base)
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    return {}
+
+
+def save_baseline(data_dir: Path, game: str, updates: Dict[str, Optional[str]]) -> None:
+    """Fusiona `updates` (origen -> hash) en el baseline. Escritura atómica."""
+    p = _state_path(data_dir, game)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    base = load_baseline(data_dir, game)
+    base.update(updates)
+    tmp = p.with_name(f".{p.name}.tmp")
+    tmp.write_text(json.dumps({"base": base, "updated": datetime.now().isoformat(timespec="seconds")}))
+    os.replace(tmp, p)
+
+
+def _prefer_device(keys: List[str]) -> str:
+    """Entre contenidos idénticos, el origen real es un dispositivo antes que el hub."""
+    return next((k for k in keys if k != "hub"), keys[0])
+
+
+def decide(fps: Dict[str, Fingerprint], base: Dict[str, Optional[str]]) -> dict:
+    """Decide qué participantes (dispositivos en línea + 'hub') mandan. Función pura.
+
+    Devuelve {"kind": "same"|"winner"|"conflict", "winner": clave, "sides": [claves], "reason": str}.
+    - Un lado cambió si su hash actual != su baseline; si solo cambió uno (o varios con contenido idéntico), gana.
+    - Cambiaron varios con contenido distinto -> conflicto. Sin baseline para alguno y contenidos distintos -> conflicto.
+    - Sin baseline y los dos dispositivos coinciden entre sí: el hub (almacén pasivo) se considera desfasado.
+    - Un lado vacío nunca gana a uno con datos (se rellena); no depende del reloj.
+    """
+    if len({fp.hash for fp in fps.values()}) == 1:
+        return {"kind": "same"}
+    nonempty = [k for k, fp in fps.items() if not fp.empty]
+    if len({fps[k].hash for k in nonempty}) == 1:
+        return {"kind": "winner", "winner": _prefer_device(nonempty)}
+    if all(k in base for k in fps):
+        changed = [k for k in nonempty if fps[k].hash != base[k]]
+        if len({fps[k].hash for k in changed}) == 1:
+            return {"kind": "winner", "winner": _prefer_device(changed)}
+        if changed:
+            return {"kind": "conflict", "sides": changed, "reason": "both-changed"}
+        return {"kind": "conflict", "sides": nonempty, "reason": "inconsistent"}
+    devs = [k for k in nonempty if k != "hub"]
+    if len(devs) > 1 and len({fps[k].hash for k in devs}) == 1:  # los dos dispositivos coinciden: el hub está desfasado
+        return {"kind": "winner", "winner": devs[0]}
+    return {"kind": "conflict", "sides": nonempty, "reason": "no-baseline"}
+
+
+def pick_resolution(resolution: str, sides: List[str], fps: Dict[str, Fingerprint]) -> Optional[str]:
+    """Elige ganador para un conflicto. None = indeterminado (relojes demasiado parecidos).
+    Lanza SyncAbort si `resolution` no es válida."""
+    if resolution == "newest":
+        ranked = sorted(sides, key=lambda k: fps[k].mtime, reverse=True)
+        top = ranked[0]
+        for k in ranked[1:]:
+            if fps[k].hash != fps[top].hash and fps[top].mtime - fps[k].mtime < CLOCK_TOLERANCE:
+                return None
+        return _prefer_device([k for k in ranked if fps[k].hash == fps[top].hash])
+    if resolution == "hub":
+        name = "hub"
+    elif resolution.startswith("device:"):
+        name = resolution[len("device:"):]
+    else:
+        raise SyncAbort(f"resolución inválida: {resolution!r}")
+    if name not in fps:
+        raise SyncAbort(f"{name} no está disponible para resolver (offline o desconocido)")
+    if fps[name].empty:
+        raise SyncAbort(f"{name} no tiene datos: no puede ganar")
+    return name
+
+
+def valid_resolution(value) -> bool:
+    return isinstance(value, str) and (value in ("newest", "hub") or
+                                       (value.startswith("device:") and len(value) > 7))
+
+
+def _side(k: str, fp: Fingerprint) -> dict:
+    return {"name": k, "hub": k == "hub", "mtime": fp.mtime, "size": fp.size, "files": fp.files, "hash": fp.hash}
+
+
 def run_sync(cfg: Config, game: str, dry_run: bool = False, data_dir: Optional[Path] = None,
              log: Callable[[str], None] = print,
-             transports: Optional[Dict[str, Transport]] = None) -> dict:
-    """Devuelve dict de estado. Lanza SyncAbort si no se pudo ejecutar."""
+             transports: Optional[Dict[str, Transport]] = None,
+             resolution: Optional[str] = None, expect: Optional[Dict[str, str]] = None,
+             conflict_policy: Optional[str] = None) -> dict:
+    """Devuelve dict de estado. Lanza SyncAbort si no se pudo ejecutar.
+
+    resolution: 'newest' | 'hub' | 'device:<nombre>' (sync manual, resuelve un conflicto).
+    expect: {origen: hash} que el usuario vio al elegir; si ya no coincide se devuelve el conflicto nuevo.
+    conflict_policy: 'skip' | 'newest' (sync automática); sin ninguno de los dos, un conflicto se devuelve sin tocar nada."""
     data_dir = Path(data_dir or settings.DATA_DIR)
     if not isinstance(game, str) or game not in cfg.games:
         raise SyncAbort(f"juego desconocido: {game}")
+    if resolution is not None and not valid_resolution(resolution):
+        raise SyncAbort(f"resolución inválida: {resolution!r}")
+    if conflict_policy is not None and conflict_policy not in ON_CONFLICT:
+        raise SyncAbort(f"política de conflicto inválida: {conflict_policy!r}")
     g = cfg.games[game]
     started = datetime.now()
     gs = slug_for(game)  # el nombre visible nunca se usa como ruta de disco
@@ -210,7 +321,7 @@ def run_sync(cfg: Config, game: str, dry_run: bool = False, data_dir: Optional[P
         except BlockingIOError:
             raise SyncAbort("ya hay una sincronización de este juego en curso")
         try:
-            _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status)
+            _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution, expect, conflict_policy)
         except SyncAbort as e:
             status["result"], status["message"] = "aborted", str(e)
             L(f"ABORTADO: {e}")
@@ -226,44 +337,65 @@ def run_sync(cfg: Config, game: str, dry_run: bool = False, data_dir: Optional[P
     status["finished"] = datetime.now().isoformat(timespec="seconds")
     sd = data_dir / "status"
     sd.mkdir(parents=True, exist_ok=True)
-    tmp = sd / f".{gs}.tmp"
-    tmp.write_text(json.dumps(status))
-    os.replace(tmp, sd / f"{gs}.json")
+    keep_conflict = False
+    if dry_run and status["result"] != "conflict":  # un dry-run no borra la marca de conflicto pendiente
+        try:
+            keep_conflict = json.loads((sd / f"{gs}.json").read_text()).get("result") == "conflict"
+        except (OSError, ValueError, AttributeError):
+            pass
+    if not keep_conflict:
+        tmp = sd / f".{gs}.tmp"
+        tmp.write_text(json.dumps(status))
+        os.replace(tmp, sd / f"{gs}.json")
     return status
 
 
-def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status):
-    gs = slug_for(game)
+def _check_process(g, tr, online, L=None):
+    if not g.process:
+        return
+    for n in online:
+        try:
+            running = tr[n].process_running(g.process)
+        except TransportError as e:
+            raise SyncAbort(f"no se pudo comprobar el proceso en {n}: {e}")
+        if running:
+            raise SyncAbort(f"{g.process} está abierto en {n}")
+    if L:
+        L(f"{g.process} no está abierto")
+
+
+def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=None, expect=None,
+             conflict_policy=None):
     labels = list(g.devices)
     tr = {n: (transports or {}).get(n) or get_transport(cfg.devices[n]) for n in labels}
     L(f"sync {game} {'(dry-run) ' if dry_run else ''}entre {labels[0]} y {labels[1]}")
 
-    # 1. Conectividad: si alguno no responde, no se toca nada.
+    # 1. Conectividad: un dispositivo offline se compara solo con el hub; si no responde ninguno, no se toca nada.
+    online, offline = [], []
     for n in labels:
         try:
             tr[n].check()
             if getattr(tr[n], "first_use", False):
                 L(f"{n}: host key guardada (primer uso)")
             L(f"{n}: conexión OK")
+            online.append(n)
         except TransportError as e:
-            raise SyncAbort(f"{n} no responde ({e}); no se toca nada")
+            L(f"{n}: no responde ({e})")
+            offline.append(n)
+    status["offline"] = offline
+    if not online:
+        raise SyncAbort(f"{' y '.join(offline)} no responden; no se toca nada")
+    if offline:
+        L(f"{', '.join(offline)} offline: se compara {online[0]} solo con el hub")
 
     # 2. Proceso abierto.
-    if g.process:
-        for n in labels:
-            try:
-                running = tr[n].process_running(g.process)
-            except TransportError as e:
-                raise SyncAbort(f"no se pudo comprobar el proceso en {n}: {e}")
-            if running:
-                raise SyncAbort(f"{g.process} está abierto en {n}")
-        L(f"{g.process} no está abierto")
+    _check_process(g, tr, online, L)
 
     with tempfile.TemporaryDirectory(prefix="checkpoint-") as td:
         tmp = Path(td)
         dirs: Dict[str, Path] = {}
         # 3. Descarga a temporal.
-        for n in labels:
+        for n in online:
             d = tmp / slug_for(n)
             d.mkdir()
             if tr[n].exists(g.paths[n]):
@@ -272,35 +404,73 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status):
             else:
                 L(f"{n}: la ruta no existe todavía (se trata como vacía)")
             dirs[n] = d
-        hub = data_dir / "hub" / gs
+        hub = data_dir / "hub" / slug_for(game)
         dirs["hub"] = hub
 
         fps = {k: fingerprint(v) for k, v in dirs.items()}
         for k, fp in fps.items():
             L(f"{k}: {fp.files} ficheros, hash {(fp.hash or '-')[:12]}, mtime máx {_fmt(fp.mtime)}")
 
-        cands = [k for k, fp in fps.items() if not fp.empty]
-        if not cands:
-            status.update(result="ok", message="nada que sincronizar (todo vacío)")
-            L("nada que sincronizar")
-            return
-        top = max(fps[k].mtime for k in cands)
-        newest = [k for k in cands if fps[k].mtime == top]
-        if len({fps[k].hash for k in newest}) > 1:
-            raise SyncAbort("empate de mtime con contenido distinto entre " + ", ".join(newest)
-                            + "; resuelve a mano")
-        winner = newest[0]
-        for k in newest:  # preferir un dispositivo sobre el hub si son iguales
-            if k != "hub":
-                winner = k
-                break
-        wh = fps[winner].hash
-        targets = [k for k in dirs if fps[k].hash != wh]
-        if not targets:
-            status.update(result="ok", message="ya sincronizado")
-            L("ya sincronizado: nada que hacer")
+        raw = load_baseline(data_dir, game)
+        base = {k: raw[_src(k)] for k in fps if _src(k) in raw}
+        L("baseline: " + ", ".join(f"{k}={'sí' if k in base else 'no'}" for k in fps))
+
+        def remember(h):  # tras una sync completa todos los participantes en línea tienen `h`
+            if not dry_run:
+                save_baseline(data_dir, game, {_src(k): h for k in fps})
+
+        d = decide(fps, base)
+        if d["kind"] == "same":
+            if all(fp.empty for fp in fps.values()):
+                status.update(result="ok", message="nada que sincronizar (todo vacío)")
+                L("nada que sincronizar")
+            else:
+                status.update(result="ok", message="ya sincronizado")
+                L("ya sincronizado: nada que hacer")
+            remember(next(iter(fps.values())).hash)
             return
 
+        if d["kind"] == "conflict":
+            sides = d["sides"]
+            winner, why = None, None
+            if resolution is not None:
+                stale = [k for k, h in (expect or {}).items() if k in fps and fps[k].hash != h]
+                if stale:
+                    why = "stale"
+                    L(f"los datos cambiaron desde que se mostró el conflicto ({', '.join(stale)}); elige de nuevo")
+                else:
+                    winner = pick_resolution(resolution, sides, fps)
+                    if winner is None:
+                        why = "indeterminate"
+                    else:
+                        L(f"conflicto resuelto manualmente ({resolution}): gana {winner}")
+            elif conflict_policy == "newest":
+                winner = pick_resolution("newest", sides, fps)
+                if winner is None:
+                    why = "indeterminate"
+                else:
+                    L(f"conflicto resuelto por política 'newest': gana {winner}")
+            if winner is None:
+                reason = why or d["reason"]
+                status["conflict"] = {"reason": reason, "policy": conflict_policy,
+                                      "sides": [_side(k, fps[k]) for k in sides]}
+                text = {"indeterminate": "los relojes difieren menos de "
+                                         f"{CLOCK_TOLERANCE} s: no se puede saber cuál es más reciente",
+                        "stale": "los datos cambiaron desde que se mostró el conflicto",
+                        "no-baseline": "primera sincronización con contenidos distintos",
+                        "inconsistent": "los contenidos difieren sin cambios registrados",
+                        "both-changed": "ambos lados cambiaron desde la última sincronización"}[reason]
+                status.update(result="conflict", message=f"conflicto en {', '.join(sides)}: {text}")
+                L(f"CONFLICTO: {text}")
+                for k in sides:
+                    L(f"  {k}: {_fmt(fps[k].mtime)}, {fps[k].size} bytes, {fps[k].files} ficheros")
+                L("no se modifica nada" + (" (política: omitir)" if conflict_policy == "skip" else ""))
+                return
+        else:
+            winner = d["winner"]
+
+        wh = fps[winner].hash
+        targets = [k for k in fps if fps[k].hash != wh]
         L(f"ganador: {winner}")
         for k in targets:
             extra = "" if fps[k].empty else " (versión anterior se guarda)"
@@ -311,7 +481,10 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status):
             L("dry-run: no se modifica nada")
             return
 
-        # 4. Guardar versiones perdedoras.
+        # 4. Re-comprobar el proceso justo antes de escribir (puede haberse abierto durante la descarga).
+        _check_process(g, tr, online)
+
+        # 5. Guardar versiones perdedoras (siempre antes de sobrescribir).
         new_version = None
         if any(not fps[k].empty for k in targets):
             vdir = _new_version_dir(data_dir, game)
@@ -320,20 +493,35 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status):
                 if not fps[k].empty:
                     shutil.copytree(dirs[k], vdir / _src(k))
                     L(f"versión guardada: {vdir.name}/{_src(k)}")
-        # 5. Enviar el ganador.
+        # 6. Escribir: primero el hub (local, atómico), luego los dispositivos. Un fallo en un dispositivo
+        #    no impide intentar el otro; el resultado es 'partial' y NO se actualiza ningún baseline.
         src = dirs[winner]
+        if "hub" in targets:
+            _replace_dir(src, hub)
+            L("hub actualizado")
+        failed = {}
         for k in targets:
             if k == "hub":
                 continue
             extras = relfiles(dirs[k]) - relfiles(src)
             L(f"{k}: enviando")
-            tr[k].push(src, g.paths[k], extras)
-        if "hub" in targets:
-            _replace_dir(src, hub)
-            L("hub actualizado")
-        # 6. Poda (solo tras éxito, no en dry-run; dentro del lock del juego).
+            try:
+                tr[k].push(src, g.paths[k], extras)
+            except TransportError as e:
+                failed[k] = str(e)
+                L(f"ERROR enviando a {k}: {e}")
+        if failed:
+            ok = [k for k in targets if k not in failed]
+            status.update(result="partial", failed=sorted(failed),
+                          message=f"ganador {winner}; actualizados {', '.join(ok) or 'ninguno'}; "
+                                  f"fallaron {', '.join(f'{k} ({m})' for k, m in failed.items())}")
+            L("sincronización PARCIAL: baseline sin actualizar; se completará en la próxima ejecución")
+            return
+        remember(wh)
+        # 7. Poda (solo tras éxito, no en dry-run; dentro del lock del juego).
         prune_versions(data_dir, game, cfg.versions_limit(game), L, protect=new_version)
-        status.update(result="ok", message=f"ganador {winner}; actualizados {', '.join(targets)}")
+        note = f" ({', '.join(offline)} offline: pendiente)" if offline else ""
+        status.update(result="ok", message=f"ganador {winner}; actualizados {', '.join(targets)}{note}")
         L("sincronización completada")
 
 

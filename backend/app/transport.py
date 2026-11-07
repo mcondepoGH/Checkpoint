@@ -103,7 +103,8 @@ class PosixTransport(Transport):
         p = self._ssh(f"mkdir -p {shlex.quote(path)}")
         if p.returncode != 0:
             raise TransportError(f"mkdir remoto falló: {_err(p, self.dev)}")
-        p = _run(["rsync", "-a", "--delete", "-s", "-e", self._rsh(),
+        # --delay-updates/--delete-delay: los ficheros se colocan al final de la transferencia (casi atómico).
+        p = _run(["rsync", "-a", "--delete-delay", "--delay-updates", "-s", "-e", self._rsh(),
                   f"{src}/", f"{self.dev.user}@{self.dev.host}:{path}/"])
         if p.returncode != 0:
             raise TransportError(f"rsync push falló: {_err(p, self.dev)}")
@@ -165,6 +166,9 @@ class WindowsTransport(Transport):
             raise TransportError(f"tar pull falló: {(aerr or berr).decode('utf-8','replace')[-300:]}")
 
     def push(self, src, path, extras=()):
+        # Limitación: tar extrae sobre la carpeta en uso (no hay equivalente sencillo a rsync --delay-updates),
+        # así que un corte a mitad deja el destino a medias. Es seguro: el baseline no se actualiza, el
+        # destino aparece como "cambiado" y la siguiente sync lo trata como conflicto en vez de pisarlo a ciegas.
         p = self._ssh(f'if not exist "{self._win(path)}\\" mkdir "{self._win(path)}"')
         if p.returncode != 0:
             raise TransportError(f"mkdir remoto falló: {_err(p, self.dev)}")
