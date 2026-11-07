@@ -241,6 +241,8 @@ npm test                                         # pruebas de node (borrador, fo
 npm run build                                    # producción
 ```
 
+`esbuild` no está declarado en `frontend/package.json`: llega como dependencia transitiva de `vite`.
+
 ## Licencia
 
 MIT. Ver [`LICENSE`](LICENSE).
