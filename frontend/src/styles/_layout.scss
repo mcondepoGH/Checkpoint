@@ -1,7 +1,7 @@
 @use 'variables' as v;
 
 .topbar {
-  display: flex; align-items: center; gap: .5rem; padding: .6rem v.$gap; flex-wrap: wrap;
+  display: flex; align-items: center; gap: .5rem; padding: .6rem var(--pad-r) .6rem var(--pad-l); flex-wrap: wrap;
   background: color-mix(in srgb, var(--surface) 85%, transparent); backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 5;
   &::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
@@ -12,18 +12,34 @@
   display: inline-flex; align-items: center; gap: .5rem; }
 .brand-logo { width: 32px; height: 32px; flex: none; }
 .tabs { display: flex; gap: .25rem; flex-wrap: wrap; }
+.tab .short, .tool .ico { display: none; }
 .tab { font: inherit; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; font-size: .85rem; background: none; border: 1px solid transparent;
   padding: .4rem .8rem; border-radius: 10px; color: var(--muted); cursor: pointer; transition: all .15s;
   &:hover { color: var(--text); border-color: var(--border); }
   &.active { background: var(--bg); color: var(--accent); border-color: var(--accent); box-shadow: 0 0 14px -3px var(--accent); } }
-.app { min-height: 100vh; display: flex; flex-direction: column; }
-.content { max-width: 1000px; width: 100%; box-sizing: border-box; margin: 0 auto; padding: v.$gap; flex: 1; display: flex; flex-direction: column; }
+.app { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+.content { max-width: 1000px; width: 100%; box-sizing: border-box; margin: 0 auto; padding: v.$gap var(--pad-r) v.$gap var(--pad-l); flex: 1; display: flex; flex-direction: column; }
 .content > section.fill { flex: 1; display: flex; flex-direction: column; }
 
+// Móvil: cabecera de una sola fila (~52 px): icono, pestañas con etiqueta corta y herramientas solo con icono.
 @media (max-width: v.$bp-sm) {
   .two { grid-template-columns: 1fr; }
-  .topbar { gap: .25rem; }
+  .topbar { flex-wrap: nowrap; gap: .25rem; min-height: 52px; padding-top: calc(.25rem + var(--st)); padding-bottom: .25rem; }
   .spacer { display: none; }
-  .brand { width: 100%; margin: 0; }
-  .tab { padding: .4rem .6rem; }
+  .brand { margin: 0 .25rem 0 0; flex: none; }
+  .brand-logo { width: 28px; height: 28px; }
+  .brand-name { display: none; }
+  .tabs { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; gap: .1rem; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none; -ms-overflow-style: none;
+    &::-webkit-scrollbar { display: none; } }
+  .tab { flex: none; min-height: v.$touch; padding: 0 .55rem; font-size: .76rem; letter-spacing: .03em; display: inline-flex; align-items: center; }
+  .tab .full, .tool .lbl { display: none; }
+  .tab .short, .tool .ico { display: inline; }
+  .tool { flex: none; width: v.$touch; min-width: v.$touch; height: v.$touch; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+  .content { padding-top: .75rem; padding-bottom: .75rem; }
+}
+// En móvil el nombre ya va oculto (solo icono); en pantallas muy estrechas se oculta también el logo para dejar el sitio a las pestañas.
+@media (max-width: v.$bp-xs) {
+  .brand { display: none; }
+  .topbar { padding-left: max(.5rem, var(--sl)); padding-right: max(.5rem, var(--sr)); }
+  .tab { padding: 0 .4rem; font-size: .72rem; letter-spacing: .02em; }
 }

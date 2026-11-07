@@ -1,15 +1,17 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { api, ApiError } from './api.js';
 import logo from './assets/logo-icon.svg';
+import Icon from './components/Icon.jsx';
 import Login from './pages/Login.jsx';
 import Settings from './pages/Settings.jsx';
 import Sync from './pages/Sync.jsx';
 import Versions from './pages/Versions.jsx';
 
+// [id, etiqueta completa, etiqueta corta para móvil]
 const TABS = [
-  ['sync', 'Sincronizar'],
-  ['versions', 'Versiones'],
-  ['settings', 'Configuración'],
+  ['sync', 'Sincronizar', 'Sync'],
+  ['versions', 'Versiones', 'Versiones'],
+  ['settings', 'Configuración', 'Ajustes'],
 ];
 
 function useTheme() {
@@ -79,15 +81,21 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <strong className="brand"><img src={logo} alt="" aria-hidden="true" className="brand-logo" />Checkpoint</strong>
+        <strong className="brand"><img src={logo} alt="" aria-hidden="true" className="brand-logo" /><span className="brand-name">Checkpoint</span></strong>
         <nav className="tabs" aria-label="Secciones">
-          {TABS.map(([id, label]) => (
-            <button key={id} className={tab === id ? 'tab active' : 'tab'} aria-current={tab === id ? 'page' : undefined} onClick={() => setTab(id)}>{label}</button>
+          {TABS.map(([id, label, short]) => (
+            <button key={id} className={tab === id ? 'tab active' : 'tab'} aria-current={tab === id ? 'page' : undefined} aria-label={label} onClick={() => setTab(id)}>
+              <span className="full" aria-hidden="true">{label}</span><span className="short" aria-hidden="true">{short}</span>
+            </button>
           ))}
         </nav>
         <div className="spacer" />
-        <button className="btn ghost" onClick={cycleTheme} title="Cambiar tema">Tema: {theme}</button>
-        <button className="btn ghost" onClick={logout}>Salir</button>
+        <button className="btn ghost tool" onClick={cycleTheme} title="Cambiar tema" aria-label={`Cambiar tema (actual: ${theme})`}>
+          <Icon name="theme" /><span className="lbl">Tema: {theme}</span>
+        </button>
+        <button className="btn ghost tool" onClick={logout} title="Salir" aria-label="Salir">
+          <Icon name="logout" /><span className="lbl">Salir</span>
+        </button>
       </header>
       <main className="content">
         {error && <div className="alert error" role="alert">{error}</div>}
