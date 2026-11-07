@@ -1,6 +1,9 @@
 """Detección de nuevas versiones (solo lectura): consulta las Releases públicas de GitHub.
 Canal «stable» (por defecto): solo Releases normales. Canal «beta»: también pre-releases (nunca borradores).
 
+Solo se aplica en instalación nativa. En Docker (se actualiza reconstruyendo la imagen) está inactiva: ni
+red, ni caché, ni ajustes; salvo que se fuerce con CHECKPOINT_UPDATE_CHECK=1 definido explícitamente.
+
 Nunca descarga ni instala nada. Un fallo de red no es un error para el usuario: se conserva lo último
 conocido y se reintenta más tarde. Con la comprobación desactivada no se hace ninguna petición."""
 import json
@@ -14,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Optional
 
-from . import settings
+from . import runtime, settings
 
 DEFAULT_REPO = "mcondepoGH/Checkpoint"
 UNKNOWN = "desconocida"
@@ -153,6 +156,11 @@ def pick_latest(releases, channel: str = DEFAULT_CHANNEL) -> Optional[dict]:
             "url": url if isinstance(url, str) and url.startswith("https://") else None}
 
 
+def applicable() -> bool:
+    """False en Docker salvo CHECKPOINT_UPDATE_CHECK definido explícitamente como verdadero."""
+    return not runtime.running_in_docker() or settings.update_check_forced()
+
+
 def _iso(ts) -> Optional[str]:
     return datetime.fromtimestamp(ts, timezone.utc).isoformat(timespec="seconds") if ts else None
 
@@ -223,7 +231,12 @@ class UpdateChecker:
 
     def state(self, refresh: bool = False) -> dict:
         actual = installed_version()
-        base = {"actual": actual, "ultima": None, "hay_actualizacion": False, "notas": "", "url": None,
+        if not applicable():
+            # Sin red, sin caché, sin leer ajustes guardados: campos neutros y sin error.
+            return {"aplicable": False, "actual": actual, "ultima": None, "hay_actualizacion": False, "notas": "",
+                    "url": None, "comprobado_en": None, "error": None, "habilitado": False, "repo": repo_name(),
+                    "canal": DEFAULT_CHANNEL, "prerelease": False}
+        base = {"aplicable": True, "actual": actual, "ultima": None, "hay_actualizacion": False, "notas": "", "url": None,
                 "comprobado_en": None, "error": None, "habilitado": self.enabled(), "repo": repo_name(),
                 "canal": self.channel(), "prerelease": False}
         if not base["habilitado"]:

@@ -407,3 +407,82 @@ def test_put_validation_is_atomic(api):
     s = api.get("/api/updates").json()
     assert s["canal"] == "stable" and s["habilitado"] is True     # nada se aplicó a medias
 
+
+
+# ---- solo instalación nativa (en Docker, inactiva salvo forzado) ----
+def _boom(*a, **k):
+    raise AssertionError("no debe haber red")
+
+
+def test_native_is_applicable(env):
+    make, _, calls = env
+    s = make([rel("v0.5.0")]).state()
+    assert s["aplicable"] is True and s["hay_actualizacion"] is True and len(calls) == 1
+
+
+def test_docker_not_forced_no_network_no_cache(env, monkeypatch, tmp_path):
+    make, _, calls = env
+    monkeypatch.setenv("CHECKPOINT_RUNTIME", "docker")
+    monkeypatch.delenv("CHECKPOINT_UPDATE_CHECK", raising=False)
+    monkeypatch.delenv("SAVESYNC_UPDATE_CHECK", raising=False)
+    monkeypatch.setattr(updates, "fetch_releases", _boom)
+    c = make([rel("v0.5.0")])
+    for refresh in (False, True):
+        s = c.state(refresh=refresh)
+        assert s["aplicable"] is False and s["error"] is None and s["hay_actualizacion"] is False
+        assert s["habilitado"] is False and s["ultima"] is None and s["comprobado_en"] is None
+    assert calls == [] and list(tmp_path.iterdir()) == []   # ni red ni caché escrita
+
+
+def test_docker_explicit_zero_or_empty_is_not_forced(env, monkeypatch):
+    make, _, calls = env
+    monkeypatch.setenv("CHECKPOINT_RUNTIME", "docker")
+    for v in ("0", "", "no", "off"):
+        monkeypatch.setenv("CHECKPOINT_UPDATE_CHECK", v)
+        assert make([rel("v0.5.0")]).state()["aplicable"] is False
+    assert calls == []
+
+
+def test_docker_forced_checks(env, monkeypatch):
+    make, _, calls = env
+    monkeypatch.setenv("CHECKPOINT_RUNTIME", "docker")
+    monkeypatch.setenv("CHECKPOINT_UPDATE_CHECK", "1")
+    s = make([rel("v0.5.0")]).state()
+    assert s["aplicable"] is True and s["hay_actualizacion"] is True and len(calls) == 1
+
+
+def test_update_check_forced_values():
+    f = settings.update_check_forced
+    assert f({}) is False and f({"CHECKPOINT_UPDATE_CHECK": ""}) is False
+    assert f({"CHECKPOINT_UPDATE_CHECK": "0"}) is False
+    assert all(f({"CHECKPOINT_UPDATE_CHECK": v}) for v in ("1", "true", "YES", "on"))
+
+
+def test_endpoints_docker_not_forced(api, monkeypatch):
+    monkeypatch.setenv("CHECKPOINT_RUNTIME", "docker")
+    monkeypatch.delenv("CHECKPOINT_UPDATE_CHECK", raising=False)
+    monkeypatch.setattr(updates, "fetch_releases", _boom)
+    login(api)
+    s = api.get("/api/updates").json()
+    assert s["aplicable"] is False and s["error"] is None
+    assert api.get("/api/updates?refresh=1").json()["aplicable"] is False
+    r = api.put("/api/updates", json={"enabled": True})
+    assert r.status_code == 409 and r.json()["aplicable"] is False
+    assert api.put("/api/updates", json={"channel": "beta"}).status_code == 409
+    assert api.get("/api/version").json() == {"version": "0.4.2"}   # la versión sigue disponible
+    assert api.calls == [] and not (settings.DATA_DIR / "updates.json").exists()
+
+
+def test_endpoints_docker_forced(api, monkeypatch):
+    monkeypatch.setenv("CHECKPOINT_RUNTIME", "docker")
+    monkeypatch.setenv("CHECKPOINT_UPDATE_CHECK", "1")
+    login(api)
+    s = api.get("/api/updates").json()
+    assert s["aplicable"] is True and s["ultima"] == "0.5.0"
+    assert api.put("/api/updates", json={"enabled": False}).json()["habilitado"] is False
+
+
+def test_endpoints_native_has_aplicable(api):
+    login(api)
+    assert api.get("/api/updates").json()["aplicable"] is True
+    assert api.put("/api/updates", json={"channel": "beta"}).status_code == 200

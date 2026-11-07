@@ -80,6 +80,16 @@ except ValueError:
 # Comprobación de nuevas versiones (solo lectura, GitHub Releases). UPDATE_CHECK y UPDATE_CHANNEL
 # («stable» o «beta»; otro valor -> stable) son los valores iniciales; lo guardado desde la UI prevalece.
 UPDATE_CHECK = _env("UPDATE_CHECK", "1").strip().lower() not in ("0", "false", "no", "off")
+
+
+def update_check_forced(environ=None) -> bool:
+    """True si CHECKPOINT_UPDATE_CHECK está definido EXPLÍCITAMENTE con valor verdadero (1/true/yes/on).
+    «No definido» (o vacío) no cuenta: es lo que distingue el valor por defecto de un forzado. En Docker la
+    comprobación de versiones solo se aplica si esto es True; en instalación nativa siempre se aplica."""
+    v = env("UPDATE_CHECK", None, environ)
+    return v is not None and v.strip().lower() in ("1", "true", "yes", "on")
+
+
 UPDATE_CHANNEL = "beta" if _env("UPDATE_CHANNEL", "stable").strip().lower() == "beta" else "stable"
 UPDATE_REPO = _env("UPDATE_REPO", "mcondepoGH/Checkpoint").strip()
 try:
