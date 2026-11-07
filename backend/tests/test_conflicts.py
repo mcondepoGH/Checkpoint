@@ -1,7 +1,6 @@
 """Conflictos, baseline y resolución: casos de decisión de _do_sync."""
 import asyncio
 import json
-import time
 
 import pytest
 import yaml
@@ -487,13 +486,13 @@ def test_api_resolution_passthrough_and_validation(tmp_path, monkeypatch):
     assert c.post("/api/sync/g", json={"resolution": "device:pc", "expect": 3}).status_code == 422
     r = c.post("/api/sync/g", json={"resolution": "device:pc", "expect": {"pc": "abc"}, "dry_run": True})
     assert r.status_code == 200
-    for _ in range(50):
-        if seen:
-            break
-        time.sleep(0.1)
+    # El hilo de la ejecución usa el run_sync parcheado: esperar a su evento "done" (no a un sleep)
+    # para que no sobreviva al monkeypatch.
+    assert "event: done" in c.get(f"/api/runs/{r.json()['run_id']}/stream").text
     assert seen["resolution"] == "device:pc" and seen["expect"] == {"pc": "abc"} and seen["dry"] is True
     r = c.post("/api/sync/g", json={})  # compatible: sin cuerpo útil
-    assert r.status_code in (200, 409)
+    assert r.status_code == 200
+    assert "event: done" in c.get(f"/api/runs/{r.json()['run_id']}/stream").text
 
 
 def test_cli_conflict_exit_code(env, monkeypatch, capsys):
