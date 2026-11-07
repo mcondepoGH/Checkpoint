@@ -304,7 +304,7 @@ def test_remoto_offline_via_api_con_local(papi, monkeypatch):
 # ---- CLI serve ----
 def test_cli_serve_exige_credenciales(monkeypatch, capsys):
     from app import cli
-    for k in ("CHECKPOINT_USER", "CHECKPOINT_PASSWORD", "SAVESYNC_USER", "SAVESYNC_PASSWORD"):
+    for k in ("CHECKPOINT_USER", "CHECKPOINT_PASSWORD"):
         monkeypatch.delenv(k, raising=False)
     assert cli.main(["serve"]) == 2
     assert "CHECKPOINT_USER" in capsys.readouterr().err

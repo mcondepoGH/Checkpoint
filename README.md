@@ -62,7 +62,7 @@ Requisitos: Docker y Docker Compose.
 | `CHECKPOINT_COOKIE_SECURE` / `CHECKPOINT_TRUST_PROXY` | `0` | Pon `1` tras un proxy inverso con HTTPS |
 | `TZ`, `PUID`, `PGID` | `Europe/Madrid`, `1000` | Zona horaria y usuario del contenedor |
 
-El prefijo antiguo `SAVESYNC_*` sigue aceptándose (obsoleto). Si la contraseña lleva `$`, ponla entre comillas simples.
+Si la contraseña lleva `$`, ponla entre comillas simples.
 
 ## Instalación sin Docker
 

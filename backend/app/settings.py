@@ -6,13 +6,10 @@ from .runtime import platform_name, running_in_docker
 
 
 def env(suffix, default=None, environ=None):
-    """Lee CHECKPOINT_<suffix>; si no existe, cae a SAVESYNC_<suffix> (nombre antiguo, deprecado)."""
+    """Lee CHECKPOINT_<suffix>; vacío o ausente = valor por defecto."""
     environ = os.environ if environ is None else environ
-    for prefix in ("CHECKPOINT_", "SAVESYNC_"):
-        v = environ.get(prefix + suffix)
-        if v not in (None, ""):
-            return v
-    return default
+    v = environ.get("CHECKPOINT_" + suffix)
+    return default if v in (None, "") else v
 
 
 def _env(suffix, default):

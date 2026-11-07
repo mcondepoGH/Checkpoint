@@ -164,27 +164,22 @@ def test_create_app_from_env(monkeypatch):
 def test_create_app_without_vars_fails(monkeypatch):
     monkeypatch.delenv("CHECKPOINT_USER", raising=False)
     monkeypatch.delenv("CHECKPOINT_PASSWORD", raising=False)
-    monkeypatch.delenv("SAVESYNC_USER", raising=False)
-    monkeypatch.delenv("SAVESYNC_PASSWORD", raising=False)
     with pytest.raises(RuntimeError, match="Faltan CHECKPOINT_USER"):
         create_app()
 
 
-def test_env_fallback_to_legacy_savesync_prefix(monkeypatch):
+def test_savesync_prefix_is_ignored(monkeypatch):
     from app import settings
     for k in ("USER", "PASSWORD", "PORT"):
         monkeypatch.delenv("CHECKPOINT_" + k, raising=False)
-        monkeypatch.delenv("SAVESYNC_" + k, raising=False)
-    assert settings.env("PORT", "8088") == "8088"
     monkeypatch.setenv("SAVESYNC_PORT", "9000")
-    assert settings.env("PORT", "8088") == "9000"           # solo el nombre antiguo
-    monkeypatch.setenv("CHECKPOINT_PORT", "9100")
-    assert settings.env("PORT", "8088") == "9100"           # el nuevo prevalece
+    assert settings.env("PORT", "8088") == "8088"
     monkeypatch.setenv("SAVESYNC_USER", "viejo")
     monkeypatch.setenv("SAVESYNC_PASSWORD", "clave-vieja")
-    c = TestClient(create_app())
-    assert c.post("/api/login", json={"user": "viejo", "password": "clave-vieja"}).status_code == 200
-    assert "checkpoint_session" in c.cookies
+    with pytest.raises(RuntimeError, match="Faltan CHECKPOINT_USER"):
+        create_app()
+    monkeypatch.setenv("CHECKPOINT_PORT", "9100")
+    assert settings.env("PORT", "8088") == "9100"
 
 
 def test_password_not_logged(monkeypatch, caplog, capsys):

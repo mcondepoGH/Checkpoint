@@ -424,7 +424,6 @@ def test_docker_not_forced_no_network_no_cache(env, monkeypatch, tmp_path):
     make, _, calls = env
     monkeypatch.setenv("CHECKPOINT_RUNTIME", "docker")
     monkeypatch.delenv("CHECKPOINT_UPDATE_CHECK", raising=False)
-    monkeypatch.delenv("SAVESYNC_UPDATE_CHECK", raising=False)
     monkeypatch.setattr(updates, "fetch_releases", _boom)
     c = make([rel("v0.5.0")])
     for refresh in (False, True):

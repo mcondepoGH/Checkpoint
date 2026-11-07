@@ -13,7 +13,7 @@ def redact(text: str) -> str:
     for p in _BLOCKS:
         text = p.sub("[REDACTED]", text)
     text = _ASSIGNMENT.sub(lambda m: m.group(1) + m.group(2) + "[REDACTED]", text)
-    for v in (os.environ.get("CHECKPOINT_PASSWORD"), os.environ.get("SAVESYNC_PASSWORD")):
-        if v and len(v) >= 4:
-            text = text.replace(v, "[REDACTED]")
+    pw = os.environ.get("CHECKPOINT_PASSWORD")
+    if pw and len(pw) >= 4:
+        text = text.replace(pw, "[REDACTED]")
     return text

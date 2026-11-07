@@ -22,8 +22,7 @@ COPY backend/app ./app
 COPY VERSION ./VERSION
 COPY --from=web /web/dist ./static
 # La CLI baja a checkpoint si se invoca como root (docker exec), para no crear ficheros de root en /data.
-RUN printf '#!/bin/sh\nif [ "$(id -u)" = "0" ]; then exec su-exec checkpoint python -m app.cli "$@"; fi\nexec python -m app.cli "$@"\n' > /usr/local/bin/checkpoint && chmod +x /usr/local/bin/checkpoint \
- && ln -s checkpoint /usr/local/bin/savesync   # compat: `docker exec ... savesync` (nombre antiguo)
+RUN printf '#!/bin/sh\nif [ "$(id -u)" = "0" ]; then exec su-exec checkpoint python -m app.cli "$@"; fi\nexec python -m app.cli "$@"\n' > /usr/local/bin/checkpoint && chmod +x /usr/local/bin/checkpoint
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 ENV HOME=/home/checkpoint PYTHONUNBUFFERED=1 CHECKPOINT_IN_DOCKER=1 \
