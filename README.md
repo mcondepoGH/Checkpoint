@@ -12,7 +12,7 @@ Checkpoint mantiene sincronizadas las partidas guardadas de un juego entre dos d
 - Interfaz web con tema gaming.
 - Sincronización automática cada X horas, con registro de ejecuciones.
 - Versiones y copias de seguridad de cada guardado, con restauración desde la UI.
-- Modo de prueba (dry-run) y log en vivo.
+- Modo de simulación (dry-run) y log en vivo.
 - Configuración editable desde la UI o a mano.
 
 ## Cómo funciona
@@ -41,26 +41,26 @@ Requisitos: Docker y Docker Compose. Sin Docker, ver [Instalación sin Docker](#
    ```bash
    cp .env.example .env     # edita CHECKPOINT_USER y CHECKPOINT_PASSWORD
    ```
-3. Arranca:
+3. Arranca (descarga la imagen publicada, `ghcr.io/mcondepogh/checkpoint:latest`):
    ```bash
-   docker compose up -d --build
+   docker compose up -d
    ```
-   (Si prefieres la imagen publicada, usa `image: ghcr.io/<owner>/checkpoint:latest` en `docker-compose.yml`; ver «Publicación de versiones».)
+   `latest` es siempre la última versión estable. Para probar versiones preliminares usa `:beta` y para fijar una versión concreta `:X.Y.Z` (p. ej. `:1.0.0`); cámbialo en `image:` de `docker-compose.yml`. Para actualizar: `docker compose pull && docker compose up -d`. Ver «Publicación de versiones».
 4. Abre `http://IP-DEL-SERVIDOR:8088`.
 
-Variables (todas con prefijo `CHECKPOINT_`, salvo las de compose). La sincronización automática y la comprobación de versiones se ajustan desde la pantalla Configuración, no con variables.
+Variables (todas con prefijo `CHECKPOINT_`, salvo `TZ`). El `docker-compose.yml` solo pasa las obligatorias (`CHECKPOINT_USER` y `CHECKPOINT_PASSWORD`, tomadas del `.env`); para usar una opcional, añádela en `environment:` del servicio (p. ej. `TZ: Europe/London` o `CHECKPOINT_SESSION_HOURS: 24`), con su valor o como `${VARIABLE:-valor}` si la defines en el `.env`. La sincronización automática y la comprobación de versiones se ajustan desde la pantalla Configuración, no con variables.
 
 | Variable | Por defecto | Descripción |
 |---|---|---|
 | `CHECKPOINT_USER` | (obligatoria) | Usuario de acceso a la web |
 | `CHECKPOINT_PASSWORD` | (obligatoria) | Contraseña, en claro en el `.env` |
-| `CHECKPOINT_PORT` | `8088` | Puerto publicado en Docker (dentro del contenedor la web escucha en el 8088); con `serve`, puerto de escucha |
+| `CHECKPOINT_PORT` | `8088` | Solo con `serve` (sin Docker): puerto de escucha. En Docker la web escucha siempre en el 8088 del contenedor; para cambiar el puerto del equipo edita `ports:` en el compose |
 | `CHECKPOINT_HOST` | `127.0.0.1` | Solo con `serve` (sin Docker): dirección de escucha |
 | `CHECKPOINT_HOME_DIR` | según el sistema | Solo sin Docker: carpeta base de `config/`, `data/` y `keys/` (ver más abajo) |
 | `CHECKPOINT_SESSION_HOURS` | `12` | Horas de validez de la sesión |
 | `CHECKPOINT_COOKIE_SECURE` / `CHECKPOINT_TRUST_PROXY` | `0` | Pon `1` tras un proxy inverso con HTTPS |
 | `CHECKPOINT_RUNTIME` | automático | `docker` o `native`: fuerza el modo (la imagen lo fija a `docker`) |
-| `TZ`, `PUID`, `PGID` | `UTC`, `1000` | Zona horaria (p. ej. `Europe/London`) y usuario del contenedor (solo compose) |
+| `TZ` | `UTC` | Zona horaria de los registros y la sincronización automática (p. ej. `Europe/London`); solo Docker, se añade a `environment:` |
 
 Si la contraseña lleva `$`, ponla entre comillas simples.
 
@@ -139,7 +139,7 @@ devices:
 2. Añádela a `authorized_keys` de cada dispositivo. El botón **?** junto a la clave muestra los comandos para Linux y Windows, incluida la activación del servidor SSH.
 3. Añade los **dispositivos** (nombre, host, puerto, usuario, sistema) y pulsa **Probar conexión**. La primera vez se guarda la huella del host. Sin Docker puedes marcar uno como **Este equipo** (sin SSH).
 4. Añade los **juegos**: elige dos dispositivos y la carpeta de guardado en cada uno (ruta absoluta, por ejemplo `/home/usuario/.local/share/Juego/Saves` o `C:\Users\Usuario\AppData\Local\Juego\Saves`).
-5. Ve a **Sincronizar**. Prueba primero con **Dry-run** y después sin él.
+5. Ve a **Sincronizar**. Prueba primero con **Simulación (dry-run)** y después sin él.
 
 ## Sincronización automática
 

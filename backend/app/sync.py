@@ -401,7 +401,7 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
         return ", ".join(dn(k) for k in ks)
 
     tr = {n: (transports or {}).get(n) or get_transport(cfg.devices[n]) for n in labels}
-    L(f"sync {g.name} {'(dry-run) ' if dry_run else ''}entre {dn(labels[0])} y {dn(labels[1])}")
+    L(f"sync {g.name} {'(simulación (dry-run)) ' if dry_run else ''}entre {dn(labels[0])} y {dn(labels[1])}")
 
     # 1. Conectividad: un dispositivo offline se compara solo con el hub; si no responde ninguno, no se toca nada.
     online, offline = [], []
@@ -511,7 +511,7 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
         status["winner"], status["targets"] = winner, targets
         if dry_run:
             status.update(result="dry-run", message=f"ganador {dn(winner)}; destinos {dns(targets)}")
-            L("dry-run: no se modifica nada")
+            L("simulación (dry-run): no se modifica nada")
             return
 
         # 4. Re-comprobar el proceso justo antes de escribir (puede haberse abierto durante la descarga).

@@ -5,7 +5,7 @@ import { labelOf } from '../names.js';
 import { parseRun } from '../format.js';
 import ConflictDialog from '../components/ConflictDialog.jsx';
 
-const RES_TXT = { conflict: 'Conflicto', partial: 'Parcial' };
+const RES_TXT = { conflict: 'Conflicto', partial: 'Parcial', 'dry-run': 'Simulación (dry-run)' };
 
 // Fecha ISO -> {time, date}; null si no se puede interpretar.
 function splitWhen(iso) {
@@ -31,7 +31,7 @@ function LastRun({ s, devName }) {
         <dt>Última sync</dt>
         <dd>{when ? <><strong className="lr-time">{when.time}</strong><span className="lr-date">{when.date}</span></>
                   : <span>{s.finished?.replace('T', ' ') || '—'}</span>}
-          {s.dry_run && <span className="lr-tag">dry-run</span>}</dd>
+          {s.dry_run && <span className="lr-tag">Simulación (dry-run)</span>}</dd>
       </div>
       {s.result === 'conflict' && <div className="lr-row"><dt>Conflicto</dt><dd className="lr-msg">{s.message}</dd></div>}
       {s.result === 'partial' && <div className="lr-row"><dt>Parcial</dt><dd className="lr-msg">{s.message}</dd></div>}
@@ -119,7 +119,7 @@ export default function Sync({ config, onGoSettings }) {
               <p className="muted">{config.games[g].devices.map(devName).join(' ⇄ ')}</p>
               <div className={`meter ${running ? 'running' : (s?.result || '')}`} role="progressbar" aria-label={`Estado de ${gameName(g)}`}><i /></div>
               <LastRun s={s} devName={devName} />
-              <label className="check"><input type="checkbox" checked={!!dry[g]} onChange={(e) => setDry({ ...dry, [g]: e.target.checked })} /> Dry-run</label>
+              <label className="check"><input type="checkbox" checked={!!dry[g]} onChange={(e) => setDry({ ...dry, [g]: e.target.checked })} /> Simulación (dry-run)</label>
               {s?.result === 'conflict' && !running && (
                 <div className="conflict-flag" role="alert">
                   <span><b>Conflicto:</b> dos versiones distintas, no se ha guardado nada.</span>
