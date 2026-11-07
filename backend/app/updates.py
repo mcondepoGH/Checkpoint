@@ -1,8 +1,8 @@
 """Detección de nuevas versiones (solo lectura): consulta las Releases públicas de GitHub.
 Canal «stable» (por defecto): solo Releases normales. Canal «beta»: también pre-releases (nunca borradores).
 
-Solo se aplica en instalación nativa. En Docker (se actualiza reconstruyendo la imagen) está inactiva: ni
-red, ni caché, ni ajustes; salvo que se fuerce con CHECKPOINT_UPDATE_CHECK=1 definido explícitamente.
+Solo se aplica en instalación nativa. En Docker (se actualiza cambiando la imagen) está inactiva: ni
+red, ni caché, ni ajustes.
 
 Nunca descarga ni instala nada. Un fallo de red no es un error para el usuario: se conserva lo último
 conocido y se reintenta más tarde. Con la comprobación desactivada no se hace ninguna petición."""
@@ -19,7 +19,8 @@ from typing import Callable, Optional
 
 from . import runtime, settings
 
-DEFAULT_REPO = "mcondepoGH/Checkpoint"
+REPO = "mcondepoGH/Checkpoint"
+CACHE_TTL = 6 * 3600   # s de validez de una comprobación correcta
 UNKNOWN = "desconocida"
 TIMEOUT = 5            # s por petición
 MIN_REFRESH = 60       # s mínimos entre comprobaciones forzadas
@@ -28,7 +29,6 @@ NOTES_MAX = 6000       # caracteres de notas que se devuelven
 MAX_BODY = 1_000_000   # bytes máximos de respuesta
 SETTINGS_FILE = "updates.json"
 CACHE_FILE = "update_cache.json"
-_REPO_RE = re.compile(r"^[A-Za-z0-9_.-]{1,100}/[A-Za-z0-9_.-]{1,100}$")
 _VER_RE = re.compile(r"^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?$")
 _SEMVER_RE = re.compile(r"^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z.-]+)?$")
 CHANNELS = ("stable", "beta")
@@ -85,9 +85,6 @@ def format_semver(s) -> Optional[str]:
 
 
 def _version_files():
-    forced = os.environ.get("CHECKPOINT_VERSION_FILE")
-    if forced:
-        return [Path(forced)]
     here = Path(__file__).resolve()
     # Docker: /app/VERSION (junto a app/). Nativo: VERSION en la raíz del repo.
     return [here.parents[1] / "VERSION", here.parents[2] / "VERSION"]
@@ -102,11 +99,6 @@ def installed_version() -> str:
             continue
         return format_semver(raw) or UNKNOWN
     return UNKNOWN
-
-
-def repo_name() -> str:
-    r = (settings.UPDATE_REPO or "").strip()
-    return r if _REPO_RE.match(r) and ".." not in r else DEFAULT_REPO
 
 
 class _HttpsOnly(urllib.request.HTTPRedirectHandler):
@@ -157,8 +149,8 @@ def pick_latest(releases, channel: str = DEFAULT_CHANNEL) -> Optional[dict]:
 
 
 def applicable() -> bool:
-    """False en Docker salvo CHECKPOINT_UPDATE_CHECK definido explícitamente como verdadero."""
-    return not runtime.running_in_docker() or settings.update_check_forced()
+    """Solo en instalación nativa: en Docker la versión la fija la imagen."""
+    return not runtime.running_in_docker()
 
 
 def _iso(ts) -> Optional[str]:
@@ -192,11 +184,11 @@ class UpdateChecker:
 
     def enabled(self) -> bool:
         v = self._read(SETTINGS_FILE).get("enabled")
-        return v if isinstance(v, bool) else bool(settings.UPDATE_CHECK)
+        return v if isinstance(v, bool) else True
 
     def channel(self) -> str:
         v = self._read(SETTINGS_FILE).get("channel")
-        return v if v in CHANNELS else normalize_channel(settings.UPDATE_CHANNEL)
+        return v if v in CHANNELS else DEFAULT_CHANNEL
 
     def _merge_settings(self, **kv):
         cur = self._read(SETTINGS_FILE)
@@ -234,10 +226,10 @@ class UpdateChecker:
         if not applicable():
             # Sin red, sin caché, sin leer ajustes guardados: campos neutros y sin error.
             return {"aplicable": False, "actual": actual, "ultima": None, "hay_actualizacion": False, "notas": "",
-                    "url": None, "comprobado_en": None, "error": None, "habilitado": False, "repo": repo_name(),
+                    "url": None, "comprobado_en": None, "error": None, "habilitado": False, "repo": REPO,
                     "canal": DEFAULT_CHANNEL, "prerelease": False}
         base = {"aplicable": True, "actual": actual, "ultima": None, "hay_actualizacion": False, "notas": "", "url": None,
-                "comprobado_en": None, "error": None, "habilitado": self.enabled(), "repo": repo_name(),
+                "comprobado_en": None, "error": None, "habilitado": self.enabled(), "repo": REPO,
                 "canal": self.channel(), "prerelease": False}
         if not base["habilitado"]:
             return base
@@ -251,7 +243,7 @@ class UpdateChecker:
             if refresh and known and age < MIN_REFRESH:
                 base["limitado"] = True
             else:
-                ttl = settings.UPDATE_CACHE_HOURS * 3600 if c.get("ok") else RETRY_AFTER
+                ttl = CACHE_TTL if c.get("ok") else RETRY_AFTER
                 if refresh or not known or age >= ttl or age < 0:
                     self._do_fetch(repo, channel, now)
             c = self._cache if self._same(self._cache, repo, channel) else {}

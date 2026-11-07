@@ -8,25 +8,12 @@ from app import runtime, settings
 
 @pytest.fixture(autouse=True)
 def limpio(monkeypatch):
-    for k in ("CHECKPOINT_RUNTIME", "CHECKPOINT_IN_DOCKER"):
-        monkeypatch.delenv(k, raising=False)
+    monkeypatch.delenv("CHECKPOINT_RUNTIME", raising=False)
     monkeypatch.setattr(runtime, "_CONTAINER_MARKERS", ())
 
 
 def test_sin_pistas_es_nativo():
     assert runtime.runtime_name() == "native" and not runtime.running_in_docker()
-
-
-@pytest.mark.parametrize("v", ["1", "true", "TRUE", "yes", "on", " 1 "])
-def test_in_docker_env_activa_docker(monkeypatch, v):
-    monkeypatch.setenv("CHECKPOINT_IN_DOCKER", v)
-    assert runtime.running_in_docker()
-
-
-@pytest.mark.parametrize("v", ["0", "", "no", "false"])
-def test_in_docker_env_falso_no_activa(monkeypatch, v):
-    monkeypatch.setenv("CHECKPOINT_IN_DOCKER", v)
-    assert not runtime.running_in_docker()
 
 
 def test_marcador_dockerenv_simulado(monkeypatch, tmp_path):
@@ -41,19 +28,20 @@ def test_override_explicito_gana_a_todo(monkeypatch, tmp_path):
     m = tmp_path / ".dockerenv"
     m.write_text("")
     monkeypatch.setattr(runtime, "_CONTAINER_MARKERS", (str(m),))
-    monkeypatch.setenv("CHECKPOINT_IN_DOCKER", "1")
     monkeypatch.setenv("CHECKPOINT_RUNTIME", "native")
     assert runtime.runtime_name() == "native"
     monkeypatch.setenv("CHECKPOINT_RUNTIME", "DOCKER")
     assert runtime.runtime_name() == "docker"
-    monkeypatch.delenv("CHECKPOINT_IN_DOCKER")
     m.unlink()
     assert runtime.runtime_name() == "docker"  # el override manda aunque no haya pistas
 
 
-def test_override_invalido_se_ignora(monkeypatch):
+def test_override_invalido_se_ignora(monkeypatch, tmp_path):
     monkeypatch.setenv("CHECKPOINT_RUNTIME", "kubernetes")
-    monkeypatch.setenv("CHECKPOINT_IN_DOCKER", "1")
+    assert runtime.runtime_name() == "native"
+    m = tmp_path / ".dockerenv"
+    m.write_text("")
+    monkeypatch.setattr(runtime, "_CONTAINER_MARKERS", (str(m),))
     assert runtime.runtime_name() == "docker"
 
 
@@ -100,4 +88,4 @@ def test_rutas_por_defecto_nativo_sin_rutas_de_docker(monkeypatch, tmp_path):
 
 def test_dockerfile_fija_runtime_docker():
     df = (Path(__file__).resolve().parents[2] / "Dockerfile").read_text()
-    assert "CHECKPOINT_IN_DOCKER=1" in df
+    assert "CHECKPOINT_RUNTIME=docker" in df and "IN_DOCKER" not in df

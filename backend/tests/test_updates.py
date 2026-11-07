@@ -75,12 +75,14 @@ def test_cache_memory_and_disk(env, monkeypatch):
     assert c2.state()["ultima"] == "0.6.0" and len(calls) == 2
 
 
-def test_cache_hours_configurable(env, monkeypatch):
+def test_cache_ttl(env, monkeypatch):
     make, t, calls = env
-    monkeypatch.setattr(settings, "UPDATE_CACHE_HOURS", 1.0)
     c = make([rel("v0.5.0")])
     c.state()
-    t[0] += 3601
+    t[0] += updates.CACHE_TTL - 10
+    c.state()
+    assert len(calls) == 1
+    t[0] += 20
     c.state()
     assert len(calls) == 2
 
@@ -120,12 +122,6 @@ def test_disabled_makes_no_request(env):
     assert c.state()["habilitado"] is True and len(calls) == 1
 
 
-def test_env_default_disabled(env, monkeypatch):
-    make, _, calls = env
-    monkeypatch.setattr(settings, "UPDATE_CHECK", False)
-    assert make([rel("v1.0.0")]).state()["habilitado"] is False and calls == []
-
-
 def test_refresh_rate_limited(env):
     make, t, calls = env
     c = make([rel("v0.5.0")])
@@ -135,16 +131,6 @@ def test_refresh_rate_limited(env):
     t[0] += updates.MIN_REFRESH
     s = c.state(refresh=True)
     assert len(calls) == 2 and not s.get("limitado")
-
-
-def test_repo_configurable_and_validated(env, monkeypatch):
-    make, _, calls = env
-    monkeypatch.setattr(settings, "UPDATE_REPO", "otro/repo")
-    make([rel("v0.5.0")]).state()
-    assert calls == ["otro/repo"]
-    monkeypatch.setattr(settings, "UPDATE_REPO", "../../x")
-    assert updates.repo_name() == updates.DEFAULT_REPO
-    assert settings.UPDATE_REPO is not None
 
 
 def test_url_and_notes_sanitised(env):
@@ -191,12 +177,12 @@ def test_redirect_to_http_refused():
 
 def test_installed_version_file(tmp_path, monkeypatch):
     f = tmp_path / "VERSION"
+    monkeypatch.setattr(updates, "_version_files", lambda: [f])
     f.write_text("v1.2.3\n")
-    monkeypatch.setenv("CHECKPOINT_VERSION_FILE", str(f))
     assert updates.installed_version() == "1.2.3"
     f.write_text("dev\n")
     assert updates.installed_version() == "desconocida"
-    monkeypatch.setenv("CHECKPOINT_VERSION_FILE", str(tmp_path / "nada"))
+    monkeypatch.setattr(updates, "_version_files", lambda: [tmp_path / "nada"])
     assert updates.installed_version() == "desconocida"
 
 
@@ -341,23 +327,20 @@ def test_no_downgrade(env, monkeypatch):
 def test_installed_version_accepts_prerelease(tmp_path, monkeypatch):
     f = tmp_path / "VERSION"
     f.write_text("v0.5.0-rc.1\n")
-    monkeypatch.setenv("CHECKPOINT_VERSION_FILE", str(f))
+    monkeypatch.setattr(updates, "_version_files", lambda: [f])
     assert updates.installed_version() == "0.5.0-rc.1"
 
 
-def test_channel_persist_env_default_and_validation(env, monkeypatch):
+def test_channel_persist_and_validation(env):
     make, _, _ = env
-    monkeypatch.setattr(settings, "UPDATE_CHANNEL", "beta")
     c = make([rel("v0.5.0")])
-    assert c.channel() == "beta"                       # valor inicial por entorno
+    assert c.channel() == "stable" and c.enabled() is True      # valores por defecto
+    c.set_channel("beta")
+    assert make([]).channel() == "beta"
     c.set_channel("stable")
-    assert make([]).channel() == "stable"              # lo guardado prevalece sobre el entorno
     assert json.loads((settings.DATA_DIR / updates.SETTINGS_FILE).read_text()) == {"channel": "stable"}
     with pytest.raises(ValueError):
         c.set_channel("nightly")
-    monkeypatch.setattr(settings, "UPDATE_CHANNEL", "raro")
-    (settings.DATA_DIR / updates.SETTINGS_FILE).unlink()
-    assert make([]).channel() == "stable"              # entorno desconocido -> stable
     (settings.DATA_DIR / updates.SETTINGS_FILE).write_text('{"channel": 7}')
     assert make([]).channel() == "stable"              # fichero corrupto -> stable
 
@@ -370,17 +353,6 @@ def test_enabled_and_channel_do_not_clobber_each_other(env):
     assert c2.channel() == "beta" and c2.enabled() is False
     c2.set_channel("stable")
     assert c2.enabled() is False
-
-
-def test_settings_env_channel_parsing(monkeypatch):
-    import importlib
-    for raw, exp in (("beta", "beta"), (" BETA ", "beta"), ("stable", "stable"), ("xx", "stable"), ("", "stable")):
-        monkeypatch.setenv("CHECKPOINT_UPDATE_CHANNEL", raw)
-        importlib.reload(settings)
-        assert settings.UPDATE_CHANNEL == exp
-    monkeypatch.delenv("CHECKPOINT_UPDATE_CHANNEL")
-    importlib.reload(settings)
-    assert settings.UPDATE_CHANNEL == "stable"
 
 
 def test_endpoints_channel(api, monkeypatch):
@@ -409,7 +381,7 @@ def test_put_validation_is_atomic(api):
 
 
 
-# ---- solo instalación nativa (en Docker, inactiva salvo forzado) ----
+# ---- solo instalación nativa (en Docker, inactiva) ----
 def _boom(*a, **k):
     raise AssertionError("no debe haber red")
 
@@ -420,10 +392,9 @@ def test_native_is_applicable(env):
     assert s["aplicable"] is True and s["hay_actualizacion"] is True and len(calls) == 1
 
 
-def test_docker_not_forced_no_network_no_cache(env, monkeypatch, tmp_path):
+def test_docker_no_network_no_cache(env, monkeypatch, tmp_path):
     make, _, calls = env
     monkeypatch.setenv("CHECKPOINT_RUNTIME", "docker")
-    monkeypatch.delenv("CHECKPOINT_UPDATE_CHECK", raising=False)
     monkeypatch.setattr(updates, "fetch_releases", _boom)
     c = make([rel("v0.5.0")])
     for refresh in (False, True):
@@ -433,33 +404,8 @@ def test_docker_not_forced_no_network_no_cache(env, monkeypatch, tmp_path):
     assert calls == [] and list(tmp_path.iterdir()) == []   # ni red ni caché escrita
 
 
-def test_docker_explicit_zero_or_empty_is_not_forced(env, monkeypatch):
-    make, _, calls = env
+def test_endpoints_docker(api, monkeypatch):
     monkeypatch.setenv("CHECKPOINT_RUNTIME", "docker")
-    for v in ("0", "", "no", "off"):
-        monkeypatch.setenv("CHECKPOINT_UPDATE_CHECK", v)
-        assert make([rel("v0.5.0")]).state()["aplicable"] is False
-    assert calls == []
-
-
-def test_docker_forced_checks(env, monkeypatch):
-    make, _, calls = env
-    monkeypatch.setenv("CHECKPOINT_RUNTIME", "docker")
-    monkeypatch.setenv("CHECKPOINT_UPDATE_CHECK", "1")
-    s = make([rel("v0.5.0")]).state()
-    assert s["aplicable"] is True and s["hay_actualizacion"] is True and len(calls) == 1
-
-
-def test_update_check_forced_values():
-    f = settings.update_check_forced
-    assert f({}) is False and f({"CHECKPOINT_UPDATE_CHECK": ""}) is False
-    assert f({"CHECKPOINT_UPDATE_CHECK": "0"}) is False
-    assert all(f({"CHECKPOINT_UPDATE_CHECK": v}) for v in ("1", "true", "YES", "on"))
-
-
-def test_endpoints_docker_not_forced(api, monkeypatch):
-    monkeypatch.setenv("CHECKPOINT_RUNTIME", "docker")
-    monkeypatch.delenv("CHECKPOINT_UPDATE_CHECK", raising=False)
     monkeypatch.setattr(updates, "fetch_releases", _boom)
     login(api)
     s = api.get("/api/updates").json()
@@ -468,17 +414,8 @@ def test_endpoints_docker_not_forced(api, monkeypatch):
     r = api.put("/api/updates", json={"enabled": True})
     assert r.status_code == 409 and r.json()["aplicable"] is False
     assert api.put("/api/updates", json={"channel": "beta"}).status_code == 409
-    assert api.get("/api/version").json() == {"version": "0.4.2"}   # la versión sigue disponible
+    assert s["actual"] == "0.4.2"                                    # la versión instalada sigue disponible
     assert api.calls == [] and not (settings.DATA_DIR / "updates.json").exists()
-
-
-def test_endpoints_docker_forced(api, monkeypatch):
-    monkeypatch.setenv("CHECKPOINT_RUNTIME", "docker")
-    monkeypatch.setenv("CHECKPOINT_UPDATE_CHECK", "1")
-    login(api)
-    s = api.get("/api/updates").json()
-    assert s["aplicable"] is True and s["ultima"] == "0.5.0"
-    assert api.put("/api/updates", json={"enabled": False}).json()["habilitado"] is False
 
 
 def test_endpoints_native_has_aplicable(api):

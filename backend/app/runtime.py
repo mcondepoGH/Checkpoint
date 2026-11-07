@@ -9,18 +9,12 @@ from pathlib import Path
 RUNTIMES = ("docker", "native")
 
 
-def _flag(value) -> bool:
-    return str(value or "").strip().lower() in ("1", "true", "yes", "on")
-
-
 def runtime_name() -> str:
-    """'docker' o 'native'. Orden: CHECKPOINT_RUNTIME (override explícito) > CHECKPOINT_IN_DOCKER (lo fija
-    el Dockerfile) > ficheros marcadores del contenedor (/.dockerenv, /run/.containerenv) > native."""
+    """'docker' o 'native'. Orden: CHECKPOINT_RUNTIME (explícito; el Dockerfile lo fija a docker) >
+    ficheros marcadores del contenedor (/.dockerenv, /run/.containerenv) > native."""
     forced = (os.environ.get("CHECKPOINT_RUNTIME") or "").strip().lower()
     if forced in RUNTIMES:
         return forced
-    if _flag(os.environ.get("CHECKPOINT_IN_DOCKER")):
-        return "docker"
     for marker in _CONTAINER_MARKERS:
         if Path(marker).exists():
             return "docker"

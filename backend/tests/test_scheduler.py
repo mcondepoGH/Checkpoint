@@ -76,16 +76,14 @@ def test_cycle_skips_busy_never_dry_and_survives_errors(sched):
     assert sched.last_status["result"] == "aborted" and sched.last_run == NOW
 
 
-def test_env_defaults_lose_to_saved(tmp_path, monkeypatch):
+def test_defaults_lose_to_saved(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
-    monkeypatch.setattr(settings, "AUTO_ENABLED", True)
-    monkeypatch.setattr(settings, "AUTO_INTERVAL_HOURS", 999.0)  # fuera de rango => 24
     s = Scheduler(lambda: None, lambda g: False, clock=lambda: NOW)
-    assert s.state()["enabled"] is True and s.state()["interval_hours"] == 24.0
-    s.update({"enabled": False, "interval_hours": 3})
-    monkeypatch.setattr(settings, "AUTO_ENABLED", True)
+    assert s.state()["enabled"] is False and s.state()["interval_hours"] == 24.0
+    assert s.state()["run_on_start"] is False and s.state()["on_conflict"] == "skip"
+    s.update({"enabled": True, "interval_hours": 3})
     s2 = Scheduler(lambda: None, lambda g: False, clock=lambda: NOW)
-    assert s2.state()["enabled"] is False and s2.state()["interval_hours"] == 3.0
+    assert s2.state()["enabled"] is True and s2.state()["interval_hours"] == 3.0
 
 
 # ---- registro de ejecuciones ----

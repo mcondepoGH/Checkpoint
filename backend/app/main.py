@@ -305,7 +305,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     async def put_updates(request: Request):
         if not updates.applicable():
             return JSONResponse({"detail": "La comprobación de actualizaciones no se aplica en Docker "
-                                 "(fuérzala con CHECKPOINT_UPDATE_CHECK=1)", "aplicable": False}, status_code=409)
+                                 "(la versión la fija la imagen)", "aplicable": False}, status_code=409)
         body = await body_json(request)
         errors = {}
         if "enabled" in body and not isinstance(body["enabled"], bool):
