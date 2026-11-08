@@ -1,10 +1,16 @@
 // «Este equipo» (dispositivo local): borrador <-> config, casilla, ids estables y sin cambios fantasma.
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { createI18n } from '../src/i18n.js';
+import { errorText } from '../src/errors.js';
 import {
   LOCAL_DOCKER_MSG, LOCAL_ONE_MSG, baseKeyOf, blankDevice, canOfferLocal, fromConfig, idOf, isDirty, localErrors,
   localOs, localPatch, pathsOf, removeDevice, toConfig,
 } from '../src/draft.js';
+
+const es = JSON.parse(fs.readFileSync(new URL('../src/locales/es.json', import.meta.url), 'utf8'));
+const t = createI18n({ catalogs: { es }, storage: null, languages: ['es'] }).t;
 
 const CFG = {
   max_versions: 20,
@@ -96,7 +102,7 @@ test('un solo local: el segundo marcado da error', () => {
   const lap = d.devices.find((x) => x.id === 'laptop-5e6f7a8b');
   const two = { ...d, devices: d.devices.map((x) => (x === lap ? { ...x, ...localPatch(true, 'linux') } : x)) };
   const errs = localErrors(two, 'native');
-  assert.equal(errs[`local-${lap.key}`], LOCAL_ONE_MSG);
+  assert.deepEqual(errs[`local-${lap.key}`], LOCAL_ONE_MSG);
   assert.equal(Object.keys(errs).filter((k) => k.startsWith('local-')).length, 1);
   assert.equal(isDirty(two, CFG, 'native'), true);
 });
@@ -104,9 +110,11 @@ test('un solo local: el segundo marcado da error', () => {
 test('en docker un local es error de validación', () => {
   const d = fromConfig(CFG);
   const errs = localErrors(d, 'docker');
-  assert.equal(errs['local-pc-1a2b3c4d'], LOCAL_DOCKER_MSG);
+  assert.deepEqual(errs['local-pc-1a2b3c4d'], LOCAL_DOCKER_MSG);
   assert.deepEqual(Object.keys(localErrors(d, 'native')), []);
-  assert.match(LOCAL_DOCKER_MSG, /sin Docker/);
+  // el error es un cuerpo {code, params} con el código del backend; se traduce al pintar
+  assert.equal(LOCAL_DOCKER_MSG.code, 'err.config.local_docker');
+  assert.match(errorText(LOCAL_DOCKER_MSG, t), /sin Docker/);
 });
 
 test('ids estables: renombrar no cambia claves, juegos ni rutas', () => {

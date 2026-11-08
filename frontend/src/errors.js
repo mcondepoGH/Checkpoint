@@ -34,3 +34,6 @@ export const fieldErrorText = (v, t) => (v && typeof v === 'object' ? errorText(
 
 // Texto de un registro del scheduler/historial (last_status, entrada o juego): {code, params} nuevo, o `message` antiguo.
 export const recordText = (r, t) => (r?.code ? errorText(r, t) : (r?.message ?? ''));
+
+// Mensaje de interfaz con la misma forma que un error ({code, params}) para guardarlo en el estado y traducirlo al pintar.
+export const ui = (code, params) => ({ code, params: params ?? {} });
