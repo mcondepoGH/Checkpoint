@@ -2,6 +2,8 @@
 
 ## Sin publicar
 
+## 1.1.0 (2026-11-08)
+
 ### Novedades
 
 - Interfaz en **español e inglés**. Selector de idioma en la cabecera, una vez iniciada la sesión (Automático, Español, English; la pantalla de acceso no lleva selectores de idioma ni de tema); la elección se recuerda en el navegador y se aplica sin recargar. Fechas, tamaños, duraciones y plurales siguen el idioma activo.
