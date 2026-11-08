@@ -2,5 +2,39 @@
   "lang": {
     "label": "Idioma",
     "auto": "Automático (navegador)"
+  },
+  "err": {
+    "main": {
+      "session_required": "sesión requerida",
+      "origin_forbidden": "origen no permitido",
+      "json_body_required": "cuerpo JSON requerido",
+      "too_many_attempts": "demasiados intentos; espera {seconds} s",
+      "bad_credentials": "credenciales incorrectas",
+      "config_invalid": "config no válida",
+      "config_changed": "config.yaml cambió desde que lo cargaste",
+      "base_version_required": "falta base_version (recarga la configuración)",
+      "backup_unknown": "copia desconocida",
+      "backup_invalid": "la copia no es válida: {reason}",
+      "device_invalid": "datos del dispositivo inválidos: {reason}",
+      "paths_invalid": "paths debe ser una lista de rutas (máx. {max})",
+      "ssh_key_missing": "clave SSH aún no generada",
+      "config_file_invalid": "config.yaml inválido: {reason}",
+      "settings_invalid": "ajustes no válidos",
+      "updates_not_applicable": "La comprobación de actualizaciones no se aplica en Docker (la versión la fija la imagen)",
+      "updates": {
+        "enabled_bool": "debe ser verdadero o falso",
+        "channel_invalid": "debe ser «stable» o «beta»",
+        "field_required": "indica «enabled» o «channel»"
+      },
+      "game_ambiguous": "{reason}",
+      "game_unknown": "juego desconocido",
+      "resolution_invalid": "resolution debe ser 'newest', 'hub' o 'device:<id o nombre>'",
+      "expect_invalid": "expect debe ser un mapa origen -> hash",
+      "run_in_progress": "ya hay una ejecución en curso de este juego",
+      "run_unknown": "ejecución desconocida",
+      "restore_failed": "{reason}",
+      "not_found": "no encontrado",
+      "frontend_not_built": "frontend no construido"
+    }
   }
 }

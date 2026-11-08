@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { api } from '../api.js';
 import EmptyState from './EmptyState.jsx';
 import { fmtDateTime, RESULT_CLASS, RESULT_TEXT } from '../format.js';
+import { errText } from '../useI18n.js';
 
 const TRIG_TXT = { scheduled: 'Programada', startup: 'Arranque' };
 
@@ -24,7 +25,7 @@ export default function AutoSyncLog() {
       const d = await api('/api/scheduler/history?limit=50');
       setEntries(d.entries || []);
       setErr('');
-    } catch (e) { setErr(e.message); } finally { setLoading(false); }
+    } catch (e) { setErr(errText(e)); } finally { setLoading(false); }
   }, []);
 
   useEffect(() => {

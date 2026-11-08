@@ -3,12 +3,14 @@ import { api, ApiError } from './api.js';
 import logo from './assets/logo-icon.svg';
 import Icon from './components/Icon.jsx';
 import UpdateBadge from './components/UpdateBadge.jsx';
+import LanguageSelect from './components/LanguageSelect.jsx';
 import UpdateDialog from './components/UpdateDialog.jsx';
 import { installedVersion, updatesApplicable } from './updates.js';
 import Login from './pages/Login.jsx';
 import Settings from './pages/Settings.jsx';
 import Sync from './pages/Sync.jsx';
 import Versions from './pages/Versions.jsx';
+import { errText } from './useI18n.js';
 
 // [id, etiqueta completa, etiqueta corta para móvil]
 const TABS = [
@@ -50,7 +52,7 @@ export default function App() {
       if (first && Object.keys(r.config.devices).length === 0) setTab('settings');
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) setAuthed(false);
-      else setError(e.message);
+      else setError(errText(e));
     }
   }, []);
 
@@ -109,6 +111,7 @@ export default function App() {
         </nav>
         <div className="spacer" />
         <UpdateBadge info={updates} onOpen={() => setShowUpdate(true)} />
+        <LanguageSelect />
         <button className="btn ghost tool" onClick={cycleTheme} title="Cambiar tema" aria-label={`Cambiar tema (actual: ${theme})`}>
           <Icon name="theme" /><span className="lbl">Tema: {theme}</span>
         </button>

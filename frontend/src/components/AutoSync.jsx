@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import Field from './Field.jsx';
 import AutoSyncLog from './AutoSyncLog.jsx';
 import { fmtDateTime, ON_CONFLICT_OPTIONS, RESULT_CLASS, RESULT_TEXT } from '../format.js';
+import { errText } from '../useI18n.js';
 
 const PRESETS = [1, 6, 12, 24];
 const ON_CONFLICT_HELP = {
@@ -31,7 +32,7 @@ export default function AutoSync() {
   };
 
   const load = useCallback(async () => {
-    try { apply(await api('/api/scheduler')); } catch (e) { setMsg({ kind: 'error', text: e.message }); }
+    try { apply(await api('/api/scheduler')); } catch (e) { setMsg({ kind: 'error', text: errText(e) }); }
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -57,7 +58,7 @@ export default function AutoSync() {
       setMsg({ kind: 'ok', text: 'Guardado.' });
     } catch (e) {
       setServerErr(e.data?.errors?.interval_hours || e.data?.errors?.on_conflict || '');
-      setMsg({ kind: 'error', text: e.message });
+      setMsg({ kind: 'error', text: errText(e) });
     } finally { setBusy(false); }
   };
 

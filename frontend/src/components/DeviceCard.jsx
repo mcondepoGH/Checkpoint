@@ -2,6 +2,7 @@ import React, { useId } from 'react';
 import Field from './Field.jsx';
 import { LOCAL_DOCKER_MSG, LOCAL_HELP, LOCAL_LABEL, NAME_HINT, NAME_MAX, OS_OPTIONS, localPatch } from '../draft.js';
 import IdNote from './IdNote.jsx';
+import { errText } from '../useI18n.js';
 
 // `runtime` ('docker' | 'native') y `platform` vienen de /api/config. «Este equipo» solo se ofrece en modo nativo.
 export default function DeviceCard({ dev, errors, localError, localFlagError, canLocal, runtime, platform, test, idText, renamed, onChange, onTest, onRemove }) {
@@ -62,7 +63,7 @@ export default function DeviceCard({ dev, errors, localError, localFlagError, ca
       )}
       <IdNote id={idText} isNew={!dev.id} renamed={renamed} />
       <div role="status" aria-live="polite">
-        {test && !test.busy && <div className={`alert ${test.ok ? 'ok' : 'error'}`} style={{ whiteSpace: 'pre-line' }}>{test.message}</div>}
+        {test && !test.busy && <div className={`alert ${test.ok ? 'ok' : 'error'}`} style={{ whiteSpace: 'pre-line' }}>{errText(test)}</div>}
       </div>
       <div className="row">
         <button type="button" className="btn" disabled={test?.busy} onClick={onTest}>

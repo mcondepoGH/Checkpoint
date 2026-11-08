@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { api, ApiError } from '../api.js';
 import Modal from './Modal.jsx';
 import DiffView from './DiffView.jsx';
+import { errText } from '../useI18n.js';
 
 // Vista previa + confirmación de guardado. Ante 409 (config.yaml cambió por fuera) vuelve a calcular
 // el diff contra la versión nueva del fichero y deja confirmar o recargar.
@@ -25,10 +26,10 @@ export default function SaveDialog({ config, diff: initial, baseVersion, onSaved
           setDiff(d.diff);
           setBase(d.version);
           setConflict(true);
-        } catch (e2) { setError(e2.message); }
+        } catch (e2) { setError(errText(e2)); }
       } else if (e instanceof ApiError && e.status === 422) {
         setError('La configuración ya no es válida: revisa los campos marcados.');
-      } else setError(e.message);
+      } else setError(errText(e));
     } finally { setBusy(false); }
   };
 

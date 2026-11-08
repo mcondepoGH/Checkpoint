@@ -16,6 +16,7 @@ import BackupsDialog from '../components/BackupsDialog.jsx';
 import Icon from '../components/Icon.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import DiffView from '../components/DiffView.jsx';
+import { errText } from '../useI18n.js';
 
 // Pantalla única de Configuración: dispositivos y juegos como tarjetas, validación en vivo con el
 // validador del backend, vista previa de cambios antes de guardar.
@@ -64,7 +65,7 @@ export default function Settings({ loaded, stale, configError, runtime, platform
         const r = await api('/api/config/validate', { method: 'POST', body: { config: JSON.parse(payloadKey) } });
         if (n === seq.current) { setErrors(r.errors); setValidating(false); }
       } catch (e) {
-        if (n === seq.current) { setErrors({ '': e.message }); setValidating(false); }
+        if (n === seq.current) { setErrors({ '': errText(e) }); setValidating(false); }
       }
     }, 300);
     return () => clearTimeout(t);
@@ -91,7 +92,7 @@ export default function Settings({ loaded, stale, configError, runtime, platform
           ? { device: { name: dev.name || 'prueba', local: true, os: dev.os }, paths: pathsOf(draft, dev.key) }
           : { device: { name: dev.name || 'prueba', host: dev.host, user: dev.user, os: dev.os, port: Number(dev.port) || dev.port } },
       });
-    } catch (e) { r = { ok: false, message: e.message }; }
+    } catch (e) { r = { ok: false, message: errText(e) }; }
     setTests((t) => ({ ...t, [dev.key]: r }));
   };
 
@@ -104,7 +105,7 @@ export default function Settings({ loaded, stale, configError, runtime, platform
     try {
       const r = await api('/api/config/diff', { method: 'POST', body: { config: payload } });
       setDialog({ kind: 'save', diff: r.diff, version: r.version, config: payload });
-    } catch (e) { setMsg(e.message); } finally { setBusy(false); }
+    } catch (e) { setMsg(errText(e)); } finally { setBusy(false); }
   };
 
   const applied = (r, text) => {
@@ -115,7 +116,7 @@ export default function Settings({ loaded, stale, configError, runtime, platform
 
   const showStaleDiff = async () => {
     try { setStaleDiff((await api('/api/config/diff', { method: 'POST', body: { config: payload } })).diff); }
-    catch (e) { setMsg(e.message); }
+    catch (e) { setMsg(errText(e)); }
   };
 
   // Los errores del backend cuelgan del id interno: devices.<id>.<campo>

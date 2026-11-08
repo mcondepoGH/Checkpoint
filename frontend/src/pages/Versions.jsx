@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { labelOf } from '../names.js';
 import EmptyState from '../components/EmptyState.jsx';
+import { errText } from '../useI18n.js';
 
 export default function Versions({ config, onGoSettings }) {
   const games = Object.keys(config.games);
@@ -10,7 +11,7 @@ export default function Versions({ config, onGoSettings }) {
   const [msg, setMsg] = useState(null);
   const [limit, setLimit] = useState(null);
 
-  const load = (g) => g ? api(`/api/versions/${encodeURIComponent(g)}`).then(setList).catch((e) => setMsg({ error: true, text: e.message })) : setList([]);
+  const load = (g) => g ? api(`/api/versions/${encodeURIComponent(g)}`).then(setList).catch((e) => setMsg({ error: true, text: errText(e) })) : setList([]);
   const loadLimit = (g) => (g ? api(`/api/versions/${encodeURIComponent(g)}/limit`).then(setLimit).catch(() => setLimit(null)) : setLimit(null));
   useEffect(() => { load(game); loadLimit(game); }, [game, config]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -19,7 +20,7 @@ export default function Versions({ config, onGoSettings }) {
     try {
       const r = await api(`/api/versions/${encodeURIComponent(game)}/restore`, { method: 'POST', body: { version, source } });
       setMsg({ text: r.message }); load(game); loadLimit(game);
-    } catch (e) { setMsg({ error: true, text: e.message }); }
+    } catch (e) { setMsg({ error: true, text: errText(e) }); }
   };
 
   return (

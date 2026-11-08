@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import logo from '../assets/logo-icon.svg';
 import { api } from '../api.js';
+import { errText } from '../useI18n.js';
 
 export default function Login({ onDone, theme, cycleTheme }) {
   const [user, setUser] = useState('');
@@ -12,7 +13,7 @@ export default function Login({ onDone, theme, cycleTheme }) {
     e.preventDefault();
     setBusy(true); setError('');
     try { await api('/api/login', { method: 'POST', body: { user, password } }); onDone(); }
-    catch (err) { setError(err.message); }
+    catch (err) { setError(errText(err)); }
     finally { setBusy(false); setPassword(''); }
   };
 

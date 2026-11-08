@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { api } from '../api.js';
 import { updatesApplicable, updateSummary, channelOf, CHANNEL_OPTIONS, CHANNEL_HELP } from '../updates.js';
+import { errText } from '../useI18n.js';
 
 // Tarjeta de Configuración: activar/desactivar la comprobación de versiones nuevas y forzarla a mano.
 export default function UpdateCheck({ info, onInfo }) {
@@ -12,7 +13,7 @@ export default function UpdateCheck({ info, onInfo }) {
   // Ejecuta una acción con el indicador de trabajo y muestra su error, si lo hay.
   const act = async (fn) => {
     setBusy(true); setMsg('');
-    try { await fn(); } catch (e) { setMsg(e.message); } finally { setBusy(false); }
+    try { await fn(); } catch (e) { setMsg(errText(e)); } finally { setBusy(false); }
   };
   const put = (body) => act(async () => onInfo(await api('/api/updates', { method: 'PUT', body })));
   const toggle = (value) => put({ enabled: value });

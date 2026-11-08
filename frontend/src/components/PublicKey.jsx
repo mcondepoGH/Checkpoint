@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
+import { errText } from '../useI18n.js';
 
 const PH = 'PEGA_AQUÍ_LA_CLAVE';
 
@@ -152,7 +153,7 @@ export default function PublicKey() {
   const area = useRef(null);
 
   useEffect(() => {
-    api('/api/ssh/public-key').then((r) => setKey(r.public_key)).catch((e) => setErr(e.message));
+    api('/api/ssh/public-key').then((r) => setKey(r.public_key)).catch((e) => setErr(errText(e)));
   }, []);
 
   const copy = async () => {

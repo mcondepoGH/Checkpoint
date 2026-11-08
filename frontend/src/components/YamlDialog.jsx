@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import Modal from './Modal.jsx';
+import { errText } from '../useI18n.js';
 
 // Solo lectura: el YAML tal como se escribiría (conserva los comentarios del fichero actual).
 export default function YamlDialog({ config, onClose }) {
@@ -9,7 +10,7 @@ export default function YamlDialog({ config, onClose }) {
   useEffect(() => {
     api('/api/config/yaml', { method: 'POST', body: { config } })
       .then((r) => setText(r.yaml))
-      .catch((e) => setErr(e.data?.errors ? 'El borrador tiene errores: corrígelos para ver el YAML.' : e.message));
+      .catch((e) => setErr(e.data?.errors ? 'El borrador tiene errores: corrígelos para ver el YAML.' : errText(e)));
   }, [config]);
   return (
     <Modal title="YAML (solo lectura)" onClose={onClose} wide>

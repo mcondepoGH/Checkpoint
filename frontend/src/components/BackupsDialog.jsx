@@ -3,6 +3,7 @@ import { api, ApiError } from '../api.js';
 import EmptyState from './EmptyState.jsx';
 import Modal from './Modal.jsx';
 import DiffView from './DiffView.jsx';
+import { errText } from '../useI18n.js';
 
 const when = (iso) => iso.replace('T', ' ');
 const kb = (n) => `${Math.max(1, Math.round(n / 1024))} KB`;
@@ -13,12 +14,12 @@ export default function BackupsDialog({ baseVersion, dirty, onRestored, onClose 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => { api('/api/config/backups').then(setList).catch((e) => setError(e.message)); }, []);
+  useEffect(() => { api('/api/config/backups').then(setList).catch((e) => setError(errText(e))); }, []);
 
   const preview = async (name) => {
     setError('');
     try { setPick({ name, diff: (await api('/api/config/diff', { method: 'POST', body: { backup: name } })).diff }); }
-    catch (e) { setError(e.message); }
+    catch (e) { setError(errText(e)); }
   };
 
   const restore = async () => {
@@ -27,7 +28,7 @@ export default function BackupsDialog({ baseVersion, dirty, onRestored, onClose 
     try { onRestored(await api('/api/config/restore', { method: 'POST', body: { name: pick.name, base_version: baseVersion } })); }
     catch (e) {
       setError(e instanceof ApiError && e.status === 409
-        ? 'config.yaml cambió por fuera mientras tanto: cierra, recarga y vuelve a intentarlo.' : e.message);
+        ? 'config.yaml cambió por fuera mientras tanto: cierra, recarga y vuelve a intentarlo.' : errText(e));
     } finally { setBusy(false); }
   };
 

@@ -4,6 +4,7 @@ import EmptyState from '../components/EmptyState.jsx';
 import { labelOf } from '../names.js';
 import { parseRun } from '../format.js';
 import ConflictDialog from '../components/ConflictDialog.jsx';
+import { errText } from '../useI18n.js';
 
 const RES_TXT = { conflict: 'Conflicto', partial: 'Parcial', 'dry-run': 'Simulación (dry-run)' };
 
@@ -85,7 +86,7 @@ export default function Sync({ config, onGoSettings }) {
         } catch { setConflict(null); }
       });
       es.onerror = () => { es.close(); setResolving(false); setActive((a) => a && { ...a, done: true }); loadStatus(); };
-    } catch (e) { setError(e.message); }
+    } catch (e) { setError(errText(e)); }
   };
 
   const badge = (s) => s && <span className={`badge ${s.result}`}>{RES_TXT[s.result] || s.result}</span>;

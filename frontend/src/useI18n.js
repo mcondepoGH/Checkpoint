@@ -1,7 +1,8 @@
-// Instancia global del navegador + hook de React. Sin migrar aún ninguna pantalla (fase 3).
+// Instancia global del navegador + hook de React. Pantallas migrándose por tramos (fase 3).
 import { useSyncExternalStore } from 'react';
 import { createI18n } from './i18n.js';
 import { catalogs } from './locales/index.js';
+import { errorText } from './errors.js';
 
 const safeStorage = () => { try { return window.localStorage; } catch { return null; } };
 
@@ -13,3 +14,6 @@ export function useI18n() {
   useSyncExternalStore(i18n.subscribe, () => i18n.locale);
   return { t: i18n.t, locale: i18n.locale, preference: i18n.preference, available: i18n.available, setLocale: i18n.setLocale };
 }
+
+// Texto traducido de un error de la API (ver errors.js).
+export const errText = (e) => errorText(e, i18n.t);
