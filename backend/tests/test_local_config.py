@@ -2,7 +2,7 @@
 import pytest
 import yaml
 
-from app.config import LOCAL_DOCKER_MSG, LOCAL_NO_REMOTE_MSG, LOCAL_ONE_MSG, load_yaml, parse_config, validate_config
+from app.config import load_yaml, parse_config, validate_config
 from app.configstore import diff_configs, parse_text, render_yaml
 from fakes import save_config
 
@@ -54,13 +54,13 @@ def test_remoto_exige_host_user(campo):
     if campo != "port":
         del dev[campo]
         _, errs = validate_config({"devices": {"x": dev}})
-        assert errs == {f"devices.x.{campo}": "campo obligatorio"}
+        assert errs == {f"devices.x.{campo}": {"code": "err.config.required", "params": {}}}
 
 
 @pytest.mark.parametrize("campo,valor", [("host", "192.0.2.5"), ("user", "usuario"), ("port", 22)])
 def test_local_rechaza_host_user_port(campo, valor):
     _, errs = validate_config(cfg_dict(**{campo: valor}))
-    assert errs == {f"devices.pc-aaaa1111.{campo}": LOCAL_NO_REMOTE_MSG}
+    assert errs == {f"devices.pc-aaaa1111.{campo}": {"code": "err.config.local_no_remote", "params": {}}}
 
 
 def test_local_acepta_host_vacio_o_null():
@@ -78,15 +78,14 @@ def test_maximo_un_local():
     d = cfg_dict()
     d["devices"]["laptop-bbbb2222"] = {"name": "Otro", "local": True, "os": "linux"}
     _, errs = validate_config(d)
-    assert errs == {"devices.laptop-bbbb2222.local": LOCAL_ONE_MSG}
+    assert errs == {"devices.laptop-bbbb2222.local": {"code": "err.config.local_one", "params": {}}}
 
 
 def test_local_en_docker_es_error_claro(monkeypatch):
     monkeypatch.setenv("CHECKPOINT_RUNTIME", "docker")
     _, errs = validate_config(cfg_dict())
-    assert errs == {"devices.pc-aaaa1111.local": LOCAL_DOCKER_MSG}
-    assert "sin Docker" in LOCAL_DOCKER_MSG
-    with pytest.raises(ValueError, match="sin Docker"):
+    assert errs == {"devices.pc-aaaa1111.local": {"code": "err.config.local_docker", "params": {}}}
+    with pytest.raises(ValueError, match="local_docker"):
         parse_config(cfg_dict())
 
 

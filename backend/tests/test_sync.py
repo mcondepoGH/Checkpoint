@@ -85,7 +85,7 @@ def test_already_in_sync_is_noop(env):
     env.write(env.laptop_dir, "s.sav", "x", 1500)
     env.sync()
     st = env.sync()
-    assert st["message"] == "ya sincronizado"
+    assert st["code"] == "err.sync.already_synced"
     assert len(list_versions(env.data, "g")) == 0
 
 
@@ -119,7 +119,7 @@ def test_process_running_aborts(env):
     env.write(env.pc_dir, "s.sav", "old", 1000)
     env.write(env.laptop_dir, "s.sav", "new", 2000)
     st = env.sync(pc={"running": True})
-    assert st["result"] == "aborted" and "abierto" in st["message"]
+    assert st["result"] == "aborted" and st["code"] == "err.sync.process_open" and st["params"]["process"]
     assert read(env.pc_dir, "s.sav") == "old"
 
 
@@ -314,7 +314,7 @@ def test_restore_after_prune_still_works(env):
     _sync_with(env, cfg)
     ver = _names(env)[1]  # la antigua que sobrevive
     msg = restore_version(cfg, "g", ver, "pc", env.data)
-    assert "restaurado" in msg and read(env.hub, "s.sav") == ver
+    assert msg["code"] == "err.sync.restored" and read(env.hub, "s.sav") == ver
     assert len(_names(env)) <= 2
 
 
@@ -335,7 +335,7 @@ def test_restore_then_sync_propagates(env):
     env.sync()
     ver = list_versions(env.data, "g")[0]["version"]
     msg = restore_version(CFG, "g", ver, "pc", env.data)
-    assert "restaurado" in msg and read(env.hub, "s.sav") == "old"
+    assert msg["code"] == "err.sync.restored" and read(env.hub, "s.sav") == "old"
     env.sync()
     assert read(env.pc_dir, "s.sav") == "old" and read(env.laptop_dir, "s.sav") == "old"
 
@@ -356,7 +356,7 @@ def test_lock_prevents_overlap(env):
     (env.data / "locks").mkdir(parents=True)
     f = open(env.data / "locks/g.lock", "w")
     fcntl.flock(f, fcntl.LOCK_EX)
-    with pytest.raises(SyncAbort, match="en curso"):
+    with pytest.raises(SyncAbort, match="in_progress"):
         env.sync()
     f.close()
 
@@ -387,7 +387,7 @@ def test_free_names_use_id_paths_only(tmp_path):
     v = list_versions(data, g)
     assert len(v) == 1 and v[0]["sources"][0]["source"] == a
     msg = restore_version(cfg, g, v[0]["version"], v[0]["sources"][0]["source"], data)
-    assert "hub restaurado" in msg
+    assert msg["code"] == "err.sync.restored" and msg["params"]["source"] == "Mi PC (salón)"
     assert (data / "hub" / slug / "s.sav").read_text() == "old"
     with pytest.raises(SyncAbort):
         restore_version(cfg, g, v[0]["version"], "../x", data)

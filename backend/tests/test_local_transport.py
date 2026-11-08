@@ -52,7 +52,7 @@ def test_get_transport_local_y_remoto():
 def test_get_transport_local_en_docker_falla(monkeypatch):
     c = parse_config({"devices": {"a": {"name": "A", "local": True, "os": "linux"}}})
     monkeypatch.setenv("CHECKPOINT_RUNTIME", "docker")
-    with pytest.raises(TransportError, match="sin Docker"):
+    with pytest.raises(TransportError, match="err.config.local_docker"):
         get_transport(c.devices["a"])
 
 
@@ -62,7 +62,7 @@ def test_exists(tr, tmp_path):
     (tmp_path / "s").mkdir()
     assert tr.exists(str(tmp_path / "s"))
     put(tmp_path, "f.txt")
-    with pytest.raises(TransportError, match="no es una carpeta"):
+    with pytest.raises(TransportError, match="not_a_folder"):
         tr.exists(str(tmp_path / "f.txt"))
 
 
@@ -182,7 +182,7 @@ def test_pull_subcarpeta_ilegible_error_claro(tr, tmp_path):
 
 
 def test_pull_inexistente_error(tr, tmp_path):
-    with pytest.raises(TransportError, match="no existe"):
+    with pytest.raises(TransportError, match="folder_missing"):
         tr.pull(str(tmp_path / "no"), tmp_path)
 
 
@@ -369,7 +369,7 @@ def test_push_ruta_es_fichero_error(tr, tmp_path):
     src = tmp_path / "src"
     put(src, "a.sav")
     f = put(tmp_path, "esfichero")
-    with pytest.raises(TransportError, match="no es una carpeta"):
+    with pytest.raises(TransportError, match="not_a_folder"):
         tr.push(src, str(f))
 
 
@@ -463,7 +463,7 @@ def test_proceso_pgrep_error(monkeypatch):
 
 
 def test_proceso_timeout(monkeypatch):
-    with pytest.raises(TransportError, match="tiempo"):
+    with pytest.raises(TransportError, match="process_timeout"):
         run_with(monkeypatch, "linux", [subprocess.TimeoutExpired("pgrep", 15)], []).process_running("juego")
 
 
@@ -511,7 +511,7 @@ def test_proceso_windows_tasklist(monkeypatch):
 
 @pytest.mark.parametrize("n", ["", "-x", "a;b", "a|b", "$(id)", "a`b`", "x" * 70])
 def test_proceso_nombre_invalido(tr, n):
-    with pytest.raises(TransportError, match="inválido"):
+    with pytest.raises(TransportError, match="process_invalid"):
         tr.process_running(n)
 
 
@@ -523,18 +523,18 @@ def test_sin_shell():
 # ---- comprobación de carpeta (botón «Comprobar carpeta») ----
 def test_folder_status_sin_ruta():
     r = local_folder_status(None)
-    assert r["ok"] and "sin SSH" in r["message"]
+    assert r["ok"] and r["code"] == "err.transport.local_info"
 
 
 def test_folder_status_ok(tmp_path):
     r = local_folder_status(str(tmp_path))
-    assert r == {"ok": True, "message": "carpeta OK: existe, es legible y escribible"}
+    assert r["ok"] and r["code"] == "err.transport.folder_ok" and r["params"] == {}
     assert list(tmp_path.iterdir()) == []  # el fichero de prueba se borra
 
 
 def test_folder_status_no_existe_pero_creable(tmp_path):
     r = local_folder_status(str(tmp_path / "a" / "b"))
-    assert r["ok"] and "se creará" in r["message"]
+    assert r["ok"] and r["code"] == "err.transport.folder_will_be_created"
     assert not (tmp_path / "a").exists()
 
 
@@ -557,7 +557,7 @@ def test_folder_status_ilegible(tmp_path):
         r = local_folder_status(str(d))
     finally:
         d.chmod(0o755)
-    assert not r["ok"] and "leer" in r["message"]
+    assert not r["ok"] and r["code"] == "err.transport.unreadable"
 
 
 @root_only
@@ -569,7 +569,7 @@ def test_folder_status_solo_lectura(tmp_path):
         r = local_folder_status(str(d))
     finally:
         d.chmod(0o755)
-    assert not r["ok"] and "escribir" in r["message"]
+    assert not r["ok"] and r["code"] == "err.transport.not_writable"
 
 
 @root_only
@@ -581,4 +581,4 @@ def test_folder_status_inexistente_sin_permiso_de_creacion(tmp_path):
         r = local_folder_status(str(d / "nueva"))
     finally:
         d.chmod(0o755)
-    assert not r["ok"] and "no se puede crear" in r["message"].lower() or "no existe y no se puede" in r["message"]
+    assert not r["ok"] and r["code"] == "err.transport.cannot_create_no_permission"

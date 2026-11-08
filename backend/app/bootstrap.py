@@ -11,20 +11,27 @@ from pathlib import Path
 from typing import Optional
 
 from . import settings
+from .apierror import describe_code, error_body
 from .config import HOST_RE
 
 log = logging.getLogger("checkpoint")
 _lock = threading.Lock()
 
 EMPTY_CONFIG = "devices: {}\ngames: {}\n"
-FIRST_USE_MSG = "host key guardada (primer uso)"
-CHANGED_MSG = ("la host key de {host}:{port} ha CAMBIADO respecto a la guardada en known_hosts "
-               "(posible suplantación o reinstalación del dispositivo). No se sobrescribe. "
-               "Si el cambio es legítimo, borra a mano esa entrada de known_hosts")
+# Aviso de «primer uso» (host key guardada): solo para el log; la UI usa el código `err.bootstrap.first_use`.
+FIRST_USE_LOG = "host key guardada (primer uso)"
+HOST_KEY_CHANGED = "err.bootstrap.host_key_changed"
 
 
 class BootstrapError(RuntimeError):
-    pass
+    """Contrato i18n: `code` (`err.bootstrap.<causa>`) + `params`; `str(e)` es técnico (logs)."""
+
+    def __init__(self, code: str, **params):
+        super().__init__(describe_code(code, params))
+        self.code, self.params = code, params
+
+    def body(self) -> dict:
+        return error_body(self.code, **self.params)
 
 
 # ---- config ----
@@ -61,9 +68,9 @@ def ensure_ssh_key(key: str = None) -> bool:
             p = subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", "checkpoint",
                                 "-f", str(key)], capture_output=True, timeout=30)
         except (OSError, subprocess.TimeoutExpired) as e:
-            raise BootstrapError(f"no se pudo generar la clave SSH: {e}")
+            raise BootstrapError("err.bootstrap.keygen_failed", detail=str(e))
         if p.returncode != 0:
-            raise BootstrapError("ssh-keygen falló: " + p.stderr.decode("utf-8", "replace").strip()[-200:])
+            raise BootstrapError("err.bootstrap.keygen_error", detail=p.stderr.decode("utf-8", "replace").strip()[-200:])
         os.chmod(key, 0o600)
         log.warning("clave SSH generada en %s (primer arranque)", key)
         return True
@@ -89,6 +96,9 @@ def public_key(key: str = None) -> Optional[str]:
 
 def startup() -> None:
     """Se llama al arrancar la app. Un fallo de escritura se registra, no tumba el servicio."""
+    warning = settings.resolve_lang()[1]
+    if warning:
+        log.warning("arranque: %s", warning)
     for fn in (ensure_config, ensure_ssh_key):
         try:
             fn()
@@ -99,13 +109,13 @@ def startup() -> None:
 # ---- known_hosts (TOFU) ----
 def _check_target(host: str, port) -> int:
     if not isinstance(host, str) or not HOST_RE.match(host) or host.startswith("-"):
-        raise BootstrapError("host inválido")
+        raise BootstrapError("err.bootstrap.host_invalid")
     try:
         port = int(port)
     except (TypeError, ValueError):
-        raise BootstrapError("puerto inválido")
+        raise BootstrapError("err.bootstrap.port_invalid")
     if not 1 <= port <= 65535:
-        raise BootstrapError("puerto fuera de rango")
+        raise BootstrapError("err.bootstrap.port_range")
     return port
 
 
@@ -121,7 +131,7 @@ def has_host_entry(host: str, port: int, known_hosts: str = None) -> bool:
         p = subprocess.run(["ssh-keygen", "-F", _kh_name(host, port), "-f", kh],
                            capture_output=True, timeout=15)
     except (OSError, subprocess.TimeoutExpired) as e:
-        raise BootstrapError(f"no se pudo leer known_hosts: {e}")
+        raise BootstrapError("err.bootstrap.known_hosts_read", detail=str(e))
     return p.returncode == 0
 
 
@@ -131,11 +141,11 @@ def _keyscan(host: str, port: int) -> str:
                             "-t", "ed25519,ecdsa,rsa", host], capture_output=True,
                            timeout=settings.SSH_TIMEOUT * 3 + 5)
     except (OSError, subprocess.TimeoutExpired) as e:
-        raise BootstrapError(f"ssh-keyscan falló: {e}")
+        raise BootstrapError("err.bootstrap.keyscan_failed", detail=str(e))
     lines = [l for l in p.stdout.decode("utf-8", "replace").splitlines()
              if l.strip() and not l.startswith("#")]
     if not lines:
-        raise BootstrapError(f"no se pudo obtener la host key de {host}:{port} (¿SSH activo y accesible?)")
+        raise BootstrapError("err.bootstrap.hostkey_unavailable", host=host, port=port)
     return "\n".join(lines) + "\n"
 
 
@@ -155,15 +165,13 @@ def ensure_host_key(host: str, port, known_hosts: str = None) -> bool:
         fd = os.open(kh, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
         with os.fdopen(fd, "a", encoding="utf-8") as f:
             f.write(entries)
-    log.warning("%s: %s:%s", FIRST_USE_MSG, host, port)
+    log.warning("%s: %s:%s", FIRST_USE_LOG, host, port)
     return True
 
 
 _CHANGED_RE = re.compile(r"HOST IDENTIFICATION HAS CHANGED|Host key verification failed", re.I)
 
 
-def explain_ssh_error(stderr: str, host: str, port) -> str:
-    """Si el fallo de ssh es por cambio de host key, devuelve un aviso claro; si no, el texto original."""
-    if _CHANGED_RE.search(stderr):
-        return CHANGED_MSG.format(host=host, port=port)
-    return stderr
+def host_key_changed(stderr: str) -> bool:
+    """True si el fallo de ssh es por cambio de host key (la UI lo explica con `err.bootstrap.host_key_changed`)."""
+    return bool(_CHANGED_RE.search(stderr))

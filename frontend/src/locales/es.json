@@ -1,0 +1,593 @@
+{
+  "lang": {
+    "label": "Idioma",
+    "auto": "Automático (navegador)"
+  },
+  "common": {
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "loading": "Cargando…",
+    "delete": "Eliminar",
+    "copy": "Copiar",
+    "copied": "Copiado",
+    "on": "Activada",
+    "off": "Desactivada",
+    "unnamed": "(sin nombre)",
+    "goSettings": "Ir a Configuración",
+    "dryRun": "Simulación (dry-run)"
+  },
+  "files": {
+    "one": "{count} fichero",
+    "other": "{count} ficheros"
+  },
+  "app": {
+    "tab": {
+      "sync": {
+        "full": "Sincronizar",
+        "short": "Sync"
+      },
+      "versions": {
+        "full": "Versiones",
+        "short": "Versiones"
+      },
+      "settings": {
+        "full": "Configuración",
+        "short": "Ajustes"
+      }
+    },
+    "sections": "Secciones",
+    "themeTitle": "Cambiar tema",
+    "themeAria": "Cambiar tema (actual: {theme})",
+    "themeLabel": "Tema: {theme}",
+    "theme": {
+      "auto": "automático",
+      "light": "claro",
+      "dark": "oscuro"
+    },
+    "logout": "Salir"
+  },
+  "login": {
+    "user": "Usuario",
+    "password": "Contraseña",
+    "submit": "Entrar"
+  },
+  "result": {
+    "ok": "correcta",
+    "error": "con errores",
+    "aborted": "abortada",
+    "skipped": "omitida",
+    "conflict": "con conflictos",
+    "partial": "parcial"
+  },
+  "conflictPolicy": {
+    "skip": "Omitir el guardado (seguro)",
+    "newest": "Gana el más reciente"
+  },
+  "sync": {
+    "title": "Sincronizar",
+    "state": {
+      "conflict": "Conflicto",
+      "partial": "Parcial",
+      "dry-run": "Simulación (dry-run)",
+      "running": "en curso"
+    },
+    "none": {
+      "title": "Sin ejecuciones",
+      "text": "Aún no se ha sincronizado este juego."
+    },
+    "last": "Última sync",
+    "conflict": "Conflicto",
+    "partial": "Parcial",
+    "offline": "Offline",
+    "winner": "Ganador",
+    "targets": "Destinos",
+    "updated": "Actualizados",
+    "detail": "Detalle",
+    "noGames": {
+      "title": "Sin juegos configurados",
+      "text": "Añade un juego en Configuración para poder sincronizar sus partidas guardadas entre dispositivos."
+    },
+    "idTitle": "ID interno: {id}",
+    "meterAria": "Estado de {game}",
+    "flagLead": "Conflicto:",
+    "flagText": "dos versiones distintas, no se ha guardado nada.",
+    "resolve": "Resolver",
+    "run": "Sincronizar",
+    "running": "En curso…",
+    "log": {
+      "title": "Log: {game} {state}",
+      "done": "(terminado)",
+      "live": "(en vivo)",
+      "waiting": "Esperando…"
+    }
+  },
+  "conflict": {
+    "title": "Conflicto en {game}",
+    "note": "No se ha modificado nada. Antes de sobrescribir, la copia perdedora se guarda en versiones.",
+    "reason": {
+      "both_changed": "Los dos lados han cambiado desde la última sincronización y su contenido es distinto.",
+      "no_baseline": "Es la primera comparación con estos datos y los contenidos son distintos.",
+      "inconsistent": "Los contenidos difieren y no hay cambios registrados.",
+      "indeterminate": "Las fechas difieren menos de 2 segundos: no se puede saber cuál es más reciente. Elige a mano.",
+      "stale": "Los datos han cambiado desde que se mostró el aviso anterior. Revisa y vuelve a elegir."
+    },
+    "hub": "Hub (copia en Checkpoint)",
+    "sidesAria": "Versiones en conflicto",
+    "pick": "¿Qué save debe ganar?",
+    "newest": "Gana el más reciente",
+    "choose": "Elegir dispositivo",
+    "back": "Atrás",
+    "apply": "Aplicar"
+  },
+  "versions": {
+    "title": "Versiones",
+    "gameAria": "Juego",
+    "limit": {
+      "unlimited": "{count} (sin límite)",
+      "max": "{count} de máx. {max}",
+      "override": " (ajuste de este juego)",
+      "global": " (ajuste global)"
+    },
+    "confirm": "¿Restaurar {version}/{source} en el hub? La copia actual del hub se guarda como versión.",
+    "noGames": {
+      "text": "Cuando añadas un juego y se sincronice, aquí aparecerán sus versiones guardadas."
+    },
+    "none": {
+      "title": "Sin versiones guardadas",
+      "text": "Aún no hay versiones de este juego. Se guardan automáticamente al sobrescribir una copia durante la sincronización."
+    },
+    "restore": "Restaurar"
+  },
+  "settings": {
+    "title": "Configuración",
+    "invalid": "config.yaml no es válido: {cause}. Corrígelo a mano o restaura una copia anterior.",
+    "stale": {
+      "lead": "config.yaml cambió por fuera.",
+      "text": "Guardar está desactivado para no pisar esos cambios.",
+      "reload": "Recargar (descarto mi borrador)",
+      "diff": "Ver diferencias"
+    },
+    "versions": {
+      "legend": "Versiones guardadas",
+      "max": "Máx. de versiones por juego"
+    },
+    "devices": "Dispositivos",
+    "addDevice": "Añadir dispositivo",
+    "noDevices": {
+      "title": "Sin dispositivos",
+      "text": "Añade al menos dos dispositivos para poder sincronizar partidas entre ellos."
+    },
+    "games": "Juegos",
+    "addGame": "Añadir juego",
+    "needTwo": "Define (y nombra) al menos dos dispositivos para añadir juegos.",
+    "delDevice": "El dispositivo {device} lo usan: {games}.\nEsos juegos perderán este dispositivo y deberás elegir otro. ¿Eliminarlo?",
+    "bar": {
+      "aria": "Acciones de configuración",
+      "errorsAria": {
+        "one": "{count} error por corregir: ir al primero",
+        "other": "{count} errores por corregir: ir al primero"
+      },
+      "errors": "Hay errores por corregir",
+      "validating": "Validando…",
+      "dirty": "Cambios sin guardar",
+      "dirtyShort": "Sin guardar",
+      "clean": "Sin cambios",
+      "backups": "Restaurar versión anterior",
+      "yaml": "Ver YAML",
+      "discardTitle": "Descartar cambios",
+      "discard": "Descartar",
+      "save": "Guardar…"
+    },
+    "saved": "Guardado y aplicado al instante.",
+    "restored": "Versión restaurada y aplicada."
+  },
+  "game": {
+    "new": "Juego nuevo",
+    "name": "Nombre",
+    "namePh": "p. ej. Mi Juego: Edición",
+    "dev1": "Dispositivo 1",
+    "dev2": "Dispositivo 2",
+    "choose": "— elige —",
+    "pathOn": "Ruta del save en {device}",
+    "process": "Proceso (opcional)",
+    "processHint": "No copia si está abierto",
+    "processPh": "juego.exe",
+    "keep": "Máx. de versiones (este juego)",
+    "keepHint": "Vacío = usar el global ({max}). {hint}",
+    "onConflict": "En conflicto (sync automática)",
+    "onConflictHint": "Sustituye al ajuste global de Sincronización automática solo para este juego.",
+    "useGlobal": "Usar el ajuste global",
+    "deleteAria": "Eliminar juego {title}"
+  },
+  "device": {
+    "new": "Dispositivo nuevo",
+    "namePh": "p. ej. Mi PC (salón)",
+    "localLabel": "Este equipo",
+    "localHelp": "Es el equipo donde se ejecuta Checkpoint: se accede directamente a sus carpetas, sin SSH.",
+    "os": "Sistema operativo",
+    "osHint": "Se detecta del equipo; cámbialo solo si no coincide",
+    "host": "Host / IP",
+    "port": "Puerto",
+    "user": "Usuario",
+    "checking": "Comprobando…",
+    "testing": "Probando…",
+    "checkFolder": "Comprobar carpeta",
+    "test": "Probar conexión",
+    "deleteAria": "Eliminar dispositivo {title}"
+  },
+  "draft": {
+    "nameHint": "Hasta {max} caracteres. Se admiten espacios, símbolos, acentos y emojis; no / ni \\",
+    "versionsHint": "0 = sin límite; al superarlo se borran las más antiguas"
+  },
+  "idnote": {
+    "keeps": "El ID interno no cambia: tus saves y versiones siguen asociados.",
+    "title": "Identificador interno: no cambia al renombrar",
+    "label": "ID interno:",
+    "pending": " (se fija al guardar)"
+  },
+  "diff": {
+    "general": "General",
+    "devices": "Dispositivos",
+    "games": "Juegos",
+    "add": "+ Añadir",
+    "change": "~ Cambiar",
+    "remove": "− Eliminar",
+    "arrow": "pasa a",
+    "none": {
+      "title": "Sin cambios",
+      "text": "No hay diferencias respecto al config.yaml actual."
+    }
+  },
+  "save": {
+    "invalid": "La configuración ya no es válida: revisa los campos marcados.",
+    "titleStale": "config.yaml cambió por fuera",
+    "title": "Revisar cambios",
+    "staleText": "El fichero se modificó desde que lo cargaste. Abajo se ven las diferencias de tu borrador contra la versión actual: lo que no aparezca en tu borrador se eliminará. Puedes confirmar igualmente o recargar y descartar tus cambios.",
+    "reload": "Recargar y descartar mis cambios",
+    "saving": "Guardando…",
+    "overwrite": "Guardar sobre la versión nueva",
+    "confirm": "Confirmar y guardar"
+  },
+  "yaml": {
+    "title": "YAML (solo lectura)",
+    "invalid": "El borrador tiene errores: corrígelos para ver el YAML.",
+    "generating": "Generando…",
+    "label": "YAML resultante"
+  },
+  "backups": {
+    "title": "Restaurar versión anterior",
+    "stale": "config.yaml cambió por fuera mientras tanto: cierra, recarga y vuelve a intentarlo.",
+    "none": {
+      "title": "Sin copias",
+      "text": "Se crea una copia cada vez que guardas (máximo 10)."
+    },
+    "view": "Ver cambios",
+    "prompt": "Al restaurar <code>{when}</code> el config.yaml actual cambiaría así (el actual queda también en las copias):",
+    "dirty": "Tienes cambios sin guardar en el borrador: se descartarán.",
+    "back": "Volver",
+    "restore": "Restaurar",
+    "restoring": "Restaurando…"
+  },
+  "autosync": {
+    "title": "Sincronización automática",
+    "running": "Ejecutando",
+    "active": "Activa",
+    "disabled": "Desactivada",
+    "intro": "Sincroniza todos los juegos cada cierto tiempo. Si ya hay una sincronización en curso, ese ciclo se omite.",
+    "hours": "Cada X horas",
+    "hoursHint": "Entre {min} y {max} (admite decimales, p. ej. 0.5).",
+    "range": "Introduce un número entre {min} y {max} horas.",
+    "presets": "Intervalos rápidos",
+    "hoursShort": "{count} h",
+    "runOnStart": "Ejecutar también al arrancar la aplicación",
+    "onConflict": "En caso de conflicto",
+    "help": {
+      "skip": "Omitir: el guardado no se efectúa y el juego queda marcado como «Conflicto» para resolverlo a mano. Es la opción segura.",
+      "newest": "Gana el más reciente: se aplica el save con fecha más nueva y el otro se guarda en versiones. Si las fechas difieren menos de 2 s, se omite."
+    },
+    "saved": "Guardado.",
+    "lastRun": "Última ejecución:",
+    "nextRun": "Próxima:",
+    "nextOff": "desactivada"
+  },
+  "autolog": {
+    "title": "Registro de ejecuciones",
+    "refreshAria": "Refrescar registro",
+    "refresh": "Refrescar",
+    "refreshing": "Actualizando…",
+    "none": {
+      "title": "Sin ejecuciones",
+      "text": "Todavía no se ha ejecutado ninguna sincronización automática. Las ejecuciones aparecerán aquí."
+    },
+    "listAria": "Ejecuciones automáticas, de más reciente a más antigua",
+    "trigger": {
+      "scheduled": "Programada",
+      "startup": "Arranque"
+    },
+    "noDetail": "Sin detalle por juego."
+  },
+  "updates": {
+    "badge": "Nueva versión disponible: {version}",
+    "badgePre": "Nueva versión preliminar disponible: {version}",
+    "badgeLabel": "Nueva versión disponible",
+    "pre": "preliminar",
+    "dialog": {
+      "installed": "Instalada",
+      "new": "Nueva",
+      "preWarn": "Es una versión preliminar del canal de pruebas: puede fallar.",
+      "notesTitle": "Novedades",
+      "noNotes": "Esta versión no incluye notas.",
+      "link": "Ver la versión en GitHub",
+      "manual": "Checkpoint no se actualiza solo: descarga la nueva versión, recompila la web y reinicia Checkpoint."
+    },
+    "check": {
+      "title": "Comprobar actualizaciones",
+      "text": "Consulta las versiones publicadas en GitHub (solo lectura, cada pocas horas) y avisa si hay una nueva. No instala nada.",
+      "channel": "Canal",
+      "now": "Comprobar ahora",
+      "limited": "Acabas de comprobarlo; espera un minuto para volver a hacerlo."
+    },
+    "channel": {
+      "stable": "Estable",
+      "beta": "Pruebas",
+      "help": "Estable: solo versiones publicadas como definitivas. Pruebas: incluye también versiones preliminares, que pueden fallar."
+    },
+    "summary": {
+      "disabled": "Comprobación desactivada: no se hace ninguna petición a internet.",
+      "newer": "Hay una versión nueva: {latest} (instalada: {current}).",
+      "newerPre": "Hay una versión nueva preliminar: {latest} (instalada: {current}).",
+      "upToDate": "Estás al día (versión {current}).",
+      "noData": "Versión instalada: {current}. Aún no hay datos de la última versión."
+    }
+  },
+  "keyhelp": {
+    "summary": "Clave pública SSH",
+    "intro": "Cópiala y añádela a <code>authorized_keys</code> de cada dispositivo. Pulsa <b>?</b> para ver los pasos.",
+    "infoAria": "Info: pasos para dar de alta la clave",
+    "infoTitle": "Info",
+    "placeholder": "PEGA_AQUÍ_LA_CLAVE",
+    "lead": "Checkpoint usa su propia clave SSH para entrar, sin contraseña, a cada dispositivo y copiar sus partidas. Hay que dar de alta la parte <b>pública</b> en cada dispositivo.",
+    "s1": {
+      "title": "Copia la clave",
+      "hint": "En esta web.",
+      "text": "Pulsa <b>{copy}</b> bajo la caja de la clave pública. Es la clave de Checkpoint: no hay que generar ninguna en tu PC."
+    },
+    "s2": {
+      "title": "Pégala en el dispositivo remoto",
+      "hint": "En cada dispositivo al que se conecta Checkpoint. Elige su sistema."
+    },
+    "tabs": {
+      "system": "Sistema del dispositivo remoto",
+      "distro": "Distribución Linux"
+    },
+    "noKey": "Aún no hay clave visible: sustituye <code>{placeholder}</code> por la clave copiada.",
+    "oneLine": "En <code>authorized_keys</code> la clave ocupa una sola línea, con este aspecto:",
+    "windowsNote": "Deja el shell por defecto (cmd.exe) y usa un usuario local.",
+    "s3": {
+      "title": "Comprueba la conexión",
+      "text": "En la tarjeta del dispositivo, pulsa <b>{test}</b>. Debe responder <code>{ok}</code>. La primera vez guarda la huella del dispositivo."
+    },
+    "warn": "Pega solo la clave pública (una línea que empieza por <code>ssh-ed25519</code>). NUNCA una clave privada.",
+    "copied": "Copiada",
+    "step": {
+      "winServer": {
+        "title": "Activar el servidor OpenSSH",
+        "hint": "En PowerShell abierto como administrador."
+      },
+      "winUser": {
+        "title": "Pegar la clave (usuario normal)",
+        "hint": "En PowerShell, con el usuario con el que se conectará Checkpoint."
+      },
+      "winAdmin": {
+        "title": "Pegar la clave (usuario administrador)",
+        "hint": "Si ese usuario es administrador, la clave va en otro fichero. PowerShell como administrador."
+      },
+      "archInstall": {
+        "title": "Instalar y activar el servidor SSH",
+        "hint": "En una terminal. El servicio se llama sshd."
+      },
+      "archFirewall": {
+        "title": "Abrir el puerto 22 (solo si hay firewall)",
+        "hint": "Arch no trae firewall activo por defecto. Usa el que tengas."
+      },
+      "linuxKey": {
+        "title": "Pegar la clave en authorized_keys",
+        "hint": "Como el usuario con el que se conectará Checkpoint (sin sudo)."
+      },
+      "debInstall": {
+        "title": "Instalar y activar el servidor SSH",
+        "hint": "En una terminal. El servicio se llama ssh."
+      },
+      "debFirewall": {
+        "title": "Abrir el puerto 22 (solo si ufw está activo)",
+        "hint": "Comprueba antes con sudo ufw status."
+      }
+    }
+  },
+  "err": {
+    "main": {
+      "session_required": "sesión requerida",
+      "origin_forbidden": "origen no permitido",
+      "json_body_required": "cuerpo JSON requerido",
+      "too_many_attempts": "demasiados intentos; espera {seconds} s",
+      "bad_credentials": "credenciales incorrectas",
+      "config_invalid": "config no válida",
+      "config_changed": "config.yaml cambió desde que lo cargaste",
+      "base_version_required": "falta base_version (recarga la configuración)",
+      "backup_unknown": "copia desconocida",
+      "backup_invalid": "la copia no es válida: {cause}",
+      "device_invalid": "datos del dispositivo inválidos: {causes}",
+      "paths_invalid": "paths debe ser una lista de rutas (máx. {max})",
+      "ssh_key_missing": "clave SSH aún no generada",
+      "config_file_invalid": "config.yaml inválido: {cause}",
+      "settings_invalid": "ajustes no válidos",
+      "updates_not_applicable": "La comprobación de actualizaciones no se aplica en Docker (la versión la fija la imagen)",
+      "updates": {
+        "enabled_bool": "debe ser verdadero o falso",
+        "channel_invalid": "debe ser «stable» o «beta»",
+        "field_required": "indica «enabled» o «channel»"
+      },
+      "game_ambiguous": "{cause}",
+      "game_unknown": "juego desconocido",
+      "resolution_invalid": "resolution debe ser 'newest', 'hub' o 'device:<id o nombre>'",
+      "expect_invalid": "expect debe ser un mapa origen -> hash",
+      "run_in_progress": "ya hay una ejecución en curso de este juego",
+      "run_unknown": "ejecución desconocida",
+      "restore_failed": "{cause}",
+      "not_found": "no encontrado",
+      "frontend_not_built": "frontend no construido"
+    },
+    "config": {
+      "required": "campo obligatorio",
+      "int": "debe ser un número entero",
+      "text": "debe ser texto",
+      "extra": "campo no permitido",
+      "map": "debe ser un mapa",
+      "list": "debe ser una lista",
+      "bool_required": "debe ser true o false",
+      "invalid": "{reason}",
+      "inconsistent": "{errors}",
+      "not_map": "config debe ser un mapa YAML",
+      "yaml_syntax": "YAML mal formado: {problem}",
+      "yaml_malformed": "YAML mal formado: error de sintaxis",
+      "yaml_duplicate_key": "clave repetida: {key} (los ids no pueden repetirse)",
+      "name_missing": "falta el campo name (obligatorio): el nombre visible del elemento",
+      "name_not_text": "nombre inválido: debe ser texto",
+      "name_empty": "el nombre es obligatorio",
+      "name_spaces": "nombre inválido: sin espacios al principio ni al final ni dobles",
+      "name_too_long": "nombre demasiado largo (máx. {max} caracteres)",
+      "name_slash": "nombre inválido: no se admiten / ni \\",
+      "name_control": "nombre inválido: sin caracteres de control ni espacios especiales",
+      "name_dots": "nombre inválido: no puede ser solo puntos",
+      "name_duplicate": "nombre repetido (sin distinguir mayúsculas): {other}",
+      "id_invalid": "id interno inválido: 1 a 64 caracteres entre letras, números, _ y -",
+      "id_reserved": "id reservado",
+      "id_duplicate": "id repetido o igual (sin distinguir mayúsculas) a {other}",
+      "local_docker": "“Este equipo” solo está disponible cuando Checkpoint se ejecuta sin Docker",
+      "local_one": "solo puede haber un dispositivo “Este equipo”",
+      "local_no_remote": "no aplica a “Este equipo” (se accede directamente al sistema de ficheros local)",
+      "host_invalid": "host inválido",
+      "user_invalid": "user inválido",
+      "port_range": "puerto fuera de rango",
+      "os_invalid": "os debe ser uno de {options}",
+      "on_conflict_invalid": "on_conflict debe ser 'skip' o 'newest'",
+      "process_invalid": "process inválido",
+      "versions_range": "debe ser un número entero entre 0 y {max} (0 = sin límite)",
+      "devices_pair": "elige exactamente dos dispositivos",
+      "device_required": "elige un dispositivo",
+      "device_unknown": "dispositivo desconocido (id inexistente): {id}",
+      "device_same": "debe ser distinto del dispositivo 1",
+      "paths_map": "paths debe ser un mapa dispositivo -> ruta",
+      "path_extra": "sobra: este dispositivo no es del juego",
+      "path_device_unknown": "id de dispositivo inexistente",
+      "path_missing": "falta la ruta del save",
+      "path_text": "ruta debe ser texto",
+      "path_windows": "ruta Windows debe ser absoluta tipo C:/Users/...",
+      "path_absolute": "ruta debe ser absoluta (empieza por /)",
+      "path_chars": "ruta con caracteres no permitidos: {path}",
+      "path_dotdot": "'..' no permitido en rutas",
+      "path_root": "ruta demasiado general (raíz)",
+      "ref_ambiguous": "{ref} es ambiguo: coincide con {matches}; usa el id"
+    },
+    "configstore": {
+      "conflict": "config.yaml cambió desde que lo cargaste",
+      "invalid": "config no válida: {causes}",
+      "backup_invalid": "la copia no es válida: {cause}"
+    },
+    "sync": {
+      "op_in_progress": "ya hay una operación de este juego en curso",
+      "sync_in_progress": "ya hay una sincronización de este juego en curso",
+      "resolution_invalid": "resolución inválida: {value}",
+      "side_unavailable": "{name} no está disponible para resolver (offline o desconocido)",
+      "side_empty": "{name} no tiene datos: no puede ganar",
+      "ref_invalid": "{cause}",
+      "game_unknown": "juego desconocido: {ref}",
+      "policy_invalid": "política de conflicto inválida: {value}",
+      "process_check_failed": "no se pudo comprobar el proceso en {device}: {cause}",
+      "process_open": "{process} está abierto en {device}",
+      "all_offline": "{devices} no responden; no se toca nada",
+      "version_invalid": "versión/origen inválido",
+      "version_unknown": "no existe esa versión",
+      "restored": "hub restaurado desde {version}/{source}; ejecuta Sincronizar para propagarlo",
+      "unexpected": "{type}: {detail}",
+      "nothing_to_sync": "nada que sincronizar (todo vacío)",
+      "already_synced": "ya sincronizado",
+      "conflict": "conflicto en {sides}: {cause}",
+      "conflict_indeterminate": "los relojes difieren menos de {seconds} s: no se puede saber cuál es más reciente",
+      "conflict_stale": "los datos cambiaron desde que se mostró el conflicto",
+      "conflict_no_baseline": "primera sincronización con contenidos distintos",
+      "conflict_inconsistent": "los contenidos difieren sin cambios registrados",
+      "conflict_both_changed": "ambos lados cambiaron desde la última sincronización",
+      "dry_run": "ganador {winner}; destinos {targets}",
+      "partial": "ganador {winner}; actualizados {updated}; fallaron {failed}",
+      "partial_none": "ganador {winner}; actualizados ninguno; fallaron {failed}",
+      "done": "ganador {winner}; actualizados {updated}",
+      "done_pending": "ganador {winner}; actualizados {updated} ({offline} offline: pendiente)"
+    },
+    "transport": {
+      "timeout": "tiempo agotado",
+      "missing_binary": "falta binario: {binary}",
+      "ssh_failed": "SSH falló: {detail}",
+      "rsync_pull_failed": "rsync pull falló: {detail}",
+      "rsync_push_failed": "rsync push falló: {detail}",
+      "mkdir_failed": "mkdir remoto falló: {detail}",
+      "pgrep_failed": "pgrep falló: {detail}",
+      "tasklist_failed": "tasklist falló: {detail}",
+      "tar_pull_failed": "tar pull falló: {detail}",
+      "tar_push_failed": "tar push falló: {detail}",
+      "process_invalid": "nombre de proceso inválido",
+      "process_timeout": "tiempo agotado comprobando procesos",
+      "pgrep_missing": "no se puede comprobar el proceso: falta pgrep",
+      "path_empty": "ruta vacía",
+      "path_null": "ruta inválida (carácter nulo)",
+      "path_dotdot": "'..' no permitido en rutas",
+      "path_not_absolute": "la ruta no es absoluta en este sistema: {path}",
+      "path_unresolvable": "ruta no resoluble: {detail}",
+      "read_failed": "no se pudo leer {path}: {detail}",
+      "copy_failed": "no se pudo copiar {file}: {detail}",
+      "not_a_folder": "la ruta existe pero no es una carpeta: {path}",
+      "no_read_permission": "sin permiso de lectura en {path}",
+      "access_denied": "sin permiso para acceder a {path}: {detail}",
+      "access_failed": "no se pudo acceder a {path}: {detail}",
+      "folder_missing": "la carpeta no existe: {path}",
+      "mkdir_local_failed": "no se pudo crear {path}: {detail}",
+      "write_failed": "no se pudo escribir en {path}: {detail}",
+      "place_failed": "no se pudo colocar la carpeta nueva: {detail}",
+      "write_file_failed": "no se pudo escribir {file}: {detail}",
+      "delete_failed": "no se pudo borrar {file}: {detail}",
+      "connection_ok": "conexión OK",
+      "local_info": "Este equipo: acceso local directo, sin SSH. Indica la ruta de los saves en cada juego.",
+      "folder_ok": "carpeta OK: existe, es legible y escribible",
+      "folder_will_be_created": "la carpeta no existe todavía; se creará al sincronizar (se trata como vacía)",
+      "not_a_folder_short": "la ruta existe pero no es una carpeta",
+      "unreadable": "la carpeta existe pero no se puede leer (sin permiso)",
+      "not_writable": "la carpeta se puede leer pero no escribir (sin permiso o solo lectura)",
+      "cannot_create_not_folder": "no se puede crear la carpeta: {path} no es una carpeta",
+      "cannot_create_no_permission": "la carpeta no existe y no se puede crear: sin permiso de escritura en {path}",
+      "check_failed": "no se pudo comprobar la carpeta: {detail}"
+    },
+    "bootstrap": {
+      "first_use": "host key guardada (primer uso)",
+      "host_key_changed": "la host key de {host}:{port} ha CAMBIADO respecto a la guardada en known_hosts (posible suplantación o reinstalación del dispositivo). No se sobrescribe. Si el cambio es legítimo, borra a mano esa entrada de known_hosts",
+      "keygen_failed": "no se pudo generar la clave SSH: {detail}",
+      "keygen_error": "ssh-keygen falló: {detail}",
+      "host_invalid": "host inválido",
+      "port_invalid": "puerto inválido",
+      "port_range": "puerto fuera de rango",
+      "known_hosts_read": "no se pudo leer known_hosts: {detail}",
+      "keyscan_failed": "ssh-keyscan falló: {detail}",
+      "hostkey_unavailable": "no se pudo obtener la host key de {host}:{port} (¿SSH activo y accesible?)"
+    },
+    "scheduler": {
+      "bool_required": "debe ser verdadero o falso",
+      "interval_not_number": "debe ser un número",
+      "interval_range": "debe estar entre {min} y {max} horas",
+      "conflict_policy_invalid": "debe ser 'skip' (omitir) o 'newest' (gana el más reciente)",
+      "busy": "ya en curso",
+      "skipped_busy": "omitido (ya en curso)",
+      "skipped_conflict": "omitido por conflicto: {cause}",
+      "summary": "{causes}"
+    }
+  }
+}

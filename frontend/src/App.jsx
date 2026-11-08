@@ -3,19 +3,17 @@ import { api, ApiError } from './api.js';
 import logo from './assets/logo-icon.svg';
 import Icon from './components/Icon.jsx';
 import UpdateBadge from './components/UpdateBadge.jsx';
+import LanguageSelect from './components/LanguageSelect.jsx';
 import UpdateDialog from './components/UpdateDialog.jsx';
 import { installedVersion, updatesApplicable } from './updates.js';
 import Login from './pages/Login.jsx';
 import Settings from './pages/Settings.jsx';
 import Sync from './pages/Sync.jsx';
 import Versions from './pages/Versions.jsx';
+import { errText, initDefaultLang, useI18n } from './useI18n.js';
 
-// [id, etiqueta completa, etiqueta corta para móvil]
-const TABS = [
-  ['sync', 'Sincronizar', 'Sync'],
-  ['versions', 'Versiones', 'Versiones'],
-  ['settings', 'Configuración', 'Ajustes'],
-];
+// Pestañas: el id es estable; las etiquetas (completa y corta, para móvil) son claves `app.tab.<id>.full|short`.
+const TABS = ['sync', 'versions', 'settings'];
 
 function useTheme() {
   const [theme, setTheme] = useState(() => {
@@ -31,12 +29,14 @@ function useTheme() {
 }
 
 export default function App() {
+  const { t, locale } = useI18n(); // re-renderiza al cambiar de idioma
+  useEffect(() => { document.documentElement.lang = locale; }, [locale]); // lector de pantalla y traductor del navegador
   const [authed, setAuthed] = useState(null);
   const [tab, setTab] = useState('sync');
   const [loaded, setLoaded] = useState({ version: '', config: { devices: {}, games: {} }, error: null });
   const [latest, setLatest] = useState(null); // última versión de config.yaml anunciada por el servidor (SSE)
   const [dirty, setDirty] = useState(false); // borrador de Configuración con cambios sin guardar
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null); // error de la API (se traduce al pintar)
   const [updates, setUpdates] = useState(null); // estado de /api/updates; un fallo aquí nunca molesta
   const [showUpdate, setShowUpdate] = useState(false);
   const [theme, cycleTheme] = useTheme();
@@ -46,19 +46,22 @@ export default function App() {
     try {
       const r = await api('/api/config');
       setLoaded(r);
-      setError('');
+      setError(null);
       if (first && Object.keys(r.config.devices).length === 0) setTab('settings');
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) setAuthed(false);
-      else setError(e.message);
+      else setError(e);
     }
   }, []);
 
   useEffect(() => {
-    api('/api/session').then((s) => {
+    // El idioma por defecto del servidor se pide en paralelo y se espera antes de pintar (evita parpadeo es -> en).
+    const pub = initDefaultLang();
+    api('/api/session').then(async (s) => {
+      await pub;
       setAuthed(s.authenticated);
       if (s.authenticated) loadConfig(true);
-    }).catch(() => setAuthed(false));
+    }).catch(async () => { await pub; setAuthed(false); });
   }, [loadConfig]);
 
   // El backend vigila config.yaml y avisa de cambios (también ediciones a mano).
@@ -75,14 +78,14 @@ export default function App() {
   // Comprobación de versión nueva: al entrar y cada 6 h (el backend cachea y no repite peticiones a GitHub).
   useEffect(() => {
     if (!authed) return undefined;
-    let t = null;
+    let timer = null;
     const check = () => api('/api/updates').then((r) => {
       setUpdates(r);
-      if (r && r.aplicable === false && t) { clearInterval(t); t = null; } // no aplica (Docker): sin más consultas
+      if (r && r.aplicable === false && timer) { clearInterval(timer); timer = null; } // no aplica (Docker): sin más consultas
     }).catch(() => {});
     check();
-    t = setInterval(check, 6 * 3600 * 1000);
-    return () => { if (t) clearInterval(t); };
+    timer = setInterval(check, 6 * 3600 * 1000);
+    return () => { if (timer) clearInterval(timer); };
   }, [authed]);
 
   const stale = latest !== null && latest !== loaded.version;
@@ -91,33 +94,34 @@ export default function App() {
 
   const logout = async () => { await api('/api/logout', { method: 'POST' }); setAuthed(false); };
 
-  if (authed === null) return <div className="center muted">Cargando…</div>;
+  if (authed === null) return <div className="center muted">{t('common.loading')}</div>;
   if (!authed) {
-    return <Login onDone={() => { setAuthed(true); loadConfig(true); }} theme={theme} cycleTheme={cycleTheme} />;
+    return <Login onDone={() => { setAuthed(true); loadConfig(true); }} />;
   }
 
   return (
     <div className="app">
       <header className="topbar">
         <strong className="brand"><img src={logo} alt="" aria-hidden="true" className="brand-logo" /><span className="brand-name">Checkpoint</span></strong>
-        <nav className="tabs" aria-label="Secciones">
-          {TABS.map(([id, label, short]) => (
-            <button key={id} className={tab === id ? 'tab active' : 'tab'} aria-current={tab === id ? 'page' : undefined} aria-label={label} onClick={() => setTab(id)}>
-              <span className="full" aria-hidden="true">{label}</span><span className="short" aria-hidden="true">{short}</span>
+        <nav className="tabs" aria-label={t('app.sections')}>
+          {TABS.map((id) => (
+            <button key={id} className={tab === id ? 'tab active' : 'tab'} aria-current={tab === id ? 'page' : undefined} aria-label={t(`app.tab.${id}.full`)} onClick={() => setTab(id)}>
+              <span className="full" aria-hidden="true">{t(`app.tab.${id}.full`)}</span><span className="short" aria-hidden="true">{t(`app.tab.${id}.short`)}</span>
             </button>
           ))}
         </nav>
         <div className="spacer" />
         <UpdateBadge info={updates} onOpen={() => setShowUpdate(true)} />
-        <button className="btn ghost tool" onClick={cycleTheme} title="Cambiar tema" aria-label={`Cambiar tema (actual: ${theme})`}>
-          <Icon name="theme" /><span className="lbl">Tema: {theme}</span>
+        <LanguageSelect />
+        <button className="btn ghost tool" onClick={cycleTheme} title={t('app.themeTitle')} aria-label={t('app.themeAria', { theme: t(`app.theme.${theme}`) })}>
+          <Icon name="theme" /><span className="lbl">{t('app.themeLabel', { theme: t(`app.theme.${theme}`) })}</span>
         </button>
-        <button className="btn ghost tool" onClick={logout} title="Salir" aria-label="Salir">
-          <Icon name="logout" /><span className="lbl">Salir</span>
+        <button className="btn ghost tool" onClick={logout} title={t('app.logout')} aria-label={t('app.logout')}>
+          <Icon name="logout" /><span className="lbl">{t('app.logout')}</span>
         </button>
       </header>
       <main className="content">
-        {error && <div className="alert error" role="alert">{error}</div>}
+        {error && <div className="alert error" role="alert">{errText(error)}</div>}
         <div hidden={tab !== 'settings'}>
           <Settings loaded={loaded} stale={stale && dirty} configError={loaded.error} runtime={loaded.runtime} platform={loaded.platform}
             onApplied={(r) => { setLoaded((l) => ({ ...l, version: r.version, config: r.config, error: null })); setLatest(r.version); }}

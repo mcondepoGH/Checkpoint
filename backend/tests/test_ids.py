@@ -82,18 +82,18 @@ def errs(d):
 def test_duplicate_yaml_ids_are_a_clear_error(tmp_path):
     p = tmp_path / "c.yaml"
     p.write_text("devices:\n  a: {name: A, host: h, user: u, os: linux}\n  a: {name: B, host: h, user: u, os: linux}\n")
-    with pytest.raises(ConfigError, match="clave repetida"):
+    with pytest.raises(ConfigError, match="yaml_duplicate_key"):
         load_config(p)
     from app.configstore import parse_text
     cfg, err = parse_text(p.read_text())
-    assert cfg is None and "clave repetida" in err
+    assert cfg is None and err["code"] == "err.config.yaml_duplicate_key"
 
 
 def test_broken_references_are_errors():
     e = errs(mod(NEW, "games/zelda-0a1b2c3d/devices", ["pc-1a2b3c4d", "nope-00000000"]))
-    assert "inexistente" in e["games.zelda-0a1b2c3d.devices.1"]
+    assert e["games.zelda-0a1b2c3d.devices.1"]["code"] == "err.config.device_unknown"
     d = mod(NEW, "games/zelda-0a1b2c3d/paths", {"pc-1a2b3c4d": "C:/a", "laptop-5e6f7a8b": "/x/y", "ghost": "/z"})
-    assert "inexistente" in errs(d)["games.zelda-0a1b2c3d.paths.ghost"]
+    assert errs(d)["games.zelda-0a1b2c3d.paths.ghost"]["code"] == "err.config.path_device_unknown"
 
 
 @pytest.mark.parametrize("bad", ["hub", "HUB", "con espacio", "a/b", "", "x" * 65, "ñ", "a.b"])
@@ -110,7 +110,7 @@ def test_bad_device_ids(bad):
 def test_ids_case_insensitive_duplicate_and_non_string():
     d = copy.deepcopy(NEW)
     d["devices"]["PC-1A2B3C4D"] = {**d["devices"]["pc-1a2b3c4d"], "name": "Otro"}
-    assert any("repetido" in m for m in errs(d).values())
+    assert any(m["code"] == "err.config.id_duplicate" for m in errs(d).values())
     d = copy.deepcopy(NEW)
     d["games"][5] = d["games"]["zelda-0a1b2c3d"]
     assert any(k.startswith("games.5") for k in errs(d))
@@ -119,10 +119,10 @@ def test_ids_case_insensitive_duplicate_and_non_string():
 def test_duplicate_names_are_errors_case_insensitive():
     d = copy.deepcopy(NEW)
     d["devices"]["other-00000000"] = {**d["devices"]["pc-1a2b3c4d"], "name": "mi pc"}
-    assert "repetido" in errs(d)["devices.other-00000000.name"]
+    assert errs(d)["devices.other-00000000.name"]["code"] == "err.config.name_duplicate"
     d = copy.deepcopy(NEW)
     d["games"]["z2-00000000"] = {**d["games"]["zelda-0a1b2c3d"], "name": "ZELDA"}
-    assert "repetido" in errs(d)["games.z2-00000000.name"]
+    assert errs(d)["games.z2-00000000.name"]["code"] == "err.config.name_duplicate"
     # dos ids distintos con el mismo nombre en secciones distintas: permitido
     d = mod(NEW, "games/zelda-0a1b2c3d/name", "Mi PC")
     assert errs(d) == {}
@@ -157,7 +157,7 @@ def test_resolve_ref_by_id_name_and_ambiguity():
     assert resolve_ref(items, "b-2") == "b-2" and resolve_ref(items, "Mario") == "b-2"
     assert resolve_ref(items, "mario") == "b-2"  # sin mayúsculas si es único
     assert resolve_ref(items, "nope") is None and resolve_ref(items, "") is None and resolve_ref(items, 3) is None
-    with pytest.raises(ConfigError, match="ambiguo"):
+    with pytest.raises(ConfigError, match="ref_ambiguous"):
         resolve_ref(items, "Zelda")  # id de uno y nombre de otro
 
 
@@ -231,7 +231,7 @@ def test_logs_and_messages_show_names_not_ids(disk):
     st = run_sync(disk.cfg, "Mi juego", False, disk.data, lines.append, disk.tr())
     text = "\n".join(lines) + st["message"]
     assert "Mi juego" in text and "Ordenador de mesa" in text
-    assert GID not in text and "ganador laptop" in st["message"] and "Ordenador de mesa" in st["message"]
+    assert GID not in text and st["params"]["winner"] == "laptop" and "Ordenador de mesa" in st["params"]["updated"]
     log = (disk.data / "logs" / GID / st["log"]).read_text()
     assert "Ordenador de mesa" in log and GID not in log
 
@@ -239,14 +239,14 @@ def test_logs_and_messages_show_names_not_ids(disk):
 def test_renamed_baseline_no_false_conflict_for_either_rename_order(disk):
     c = disk.cfg
     c.games[GID].name = "Nuevo"
-    assert disk.sync(c)["message"] == "ya sincronizado"
+    assert disk.sync(c)["code"] == "err.sync.already_synced"
     c.devices[LAPTOP].name = "Otro portátil"
-    assert disk.sync(c)["message"] == "ya sincronizado"
+    assert disk.sync(c)["code"] == "err.sync.already_synced"
 
 
 def test_game_resolution_by_id_name_and_unknown(disk):
     assert resolve_game(disk.cfg, GID) == GID and resolve_game(disk.cfg, GAME) == GID
-    with pytest.raises(SyncAbort, match="desconocido"):
+    with pytest.raises(SyncAbort, match="game_unknown"):
         resolve_game(disk.cfg, "nada")
     assert disk.sync(game=GAME)["game"] == GID  # run_sync acepta el nombre y trabaja con el id
 
@@ -279,7 +279,7 @@ def test_conflict_with_ids_and_resolution_by_id_or_name(disk):
 def test_restore_version_by_source_id_or_name(disk):
     disk.cfg.devices[PC].name = "Ordenador de mesa"
     msg = restore_version(disk.cfg, GAME, "2026-01-01_100000", "Ordenador de mesa", disk.data)
-    assert "Ordenador de mesa" in msg and (disk.hub / "s.sav").read_text() == "old"
+    assert msg["params"]["source"] == "Ordenador de mesa" and (disk.hub / "s.sav").read_text() == "old"
     with pytest.raises(SyncAbort):
         restore_version(disk.cfg, GID, "2026-01-01_100000", "../x", disk.data)
 
@@ -302,7 +302,8 @@ def test_scheduler_cycle_uses_ids_and_records_names(tmp_path, monkeypatch):
     e = history.make_entry(datetime.now(timezone.utc), 1, "scheduled", "conflict", out["details"], out["message"])
     assert e["games"][gid]["name"] == "Zelda"
     busy = Scheduler(lambda: cfg, lambda g: g == gid, runner=runner).run_cycle()
-    assert busy["games"] == {gid: "skipped"} and busy["message"] == "Zelda: omitido (ya en curso)"
+    assert busy["games"] == {gid: "skipped"} and busy["code"] == "err.scheduler.summary"
+    assert busy["params"]["causes"] == [{"path": "Zelda", "code": "err.scheduler.skipped_busy", "params": {}}]
 
 
 def test_history_annotate_current_and_deleted():
@@ -359,14 +360,14 @@ def test_cli_accepts_id_and_name_and_shows_names(cli_env, capsys):
     assert cli.main(["sync", "zelda-0a1b2c3d", "--dry-run"]) == 0
     assert cli.main(["sync", "Zelda", "--dry-run"]) == 0
     assert cli.main(["sync", "nada", "--dry-run"]) == 2
-    assert "desconocido" in capsys.readouterr().err
+    assert "game_unknown" in capsys.readouterr().err
 
 
 def test_cli_ambiguous_name_is_clear_error(cli_env, capsys):
     capsys.readouterr()
     assert cli.main(["sync", "x", "--dry-run"]) == 2
     err = capsys.readouterr().err
-    assert "ambiguo" in err and "Mario" in err and "usa el id" in err
+    assert "ref_ambiguous" in err and "Mario" in err
     assert cli.main(["versions", "x"]) == 2
 
 
@@ -459,7 +460,7 @@ def test_api_validate_reports_id_paths_and_test_device_without_name(api):
     r = api.post("/api/config/validate", json={"config": bad}).json()
     assert r["ok"] is False and "games.zelda-0a1b2c3d.devices.1" in r["errors"]
     r = api.post("/api/devices/test", json={"device": {"host": "-x", "user": "u", "os": "linux"}}).json()
-    assert r["ok"] is False and "host" in r["message"]
+    assert r["ok"] is False and r["code"] == "err.main.device_invalid" and r["params"]["causes"][0]["path"] == "host"
 
 
 def _legacy_api(client, tmp_path):

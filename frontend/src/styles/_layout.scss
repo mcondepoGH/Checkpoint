@@ -54,3 +54,7 @@
   .topbar { padding-left: max(.5rem, var(--sl)); padding-right: max(.5rem, var(--sr)); }
   .tab { padding: 0 .4rem; font-size: .72rem; letter-spacing: .02em; }
 }
+
+// Selector de idioma de la cabecera: desplegable pequeño (la etiqueta solo la leen los lectores de pantalla).
+.topbar .lang-select { margin: 0; display: inline-flex; width: auto; }
+.topbar .lang-select select { width: auto; min-width: 0; padding: .3rem .5rem; font-size: .85rem; }

@@ -32,10 +32,12 @@ export const blankDevice = () => ({ key: uid(), id: null, salt: hex8(), name: ''
 
 // «Este equipo»: el dispositivo es la máquina donde corre Checkpoint (sin SSH). Solo existe fuera de Docker
 // (runtime === 'native', lo informa /api/config) y como máximo uno.
-export const LOCAL_LABEL = 'Este equipo';
-export const LOCAL_DOCKER_MSG = '“Este equipo” solo está disponible cuando Checkpoint se ejecuta sin Docker';
-export const LOCAL_ONE_MSG = 'Solo puede haber un dispositivo “Este equipo”';
-export const LOCAL_HELP = 'Es el equipo donde se ejecuta Checkpoint: se accede directamente a sus carpetas, sin SSH.';
+// Textos de interfaz: LOCAL_LABEL y LOCAL_HELP son claves del catálogo; los errores son cuerpos {code, params}
+// (los mismos códigos que devuelve el backend) que se traducen al pintar con errorText/fieldErrorText.
+export const LOCAL_LABEL = 'device.localLabel';
+export const LOCAL_DOCKER_MSG = { code: 'err.config.local_docker', params: {} };
+export const LOCAL_ONE_MSG = { code: 'err.config.local_one', params: {} };
+export const LOCAL_HELP = 'device.localHelp';
 // SO que se autorrellena al marcarlo: el de la plataforma que informa el backend (macOS usa rutas POSIX = linux).
 export const localOs = (platform) => (platform === 'windows' ? 'windows' : 'linux');
 // ¿Se ofrece la casilla en este dispositivo? Solo en modo nativo y si no hay ya otro «Este equipo».
@@ -52,7 +54,7 @@ export const blankGame = () => ({ key: uid(), id: null, salt: hex8(), name: '', 
 // Versiones guardadas por juego: global (por defecto) y override por juego (vacío = usar el global). 0 = sin límite.
 export const DEFAULT_MAX_VERSIONS = 20;
 export const MAX_VERSIONS_LIMIT = 1000;
-export const VERSIONS_HINT = '0 = sin límite; al superarlo se borran las más antiguas';
+export const VERSIONS_HINT = 'draft.versionsHint'; // clave del catálogo
 
 export function fromConfig(cfg) {
   const devices = Object.entries(cfg?.devices || {}).map(([id, d]) => ({
@@ -83,14 +85,16 @@ export const renamed = (item) => !!item.id && cleanName(item.name) !== cleanName
 
 // Nombre visible libre: sin / ni \\, sin caracteres de control; máx. 64. Se normaliza al enviar.
 export const NAME_MAX = 64;
-export const NAME_HINT = `Hasta ${NAME_MAX} caracteres. Se admiten espacios, símbolos, acentos y emojis; no / ni \\`;
+export const NAME_HINT = 'draft.nameHint'; // clave del catálogo; parámetro {max} = NAME_MAX
 export const cleanName = (n) => String(n).replace(/\s+/g, ' ').trim();
-const BAD_NAME = /[\u0000-\u001f\u007f-\u009f\u2028\u2029/\\]/;
+const SLASH_NAME = /[/\\]/;
+const CONTROL_NAME = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/;
 const nameKey = (n) => cleanName(n).toLowerCase();
 
 // Nombres vacíos, inválidos o repetidos: se detectan en local para avisar al instante (el backend repite la comprobación).
+// Los errores son cuerpos {code, params} con los mismos códigos `err.config.*` del backend.
 const versionsError = (v) => (/^\d+$/.test(String(v).trim()) && Number(v) <= MAX_VERSIONS_LIMIT
-  ? undefined : `Debe ser un número entero entre 0 y ${MAX_VERSIONS_LIMIT} (0 = sin límite)`);
+  ? undefined : { code: 'err.config.versions_range', params: { max: MAX_VERSIONS_LIMIT } });
 
 export function localErrors(draft, runtime) {
   const errs = {};
@@ -106,15 +110,17 @@ export function localErrors(draft, runtime) {
     if (e) errs[`keep-${g.key}`] = e;
   }
   for (const list of [draft.devices, draft.games]) {
-    const seen = new Set();
+    const seen = new Map(); // nombre normalizado -> primer nombre que lo usó
     for (const it of list) {
       const n = cleanName(it.name);
-      if (!n) errs[it.key] = 'El nombre es obligatorio';
-      else if (n.length > NAME_MAX) errs[it.key] = `Nombre demasiado largo (máx. ${NAME_MAX} caracteres)`;
-      else if (BAD_NAME.test(n)) errs[it.key] = 'Nombre inválido: no se admiten / \\ ni caracteres de control';
-      else if (!n.replace(/\./g, '')) errs[it.key] = 'Nombre inválido: no puede ser solo puntos';
-      else if (seen.has(nameKey(n))) errs[it.key] = 'Nombre repetido (sin distinguir mayúsculas ni espacios extra)';
-      seen.add(nameKey(n));
+      const err = (code, params = {}) => { errs[it.key] = { code: `err.config.${code}`, params }; };
+      if (!n) err('name_empty');
+      else if (n.length > NAME_MAX) err('name_too_long', { max: NAME_MAX });
+      else if (SLASH_NAME.test(n)) err('name_slash');
+      else if (CONTROL_NAME.test(n)) err('name_control');
+      else if (!n.replace(/\./g, '')) err('name_dots');
+      else if (seen.has(nameKey(n))) err('name_duplicate', { other: seen.get(nameKey(n)) });
+      if (!seen.has(nameKey(n))) seen.set(nameKey(n), n);
     }
   }
   return errs;
@@ -152,7 +158,7 @@ export const hasChanges = (payloadKey, baseKey, local) => payloadKey !== baseKey
 export const isDirty = (draft, config, runtime) => hasChanges(JSON.stringify(toConfig(draft)), baseKeyOf(config), localErrors(draft, runtime));
 
 export const gamesUsing = (draft, devKey) =>
-  draft.games.filter((g) => g.a === devKey || g.b === devKey).map((g) => g.name || '(sin nombre)');
+  draft.games.filter((g) => g.a === devKey || g.b === devKey).map((g) => g.name);  // '' si no tiene nombre (la pantalla pone «(sin nombre)»)
 
 export function removeDevice(draft, devKey) {
   const clear = (g) => ({
@@ -162,12 +168,13 @@ export function removeDevice(draft, devKey) {
   return { ...draft, devices: draft.devices.filter((d) => d.key !== devKey), games: draft.games.map(clear) };
 }
 
-// Los errores del backend vienen como {"games.<id>.paths.<id dispositivo>": "msg"}.
-export const errorsFor = (errors, prefix) => {
+// Los errores del backend vienen como {"games.<id>.paths.<id dispositivo>": {code, params}} (o texto, si es antiguo).
+// `tr` convierte cada valor en texto (p. ej. v => fieldErrorText(v, t)); por defecto los deja tal cual.
+export const errorsFor = (errors, prefix, tr = (v) => v) => {
   const out = {};
   for (const [k, v] of Object.entries(errors || {})) {
-    if (k === prefix) out[''] = v;
-    else if (k.startsWith(prefix + '.')) out[k.slice(prefix.length + 1)] = v;
+    if (k === prefix) out[''] = tr(v);
+    else if (k.startsWith(prefix + '.')) out[k.slice(prefix.length + 1)] = tr(v);
   }
   return out;
 };

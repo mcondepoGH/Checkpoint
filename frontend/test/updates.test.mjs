@@ -7,6 +7,10 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { updatesApplicable, showBadge, safeUrl, updateSummary, channelOf, isPrerelease, installedVersion, CHANNEL_OPTIONS } from '../src/updates.js';
 
+import { createI18n } from '../src/i18n.js';
+const es = JSON.parse(fs.readFileSync(new URL('../src/locales/es.json', import.meta.url), 'utf8'));
+const t = createI18n({ catalogs: { es }, storage: null, languages: ['es'] }).t;
+
 const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src');
 const NEW = { actual: '0.4.2', ultima: '0.5.0', hay_actualizacion: true, habilitado: true, notas: 'Novedades <b>x</b>', url: 'https://github.com/o/r/releases/tag/v0.5.0', comprobado_en: '2026-01-01T10:00:00+00:00', error: null, canal: 'stable', prerelease: false };
 const PRE = { ...NEW, canal: 'beta', ultima: '0.6.0-rc.1', prerelease: true };
@@ -37,10 +41,10 @@ test('safeUrl: solo https', () => {
 });
 
 test('updateSummary: texto del ajuste', () => {
-  assert.match(updateSummary({ ...NEW, hay_actualizacion: false }), /al día/i);
-  assert.match(updateSummary(NEW), /0\.5\.0/);
-  assert.match(updateSummary({ ...NEW, habilitado: false }), /desactivada/i);
-  assert.equal(updateSummary(null), '');
+  assert.match(updateSummary({ ...NEW, hay_actualizacion: false }, t), /al día/i);
+  assert.match(updateSummary(NEW, t), /0\.5\.0/);
+  assert.match(updateSummary({ ...NEW, habilitado: false }, t), /desactivada/i);
+  assert.equal(updateSummary(null, t), '');
 });
 
 test('canal y marca preliminar: lógica pura', () => {
@@ -51,7 +55,7 @@ test('canal y marca preliminar: lógica pura', () => {
   assert.equal(installedVersion(NEW), NEW.actual); assert.equal(installedVersion({ actual: 'desconocida' }), '');
   assert.equal(installedVersion(null), ''); assert.equal(installedVersion({}), '');
   assert.deepEqual(CHANNEL_OPTIONS.map((o) => o.value), ['stable', 'beta']);
-  assert.match(updateSummary(PRE), /preliminar/); assert.ok(!/preliminar/.test(updateSummary(NEW)));
+  assert.match(updateSummary(PRE, t), /preliminar/); assert.ok(!/preliminar/.test(updateSummary(NEW, t)));
 });
 
 let mod = null;

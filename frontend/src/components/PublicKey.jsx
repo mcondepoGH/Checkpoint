@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
-
-const PH = 'PEGA_AQUÍ_LA_CLAVE';
+import { errText, useI18n } from '../useI18n.js';
 
 function copyText(text, area) {
   return (async () => {
@@ -17,6 +16,7 @@ function copyText(text, area) {
 }
 
 function CodeBlock({ text }) {
+  const { t } = useI18n();
   const [ok, setOk] = useState(false);
   const copy = async () => {
     const r = await copyText(text);
@@ -26,33 +26,33 @@ function CodeBlock({ text }) {
   return (
     <div className="codeblock">
       <pre><code>{text}</code></pre>
-      <button type="button" className="btn" onClick={copy}>{ok ? 'Copiado' : 'Copiar'}</button>
+      <button type="button" className="btn" onClick={copy}>{ok ? t('common.copied') : t('common.copy')}</button>
     </div>
   );
 }
 
 const LINUX_KEY = (k) => `mkdir -p ~/.ssh && chmod 700 ~/.ssh\necho "${k}" >> ~/.ssh/authorized_keys\nchmod 600 ~/.ssh/authorized_keys`;
 
-// Cada paso: [título corto, una línea de explicación, comando]
+// Cada paso: [id del paso (claves `keyhelp.step.<id>.title|hint`), comando]. Los comandos no se traducen.
 function osSteps(os, distro, k) {
   if (os === 'Windows') {
     return [
-      ['Activar el servidor OpenSSH', 'En PowerShell abierto como administrador.', 'Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0\nStart-Service sshd; Set-Service sshd -StartupType Automatic'],
-      ['Pegar la clave (usuario normal)', 'En PowerShell, con el usuario con el que se conectará Checkpoint.', `New-Item -ItemType Directory -Force "$env:USERPROFILE\\.ssh" | Out-Null\nAdd-Content -Path "$env:USERPROFILE\\.ssh\\authorized_keys" -Value '${k}'`],
-      ['Pegar la clave (usuario administrador)', 'Si ese usuario es administrador, la clave va en otro fichero. PowerShell como administrador.', `Add-Content -Path "C:\\ProgramData\\ssh\\administrators_authorized_keys" -Value '${k}'\nicacls "C:\\ProgramData\\ssh\\administrators_authorized_keys" /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F"`],
+      ['winServer', 'Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0\nStart-Service sshd; Set-Service sshd -StartupType Automatic'],
+      ['winUser', `New-Item -ItemType Directory -Force "$env:USERPROFILE\\.ssh" | Out-Null\nAdd-Content -Path "$env:USERPROFILE\\.ssh\\authorized_keys" -Value '${k}'`],
+      ['winAdmin', `Add-Content -Path "C:\\ProgramData\\ssh\\administrators_authorized_keys" -Value '${k}'\nicacls "C:\\ProgramData\\ssh\\administrators_authorized_keys" /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F"`],
     ];
   }
   if (distro === 'Arch Linux') {
     return [
-      ['Instalar y activar el servidor SSH', 'En una terminal. El servicio se llama sshd.', 'sudo pacman -S --needed openssh\nsudo systemctl enable --now sshd'],
-      ['Abrir el puerto 22 (solo si hay firewall)', 'Arch no trae firewall activo por defecto. Usa el que tengas.', '# ufw\nsudo ufw allow 22/tcp\n# firewalld\nsudo firewall-cmd --permanent --add-service=ssh && sudo firewall-cmd --reload'],
-      ['Pegar la clave en authorized_keys', 'Como el usuario con el que se conectará Checkpoint (sin sudo).', LINUX_KEY(k)],
+      ['archInstall', 'sudo pacman -S --needed openssh\nsudo systemctl enable --now sshd'],
+      ['archFirewall', '# ufw\nsudo ufw allow 22/tcp\n# firewalld\nsudo firewall-cmd --permanent --add-service=ssh && sudo firewall-cmd --reload'],
+      ['linuxKey', LINUX_KEY(k)],
     ];
   }
   return [
-    ['Instalar y activar el servidor SSH', 'En una terminal. El servicio se llama ssh.', 'sudo apt update && sudo apt install -y openssh-server\nsudo systemctl enable --now ssh'],
-    ['Abrir el puerto 22 (solo si ufw está activo)', 'Comprueba antes con sudo ufw status.', 'sudo ufw allow 22/tcp'],
-    ['Pegar la clave en authorized_keys', 'Como el usuario con el que se conectará Checkpoint (sin sudo).', LINUX_KEY(k)],
+    ['debInstall', 'sudo apt update && sudo apt install -y openssh-server\nsudo systemctl enable --now ssh'],
+    ['debFirewall', 'sudo ufw allow 22/tcp'],
+    ['linuxKey', LINUX_KEY(k)],
   ];
 }
 
@@ -97,6 +97,8 @@ const SYSTEMS = ['Windows', 'Linux'];
 const DISTROS = ['Debian / Ubuntu', 'Arch Linux'];
 
 function KeyHelp({ pubKey, children }) {
+  const { t, rich } = useI18n();
+  const PH = t('keyhelp.placeholder'); // marcador dentro de los comandos, hasta que haya clave
   const [open, setOpen] = useState(false);
   const [sys, setSys] = useState('Linux');
   const [distro, setDistro] = useState(DISTROS[0]);
@@ -106,39 +108,39 @@ function KeyHelp({ pubKey, children }) {
     <div className="keyhelp">
       <div className="keyhelp-head">
         <div className="keyhelp-intro">{children}</div>
-        <button type="button" className="btn chip" aria-label="Info: pasos para dar de alta la clave" title="Info" aria-expanded={open} aria-controls="keyhelp-panel" onClick={() => setOpen(!open)}>?</button>
+        <button type="button" className="btn chip" aria-label={t('keyhelp.infoAria')} title={t('keyhelp.infoTitle')} aria-expanded={open} aria-controls="keyhelp-panel" onClick={() => setOpen(!open)}>?</button>
       </div>
       {open && (
         <div id="keyhelp-panel" className="keyhelp-panel">
-          <p className="muted keyhelp-lead">Checkpoint usa su propia clave SSH para entrar, sin contraseña, a cada dispositivo y copiar sus partidas. Hay que dar de alta la parte <strong>pública</strong> en cada dispositivo.</p>
+          <p className="muted keyhelp-lead">{rich('keyhelp.lead')}</p>
           <ol className="keysteps">
-            <Step n={1} title="Copia la clave" hint="En esta web.">
-              <p className="muted">Pulsa <strong>Copiar</strong> bajo la caja de la clave pública. Es la clave de Checkpoint: no hay que generar ninguna en tu PC.</p>
+            <Step n={1} title={t('keyhelp.s1.title')} hint={t('keyhelp.s1.hint')}>
+              <p className="muted">{rich('keyhelp.s1.text', { copy: t('common.copy') })}</p>
             </Step>
-            <Step n={2} title="Pégala en el dispositivo remoto" hint="En cada dispositivo al que se conecta Checkpoint. Elige su sistema.">
-              <Tabs label="Sistema del dispositivo remoto" idBase="ks-sys" items={SYSTEMS} value={sys} onChange={setSys} />
-              {sys === 'Linux' && <Tabs label="Distribución Linux" idBase="ks-distro" items={DISTROS} value={distro} onChange={setDistro} small />}
+            <Step n={2} title={t('keyhelp.s2.title')} hint={t('keyhelp.s2.hint')}>
+              <Tabs label={t('keyhelp.tabs.system')} idBase="ks-sys" items={SYSTEMS} value={sys} onChange={setSys} />
+              {sys === 'Linux' && <Tabs label={t('keyhelp.tabs.distro')} idBase="ks-distro" items={DISTROS} value={distro} onChange={setDistro} small />}
               <div role="tabpanel" id={sys === 'Linux' ? 'ks-distro-panel' : 'ks-sys-panel'} aria-labelledby={sys === 'Linux' ? `ks-distro-tab-${distro}` : 'ks-sys-tab-Windows'} className="keypanel">
-                {!pubKey && <p className="muted">Aún no hay clave visible: sustituye <code>{PH}</code> por la clave copiada.</p>}
+                {!pubKey && <p className="muted">{rich('keyhelp.noKey', { placeholder: PH })}</p>}
                 <ol className="keysubsteps">
-                  {steps.map(([title, hint, cmd], i) => (
-                    <li key={title} className="keysub">
-                      <h5><span className="keysub-n" aria-hidden="true">{String.fromCharCode(97 + i)}</span>{title}</h5>
-                      <p className="muted">{hint}</p>
+                  {steps.map(([id, cmd], i) => (
+                    <li key={id} className="keysub">
+                      <h5><span className="keysub-n" aria-hidden="true">{String.fromCharCode(97 + i)}</span>{t(`keyhelp.step.${id}.title`)}</h5>
+                      <p className="muted">{t(`keyhelp.step.${id}.hint`)}</p>
                       <CodeBlock text={cmd} />
                     </li>
                   ))}
                 </ol>
-                <p className="muted">En <code>authorized_keys</code> la clave ocupa una sola línea, con este aspecto:</p>
+                <p className="muted">{rich('keyhelp.oneLine')}</p>
                 <CodeBlock text="ssh-ed25519 AAAAC3Nza...XXXX checkpoint" />
-                {sys === 'Windows' && <p className="muted">Deja el shell por defecto (cmd.exe) y usa un usuario local.</p>}
+                {sys === 'Windows' && <p className="muted">{t('keyhelp.windowsNote')}</p>}
               </div>
             </Step>
-            <Step n={3} title="Comprueba la conexión" hint="En esta web.">
-              <p className="muted">En la tarjeta del dispositivo, pulsa <strong>Probar conexión</strong>. Debe responder <code>conexión OK</code>. La primera vez guarda la huella del dispositivo.</p>
+            <Step n={3} title={t('keyhelp.s3.title')} hint={t('keyhelp.s1.hint')}>
+              <p className="muted">{rich('keyhelp.s3.text', { test: t('device.test'), ok: t('err.transport.connection_ok') })}</p>
             </Step>
           </ol>
-          <div className="alert warn">Pega solo la clave pública (una línea que empieza por <code>ssh-ed25519</code>). NUNCA una clave privada.</div>
+          <div className="alert warn">{rich('keyhelp.warn')}</div>
         </div>
       )}
     </div>
@@ -146,13 +148,14 @@ function KeyHelp({ pubKey, children }) {
 }
 
 export default function PublicKey() {
+  const { t, rich } = useI18n();
   const [key, setKey] = useState('');
-  const [err, setErr] = useState('');
+  const [err, setErr] = useState(null); // error de la API (se traduce al pintar)
   const [copied, setCopied] = useState(false);
   const area = useRef(null);
 
   useEffect(() => {
-    api('/api/ssh/public-key').then((r) => setKey(r.public_key)).catch((e) => setErr(e.message));
+    api('/api/ssh/public-key').then((r) => setKey(r.public_key)).catch((e) => setErr(e));
   }, []);
 
   const copy = async () => {
@@ -163,17 +166,17 @@ export default function PublicKey() {
 
   return (
     <details className="card pubkey">
-      <summary>Clave pública SSH</summary>
+      <summary>{t('keyhelp.summary')}</summary>
       <KeyHelp pubKey={key}>
-        <p className="muted">Cópiala y añádela a <code>authorized_keys</code> de cada dispositivo. Pulsa <strong>?</strong> para ver los pasos.</p>
+        <p className="muted">{rich('keyhelp.intro')}</p>
       </KeyHelp>
-      {err && <div className="alert error">{err}</div>}
+      {err && <div className="alert error">{errText(err)}</div>}
       {key && (
         <>
-          <label htmlFor="pubkey-text" className="sr-only">Clave pública SSH</label>
+          <label htmlFor="pubkey-text" className="sr-only">{t('keyhelp.summary')}</label>
           <textarea id="pubkey-text" ref={area} readOnly rows={3} value={key} onFocus={(e) => e.target.select()} />
           <div className="row">
-            <button type="button" className="btn" onClick={copy}>{copied ? 'Copiada' : 'Copiar'}</button>
+            <button type="button" className="btn" onClick={copy}>{copied ? t('keyhelp.copied') : t('common.copy')}</button>
           </div>
         </>
       )}

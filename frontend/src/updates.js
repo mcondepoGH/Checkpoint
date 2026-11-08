@@ -16,8 +16,9 @@ export function safeUrl(u) {
   return typeof u === 'string' && /^https:\/\//i.test(u) ? u : null;
 }
 
-export const CHANNEL_OPTIONS = [{ value: 'stable', label: 'Estable' }, { value: 'beta', label: 'Pruebas' }];
-export const CHANNEL_HELP = 'Estable: solo versiones publicadas como definitivas. Pruebas: incluye también versiones preliminares, que pueden fallar.';
+// `label` y CHANNEL_HELP son claves del catálogo (se traducen al pintar); `value` es el valor estable del backend.
+export const CHANNEL_OPTIONS = [{ value: 'stable', label: 'updates.channel.stable' }, { value: 'beta', label: 'updates.channel.beta' }];
+export const CHANNEL_HELP = 'updates.channel.help';
 
 export function channelOf(info) {
   return info && info.canal === 'beta' ? 'beta' : 'stable';
@@ -34,10 +35,11 @@ export function installedVersion(info) {
   return v && v !== 'desconocida' ? v : '';
 }
 
-export function updateSummary(info) {
+// Resumen del estado de la comprobación, traducido con `t`.
+export function updateSummary(info, t) {
   if (!info) return '';
-  if (info.habilitado === false) return 'Comprobación desactivada: no se hace ninguna petición a internet.';
-  if (info.hay_actualizacion) return `Hay una versión nueva${isPrerelease(info) ? ' preliminar' : ''}: ${info.ultima} (instalada: ${info.actual}).`;
-  if (info.ultima) return `Estás al día (versión ${info.actual}).`;
-  return `Versión instalada: ${info.actual}. Aún no hay datos de la última versión.`;
+  if (info.habilitado === false) return t('updates.summary.disabled');
+  if (info.hay_actualizacion) return t(isPrerelease(info) ? 'updates.summary.newerPre' : 'updates.summary.newer', { latest: info.ultima, current: info.actual });
+  if (info.ultima) return t('updates.summary.upToDate', { current: info.actual });
+  return t('updates.summary.noData', { current: info.actual });
 }

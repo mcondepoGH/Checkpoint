@@ -2,34 +2,42 @@ import React, { useId } from 'react';
 import Field from './Field.jsx';
 import { LOCAL_DOCKER_MSG, LOCAL_HELP, LOCAL_LABEL, NAME_HINT, NAME_MAX, OS_OPTIONS, localPatch } from '../draft.js';
 import IdNote from './IdNote.jsx';
+import { fieldErrorText } from '../errors.js';
+import { errText, useI18n } from '../useI18n.js';
 
 // `runtime` ('docker' | 'native') y `platform` vienen de /api/config. «Este equipo» solo se ofrece en modo nativo.
+// Resultado de «Probar conexión»/«Comprobar carpeta»: con varias carpetas, una línea por ruta (cada una con su code si lo hay).
+// Si se guardó una host key nueva (`first_use`), se añade el aviso: « (…)» tras un OK y « […]» tras un fallo.
+const firstUse = (test, t) => (test.first_use ? (test.ok ? ` (${t('err.bootstrap.first_use')})` : ` [${t('err.bootstrap.first_use')}]`) : '');
+const testText = (test, t) => (test.results ? test.results.map((r) => `${r.path}: ${errText(r)}`).join('\n') : errText(test) + firstUse(test, t));
+
 export default function DeviceCard({ dev, errors, localError, localFlagError, canLocal, runtime, platform, test, idText, renamed, onChange, onTest, onRemove }) {
+  const { t } = useI18n();
   const set = (k) => (e) => onChange({ [k]: e.target.value });
   const descId = useId();
-  const title = dev.name || 'Dispositivo nuevo';
+  const title = dev.name || t('device.new');
   return (
     <fieldset className="card cfg-card">
       <legend className="cfg-title">{title}</legend>
-      <Field label="Nombre" hint={NAME_HINT} error={localError || errors.name || errors['']}>
-        {(p) => <input {...p} value={dev.name} onChange={set('name')} maxLength={NAME_MAX} placeholder="p. ej. Mi PC (salón)" autoComplete="off" spellCheck="false" />}
+      <Field label={t('game.name')} hint={t(NAME_HINT, { max: NAME_MAX })} error={localError || errors.name || errors['']}>
+        {(p) => <input {...p} value={dev.name} onChange={set('name')} maxLength={NAME_MAX} placeholder={t('device.namePh')} autoComplete="off" spellCheck="false" />}
       </Field>
       {(canLocal || dev.local) && runtime !== 'docker' && (
         <div className="local-opt">
           <label className="check">
             <input type="checkbox" checked={dev.local} aria-describedby={`${descId}-local`} aria-invalid={localFlagError || errors.local ? true : undefined}
               onChange={(e) => onChange(localPatch(e.target.checked, platform))} />
-            <span>{LOCAL_LABEL}</span>
+            <span>{t(LOCAL_LABEL)}</span>
           </label>
-          <small id={`${descId}-local`} className="muted">{LOCAL_HELP}</small>
+          <small id={`${descId}-local`} className="muted">{t(LOCAL_HELP)}</small>
         </div>
       )}
-      {dev.local && runtime === 'docker' && <div className="alert error" role="alert">{LOCAL_DOCKER_MSG}.</div>}
+      {dev.local && runtime === 'docker' && <div className="alert error" role="alert">{errText(LOCAL_DOCKER_MSG)}.</div>}
       {dev.local && runtime !== 'docker' && (localFlagError || errors.local) && (
-        <div className="alert error" role="alert">{localFlagError || errors.local}</div>
+        <div className="alert error" role="alert">{fieldErrorText(localFlagError || errors.local, t)}</div>
       )}
       {dev.local ? (
-        <Field label="Sistema operativo" hint="Se detecta del equipo; cámbialo solo si no coincide" error={errors.os}>
+        <Field label={t('device.os')} hint={t('device.osHint')} error={errors.os}>
           {(p) => (
             <select {...p} value={dev.os} onChange={set('os')}>
               {OS_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -39,18 +47,18 @@ export default function DeviceCard({ dev, errors, localError, localFlagError, ca
       ) : (
         <>
           <div className="two">
-            <Field label="Host / IP" error={errors.host}>
+            <Field label={t('device.host')} error={errors.host}>
               {(p) => <input {...p} value={dev.host} onChange={set('host')} autoComplete="off" spellCheck="false" />}
             </Field>
-            <Field label="Puerto" error={errors.port}>
+            <Field label={t('device.port')} error={errors.port}>
               {(p) => <input {...p} type="number" inputMode="numeric" min="1" max="65535" value={dev.port} onChange={set('port')} />}
             </Field>
           </div>
           <div className="two">
-            <Field label="Usuario" error={errors.user}>
+            <Field label={t('device.user')} error={errors.user}>
               {(p) => <input {...p} value={dev.user} onChange={set('user')} autoComplete="off" spellCheck="false" />}
             </Field>
-            <Field label="Sistema operativo" error={errors.os}>
+            <Field label={t('device.os')} error={errors.os}>
               {(p) => (
                 <select {...p} value={dev.os} onChange={set('os')}>
                   {OS_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
@@ -62,14 +70,14 @@ export default function DeviceCard({ dev, errors, localError, localFlagError, ca
       )}
       <IdNote id={idText} isNew={!dev.id} renamed={renamed} />
       <div role="status" aria-live="polite">
-        {test && !test.busy && <div className={`alert ${test.ok ? 'ok' : 'error'}`} style={{ whiteSpace: 'pre-line' }}>{test.message}</div>}
+        {test && !test.busy && <div className={`alert ${test.ok ? 'ok' : 'error'}`} style={{ whiteSpace: 'pre-line' }}>{testText(test, t)}</div>}
       </div>
       <div className="row">
         <button type="button" className="btn" disabled={test?.busy} onClick={onTest}>
-          {test?.busy ? (dev.local ? 'Comprobando…' : 'Probando…') : (dev.local ? 'Comprobar carpeta' : 'Probar conexión')}
+          {test?.busy ? (dev.local ? t('device.checking') : t('device.testing')) : (dev.local ? t('device.checkFolder') : t('device.test'))}
         </button>
         <span className="spacer" />
-        <button type="button" className="btn danger" onClick={onRemove} aria-label={`Eliminar dispositivo ${title}`}>Eliminar</button>
+        <button type="button" className="btn danger" onClick={onRemove} aria-label={t('device.deleteAria', { title })}>{t('common.delete')}</button>
       </div>
     </fieldset>
   );

@@ -16,7 +16,9 @@ from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
 from . import settings
-from .config import DEFAULT_MAX_VERSIONS, Config, atomic_write, load_yaml, validate_config
+from .apierror import error_body
+from .config import (DEFAULT_MAX_VERSIONS, Config, atomic_write, describe, errors_to_causes, load_yaml, validate_config,
+                     yaml_error)
 
 MAX_BACKUPS = 10
 BACKUP_PREFIX = "config.yaml.bak-"
@@ -25,16 +27,22 @@ BACKUP_RE = re.compile(r"^config\.yaml\.bak-(\d{4})-(\d{2})-(\d{2})_(\d{2})(\d{2
 
 class Conflict(Exception):
     """El fichero cambió desde la versión base que envió la UI."""
+    code = "err.configstore.conflict"
+    params: dict = {}
 
     def __init__(self, current_version):
-        super().__init__("config.yaml cambió desde que lo cargaste")
+        super().__init__(self.code)
         self.current_version = current_version
 
 
 class InvalidConfig(ValueError):
-    def __init__(self, errors: Dict[str, str]):
-        super().__init__("; ".join(f"{k}: {v}" if k else v for k, v in errors.items()))
+    """Borrador/copia no válidos; `errors` = {ruta: {code, params}} (la ruta "" = error general)."""
+    code = "err.configstore.invalid"
+
+    def __init__(self, errors: Dict[str, dict]):
+        super().__init__("; ".join(f"{k}: {describe(v)}" if k else describe(v) for k, v in errors.items()))
         self.errors = errors
+        self.params = {"causes": errors_to_causes(errors)}
 
 
 def version_of(data: bytes) -> str:
@@ -50,20 +58,22 @@ class Snapshot:
     version: str
     text: str
     cfg: Optional[Config]
-    error: Optional[str]
+    error: Optional[dict]  # {code, params} (ver parse_text)
 
     def as_dict(self) -> dict:
         return (self.cfg or Config()).model_dump(exclude_none=True)
 
 
 def parse_text(text: str):
+    """(Config, None) o (None, {code, params}). Error de YAML = el de `yaml_error`; de validación =
+    `err.configstore.invalid` con `params.causes` = [{path, code, params}]."""
     try:
         data = load_yaml(text)
     except yaml.YAMLError as e:
-        return None, f"YAML mal formado: {getattr(e, 'problem', None) or 'error de sintaxis'}"
+        return None, yaml_error(e).body()
     cfg, errors = validate_config(data)
     if errors:
-        return None, "; ".join(f"{k}: {v}" if k else v for k, v in errors.items())
+        return None, error_body("err.configstore.invalid", causes=errors_to_causes(errors))
     return cfg, None
 
 
@@ -217,7 +227,7 @@ class ConfigStore:
         text = self.read_backup(name)
         cfg, err = parse_text(text)
         if err:
-            raise InvalidConfig({"": f"la copia no es válida: {err}"})
+            raise InvalidConfig({"": error_body("err.configstore.backup_invalid", cause=err)})
         with self._lock:
             return self._write(base_version, text)
 

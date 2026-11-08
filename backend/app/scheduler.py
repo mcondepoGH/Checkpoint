@@ -14,6 +14,7 @@ from typing import Callable, Optional
 from starlette.concurrency import run_in_threadpool
 
 from . import history, settings
+from .apierror import describe_code, error_body
 from .config import ON_CONFLICT
 from .sync import SyncAbort, run_sync
 
@@ -45,27 +46,27 @@ def parse_iso(s) -> Optional[datetime]:
 
 
 def validate_settings(body: dict, current: dict) -> dict:
-    """Mezcla `body` sobre `current` y valida. Lanza ValueError con {campo: mensaje} en args[0]."""
+    """Mezcla `body` sobre `current` y valida. Lanza ValueError con {campo: {code, params}} en args[0] (la UI traduce)."""
     out, errors = dict(current), {}
     for k in ("enabled", "run_on_start"):
         if k in body:
             if isinstance(body[k], bool):
                 out[k] = body[k]
             else:
-                errors[k] = "debe ser verdadero o falso"
+                errors[k] = error_body("err.scheduler.bool_required")
     if "interval_hours" in body:
         v = body["interval_hours"]
         if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v):
-            errors["interval_hours"] = "debe ser un número"
+            errors["interval_hours"] = error_body("err.scheduler.interval_not_number")
         elif not MIN_HOURS <= v <= MAX_HOURS:
-            errors["interval_hours"] = f"debe estar entre {MIN_HOURS:g} y {MAX_HOURS:g} horas"
+            errors["interval_hours"] = error_body("err.scheduler.interval_range", min=MIN_HOURS, max=MAX_HOURS)
         else:
             out["interval_hours"] = float(v)
     if "on_conflict" in body:
         if body["on_conflict"] in ON_CONFLICT:
             out["on_conflict"] = body["on_conflict"]
         else:
-            errors["on_conflict"] = "debe ser 'skip' (omitir) o 'newest' (gana el más reciente)"
+            errors["on_conflict"] = error_body("err.scheduler.conflict_policy_invalid")
     if errors:
         raise ValueError(errors)
     return out
@@ -148,43 +149,56 @@ class Scheduler:
     def run_cycle(self) -> dict:
         """Sincroniza todos los juegos (modo normal), uno tras otro. Salta los que ya están en curso."""
         cfg = self.get_cfg()
-        res, msgs, det = {}, [], {}
-        for game in cfg.games:  # `game` es el id; en mensajes y logs se muestra el nombre
+        res, items, det = {}, [], {}
+        for game in cfg.games:  # `game` es el id; en logs se muestra el nombre
             name = cfg.games[game].name
             if self.busy(game):
                 res[game] = "skipped"
-                msgs.append(f"{name}: omitido (ya en curso)")
-                det[game] = {"result": "skipped", "message": "ya en curso", "name": name}
+                items.append({"path": name, "code": "err.scheduler.skipped_busy", "params": {}})
+                det[game] = {"result": "skipped", "code": "err.scheduler.busy", "params": {}, "name": name}
                 log.info("auto-sync juego=%s resultado=skipped (ya en curso)", name)
                 continue
             self.current = game
-            m = ""
+            m, c = "", None  # m: texto técnico para logs; c: {code, params} para UI e historial
             policy = cfg.games[game].on_conflict or self.cfg.get("on_conflict", "skip")
             try:
                 st = self.runner(cfg, game, False, log=lambda m: None, conflict_policy=policy)
                 res[game] = st["result"]
+                sc = {"code": st["code"], "params": st.get("params") or {}} if st.get("code") else None
                 if st["result"] == "conflict":
                     m = "omitido por conflicto: " + st.get("message", "")
-                    msgs.append(f"{name}: {m}")
+                    c = ({"code": "err.scheduler.skipped_conflict", "params": {"cause": sc}} if sc else None)
                 elif st["result"] != "ok":
-                    m = st.get("message", "")
-                    msgs.append(f"{name}: {m}")
+                    m, c = st.get("message", ""), sc
+                if not c and m:
+                    c = {"message": m}  # sin code (runner ajeno): texto tal cual
             except SyncAbort as e:
-                res[game], m = "aborted", str(e)
-                msgs.append(f"{name}: {e}")
+                res[game], m, c = "aborted", str(e), {"code": e.code, "params": e.params}
             except Exception as e:  # un juego roto no frena a los demás
                 res[game], m = "error", f"{type(e).__name__}: {e}"
-                msgs.append(f"{name}: {m}")
+                c = {"code": "err.sync.unexpected", "params": {"type": type(e).__name__, "detail": str(e)}}
             finally:
                 self.current = None
-            det[game] = {"result": res[game], "message": history.short(m), "name": name}
+            if c and "code" in c:
+                items.append({"path": name, **c})
+                det[game] = {"result": res[game], "name": name, **c}
+            else:
+                if c:
+                    items.append({"path": name, "message": c["message"]})
+                det[game] = {"result": res[game], "message": history.short(m), "name": name}
             (log.error if res[game] == "error" else log.info)(
                 "auto-sync juego=%s resultado=%s%s", name, res[game], f" ({history.short(m, 120)})" if m else "")
         vals = set(res.values())
         result = ("error" if "error" in vals else "aborted" if "aborted" in vals
                   else "partial" if "partial" in vals else "conflict" if "conflict" in vals
                   else "skipped" if vals == {"skipped"} else "ok")
-        return {"result": result, "games": res, "message": "; ".join(msgs), "details": det}
+        out = {"result": result, "games": res, "message": "", "details": det}
+        coded = [i for i in items if "code" in i]
+        if coded and len(coded) == len(items):
+            out.update(code="err.scheduler.summary", params={"causes": items})
+        elif items:  # alguno sin code (runner ajeno): texto técnico unido, como antes
+            out["message"] = "; ".join(f"{i['path']}: {i.get('message') or describe_code(i['code'], i['params'])}" for i in items)
+        return out
 
     async def _cycle(self, trigger: str = "scheduled"):
         if self.running:
@@ -195,20 +209,25 @@ class Scheduler:
         try:
             status = await run_in_threadpool(self.run_cycle)
         except Exception as e:
-            status = {"result": "error", "games": {}, "message": f"{type(e).__name__}: {e}"}
+            status = {"result": "error", "games": {}, "message": "", "code": "err.sync.unexpected",
+                      "params": {"type": type(e).__name__, "detail": str(e)}}
         finally:
             self.running = False
         dur = time.monotonic() - t0
+        if status.get("params"):
+            status["params"] = history.clean_params(status["params"])  # last_status se persiste: sin secretos
         details = status.pop("details", None) or {g: {"result": r, "message": ""} for g, r in status["games"].items()}
         try:
-            history.append(history.make_entry(started, dur, trigger, status["result"], details, status["message"]),
+            history.append(history.make_entry(started, dur, trigger, status["result"], details, status["message"],
+                               status.get("code"), status.get("params")),
                            now=self.clock())
         except Exception as e:  # el registro nunca rompe el ciclo
             log.error("auto-sync no se pudo guardar el registro: %s", type(e).__name__)
         (log.error if status["result"] == "error" else log.info)(
             "auto-sync ciclo terminado resultado=%s duracion=%.1fs juegos=%s%s", status["result"], dur,
             ",".join(f"{g}={r}" for g, r in status["games"].items()),
-            f" mensaje={history.short(status['message'], 200)}" if status["message"] else "")
+            f" mensaje={history.short(status['message'] or describe_code(status['code'], status['params']), 200)}"
+            if status["message"] or status.get("code") else "")
         with self._lock:
             self.last_run = self.clock()
             self.last_status = status

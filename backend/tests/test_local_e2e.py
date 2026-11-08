@@ -112,7 +112,7 @@ def test_ya_sincronizado_no_hace_nada(env):
     env.seed()
     before = (env.pc_dir / "s.sav").stat().st_mtime_ns
     st = env.sync()
-    assert st["result"] == "ok" and "sincronizado" in st["message"]
+    assert st["result"] == "ok" and st["code"] in ("err.sync.done", "err.sync.already_synced")
     assert (env.pc_dir / "s.sav").stat().st_mtime_ns == before and count_versions(env.data, "g") == 0
 
 
@@ -214,7 +214,7 @@ def test_local_vaciado_nunca_gana(env):
 
 def test_todo_vacio(env):
     st = env.sync()
-    assert st["result"] == "ok" and "vacío" in st["message"]
+    assert st["result"] == "ok" and st["code"] == "err.sync.nothing_to_sync"
 
 
 # ---- ficheros, subcarpetas, borrados ----
@@ -240,7 +240,7 @@ def test_borrado_de_fichero_en_local_se_propaga_sin_resucitar(env):
     st = env.sync()
     assert st["result"] == "ok" and st["winner"] == env.pc
     assert relfiles(env.laptop_dir) == relfiles(env.hub) == {"s.sav"}
-    assert env.sync()["message"] == "ya sincronizado"
+    assert env.sync()["code"] == "err.sync.already_synced"
 
 
 def test_borrado_en_remoto_se_propaga_al_local(env):
@@ -304,7 +304,7 @@ def test_proceso_abierto_en_local_aborta_antes_de_tocar(env):
     env.seed()
     env.write(env.laptop_dir, "s.sav", "lap-new", 3000)
     st = env.sync(pc=LocalDeviceTransport(run=fake_run(lambda: True)))
-    assert st["result"] == "aborted" and "juego.bin está abierto en PC" in st["message"]
+    assert st["result"] == "aborted" and st["code"] == "err.sync.process_open" and st["params"] == {"process": "juego.bin", "device": "PC"}
     assert read(env.pc_dir) == "base" and read(env.hub) == "base" and count_versions(env.data, "g") == 0
 
 
@@ -340,7 +340,7 @@ def test_error_al_comprobar_proceso_aborta(env):
     def run(args, **kw):
         return subprocess.CompletedProcess(args, 2, b"", b"boom")
     st = env.sync(pc=LocalDeviceTransport(run=run))
-    assert st["result"] == "aborted" and "no se pudo comprobar el proceso en PC" in st["message"]
+    assert st["result"] == "aborted" and st["code"] == "err.sync.process_check_failed" and st["params"]["device"] == "PC"
 
 
 def test_sin_proceso_configurado_no_se_comprueba(tmp_path):
@@ -394,7 +394,7 @@ def test_idempotente_varias_syncs(env):
     n = count_versions(env.data, "g")
     for _ in range(3):
         st = env.sync()
-        assert st["result"] == "ok" and st["message"] == "ya sincronizado"
+        assert st["result"] == "ok" and st["code"] == "err.sync.already_synced"
     assert count_versions(env.data, "g") == n
 
 
@@ -403,7 +403,7 @@ def test_lock_impide_solapamiento(env):
     env.seed()
     from app.sync import _game_lock
     with _game_lock(env.data, "g"):
-        with pytest.raises(SyncAbort, match="en curso"):
+        with pytest.raises(SyncAbort, match="in_progress"):
             env.sync()
     assert env.sync()["result"] == "ok"
 
@@ -425,7 +425,7 @@ def test_dos_syncs_concurrentes_solo_una_corre(env):
     t = threading.Thread(target=a)
     t.start()
     assert entered.wait(10)
-    with pytest.raises(SyncAbort, match="en curso"):
+    with pytest.raises(SyncAbort, match="in_progress"):
         env.sync()
     gate.set()
     t.join(20)
@@ -439,7 +439,7 @@ def test_remoto_offline_local_online_sube_al_hub_y_versiona(env):
     st = env.sync(laptop=LocalTransport(env.laptop_root, down=True))
     assert st["result"] == "ok" and st["offline"] == [env.lap] and st["winner"] == env.pc
     assert read(env.hub) == "pc-new" and read(env.laptop_dir) == "base"
-    assert "offline: pendiente" in st["message"]
+    assert st["code"] == "err.sync.done_pending" and st["params"]["offline"]
     v = list_versions(env.data, "g")
     assert [s["source"] for s in v[0]["sources"]] == ["hub"]  # el hub anterior queda versionado
 
@@ -465,7 +465,7 @@ def test_remoto_offline_conflicto_contra_hub(env):
 def test_remoto_offline_local_sin_cambios_no_hace_nada(env):
     env.seed()
     st = env.sync(laptop=LocalTransport(env.laptop_root, down=True))
-    assert st["result"] == "ok" and st["message"].startswith("ya sincronizado")
+    assert st["result"] == "ok" and st["code"] == "err.sync.already_synced"
 
 
 def test_local_sin_remoto_ni_hub_primer_arranque_un_solo_dispositivo(env):
@@ -549,7 +549,7 @@ def test_restaurar_version_y_sincronizar_propaga_al_local(env):
     env.sync()
     v = list_versions(env.data, "g")[0]
     msg = restore_version(env.cfg, "g", v["version"], env.pc, env.data)
-    assert "restaurado" in msg and read(env.hub) == "base"
+    assert msg["code"] == "err.sync.restored" and read(env.hub) == "base"
     st = env.sync()
     assert st["result"] == "ok" and st["winner"] == "hub"
     assert read(env.pc_dir) == read(env.laptop_dir) == "base"
@@ -582,7 +582,7 @@ def test_ruta_local_inexistente_sin_permiso_error_claro_y_nada_cambia(env):
         st = env.sync()
     finally:
         env.pc_dir.chmod(0o755)
-    assert st["result"] in ("error", "aborted") and "permiso" in st["message"]
+    assert st["result"] in ("error", "aborted") and st["code"] == "err.transport.no_read_permission"
     assert read(env.hub) == "base" and read(env.laptop_dir) == "lap-new"
 
 

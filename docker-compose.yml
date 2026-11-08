@@ -10,6 +10,9 @@ services:
       # Obligatorias (definidas en .env). Las opcionales se añaden aquí; ver README.
       CHECKPOINT_USER: ${CHECKPOINT_USER:?define CHECKPOINT_USER en .env}
       CHECKPOINT_PASSWORD: ${CHECKPOINT_PASSWORD:?define CHECKPOINT_PASSWORD en .env}
+      # Opcional: idioma por defecto de la interfaz ("es" o "en"). Sin marcar = español. Quien ya eligió idioma en su
+      # navegador (selector de la cabecera) conserva su elección; "Automático" sigue el idioma del navegador.
+      # CHECKPOINT_LANG: ${CHECKPOINT_LANG:-es}
     volumes:
       - ./config:/config
       - ./keys:/keys   # clave SSH (se genera sola) y known_hosts

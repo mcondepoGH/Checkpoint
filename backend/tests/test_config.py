@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.config import MISSING_NAME_MSG, load_config, name_error, normalize_path, parse_config, validate_config
+from app.config import load_config, name_error, normalize_path, parse_config, validate_config
 from fakes import save_config
 
 BASE = {
@@ -79,9 +79,9 @@ def test_name_is_required_with_clear_error(section, key):
     with pytest.raises(ValidationError, match="name"):
         parse_config(d)
     cfg, e = validate_config(d)
-    assert cfg is None and e[f"{section}.{key}.name"] == MISSING_NAME_MSG
+    assert cfg is None and e[f"{section}.{key}.name"] == {"code": "err.config.name_missing", "params": {}}
     d[section][key]["name"] = None
-    assert validate_config(d)[1][f"{section}.{key}.name"] == MISSING_NAME_MSG
+    assert validate_config(d)[1][f"{section}.{key}.name"] == {"code": "err.config.name_missing", "params": {}}
 
 
 def test_versions_limit_global_override_and_zero():
@@ -96,9 +96,11 @@ def test_versions_limit_global_override_and_zero():
 def test_versions_limit_error_messages():
     from app.config import validate_config
     _, e = validate_config(mod(max_versions=-1, games__g__keep_versions=2000))
-    assert "entre 0 y 1000" in e["max_versions"] and "entre 0 y 1000" in e["games.g.keep_versions"]
+    ok = {"code": "err.config.versions_range", "params": {"max": 1000}}
+    assert e["max_versions"] == ok and e["games.g.keep_versions"] == ok
     _, e = validate_config(mod(max_versions=True, games__g__keep_versions=1.5))
-    assert e["max_versions"] == "debe ser un número entero" and e["games.g.keep_versions"] == "debe ser un número entero"
+    ok = {"code": "err.config.int", "params": {}}
+    assert e["max_versions"] == ok and e["games.g.keep_versions"] == ok
 
 
 def test_save_roundtrip_without_override(tmp_path):

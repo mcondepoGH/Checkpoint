@@ -4,22 +4,25 @@ import EmptyState from '../components/EmptyState.jsx';
 import { labelOf } from '../names.js';
 import { parseRun } from '../format.js';
 import ConflictDialog from '../components/ConflictDialog.jsx';
+import { errText, useI18n } from '../useI18n.js';
 
-const RES_TXT = { conflict: 'Conflicto', partial: 'Parcial', 'dry-run': 'Simulación (dry-run)' };
+// Estados con texto propio en el distintivo: clave `sync.state.<resultado>`; otro resultado se muestra tal cual.
+const RES_KEYS = ['conflict', 'partial', 'dry-run'];
 
 // Fecha ISO -> {time, date}; null si no se puede interpretar.
-function splitWhen(iso) {
+function splitWhen(iso, locale) {
   const d = iso ? new Date(iso) : null;
   if (!d || Number.isNaN(d.getTime())) return null;
   return {
-    time: d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-    date: d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }),
+    time: d.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    date: d.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' }),
   };
 }
 
 function LastRun({ s, devName }) {
-  if (!s) return <EmptyState variant="inline" icon="⏳" title="Sin ejecuciones" text="Aún no se ha sincronizado este juego." />;
-  const when = splitWhen(s.finished);
+  const { t, locale } = useI18n();
+  if (!s) return <EmptyState variant="inline" icon="⏳" title={t('sync.none.title')} text={t('sync.none.text')} />;
+  const when = splitWhen(s.finished, locale);
   const parsed = parseRun(s);
   // winner/targets/offline del estado son ids de dispositivo (los mensajes ya llevan nombres)
   const winner = parsed.winner && devName(parsed.winner);
@@ -28,25 +31,26 @@ function LastRun({ s, devName }) {
   return (
     <dl className="lastrun">
       <div className="lr-row">
-        <dt>Última sync</dt>
+        <dt>{t('sync.last')}</dt>
         <dd>{when ? <><strong className="lr-time">{when.time}</strong><span className="lr-date">{when.date}</span></>
                   : <span>{s.finished?.replace('T', ' ') || '—'}</span>}
-          {s.dry_run && <span className="lr-tag">Simulación (dry-run)</span>}</dd>
+          {s.dry_run && <span className="lr-tag">{t('common.dryRun')}</span>}</dd>
       </div>
-      {s.result === 'conflict' && <div className="lr-row"><dt>Conflicto</dt><dd className="lr-msg">{s.message}</dd></div>}
-      {s.result === 'partial' && <div className="lr-row"><dt>Parcial</dt><dd className="lr-msg">{s.message}</dd></div>}
-      {s.offline?.length > 0 && <div className="lr-row"><dt>Offline</dt><dd className="pills">{s.offline.map((d) => <span className="pill" key={d}>{devName(d)}</span>)}</dd></div>}
-      {winner && <div className="lr-row"><dt>Ganador</dt><dd><span className="pill win">{winner}</span></dd></div>}
+      {s.result === 'conflict' && <div className="lr-row"><dt>{t('sync.conflict')}</dt><dd className="lr-msg">{errText(s)}</dd></div>}
+      {s.result === 'partial' && <div className="lr-row"><dt>{t('sync.partial')}</dt><dd className="lr-msg">{errText(s)}</dd></div>}
+      {s.offline?.length > 0 && <div className="lr-row"><dt>{t('sync.offline')}</dt><dd className="pills">{s.offline.map((d) => <span className="pill" key={d}>{devName(d)}</span>)}</dd></div>}
+      {winner && <div className="lr-row"><dt>{t('sync.winner')}</dt><dd><span className="pill win">{winner}</span></dd></div>}
       {list.length > 0 && (
-        <div className="lr-row"><dt>{planned ? 'Destinos' : 'Actualizados'}</dt>
+        <div className="lr-row"><dt>{planned ? t('sync.targets') : t('sync.updated')}</dt>
           <dd className="pills">{list.map((d) => <span className="pill" key={d}>{d}</span>)}</dd></div>
       )}
-      {!structured && s.message && <div className="lr-row"><dt>Detalle</dt><dd className="lr-msg">{s.message}</dd></div>}
+      {!structured && (s.code || s.message) && <div className="lr-row"><dt>{t('sync.detail')}</dt><dd className="lr-msg">{errText(s)}</dd></div>}
     </dl>
   );
 }
 
 export default function Sync({ config, onGoSettings }) {
+  const { t } = useI18n(); // re-renderiza al cambiar de idioma
   // Las claves de config.games/status son ids internos; en pantalla siempre el nombre.
   const games = Object.keys(config.games);
   const devName = (id) => labelOf(config.devices, id);
@@ -54,7 +58,7 @@ export default function Sync({ config, onGoSettings }) {
   const [dry, setDry] = useState({});
   const [status, setStatus] = useState({});
   const [active, setActive] = useState(null); // {game, lines, done}
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null); // error de la API (se traduce al pintar)
   const [conflict, setConflict] = useState(null); // {game, conflict}
   const [resolving, setResolving] = useState(false);
   const esRef = useRef(null);
@@ -66,7 +70,7 @@ export default function Sync({ config, onGoSettings }) {
 
   // resolution/expect: solo al resolver un conflicto desde el popup.
   const run = async (game, resolution, expect) => {
-    setError('');
+    setError(null);
     try {
       const body = { dry_run: !!dry[game] };
       if (resolution) { body.resolution = resolution; body.expect = expect; }
@@ -85,10 +89,10 @@ export default function Sync({ config, onGoSettings }) {
         } catch { setConflict(null); }
       });
       es.onerror = () => { es.close(); setResolving(false); setActive((a) => a && { ...a, done: true }); loadStatus(); };
-    } catch (e) { setError(e.message); }
+    } catch (e) { setError(e); }
   };
 
-  const badge = (s) => s && <span className={`badge ${s.result}`}>{RES_TXT[s.result] || s.result}</span>;
+  const badge = (s) => s && <span className={`badge ${s.result}`}>{RES_KEYS.includes(s.result) ? t(`sync.state.${s.result}`) : s.result}</span>;
   const openConflict = (g) => {
     const c = status[g]?.conflict;
     if (c) setConflict({ game: g, conflict: c });
@@ -102,12 +106,12 @@ export default function Sync({ config, onGoSettings }) {
 
   return (
     <section className={games.length === 0 ? 'fill' : undefined}>
-      <h2>Sincronizar</h2>
-      {error && <div className="alert error">{error}</div>}
+      <h2>{t('sync.title')}</h2>
+      {error && <div className="alert error">{errText(error)}</div>}
       {games.length === 0 && (
-        <EmptyState variant="page" icon="🎮" title="Sin juegos configurados"
-          text="Añade un juego en Configuración para poder sincronizar sus partidas guardadas entre dispositivos."
-          action={onGoSettings && <button type="button" className="btn primary" onClick={onGoSettings}>Ir a Configuración</button>} />
+        <EmptyState variant="page" icon="🎮" title={t('sync.noGames.title')}
+          text={t('sync.noGames.text')}
+          action={onGoSettings && <button type="button" className="btn primary" onClick={onGoSettings}>{t('common.goSettings')}</button>} />
       )}
       <div className="grid">
         {games.map((g) => {
@@ -115,18 +119,18 @@ export default function Sync({ config, onGoSettings }) {
           const running = active && active.game === g && !active.done;
           return (
             <div className="card" key={g}>
-              <h3 title={`ID interno: ${g}`}>{gameName(g)} {running ? <span className="badge running">en curso</span> : badge(s)}</h3>
+              <h3 title={t('sync.idTitle', { id: g })}>{gameName(g)} {running ? <span className="badge running">{t('sync.state.running')}</span> : badge(s)}</h3>
               <p className="muted">{config.games[g].devices.map(devName).join(' ⇄ ')}</p>
-              <div className={`meter ${running ? 'running' : (s?.result || '')}`} role="progressbar" aria-label={`Estado de ${gameName(g)}`}><i /></div>
+              <div className={`meter ${running ? 'running' : (s?.result || '')}`} role="progressbar" aria-label={t('sync.meterAria', { game: gameName(g) })}><i /></div>
               <LastRun s={s} devName={devName} />
-              <label className="check"><input type="checkbox" checked={!!dry[g]} onChange={(e) => setDry({ ...dry, [g]: e.target.checked })} /> Simulación (dry-run)</label>
+              <label className="check"><input type="checkbox" checked={!!dry[g]} onChange={(e) => setDry({ ...dry, [g]: e.target.checked })} /> {t('common.dryRun')}</label>
               {s?.result === 'conflict' && !running && (
                 <div className="conflict-flag" role="alert">
-                  <span><b>Conflicto:</b> dos versiones distintas, no se ha guardado nada.</span>
-                  <button type="button" className="btn" onClick={() => openConflict(g)}>Resolver</button>
+                  <span><b>{t('sync.flagLead')}</b> {t('sync.flagText')}</span>
+                  <button type="button" className="btn" onClick={() => openConflict(g)}>{t('sync.resolve')}</button>
                 </div>
               )}
-              <button className="btn primary" disabled={running} onClick={() => run(g)}>{running ? 'En curso…' : 'Sincronizar'}</button>
+              <button className="btn primary" disabled={running} onClick={() => run(g)}>{running ? t('sync.running') : t('sync.run')}</button>
             </div>
           );
         })}
@@ -137,8 +141,8 @@ export default function Sync({ config, onGoSettings }) {
       )}
       {active && (
         <div className="card logcard">
-          <h3>Log: {gameName(active.game)} {active.done ? '(terminado)' : '(en vivo)'}</h3>
-          <pre className="log" ref={logRef}>{active.lines.join('\n') || 'Esperando…'}</pre>
+          <h3>{t('sync.log.title', { game: gameName(active.game), state: active.done ? t('sync.log.done') : t('sync.log.live') })}</h3>
+          <pre className="log" ref={logRef}>{active.lines.join('\n') || t('sync.log.waiting')}</pre>
         </div>
       )}
     </section>

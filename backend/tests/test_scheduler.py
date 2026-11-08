@@ -46,7 +46,7 @@ def sched(tmp_path, monkeypatch):
     def runner(cfg, game, dry, log, **kw):  # kw: conflict_policy
         calls.append((game, dry))
         if game == "b":
-            raise SyncAbort("lock")
+            raise SyncAbort("err.sync.process_open", process="lock", device="PC")
         return {"result": "ok", "message": ""}
 
     s = Scheduler(lambda: Cfg(), lambda g: g == "c", clock=lambda: t[0], runner=runner)
@@ -145,7 +145,8 @@ def test_cycle_records_history_and_triggers(sched):
     (e,) = history.read()
     assert e["trigger"] == "startup" and e["result"] == "aborted"
     assert {g: d["result"] for g, d in e["games"].items()} == {"a": "ok", "b": "aborted", "c": "skipped"}
-    assert e["games"]["b"]["message"] == "lock" and "lock" in e["message"]
+    assert e["games"]["b"]["code"] == "err.sync.process_open" and e["games"]["b"]["params"]["process"] == "lock"
+    assert e["code"] == "err.scheduler.summary" and "lock" in json.dumps(e["params"])
     assert "details" not in sched.last_status
     asyncio.run(sched._cycle())
     assert [x["trigger"] for x in history.read()] == ["scheduled", "startup"]
