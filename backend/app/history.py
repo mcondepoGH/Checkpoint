@@ -32,8 +32,28 @@ def short(msg, n: int = MSG_LEN) -> str:
     return s if len(s) <= n else s[: n - 1] + "…"
 
 
-def make_entry(started: datetime, duration: float, trigger: str, result: str, games: dict, message: str = "") -> dict:
-    """`games`: {id del juego: {"result": ..., "message": ..., "name": ...}}. Valores desconocidos se normalizan.
+def clean_params(v, n: int = MSG_LEN):
+    """Params de un code: cadenas redactadas y truncadas, recursivo (causas anidadas). Nunca guarda secretos."""
+    if isinstance(v, str):
+        return short(v, n)
+    if isinstance(v, dict):
+        return {str(k): clean_params(x, n) for k, x in v.items()}
+    if isinstance(v, (list, tuple)):
+        return [clean_params(x, n) for x in v]
+    return v if v is None or isinstance(v, (bool, int, float)) else short(v, n)
+
+
+def _coded(d: dict, out: dict) -> dict:
+    """Si `d` trae `code`, guarda code+params (la UI traduce) y deja `message` vacío; si no, el texto (`message`)."""
+    if isinstance(d.get("code"), str) and d["code"]:
+        out["code"], out["params"], out["message"] = d["code"], clean_params(d.get("params") or {}), ""
+    return out
+
+
+def make_entry(started: datetime, duration: float, trigger: str, result: str, games: dict, message: str = "",
+               code: Optional[str] = None, params: Optional[dict] = None) -> dict:
+    """`games`: {id del juego: {"result": ..., "message": ..., "name": ..., "code"?, "params"?}}. Registros nuevos
+    llevan `code`+`params` (sin `message`); los antiguos solo `message` y se leen tal cual. Valores desconocidos se normalizan.
     Se guarda el id (clave estable) y el nombre que tenía entonces (legible aunque el juego se renombre o borre)."""
     gs = {}
     for g, d in games.items():
@@ -42,12 +62,15 @@ def make_entry(started: datetime, duration: float, trigger: str, result: str, ga
                       "message": short(d.get("message", "")) if isinstance(d, dict) else ""}
         if isinstance(d, dict) and isinstance(d.get("name"), str) and d["name"]:
             gs[str(g)]["name"] = short(d["name"], 64)
-    return {"id": uuid.uuid4().hex[:12],
+        if isinstance(d, dict):
+            _coded(d, gs[str(g)])
+    entry = {"id": uuid.uuid4().hex[:12],
             "started": started.astimezone(timezone.utc).isoformat(timespec="seconds"),
             "duration": round(max(0.0, float(duration)), 1),
             "trigger": trigger if trigger in TRIGGERS else "scheduled",
             "result": result if result in RESULTS else "error",
             "games": gs, "message": short(message)}
+    return _coded({"code": code, "params": params}, entry)
 
 
 def _valid(e) -> bool:

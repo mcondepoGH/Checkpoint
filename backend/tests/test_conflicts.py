@@ -438,7 +438,8 @@ def test_scheduler_skip_logs_conflict_in_history(env, monkeypatch):
     asyncio.run(s._cycle())
     (e,) = history.read()
     assert e["result"] == "conflict" and e["games"]["g"]["result"] == "conflict"
-    assert "omitido por conflicto" in e["games"]["g"]["message"]
+    assert e["games"]["g"]["code"] == "err.scheduler.skipped_conflict" and e["games"]["g"]["message"] == ""
+    assert e["games"]["g"]["params"]["cause"]["code"].startswith("err.sync.conflict")
     assert read(env.pc_dir, "s.sav") == "pc-change" and versions(env) == []
 
 

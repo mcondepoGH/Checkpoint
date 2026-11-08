@@ -302,7 +302,8 @@ def test_scheduler_cycle_uses_ids_and_records_names(tmp_path, monkeypatch):
     e = history.make_entry(datetime.now(timezone.utc), 1, "scheduled", "conflict", out["details"], out["message"])
     assert e["games"][gid]["name"] == "Zelda"
     busy = Scheduler(lambda: cfg, lambda g: g == gid, runner=runner).run_cycle()
-    assert busy["games"] == {gid: "skipped"} and busy["message"] == "Zelda: omitido (ya en curso)"
+    assert busy["games"] == {gid: "skipped"} and busy["code"] == "err.scheduler.summary"
+    assert busy["params"]["causes"] == [{"path": "Zelda", "code": "err.scheduler.skipped_busy", "params": {}}]
 
 
 def test_history_annotate_current_and_deleted():

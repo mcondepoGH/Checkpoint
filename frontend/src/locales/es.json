@@ -176,6 +176,16 @@
       "known_hosts_read": "no se pudo leer known_hosts: {detail}",
       "keyscan_failed": "ssh-keyscan falló: {detail}",
       "hostkey_unavailable": "no se pudo obtener la host key de {host}:{port} (¿SSH activo y accesible?)"
+    },
+    "scheduler": {
+      "bool_required": "debe ser verdadero o falso",
+      "interval_not_number": "debe ser un número",
+      "interval_range": "debe estar entre {min} y {max} horas",
+      "conflict_policy_invalid": "debe ser 'skip' (omitir) o 'newest' (gana el más reciente)",
+      "busy": "ya en curso",
+      "skipped_busy": "omitido (ya en curso)",
+      "skipped_conflict": "omitido por conflicto: {cause}",
+      "summary": "{causes}"
     }
   }
 }
