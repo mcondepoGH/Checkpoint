@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import { api } from '../api.js';
 import { updatesApplicable, updateSummary, channelOf, CHANNEL_OPTIONS, CHANNEL_HELP } from '../updates.js';
-import { errText } from '../useI18n.js';
+import { errText, useI18n } from '../useI18n.js';
+import { ui } from '../errors.js';
 
 // Tarjeta de Configuración: activar/desactivar la comprobación de versiones nuevas y forzarla a mano.
 export default function UpdateCheck({ info, onInfo }) {
+  const { t } = useI18n();
   const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState('');
+  const [msg, setMsg] = useState(null); // error de la API o mensaje {code} (se traduce al pintar)
   if (info && !updatesApplicable(info)) return null; // Docker sin forzar: ni tarjeta ni selector de canal
   const enabled = info ? info.habilitado !== false : true;
 
   // Ejecuta una acción con el indicador de trabajo y muestra su error, si lo hay.
   const act = async (fn) => {
-    setBusy(true); setMsg('');
-    try { await fn(); } catch (e) { setMsg(errText(e)); } finally { setBusy(false); }
+    setBusy(true); setMsg(null);
+    try { await fn(); } catch (e) { setMsg(e); } finally { setBusy(false); }
   };
   const put = (body) => act(async () => onInfo(await api('/api/updates', { method: 'PUT', body })));
   const toggle = (value) => put({ enabled: value });
@@ -21,31 +23,31 @@ export default function UpdateCheck({ info, onInfo }) {
   const refresh = () => act(async () => {
     const r = await api('/api/updates?refresh=true');
     onInfo(r);
-    if (r.limitado) setMsg('Acabas de comprobarlo; espera un minuto para volver a hacerlo.');
+    if (r.limitado) setMsg(ui('updates.check.limited'));
   });
 
   return (
     <section className="card" aria-labelledby="updates-title">
-      <h3 id="updates-title">Comprobar actualizaciones</h3>
-      <p className="muted">Consulta las versiones publicadas en GitHub (solo lectura, cada pocas horas) y avisa si hay una nueva. No instala nada.</p>
+      <h3 id="updates-title">{t('updates.check.title')}</h3>
+      <p className="muted">{t('updates.check.text')}</p>
       <label className="switch">
         <input type="checkbox" role="switch" checked={enabled} disabled={busy} onChange={(e) => toggle(e.target.checked)} />
         <span className="track" aria-hidden="true"><i /></span>
-        <span>{enabled ? 'Activada' : 'Desactivada'}</span>
+        <span>{enabled ? t('common.on') : t('common.off')}</span>
       </label>
       <div className="update-channel">
-        <label htmlFor="update-channel">Canal</label>
+        <label htmlFor="update-channel">{t('updates.check.channel')}</label>
         <select id="update-channel" value={channelOf(info)} disabled={busy || !enabled} onChange={(e) => setChannel(e.target.value)}
           aria-describedby="update-channel-help">
-          {CHANNEL_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          {CHANNEL_OPTIONS.map((o) => <option key={o.value} value={o.value}>{t(o.label)}</option>)}
         </select>
       </div>
-      <p id="update-channel-help" className="muted">{CHANNEL_HELP}</p>
-      {info && <p className="muted" role="status">{updateSummary(info)}</p>}
+      <p id="update-channel-help" className="muted">{t(CHANNEL_HELP)}</p>
+      {info && <p className="muted" role="status">{updateSummary(info, t)}</p>}
       <div className="row">
-        <button className="btn ghost" onClick={refresh} disabled={busy || !enabled}>Comprobar ahora</button>
+        <button className="btn ghost" onClick={refresh} disabled={busy || !enabled}>{t('updates.check.now')}</button>
       </div>
-      <div role="status" aria-live="polite">{msg && <div className="alert error">{msg}</div>}</div>
+      <div role="status" aria-live="polite">{msg && <div className="alert error">{errText(msg)}</div>}</div>
     </section>
   );
 }

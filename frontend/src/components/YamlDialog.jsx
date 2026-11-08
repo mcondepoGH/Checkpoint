@@ -1,28 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import Modal from './Modal.jsx';
-import { errText } from '../useI18n.js';
+import { errText, useI18n } from '../useI18n.js';
+import { ui } from '../errors.js';
 
 // Solo lectura: el YAML tal como se escribiría (conserva los comentarios del fichero actual).
 export default function YamlDialog({ config, onClose }) {
+  const { t } = useI18n();
   const [text, setText] = useState(null);
-  const [err, setErr] = useState('');
+  const [err, setErr] = useState(null); // error de la API o mensaje {code} (se traduce al pintar)
   useEffect(() => {
     api('/api/config/yaml', { method: 'POST', body: { config } })
       .then((r) => setText(r.yaml))
-      .catch((e) => setErr(e.data?.errors ? 'El borrador tiene errores: corrígelos para ver el YAML.' : errText(e)));
+      .catch((e) => setErr(e.data?.errors ? ui('yaml.invalid') : e));
   }, [config]);
   return (
-    <Modal title="YAML (solo lectura)" onClose={onClose} wide>
-      {err && <div className="alert error" role="alert">{err}</div>}
-      {text === null && !err && <p className="muted">Generando…</p>}
+    <Modal title={t('yaml.title')} onClose={onClose} wide>
+      {err && <div className="alert error" role="alert">{errText(err)}</div>}
+      {text === null && !err && <p className="muted">{t('yaml.generating')}</p>}
       {text !== null && (
         <>
-          <label htmlFor="yaml-view" className="sr-only">YAML resultante</label>
+          <label htmlFor="yaml-view" className="sr-only">{t('yaml.label')}</label>
           <textarea id="yaml-view" className="yaml" readOnly rows={18} value={text} wrap="off" />
         </>
       )}
-      <div className="row end"><button type="button" className="btn" onClick={onClose}>Cerrar</button></div>
+      <div className="row end"><button type="button" className="btn" onClick={onClose}>{t('common.close')}</button></div>
     </Modal>
   );
 }

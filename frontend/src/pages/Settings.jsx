@@ -16,20 +16,20 @@ import BackupsDialog from '../components/BackupsDialog.jsx';
 import Icon from '../components/Icon.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import DiffView from '../components/DiffView.jsx';
-import { errText, t, useI18n } from '../useI18n.js';
-import { errorText, fieldErrorText } from '../errors.js';
+import { errText, useI18n } from '../useI18n.js';
+import { errorText, fieldErrorText, ui } from '../errors.js';
 
 // Pantalla única de Configuración: dispositivos y juegos como tarjetas, validación en vivo con el
 // validador del backend, vista previa de cambios antes de guardar.
 export default function Settings({ loaded, stale, configError, runtime, platform, onApplied, onReload, onDirty, updates, onUpdates }) {
-  useI18n(); // re-renderiza al cambiar de idioma: los errores de campo se traducen al pintar
+  const { t } = useI18n(); // re-renderiza al cambiar de idioma: errores y mensajes se guardan sin traducir y se traducen al pintar
   const fe = (v) => fieldErrorText(v, t);
   const [draft, setDraft] = useState(() => fromConfig(loaded.config));
   const [errors, setErrors] = useState({});
   const [validating, setValidating] = useState(false);
   const [tests, setTests] = useState({});
   const [dialog, setDialog] = useState(null); // {kind:'save'|'yaml'|'backups', ...}
-  const [msg, setMsg] = useState('');
+  const [msg, setMsg] = useState(null); // {ok?, body}: `body` es un error de la API o un mensaje {code} (se traduce al pintar)
   const [busy, setBusy] = useState(false);
   const [staleDiff, setStaleDiff] = useState(null);
 
@@ -63,15 +63,15 @@ export default function Settings({ loaded, stale, configError, runtime, platform
   useEffect(() => {
     const n = ++seq.current;
     setValidating(true);
-    const t = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       try {
         const r = await api('/api/config/validate', { method: 'POST', body: { config: JSON.parse(payloadKey) } });
         if (n === seq.current) { setErrors(r.errors); setValidating(false); }
       } catch (e) {
-        if (n === seq.current) { setErrors({ '': errText(e) }); setValidating(false); }
+        if (n === seq.current) { setErrors({ '': e }); setValidating(false); }
       }
     }, 300);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [payloadKey]);
 
   const patch = (list, key, p) => setDraft((d) => ({ ...d, [list]: d[list].map((x) => (x.key === key ? { ...x, ...p } : x)) }));
@@ -79,13 +79,12 @@ export default function Settings({ loaded, stale, configError, runtime, platform
   const delDevice = (dev) => {
     const used = gamesUsing(draft, dev.key);
     if (used.length && !window.confirm(
-      `El dispositivo ${dev.name || '(sin nombre)'} lo usan: ${used.join(', ')}.\n` +
-      'Esos juegos perderán este dispositivo y deberás elegir otro. ¿Eliminarlo?')) return;
+      t('settings.delDevice', { device: dev.name || t('common.unnamed'), games: used.map((n) => n || t('common.unnamed')).join(', ') }))) return;
     setDraft((d) => removeDevice(d, dev.key));
   };
 
   const testDevice = async (dev) => {
-    setTests((t) => ({ ...t, [dev.key]: { busy: true } }));
+    setTests((prev) => ({ ...prev, [dev.key]: { busy: true } }));
     let r;
     try {
       r = await api('/api/devices/test', {
@@ -95,8 +94,8 @@ export default function Settings({ loaded, stale, configError, runtime, platform
           ? { device: { name: dev.name || 'prueba', local: true, os: dev.os }, paths: pathsOf(draft, dev.key) }
           : { device: { name: dev.name || 'prueba', host: dev.host, user: dev.user, os: dev.os, port: Number(dev.port) || dev.port } },
       });
-    } catch (e) { r = { ok: false, message: errText(e) }; }
-    setTests((t) => ({ ...t, [dev.key]: r }));
+    } catch (e) { r = { ok: false, code: e.code, params: e.params, message: e.message }; }
+    setTests((prev) => ({ ...prev, [dev.key]: r }));
   };
 
   const hasErrors = Object.keys(errors).length > 0 || hasLocal;
@@ -104,22 +103,22 @@ export default function Settings({ loaded, stale, configError, runtime, platform
 
   const openSave = async () => {
     setBusy(true);
-    setMsg('');
+    setMsg(null);
     try {
       const r = await api('/api/config/diff', { method: 'POST', body: { config: payload } });
       setDialog({ kind: 'save', diff: r.diff, version: r.version, config: payload });
-    } catch (e) { setMsg(errText(e)); } finally { setBusy(false); }
+    } catch (e) { setMsg({ body: e }); } finally { setBusy(false); }
   };
 
   const applied = (r, text) => {
     setDialog(null);
-    setMsg(text);
+    setMsg({ ok: true, body: text });
     onApplied({ version: r.version, config: r.config });
   };
 
   const showStaleDiff = async () => {
     try { setStaleDiff((await api('/api/config/diff', { method: 'POST', body: { config: payload } })).diff); }
-    catch (e) { setMsg(errText(e)); }
+    catch (e) { setMsg({ body: e }); }
   };
 
   // Los errores del backend cuelgan del id interno: devices.<id>.<campo>
@@ -139,23 +138,23 @@ export default function Settings({ loaded, stale, configError, runtime, platform
 
   return (
     <section aria-labelledby="cfg-title" ref={rootRef}>
-      <h2 id="cfg-title">Configuración</h2>
+      <h2 id="cfg-title">{t('settings.title')}</h2>
 
       {configError && <div className="alert error" role="alert">
-        config.yaml no es válido: {errorText(configError, t)}. Corrígelo a mano o restaura una copia anterior.
+        {t('settings.invalid', { cause: errorText(configError, t) })}
       </div>}
       {stale && (
         <div className="alert warn" role="alert">
-          <strong>config.yaml cambió por fuera.</strong> Guardar está desactivado para no pisar esos cambios.
+          <strong>{t('settings.stale.lead')}</strong> {t('settings.stale.text')}
           <div className="row">
-            <button type="button" className="btn" onClick={onReload}>Recargar (descarto mi borrador)</button>
-            <button type="button" className="btn" onClick={showStaleDiff}>Ver diferencias</button>
+            <button type="button" className="btn" onClick={onReload}>{t('settings.stale.reload')}</button>
+            <button type="button" className="btn" onClick={showStaleDiff}>{t('settings.stale.diff')}</button>
           </div>
           {staleDiff && <DiffBox diff={staleDiff} />}
         </div>
       )}
       {generalError && <div className="alert error" role="alert">{generalError}</div>}
-      <div role="status" aria-live="polite">{msg && <div className="alert ok">{msg}</div>}</div>
+      <div role="status" aria-live="polite">{msg && <div className={`alert ${msg.ok ? 'ok' : 'error'}`}>{errText(msg.body)}</div>}</div>
 
       {/* La clave SSH solo importa si hay (o puede haber) dispositivos remotos. */}
       {(draft.devices.length === 0 || draft.devices.some((d) => !d.local)) && <PublicKey />}
@@ -165,17 +164,17 @@ export default function Settings({ loaded, stale, configError, runtime, platform
       {updatesApplicable(updates) && <UpdateCheck info={updates} onInfo={onUpdates} />}
 
       <fieldset className="card cfg-card">
-        <legend className="cfg-title">Versiones guardadas</legend>
-        <Field label="Máx. de versiones por juego" hint={VERSIONS_HINT} error={local.maxVersions || fe(errors.max_versions)}>
+        <legend className="cfg-title">{t('settings.versions.legend')}</legend>
+        <Field label={t('settings.versions.max')} hint={t(VERSIONS_HINT)} error={local.maxVersions || fe(errors.max_versions)}>
           {(p) => <input {...p} type="number" inputMode="numeric" min="0" max={MAX_VERSIONS_LIMIT} step="1"
             value={draft.maxVersions} onChange={(e) => setDraft((d) => ({ ...d, maxVersions: e.target.value }))} />}
         </Field>
       </fieldset>
 
       <div className="row between section-head">
-        <h3>Dispositivos</h3>
+        <h3>{t('settings.devices')}</h3>
         <button type="button" className="btn" onClick={() => setDraft((d) => ({ ...d, devices: [...d.devices, blankDevice()] }))}>
-          Añadir dispositivo
+          {t('settings.addDevice')}
         </button>
       </div>
       <div className="grid">
@@ -187,19 +186,19 @@ export default function Settings({ loaded, stale, configError, runtime, platform
         ))}
       </div>
       {draft.devices.length === 0 && (
-        <EmptyState icon="💻" title="Sin dispositivos"
-          text="Añade al menos dos dispositivos para poder sincronizar partidas entre ellos."
-          action={<button type="button" className="btn primary" onClick={() => setDraft((d) => ({ ...d, devices: [...d.devices, blankDevice()] }))}>Añadir dispositivo</button>} />
+        <EmptyState icon="💻" title={t('settings.noDevices.title')}
+          text={t('settings.noDevices.text')}
+          action={<button type="button" className="btn primary" onClick={() => setDraft((d) => ({ ...d, devices: [...d.devices, blankDevice()] }))}>{t('settings.addDevice')}</button>} />
       )}
 
       <div className="row between section-head">
-        <h3>Juegos</h3>
+        <h3>{t('settings.games')}</h3>
         <button type="button" className="btn" disabled={draft.devices.filter((d) => d.name).length < 2}
           onClick={() => setDraft((d) => ({ ...d, games: [...d.games, blankGame()] }))}>
-          Añadir juego
+          {t('settings.addGame')}
         </button>
       </div>
-      {draft.devices.filter((d) => d.name).length < 2 && <p className="muted">Define (y nombra) al menos dos dispositivos para añadir juegos.</p>}
+      {draft.devices.filter((d) => d.name).length < 2 && <p className="muted">{t('settings.needTwo')}</p>}
       <div className="grid">
         {draft.games.map((g) => (
           <GameCard key={g.key} game={g} devices={draft.devices} errors={gameErrs(g)} localError={local[g.key]} keepError={local[`keep-${g.key}`]} globalMax={draft.maxVersions}
@@ -210,39 +209,39 @@ export default function Settings({ loaded, stale, configError, runtime, platform
         ))}
       </div>
 
-      <div className="actionbar" role="group" aria-label="Acciones de configuración">
+      <div className="actionbar" role="group" aria-label={t('settings.bar.aria')}>
         {hasErrors && !validating ? (
           <button type="button" className="ab-chip error" onClick={jumpToError}
-            aria-label={`${errorCount || 1} errores por corregir: ir al primero`}>
-            <Icon name="alert" /><b>{errorCount || 1}</b><span className="ab-long">Hay errores por corregir</span>
+            aria-label={t('settings.bar.errorsAria', { count: errorCount || 1 })}>
+            <Icon name="alert" /><b>{errorCount || 1}</b><span className="ab-long">{t('settings.bar.errors')}</span>
           </button>
         ) : (
           <span className={`ab-chip${dirty ? ' dirty' : ''}`} aria-live="polite">
-            {validating ? 'Validando…' : dirty ? <><span className="ab-long">Cambios sin guardar</span><span className="ab-short">Sin guardar</span></> : 'Sin cambios'}
+            {validating ? t('settings.bar.validating') : dirty ? <><span className="ab-long">{t('settings.bar.dirty')}</span><span className="ab-short">{t('settings.bar.dirtyShort')}</span></> : t('settings.bar.clean')}
           </span>
         )}
         <span className="spacer" />
-        <button type="button" className="btn ghost ab-tool" title="Restaurar versión anterior" aria-label="Restaurar versión anterior" onClick={() => setDialog({ kind: 'backups' })}>
-          <Icon name="history" /><span className="lbl">Restaurar versión anterior</span>
+        <button type="button" className="btn ghost ab-tool" title={t('settings.bar.backups')} aria-label={t('settings.bar.backups')} onClick={() => setDialog({ kind: 'backups' })}>
+          <Icon name="history" /><span className="lbl">{t('settings.bar.backups')}</span>
         </button>
-        <button type="button" className="btn ghost ab-tool" title="Ver YAML" aria-label="Ver YAML" onClick={() => setDialog({ kind: 'yaml', config: payload })} disabled={hasErrors}>
-          <Icon name="code" /><span className="lbl">Ver YAML</span>
+        <button type="button" className="btn ghost ab-tool" title={t('settings.bar.yaml')} aria-label={t('settings.bar.yaml')} onClick={() => setDialog({ kind: 'yaml', config: payload })} disabled={hasErrors}>
+          <Icon name="code" /><span className="lbl">{t('settings.bar.yaml')}</span>
         </button>
-        <button type="button" className="btn ab-tool" title="Descartar cambios" aria-label="Descartar cambios" disabled={!dirty} onClick={() => { setDraft(fromConfig(loaded.config)); setMsg(''); }}>
-          <Icon name="undo" /><span className="lbl">Descartar</span>
+        <button type="button" className="btn ab-tool" title={t('settings.bar.discardTitle')} aria-label={t('settings.bar.discardTitle')} disabled={!dirty} onClick={() => { setDraft(fromConfig(loaded.config)); setMsg(null); }}>
+          <Icon name="undo" /><span className="lbl">{t('settings.bar.discard')}</span>
         </button>
-        <button type="button" className="btn primary" disabled={!canSave} onClick={openSave}>Guardar…</button>
+        <button type="button" className="btn primary" disabled={!canSave} onClick={openSave}>{t('settings.bar.save')}</button>
       </div>
 
       {dialog?.kind === 'save' && (
         <SaveDialog config={dialog.config} diff={dialog.diff} baseVersion={loaded.version}
-          onSaved={(r) => applied(r, 'Guardado y aplicado al instante.')}
+          onSaved={(r) => applied(r, ui('settings.saved'))}
           onReload={() => { setDialog(null); onReload(); }} onClose={() => setDialog(null)} />
       )}
       {dialog?.kind === 'yaml' && <YamlDialog config={dialog.config} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'backups' && (
         <BackupsDialog baseVersion={loaded.version} dirty={dirty}
-          onRestored={(r) => applied(r, 'Versión restaurada y aplicada.')} onClose={() => setDialog(null)} />
+          onRestored={(r) => applied(r, ui('settings.restored'))} onClose={() => setDialog(null)} />
       )}
     </section>
   );
