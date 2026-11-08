@@ -111,3 +111,11 @@ test('hasChanges: borrador distinto o errores locales', async () => {
   assert.equal(hasChanges('a', 'b', {}), true);
   assert.equal(hasChanges('a', 'a', { x: 'err' }), true);
 });
+
+test('errorsFor traduce {code,params} con el traductor y deja pasar texto antiguo', async () => {
+  const { errorsFor } = await import('../src/draft.js');
+  const tr = (v) => (typeof v === 'string' ? v : `T(${v.code})`);
+  const errs = { 'games.g': { code: 'a', params: {} }, 'games.g.paths.pc': { code: 'b', params: {} }, 'games.g.name': 'viejo', 'games.h.name': 'otro' };
+  assert.deepEqual(errorsFor(errs, 'games.g', tr), { '': 'T(a)', 'paths.pc': 'T(b)', name: 'viejo' });
+  assert.deepEqual(errorsFor({ 'x.y': 'z' }, 'x'), { y: 'z' });
+});

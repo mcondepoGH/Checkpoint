@@ -1,6 +1,11 @@
 """Contrato de error HTTP: `detail = {"code": "err.<modulo>.<causa>", "params": {...}}`.
 El backend NO traduce: la UI traduce `code` con `params`. Las respuestas con datos extra
-(`errors`, `retry_after`, `current_version`...) los llevan al nivel superior, junto a `detail`."""
+(`errors`, `retry_after`, `current_version`...) los llevan al nivel superior, junto a `detail`.
+`errors` por campo = {ruta: {code, params}}.
+
+Causas anidadas (la excepción de origen sube tal cual, sin texto): un param puede ser un cuerpo
+{code, params} (`params.cause`, uno) o una lista [{path, code, params}] (`params.causes`, varios; `path`
+opcional). La UI traduce el anidado primero y lo inserta en `{cause}`/`{causes}` del mensaje padre."""
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 

@@ -162,12 +162,13 @@ export function removeDevice(draft, devKey) {
   return { ...draft, devices: draft.devices.filter((d) => d.key !== devKey), games: draft.games.map(clear) };
 }
 
-// Los errores del backend vienen como {"games.<id>.paths.<id dispositivo>": "msg"}.
-export const errorsFor = (errors, prefix) => {
+// Los errores del backend vienen como {"games.<id>.paths.<id dispositivo>": {code, params}} (o texto, si es antiguo).
+// `tr` convierte cada valor en texto (p. ej. v => fieldErrorText(v, t)); por defecto los deja tal cual.
+export const errorsFor = (errors, prefix, tr = (v) => v) => {
   const out = {};
   for (const [k, v] of Object.entries(errors || {})) {
-    if (k === prefix) out[''] = v;
-    else if (k.startsWith(prefix + '.')) out[k.slice(prefix.length + 1)] = v;
+    if (k === prefix) out[''] = tr(v);
+    else if (k.startsWith(prefix + '.')) out[k.slice(prefix.length + 1)] = tr(v);
   }
   return out;
 };

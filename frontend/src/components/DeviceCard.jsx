@@ -5,6 +5,9 @@ import IdNote from './IdNote.jsx';
 import { errText } from '../useI18n.js';
 
 // `runtime` ('docker' | 'native') y `platform` vienen de /api/config. «Este equipo» solo se ofrece en modo nativo.
+// Resultado de «Probar conexión»/«Comprobar carpeta»: con varias carpetas, una línea por ruta (cada una con su code si lo hay).
+const testText = (test) => (test.results ? test.results.map((r) => `${r.path}: ${errText(r)}`).join('\n') : errText(test));
+
 export default function DeviceCard({ dev, errors, localError, localFlagError, canLocal, runtime, platform, test, idText, renamed, onChange, onTest, onRemove }) {
   const set = (k) => (e) => onChange({ [k]: e.target.value });
   const descId = useId();
@@ -63,7 +66,7 @@ export default function DeviceCard({ dev, errors, localError, localFlagError, ca
       )}
       <IdNote id={idText} isNew={!dev.id} renamed={renamed} />
       <div role="status" aria-live="polite">
-        {test && !test.busy && <div className={`alert ${test.ok ? 'ok' : 'error'}`} style={{ whiteSpace: 'pre-line' }}>{errText(test)}</div>}
+        {test && !test.busy && <div className={`alert ${test.ok ? 'ok' : 'error'}`} style={{ whiteSpace: 'pre-line' }}>{testText(test)}</div>}
       </div>
       <div className="row">
         <button type="button" className="btn" disabled={test?.busy} onClick={onTest}>

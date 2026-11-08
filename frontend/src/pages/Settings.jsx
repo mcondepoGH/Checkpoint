@@ -16,11 +16,14 @@ import BackupsDialog from '../components/BackupsDialog.jsx';
 import Icon from '../components/Icon.jsx';
 import EmptyState from '../components/EmptyState.jsx';
 import DiffView from '../components/DiffView.jsx';
-import { errText } from '../useI18n.js';
+import { errText, t, useI18n } from '../useI18n.js';
+import { errorText, fieldErrorText } from '../errors.js';
 
 // Pantalla única de Configuración: dispositivos y juegos como tarjetas, validación en vivo con el
 // validador del backend, vista previa de cambios antes de guardar.
 export default function Settings({ loaded, stale, configError, runtime, platform, onApplied, onReload, onDirty, updates, onUpdates }) {
+  useI18n(); // re-renderiza al cambiar de idioma: los errores de campo se traducen al pintar
+  const fe = (v) => fieldErrorText(v, t);
   const [draft, setDraft] = useState(() => fromConfig(loaded.config));
   const [errors, setErrors] = useState({});
   const [validating, setValidating] = useState(false);
@@ -120,9 +123,9 @@ export default function Settings({ loaded, stale, configError, runtime, platform
   };
 
   // Los errores del backend cuelgan del id interno: devices.<id>.<campo>
-  const devErrs = (d) => errorsFor(errors, `devices.${idOf(d, 'dispositivo')}`);
-  const gameErrs = (g) => errorsFor(errors, `games.${idOf(g, 'juego')}`);
-  const generalError = errors[''];
+  const devErrs = (d) => errorsFor(errors, `devices.${idOf(d, 'dispositivo')}`, fe);
+  const gameErrs = (g) => errorsFor(errors, `games.${idOf(g, 'juego')}`, fe);
+  const generalError = fe(errors['']);
 
   // Chip de errores de la barra: salta al primer campo con error (o a la alerta general) y le da el foco.
   const rootRef = useRef(null);
@@ -139,7 +142,7 @@ export default function Settings({ loaded, stale, configError, runtime, platform
       <h2 id="cfg-title">Configuración</h2>
 
       {configError && <div className="alert error" role="alert">
-        config.yaml no es válido: {configError}. Corrígelo a mano o restaura una copia anterior.
+        config.yaml no es válido: {errorText(configError, t)}. Corrígelo a mano o restaura una copia anterior.
       </div>}
       {stale && (
         <div className="alert warn" role="alert">
@@ -163,7 +166,7 @@ export default function Settings({ loaded, stale, configError, runtime, platform
 
       <fieldset className="card cfg-card">
         <legend className="cfg-title">Versiones guardadas</legend>
-        <Field label="Máx. de versiones por juego" hint={VERSIONS_HINT} error={local.maxVersions || errors.max_versions}>
+        <Field label="Máx. de versiones por juego" hint={VERSIONS_HINT} error={local.maxVersions || fe(errors.max_versions)}>
           {(p) => <input {...p} type="number" inputMode="numeric" min="0" max={MAX_VERSIONS_LIMIT} step="1"
             value={draft.maxVersions} onChange={(e) => setDraft((d) => ({ ...d, maxVersions: e.target.value }))} />}
         </Field>

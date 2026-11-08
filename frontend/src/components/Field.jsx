@@ -1,7 +1,10 @@
 import React, { useId } from 'react';
+import { t } from '../useI18n.js';
+import { fieldErrorText } from '../errors.js';
 
 // Etiqueta + control + error asociado (aria-describedby / aria-invalid). `children` recibe los props a esparcir en el control.
-export default function Field({ label, error, hint, children }) {
+export default function Field({ label, error: rawError, hint, children }) {
+  const error = fieldErrorText(rawError, t); // {code, params} (actual) o texto (antiguo)
   const id = useId();
   const errId = `${id}-err`;
   const hintId = `${id}-hint`;
