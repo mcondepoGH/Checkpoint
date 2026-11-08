@@ -17,7 +17,7 @@ from . import bootstrap
 from . import history
 from . import runtime
 from . import updates
-from .apierror import ApiError, error_body, error_response
+from .apierror import ApiError, describe_code, error_body, error_response
 from .auth import Auth
 from .config import Config, ConfigError, Device, pyd_body, describe, normalize_path, resolve_ref, validate_config
 from .configstore import Conflict, ConfigStore, InvalidConfig, parse_text, config_events_gen, diff_configs, render_yaml
@@ -235,25 +235,29 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             try:
                 norm = normalize_path(dev.os, raw_path)
             except ConfigError as e:
-                results.append((raw_path, {"ok": False, "message": str(e), **e.body()}))
+                results.append((raw_path, {"ok": False, "message": describe_code(e.code, e.params), **e.body()}))
                 continue
             results.append((norm, local_folder_status(norm)))
         if len(results) == 1:
             return results[0][1]
-        # `message`: texto plano de respaldo; `results`: por ruta, con code/params donde los hay (la UI los traduce).
+        # `message`: respaldo técnico (sin traducir); `results`: por ruta, con code/params (la UI los traduce).
         return {"ok": all(r["ok"] for _, r in results),
                 "message": "\n".join(f"{p}: {r['message']}" for p, r in results),
                 "results": [{"path": p, **r} for p, r in results]}
 
     def _test_conn(dev: Device):
         first = False
+        # `code`/`params` los traduce la UI; `first_use` = se guardó una host key nueva (la UI añade el aviso
+        # `err.bootstrap.first_use`). `message` es solo respaldo técnico. El stderr de ssh va redactado en params.
         try:
             first = bootstrap.ensure_host_key(dev.host, dev.port)
             get_transport(dev).check()
-            return {"ok": True, "message": "conexión OK" + (f" ({bootstrap.FIRST_USE_MSG})" if first else "")}
+            return {"ok": True, "message": "err.transport.connection_ok", "code": "err.transport.connection_ok",
+                    "params": {}, "first_use": first}
         except (TransportError, bootstrap.BootstrapError) as e:
-            msg = redact(str(e))
-            return {"ok": False, "message": msg + (f" [{bootstrap.FIRST_USE_MSG}]" if first else "")}
+            params = {k: redact(v) if isinstance(v, str) else v for k, v in e.params.items()}
+            return {"ok": False, "message": describe_code(e.code, params), "code": e.code, "params": params,
+                    "first_use": first}
 
     @app.get("/api/ssh/public-key", dependencies=[Depends(require)])
     def ssh_public_key():
@@ -365,7 +369,8 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
                 run.status = run_sync(cfg, game, dry, log=run.lines.append, resolution=resolution, expect=expect)
             except SyncAbort as e:
                 run.lines.append(redact(f"ABORTADO: {e}"))
-                run.status = {"result": "aborted", "message": str(e), "game": game, "name": cfg.games[game].name}
+                run.status = {"result": "aborted", "code": e.code, "params": e.params, "message": str(e),
+                              "game": game, "name": cfg.games[game].name}
             finally:
                 run.done = True
 
@@ -433,11 +438,11 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         body = await body_json(request)
         cfg = _cfg()
         try:
-            msg = restore_version(cfg, game, str(body.get("version", "")), str(body.get("source", "")),
+            res = restore_version(cfg, game, str(body.get("version", "")), str(body.get("source", "")),
                                   settings.DATA_DIR)
         except SyncAbort as e:
-            raise ApiError(400, "err.main.restore_failed", reason=str(e))
-        return {"ok": True, "message": msg}
+            raise ApiError(400, "err.main.restore_failed", cause=e.body())
+        return {"ok": True, "message": describe_code(res["code"], res["params"]), **res}
 
     # ---- web (SPA) ----
     # Los estáticos no contienen secretos; solo así se puede pintar la pantalla de login.

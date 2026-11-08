@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
 from . import locking, settings
+from .apierror import describe_code, error_body
 from .config import ON_CONFLICT, Config, ConfigError, resolve_ref
 from .redact import redact
 from .transport import Transport, TransportError, get_transport
@@ -20,7 +21,21 @@ VERSION_RE = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{6}(-\d+)?$")
 
 
 class SyncAbort(Exception):
-    """Fin controlado sin tocar nada (o error ya reportado)."""
+    """Fin controlado sin tocar nada (o error ya reportado). Contrato i18n: `code` (`err.sync.<causa>`) +
+    `params`; sin texto en español (la UI traduce). `str(e)` es técnico, para logs y CLI."""
+
+    def __init__(self, code: str, **params):
+        super().__init__(describe_code(code, params))
+        self.code, self.params = code, params
+
+    def body(self) -> dict:
+        return error_body(self.code, **self.params)
+
+
+def _set(status: dict, result: str, code: str, **params):
+    """Resultado con mensaje estructurado: `code`/`params` (la UI los traduce). `message` es solo el respaldo
+    técnico que leen scheduler, historial y CLI (code + params, no traducido)."""
+    status.update(result=result, code=code, params=params, message=describe_code(code, params))
 
 
 @dataclass
@@ -138,7 +153,7 @@ def _game_lock(data_dir: Path, gs: str):
         with locking.locked(Path(data_dir) / "locks" / f"{gs}.lock"):
             yield
     except locking.LockBusy:
-        raise SyncAbort("ya hay una operación de este juego en curso")
+        raise SyncAbort("err.sync.op_in_progress")
 
 
 def _new_version_dir(data_dir: Path, game: str) -> Path:
@@ -262,11 +277,11 @@ def pick_resolution(resolution: str, sides: List[str], fps: Dict[str, Fingerprin
     elif resolution.startswith("device:"):
         name = resolution[len("device:"):]
     else:
-        raise SyncAbort(f"resolución inválida: {resolution!r}")
+        raise SyncAbort("err.sync.resolution_invalid", value=resolution)
     if name not in fps:
-        raise SyncAbort(f"{dn(name)} no está disponible para resolver (offline o desconocido)")
+        raise SyncAbort("err.sync.side_unavailable", name=dn(name))
     if fps[name].empty:
-        raise SyncAbort(f"{dn(name)} no tiene datos: no puede ganar")
+        raise SyncAbort("err.sync.side_empty", name=dn(name))
     return name
 
 
@@ -285,9 +300,9 @@ def resolve_game(cfg: Config, ref) -> str:
     try:
         gid = resolve_ref(cfg.games, ref)
     except ConfigError as e:
-        raise SyncAbort(str(e))
+        raise SyncAbort("err.sync.ref_invalid", cause=e.body())
     if gid is None:
-        raise SyncAbort(f"juego desconocido: {ref}")
+        raise SyncAbort("err.sync.game_unknown", ref=ref)
     return gid
 
 
@@ -299,7 +314,7 @@ def _origin_id(cfg: Config, gid: str, ref):
     try:
         return resolve_ref(devs, ref) or ref
     except ConfigError as e:
-        raise SyncAbort(str(e))
+        raise SyncAbort("err.sync.ref_invalid", cause=e.body())
 
 
 def run_sync(cfg: Config, game: str, dry_run: bool = False, data_dir: Optional[Path] = None,
@@ -316,13 +331,13 @@ def run_sync(cfg: Config, game: str, dry_run: bool = False, data_dir: Optional[P
     data_dir = Path(data_dir or settings.DATA_DIR)
     game = resolve_game(cfg, game)
     if resolution is not None and not valid_resolution(resolution):
-        raise SyncAbort(f"resolución inválida: {resolution!r}")
+        raise SyncAbort("err.sync.resolution_invalid", value=resolution)
     if resolution is not None and resolution.startswith("device:"):
         resolution = "device:" + _origin_id(cfg, game, resolution[len("device:"):])
     if expect:
         expect = {_origin_id(cfg, game, k): v for k, v in expect.items()}
     if conflict_policy is not None and conflict_policy not in ON_CONFLICT:
-        raise SyncAbort(f"política de conflicto inválida: {conflict_policy!r}")
+        raise SyncAbort("err.sync.policy_invalid", value=conflict_policy)
     g = cfg.games[game]
     started = datetime.now()
     gs = game  # el id interno es la única clave de rutas de disco; el nombre es solo la etiqueta
@@ -342,18 +357,18 @@ def run_sync(cfg: Config, game: str, dry_run: bool = False, data_dir: Optional[P
     try:
         handle = locking.acquire(data_dir / "locks" / f"{gs}.lock")
     except locking.LockBusy:
-        raise SyncAbort("ya hay una sincronización de este juego en curso")
+        raise SyncAbort("err.sync.sync_in_progress")
     try:
         try:
             _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution, expect, conflict_policy)
         except SyncAbort as e:
-            status["result"], status["message"] = "aborted", str(e)
+            _set(status, "aborted", e.code, **e.params)
             L(f"ABORTADO: {e}")
         except TransportError as e:
-            status["result"], status["message"] = "error", str(e)
+            _set(status, "error", e.code, **e.params)
             L(f"ERROR: {e}")
         except Exception as e:  # nunca dejar la excepción sin registrar
-            status["result"], status["message"] = "error", f"{type(e).__name__}: {e}"
+            _set(status, "error", "err.sync.unexpected", type=type(e).__name__, detail=str(e))
             L(f"ERROR inesperado: {type(e).__name__}: {e}")
     finally:
         handle.release()
@@ -380,9 +395,9 @@ def _check_process(g, tr, online, L=None, dn=lambda k: k):
         try:
             running = tr[n].process_running(g.process)
         except TransportError as e:
-            raise SyncAbort(f"no se pudo comprobar el proceso en {dn(n)}: {e}")
+            raise SyncAbort("err.sync.process_check_failed", device=dn(n), cause=e.body())
         if running:
-            raise SyncAbort(f"{g.process} está abierto en {dn(n)}")
+            raise SyncAbort("err.sync.process_open", process=g.process, device=dn(n))
     if L:
         L(f"{g.process} no está abierto")
 
@@ -417,7 +432,7 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
             offline.append(n)
     status["offline"] = offline
     if not online:
-        raise SyncAbort(f"{' y '.join(dn(k) for k in offline)} no responden; no se toca nada")
+        raise SyncAbort("err.sync.all_offline", devices=dns(offline))
     if offline:
         L(f"{dns(offline)} offline: se compara {dn(online[0])} solo con el hub")
 
@@ -455,10 +470,10 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
         d = decide(fps, base)
         if d["kind"] == "same":
             if all(fp.empty for fp in fps.values()):
-                status.update(result="ok", message="nada que sincronizar (todo vacío)")
+                _set(status, "ok", "err.sync.nothing_to_sync")
                 L("nada que sincronizar")
             else:
-                status.update(result="ok", message="ya sincronizado")
+                _set(status, "ok", "err.sync.already_synced")
                 L("ya sincronizado: nada que hacer")
             remember(next(iter(fps.values())).hash)
             return
@@ -493,7 +508,9 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
                         "no-baseline": "primera sincronización con contenidos distintos",
                         "inconsistent": "los contenidos difieren sin cambios registrados",
                         "both-changed": "ambos lados cambiaron desde la última sincronización"}[reason]
-                status.update(result="conflict", message=f"conflicto en {dns(sides)}: {text}")
+                cause = error_body("err.sync.conflict_" + reason.replace("-", "_"),
+                                   **({"seconds": CLOCK_TOLERANCE} if reason == "indeterminate" else {}))
+                _set(status, "conflict", "err.sync.conflict", sides=dns(sides), cause=cause)
                 L(f"CONFLICTO: {text}")
                 for k in sides:
                     L(f"  {dn(k)}: {_fmt(fps[k].mtime)}, {fps[k].size} bytes, {fps[k].files} ficheros")
@@ -510,7 +527,7 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
             L(f"plan: {dn(winner)} -> {dn(k)}{extra}")
         status["winner"], status["targets"] = winner, targets
         if dry_run:
-            status.update(result="dry-run", message=f"ganador {dn(winner)}; destinos {dns(targets)}")
+            _set(status, "dry-run", "err.sync.dry_run", winner=dn(winner), targets=dns(targets))
             L("simulación (dry-run): no se modifica nada")
             return
 
@@ -541,37 +558,39 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
             try:
                 tr[k].push(src, g.paths[k], extras)
             except TransportError as e:
-                failed[k] = str(e)
+                failed[k] = e.body()
                 L(f"ERROR enviando a {dn(k)}: {e}")
         if failed:
             ok = [k for k in targets if k not in failed]
-            status.update(result="partial", failed=sorted(failed),
-                          message=f"ganador {dn(winner)}; actualizados {dns(ok) or 'ninguno'}; "
-                                  f"fallaron {', '.join(f'{dn(k)} ({m})' for k, m in failed.items())}")
+            _set(status, "partial", "err.sync.partial" if ok else "err.sync.partial_none", winner=dn(winner),
+                 updated=dns(ok), failed=[{"path": dn(k), **b} for k, b in failed.items()])
+            status["failed"] = sorted(failed)
             L("sincronización PARCIAL: baseline sin actualizar; se completará en la próxima ejecución")
             return
         remember(wh)
         # 7. Poda (solo tras éxito, no en dry-run; dentro del lock del juego).
         prune_versions(data_dir, game, cfg.versions_limit(game), L, protect=new_version)
-        note = f" ({dns(offline)} offline: pendiente)" if offline else ""
-        status.update(result="ok", message=f"ganador {dn(winner)}; actualizados {dns(targets)}{note}")
+        if offline:
+            _set(status, "ok", "err.sync.done_pending", winner=dn(winner), updated=dns(targets), offline=dns(offline))
+        else:
+            _set(status, "ok", "err.sync.done", winner=dn(winner), updated=dns(targets))
         L("sincronización completada")
 
 
-def restore_version(cfg: Config, game: str, version: str, source: str, data_dir: Path) -> str:
+def restore_version(cfg: Config, game: str, version: str, source: str, data_dir: Path) -> dict:
     """Copia una versión al hub con mtime=ahora; el siguiente sync la propaga.
-    La copia actual del hub se guarda antes como versión."""
+    La copia actual del hub se guarda antes como versión. Devuelve el cuerpo {code, params} del aviso de éxito."""
     data_dir = Path(data_dir)
     game = resolve_game(cfg, game)
     if VERSION_RE.match(version):
         source = _origin_id(cfg, game, source)
     if not VERSION_RE.match(version) or source not in {d for d in (*cfg.games[game].devices, "hub")}:
-        raise SyncAbort("versión/origen inválido")
+        raise SyncAbort("err.sync.version_invalid")
     gs = game
     with _game_lock(data_dir, gs):
         src = data_dir / "versions" / gs / version / source
         if not src.is_dir():
-            raise SyncAbort("no existe esa versión")
+            raise SyncAbort("err.sync.version_unknown")
         hub = data_dir / "hub" / gs
         new_version = None
         if hub.is_dir() and any(hub.iterdir()):
@@ -590,4 +609,4 @@ def restore_version(cfg: Config, game: str, version: str, source: str, data_dir:
         shutil.rmtree(tmp)
         prune_versions(data_dir, game, cfg.versions_limit(game), protect=new_version)
     src_name = source if source == "hub" else cfg.devices[source].name
-    return f"hub restaurado desde {version}/{src_name}; ejecuta Sincronizar para propagarlo"
+    return error_body("err.sync.restored", version=version, source=src_name)

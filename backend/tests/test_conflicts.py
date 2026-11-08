@@ -70,9 +70,9 @@ def test_idempotent(env):
     env.sync()
     n = len(versions(env))
     st = env.sync()
-    assert st["result"] == "ok" and st["message"] == "ya sincronizado"
+    assert st["result"] == "ok" and st["code"] == "err.sync.already_synced"
     assert len(versions(env)) == n
-    assert env.sync()["message"] == "ya sincronizado"
+    assert env.sync()["code"] == "err.sync.already_synced"
 
 
 # ---- conflicto real ----
@@ -225,7 +225,7 @@ def test_one_online_conflict_against_hub(env):
 def test_one_online_unchanged_is_noop(env):
     env.seed()
     st = env.sync(laptop={"down": True})
-    assert st["result"] == "ok" and st["message"] == "ya sincronizado" and versions(env) == []
+    assert st["result"] == "ok" and st["code"] == "err.sync.already_synced" and versions(env) == []
 
 
 def _lagging(env):
@@ -311,7 +311,7 @@ def test_deleted_file_propagates_without_resurrecting(env):
     st = env.sync()
     assert st["result"] == "ok" and st["winner"] == "pc"
     assert not (env.laptop_dir / "b.sav").exists() and not (env.hub / "b.sav").exists()
-    assert env.sync()["message"] == "ya sincronizado"
+    assert env.sync()["code"] == "err.sync.already_synced"
     assert not (env.pc_dir / "b.sav").exists() and not (env.laptop_dir / "b.sav").exists()
 
 
@@ -337,7 +337,7 @@ def test_process_open_aborts_before_anything(env):
     env.seed()
     env.write(env.laptop_dir, "s.sav", "new", 2000)
     st = env.sync(laptop={"running": True})
-    assert st["result"] == "aborted" and "abierto" in st["message"]
+    assert st["result"] == "aborted" and st["code"] == "err.sync.process_open"
     assert read(env.pc_dir, "s.sav") == "base" and versions(env) == []
 
 
@@ -355,7 +355,7 @@ def test_process_recheck_before_push(env):
     env.write(env.pc_dir, "s.sav", "pc-new", 3000)
     tr = {"pc": LocalTransport(env.pc_root), "laptop": Flip(env.laptop_root)}
     st = run_sync(CFG, "g", False, env.data, env.logs.append, tr)
-    assert st["result"] == "aborted" and "abierto en laptop" in st["message"]
+    assert st["result"] == "aborted" and st["code"] == "err.sync.process_open" and st["params"]["device"] == "laptop"
     assert read(env.laptop_dir, "s.sav") == "base" and read(env.hub, "s.sav") == "base"
     assert versions(env) == []
 
@@ -377,7 +377,7 @@ def test_partial_failure_keeps_baseline_and_recovers(env):
     assert load_baseline(env.data, "g") == before
     st = env.sync()  # reintento: no es conflicto, completa el envío pendiente
     assert st["result"] == "ok" and read(env.laptop_dir, "s.sav") == "pc-new"
-    assert env.sync()["message"] == "ya sincronizado"
+    assert env.sync()["code"] == "err.sync.already_synced"
 
 
 # ---- decide / pick_resolution (puro) ----

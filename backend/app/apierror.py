@@ -14,6 +14,11 @@ def error_body(code: str, **params) -> dict:
     return {"code": code, "params": params}
 
 
+def describe_code(code: str, params: dict) -> str:
+    """Texto técnico (no traducido) de code+params: para logs, CLI y campos internos de respaldo."""
+    return code + "".join(f" {k}={v!r}" for k, v in params.items())
+
+
 class ApiError(HTTPException):
     def __init__(self, status_code: int, code: str, headers=None, **params):
         super().__init__(status_code, error_body(code, **params), headers=headers)

@@ -16,12 +16,21 @@ from pathlib import Path
 from typing import Iterable, List
 
 from . import bootstrap, settings
-from .config import LOCAL_DOCKER_MSG, PATH_CHARS_RE, PROC_RE, Device
+from .apierror import describe_code, error_body
+from .config import PATH_CHARS_RE, PROC_RE, Device
 from .runtime import running_in_docker
 
 
 class TransportError(RuntimeError):
-    pass
+    """Contrato i18n: `code` (`err.transport.<causa>` o `err.bootstrap.<causa>`) + `params`. El stderr de
+    ssh/rsync/tar no se traduce: va en el param `detail`. `str(e)` es técnico (logs)."""
+
+    def __init__(self, code: str, **params):
+        super().__init__(describe_code(code, params))
+        self.code, self.params = code, params
+
+    def body(self) -> dict:
+        return error_body(self.code, **self.params)
 
 
 class Transport:
@@ -51,14 +60,21 @@ def _run(args: List[str], timeout=600, stdin=None) -> subprocess.CompletedProces
     try:
         return subprocess.run(args, capture_output=True, timeout=timeout, stdin=stdin)
     except subprocess.TimeoutExpired:
-        raise TransportError("tiempo agotado")
+        raise TransportError("err.transport.timeout")
     except FileNotFoundError as e:
-        raise TransportError(f"falta binario: {e.filename}")
+        raise TransportError("err.transport.missing_binary", binary=e.filename)
 
 
-def _err(p: subprocess.CompletedProcess, dev: Device = None) -> str:
-    txt = (p.stderr or b"").decode("utf-8", "replace").strip()[-300:]
-    return bootstrap.explain_ssh_error(txt, dev.host, dev.port) if dev else txt
+def _err(p: subprocess.CompletedProcess) -> str:
+    return (p.stderr or b"").decode("utf-8", "replace").strip()[-300:]
+
+
+def _fail(code: str, p: subprocess.CompletedProcess, dev: Device = None) -> TransportError:
+    """Error de un comando ssh/rsync: stderr como `detail`; si es un cambio de host key, su propio código."""
+    txt = _err(p)
+    if dev and bootstrap.host_key_changed(txt):
+        return TransportError(bootstrap.HOST_KEY_CHANGED, host=dev.host, port=dev.port)
+    return TransportError(code, detail=txt)
 
 
 def _ensure_host_key(dev: Device) -> bool:
@@ -66,7 +82,7 @@ def _ensure_host_key(dev: Device) -> bool:
     try:
         return bootstrap.ensure_host_key(dev.host, dev.port)
     except bootstrap.BootstrapError as e:
-        raise TransportError(str(e))
+        raise TransportError(e.code, **e.params)
 
 
 def _safe_rel(rel: str) -> bool:
@@ -84,7 +100,7 @@ class PosixTransport(Transport):
         self.first_use = _ensure_host_key(self.dev)
         p = self._ssh("true", timeout=settings.SSH_TIMEOUT + 10)
         if p.returncode != 0:
-            raise TransportError(f"SSH falló: {_err(p, self.dev)}")
+            raise _fail("err.transport.ssh_failed", p, self.dev)
 
     def exists(self, path):
         p = self._ssh(f"test -d {shlex.quote(path)}")
@@ -92,7 +108,7 @@ class PosixTransport(Transport):
             return True
         if p.returncode == 1:
             return False
-        raise TransportError(f"SSH falló: {_err(p, self.dev)}")
+        raise _fail("err.transport.ssh_failed", p, self.dev)
 
     def _rsh(self) -> str:
         return " ".join(shlex.quote(a) for a in _ssh_base(self.dev)[:-1])
@@ -102,21 +118,21 @@ class PosixTransport(Transport):
         p = _run(["rsync", "-a", "--delete", "-s", "-e", self._rsh(),
                   f"{self.dev.user}@{self.dev.host}:{path}/", f"{dest}/"])
         if p.returncode != 0:
-            raise TransportError(f"rsync pull falló: {_err(p, self.dev)}")
+            raise _fail("err.transport.rsync_pull_failed", p, self.dev)
 
     def push(self, src, path, extras=()):
         p = self._ssh(f"mkdir -p {shlex.quote(path)}")
         if p.returncode != 0:
-            raise TransportError(f"mkdir remoto falló: {_err(p, self.dev)}")
+            raise _fail("err.transport.mkdir_failed", p, self.dev)
         # --delay-updates/--delete-delay: los ficheros se colocan al final de la transferencia (casi atómico).
         p = _run(["rsync", "-a", "--delete-delay", "--delay-updates", "-s", "-e", self._rsh(),
                   f"{src}/", f"{self.dev.user}@{self.dev.host}:{path}/"])
         if p.returncode != 0:
-            raise TransportError(f"rsync push falló: {_err(p, self.dev)}")
+            raise _fail("err.transport.rsync_push_failed", p, self.dev)
 
     def process_running(self, name):
         if not PROC_RE.match(name):
-            raise TransportError("nombre de proceso inválido")
+            raise TransportError("err.transport.process_invalid")
         # [x]yz evita que pgrep -f coincida con su propia línea de comandos.
         pat = "[" + re.escape(name[0]) + "]" + re.escape(name[1:])
         p = self._ssh(f"pgrep -f -- {shlex.quote(pat)}")
@@ -124,7 +140,7 @@ class PosixTransport(Transport):
             return True
         if p.returncode == 1:
             return False
-        raise TransportError(f"pgrep falló: {_err(p, self.dev)}")
+        raise _fail("err.transport.pgrep_failed", p, self.dev)
 
 
 class WindowsTransport(Transport):
@@ -144,7 +160,7 @@ class WindowsTransport(Transport):
         self.first_use = _ensure_host_key(self.dev)
         p = self._ssh("echo ok", timeout=settings.SSH_TIMEOUT + 10)
         if p.returncode != 0 or b"ok" not in p.stdout:
-            raise TransportError(f"SSH falló: {_err(p, self.dev)}")
+            raise _fail("err.transport.ssh_failed", p, self.dev)
 
     def exists(self, path):
         p = self._ssh(f'if exist "{self._win(path)}\\" (exit 0) else (exit 1)')
@@ -152,7 +168,7 @@ class WindowsTransport(Transport):
             return True
         if p.returncode == 1:
             return False
-        raise TransportError(f"SSH falló: {_err(p, self.dev)}")
+        raise _fail("err.transport.ssh_failed", p, self.dev)
 
     def pull(self, path, dest):
         dest.mkdir(parents=True, exist_ok=True)
@@ -166,9 +182,9 @@ class WindowsTransport(Transport):
             _, aerr = a.communicate(timeout=60)
         except subprocess.TimeoutExpired:
             a.kill(); b.kill()
-            raise TransportError("tiempo agotado")
+            raise TransportError("err.transport.timeout")
         if a.returncode != 0 or b.returncode != 0:
-            raise TransportError(f"tar pull falló: {(aerr or berr).decode('utf-8','replace')[-300:]}")
+            raise TransportError("err.transport.tar_pull_failed", detail=(aerr or berr).decode("utf-8", "replace")[-300:])
 
     def push(self, src, path, extras=()):
         # Limitación: tar extrae sobre la carpeta en uso (no hay equivalente sencillo a rsync --delay-updates),
@@ -176,7 +192,7 @@ class WindowsTransport(Transport):
         # destino aparece como "cambiado" y la siguiente sync lo trata como conflicto en vez de pisarlo a ciegas.
         p = self._ssh(f'if not exist "{self._win(path)}\\" mkdir "{self._win(path)}"')
         if p.returncode != 0:
-            raise TransportError(f"mkdir remoto falló: {_err(p, self.dev)}")
+            raise _fail("err.transport.mkdir_failed", p, self.dev)
         for rel in extras:
             if not _safe_rel(rel):
                 continue
@@ -191,23 +207,23 @@ class WindowsTransport(Transport):
             _, aerr = a.communicate(timeout=60)
         except subprocess.TimeoutExpired:
             a.kill(); b.kill()
-            raise TransportError("tiempo agotado")
+            raise TransportError("err.transport.timeout")
         if a.returncode != 0 or b.returncode != 0:
-            raise TransportError(f"tar push falló: {(berr or aerr).decode('utf-8','replace')[-300:]}")
+            raise TransportError("err.transport.tar_push_failed", detail=(berr or aerr).decode("utf-8", "replace")[-300:])
 
     def process_running(self, name):
         if not PROC_RE.match(name):
-            raise TransportError("nombre de proceso inválido")
+            raise TransportError("err.transport.process_invalid")
         p = self._ssh(f'tasklist /FI "IMAGENAME eq {name}" /NH')
         if p.returncode != 0:
-            raise TransportError(f"tasklist falló: {_err(p, self.dev)}")
+            raise _fail("err.transport.tasklist_failed", p, self.dev)
         return name.lower() in p.stdout.decode("utf-8", "replace").lower()
 
 
 def get_transport(dev: Device) -> Transport:
     if dev.local:
         if running_in_docker():
-            raise TransportError(LOCAL_DOCKER_MSG)
+            raise TransportError("err.config.local_docker")
         return LocalDeviceTransport(dev)
     return WindowsTransport(dev) if dev.os == "windows" else PosixTransport(dev)
 
@@ -226,13 +242,13 @@ def _oserr(e: OSError) -> str:
 def local_path(path) -> Path:
     """Valida una ruta de saves local: texto, sin NUL, absoluta en este sistema y sin '..'."""
     if not isinstance(path, str) or not path.strip():
-        raise TransportError("ruta vacía")
+        raise TransportError("err.transport.path_empty")
     if "\x00" in path:
-        raise TransportError("ruta inválida (carácter nulo)")
+        raise TransportError("err.transport.path_null")
     if ".." in path.replace("\\", "/").split("/"):
-        raise TransportError("'..' no permitido en rutas")
+        raise TransportError("err.transport.path_dotdot")
     if not os.path.isabs(path):
-        raise TransportError(f"la ruta no es absoluta en este sistema: {path}")
+        raise TransportError("err.transport.path_not_absolute", path=path)
     return Path(os.path.abspath(path))
 
 
@@ -241,7 +257,7 @@ def _resolve(p: Path) -> Path:
     try:
         return Path(os.path.realpath(p))
     except (OSError, RuntimeError, ValueError) as e:
-        raise TransportError(f"ruta no resoluble: {e}")
+        raise TransportError("err.transport.path_unresolvable", detail=str(e))
 
 
 def _walk_files(root: Path):
@@ -267,7 +283,7 @@ def _walk_files(root: Path):
 
 
 def _walk_err(e):
-    raise TransportError(f"no se pudo leer {e.filename}: {_oserr(e)}")
+    raise TransportError("err.transport.read_failed", path=e.filename, detail=_oserr(e))
 
 
 def _copy_tree(src: Path, dst: Path):
@@ -280,7 +296,7 @@ def _copy_tree(src: Path, dst: Path):
         try:
             shutil.copy2(src / f, dst / f)
         except OSError as e:
-            raise TransportError(f"no se pudo copiar {f}: {_oserr(e)}")
+            raise TransportError("err.transport.copy_failed", file=f, detail=_oserr(e))
 
 
 def _tmp_name(base: Path, tag: str) -> Path:
@@ -304,37 +320,37 @@ class LocalDeviceTransport(Transport):
             if not root.exists():
                 return False
             if not root.is_dir():
-                raise TransportError(f"la ruta existe pero no es una carpeta: {path}")
+                raise TransportError("err.transport.not_a_folder", path=path)
             if not os.access(root, os.R_OK | os.X_OK):
-                raise TransportError(f"sin permiso de lectura en {path}")
+                raise TransportError("err.transport.no_read_permission", path=path)
         except PermissionError as e:
-            raise TransportError(f"sin permiso para acceder a {path}: {_oserr(e)}")
+            raise TransportError("err.transport.access_denied", path=path, detail=_oserr(e))
         except OSError as e:
-            raise TransportError(f"no se pudo acceder a {path}: {_oserr(e)}")
+            raise TransportError("err.transport.access_failed", path=path, detail=_oserr(e))
         return True
 
     def pull(self, path: str, dest: Path) -> None:
         root = _resolve(local_path(path))
         if not root.is_dir():
-            raise TransportError(f"la carpeta no existe: {path}")
+            raise TransportError("err.transport.folder_missing", path=path)
         _copy_tree(root, Path(dest))
 
     def push(self, src: Path, path: str, extras: Iterable[str] = ()) -> None:
         src = Path(src)
         target = _resolve(local_path(path))
         if target.exists() and not target.is_dir():
-            raise TransportError(f"la ruta existe pero no es una carpeta: {path}")
+            raise TransportError("err.transport.not_a_folder", path=path)
         try:
             target.parent.mkdir(parents=True, exist_ok=True)
         except OSError as e:
-            raise TransportError(f"no se pudo crear {target.parent}: {_oserr(e)}")
+            raise TransportError("err.transport.mkdir_local_failed", path=str(target.parent), detail=_oserr(e))
         try:
             if not self._swap(src, target):
                 self._in_place(src, target)
         except TransportError:
             raise
         except OSError as e:
-            raise TransportError(f"no se pudo escribir en {path}: {_oserr(e)}")
+            raise TransportError("err.transport.write_failed", path=path, detail=_oserr(e))
 
     # -- escritura --
     def _swap(self, src: Path, target: Path) -> bool:
@@ -366,7 +382,7 @@ class LocalDeviceTransport(Transport):
                 if old is not None:
                     os.rename(old, target)  # deshacer
                     old = None
-                raise TransportError(f"no se pudo colocar la carpeta nueva: {_oserr(e)}")
+                raise TransportError("err.transport.place_failed", detail=_oserr(e))
         except BaseException:
             shutil.rmtree(new, ignore_errors=True)
             raise
@@ -411,14 +427,14 @@ class LocalDeviceTransport(Transport):
                     tmp.unlink()
                 except OSError:
                     pass
-                raise TransportError(f"no se pudo escribir {rel}: {_oserr(e)}")
+                raise TransportError("err.transport.write_file_failed", file=rel, detail=_oserr(e))
         t_files, t_dirs, _ = _walk_files(target)
         for rel in t_files:
             if rel not in wanted:
                 try:
                     os.unlink(target / rel)
                 except OSError as e:
-                    raise TransportError(f"no se pudo borrar {rel}: {_oserr(e)}")
+                    raise TransportError("err.transport.delete_failed", file=rel, detail=_oserr(e))
         keep = {os.path.dirname(f) for f in wanted} | set(s_dirs)
         keep = {k for r in keep for k in _parents(r)}
         for rel in sorted(t_dirs, key=len, reverse=True):
@@ -431,11 +447,11 @@ class LocalDeviceTransport(Transport):
     # -- procesos --
     def process_running(self, name: str) -> bool:
         if not PROC_RE.match(name):
-            raise TransportError("nombre de proceso inválido")
+            raise TransportError("err.transport.process_invalid")
         if sys.platform.startswith("win"):
             p = self._exec(["tasklist", "/FI", f"IMAGENAME eq {name}", "/NH"])
             if p.returncode != 0:
-                raise TransportError("tasklist falló: " + _err(p))
+                raise TransportError("err.transport.tasklist_failed", detail=_err(p))
             return name.lower() in p.stdout.decode("utf-8", "replace").lower()
         pat = "[" + re.escape(name[0]) + "]" + re.escape(name[1:])
         try:
@@ -445,7 +461,7 @@ class LocalDeviceTransport(Transport):
         if p.returncode == 1:
             return False
         if p.returncode != 0:
-            raise TransportError("pgrep falló: " + _err(p))
+            raise TransportError("err.transport.pgrep_failed", detail=_err(p))
         pids = {int(x) for x in p.stdout.decode().split() if x.isdigit()}
         return bool(pids - {os.getpid()})  # Checkpoint no cuenta como el juego abierto
 
@@ -453,14 +469,14 @@ class LocalDeviceTransport(Transport):
         try:
             return self._run(args, capture_output=True, timeout=15)
         except subprocess.TimeoutExpired:
-            raise TransportError("tiempo agotado comprobando procesos")
+            raise TransportError("err.transport.process_timeout")
 
     @staticmethod
     def _proc_scan(name: str) -> bool:
         """Sin pgrep: lee /proc (Linux). Si tampoco existe, error claro."""
         proc = Path("/proc")
         if not proc.is_dir():
-            raise TransportError("no se puede comprobar el proceso: falta pgrep")
+            raise TransportError("err.transport.pgrep_missing")
         me = str(os.getpid())
         for d in proc.iterdir():
             if not d.name.isdigit() or d.name == me:
@@ -483,34 +499,38 @@ def _parents(rel: str):
     return out
 
 
+def _status(ok: bool, code: str, **params) -> dict:
+    """Resultado de una comprobación: `code`/`params` (la UI los traduce); `message` es solo respaldo técnico."""
+    return {"ok": ok, "message": describe_code(code, params), "code": code, "params": params}
+
+
 def local_folder_status(path) -> dict:
     """Comprobación de la carpeta de saves de «Este equipo» (botón «Comprobar carpeta»). Sin SSH."""
     if path in (None, ""):
-        return {"ok": True, "message": "Este equipo: acceso local directo, sin SSH. "
-                                       "Indica la ruta de los saves en cada juego."}
+        return _status(True, "err.transport.local_info")
     try:
         p = _resolve(local_path(path))
     except TransportError as e:
-        return {"ok": False, "message": str(e)}
+        return _status(False, e.code, **e.params)
     try:
         if p.exists():
             if not p.is_dir():
-                return {"ok": False, "message": "la ruta existe pero no es una carpeta"}
+                return _status(False, "err.transport.not_a_folder_short")
             if not os.access(p, os.R_OK | os.X_OK):
-                return {"ok": False, "message": "la carpeta existe pero no se puede leer (sin permiso)"}
+                return _status(False, "err.transport.unreadable")
             if not _can_write(p):
-                return {"ok": False, "message": "la carpeta se puede leer pero no escribir (sin permiso o solo lectura)"}
-            return {"ok": True, "message": "carpeta OK: existe, es legible y escribible"}
+                return _status(False, "err.transport.not_writable")
+            return _status(True, "err.transport.folder_ok")
         anc = p
         while not anc.exists() and anc != anc.parent:
             anc = anc.parent
         if not anc.is_dir():
-            return {"ok": False, "message": f"no se puede crear la carpeta: {anc} no es una carpeta"}
+            return _status(False, "err.transport.cannot_create_not_folder", path=str(anc))
         if not _can_write(anc):
-            return {"ok": False, "message": f"la carpeta no existe y no se puede crear: sin permiso de escritura en {anc}"}
-        return {"ok": True, "message": "la carpeta no existe todavía; se creará al sincronizar (se trata como vacía)"}
+            return _status(False, "err.transport.cannot_create_no_permission", path=str(anc))
+        return _status(True, "err.transport.folder_will_be_created")
     except OSError as e:
-        return {"ok": False, "message": f"no se pudo comprobar la carpeta: {_oserr(e)}"}
+        return _status(False, "err.transport.check_failed", detail=_oserr(e))
 
 
 def _can_write(d: Path) -> bool:

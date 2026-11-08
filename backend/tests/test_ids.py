@@ -231,7 +231,7 @@ def test_logs_and_messages_show_names_not_ids(disk):
     st = run_sync(disk.cfg, "Mi juego", False, disk.data, lines.append, disk.tr())
     text = "\n".join(lines) + st["message"]
     assert "Mi juego" in text and "Ordenador de mesa" in text
-    assert GID not in text and "ganador laptop" in st["message"] and "Ordenador de mesa" in st["message"]
+    assert GID not in text and st["params"]["winner"] == "laptop" and "Ordenador de mesa" in st["params"]["updated"]
     log = (disk.data / "logs" / GID / st["log"]).read_text()
     assert "Ordenador de mesa" in log and GID not in log
 
@@ -239,14 +239,14 @@ def test_logs_and_messages_show_names_not_ids(disk):
 def test_renamed_baseline_no_false_conflict_for_either_rename_order(disk):
     c = disk.cfg
     c.games[GID].name = "Nuevo"
-    assert disk.sync(c)["message"] == "ya sincronizado"
+    assert disk.sync(c)["code"] == "err.sync.already_synced"
     c.devices[LAPTOP].name = "Otro portátil"
-    assert disk.sync(c)["message"] == "ya sincronizado"
+    assert disk.sync(c)["code"] == "err.sync.already_synced"
 
 
 def test_game_resolution_by_id_name_and_unknown(disk):
     assert resolve_game(disk.cfg, GID) == GID and resolve_game(disk.cfg, GAME) == GID
-    with pytest.raises(SyncAbort, match="desconocido"):
+    with pytest.raises(SyncAbort, match="game_unknown"):
         resolve_game(disk.cfg, "nada")
     assert disk.sync(game=GAME)["game"] == GID  # run_sync acepta el nombre y trabaja con el id
 
@@ -279,7 +279,7 @@ def test_conflict_with_ids_and_resolution_by_id_or_name(disk):
 def test_restore_version_by_source_id_or_name(disk):
     disk.cfg.devices[PC].name = "Ordenador de mesa"
     msg = restore_version(disk.cfg, GAME, "2026-01-01_100000", "Ordenador de mesa", disk.data)
-    assert "Ordenador de mesa" in msg and (disk.hub / "s.sav").read_text() == "old"
+    assert msg["params"]["source"] == "Ordenador de mesa" and (disk.hub / "s.sav").read_text() == "old"
     with pytest.raises(SyncAbort):
         restore_version(disk.cfg, GID, "2026-01-01_100000", "../x", disk.data)
 
@@ -359,7 +359,7 @@ def test_cli_accepts_id_and_name_and_shows_names(cli_env, capsys):
     assert cli.main(["sync", "zelda-0a1b2c3d", "--dry-run"]) == 0
     assert cli.main(["sync", "Zelda", "--dry-run"]) == 0
     assert cli.main(["sync", "nada", "--dry-run"]) == 2
-    assert "desconocido" in capsys.readouterr().err
+    assert "game_unknown" in capsys.readouterr().err
 
 
 def test_cli_ambiguous_name_is_clear_error(cli_env, capsys):

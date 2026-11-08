@@ -134,7 +134,6 @@ def normalize_path(os_name: str, p: str) -> str:
 
 
 # Texto fijo que aún usa transport.py (tramo posterior); la UI recibe `err.config.local_docker`.
-LOCAL_DOCKER_MSG = "“Este equipo” solo está disponible cuando Checkpoint se ejecuta sin Docker"
 
 
 class Device(BaseModel):

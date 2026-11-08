@@ -156,7 +156,7 @@ def test_backend_msvcrt_simulado(monkeypatch, tmp_path):
 def test_sync_usa_el_lock_portable_y_aborta_si_ocupado(tmp_path):
     from app.sync import SyncAbort, _game_lock
     with _game_lock(tmp_path, "g"):
-        with pytest.raises(SyncAbort, match="en curso"):
+        with pytest.raises(SyncAbort, match="in_progress"):
             with _game_lock(tmp_path, "g"):
                 pass
     with _game_lock(tmp_path, "g"):

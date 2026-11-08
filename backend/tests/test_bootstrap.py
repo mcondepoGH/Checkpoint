@@ -8,7 +8,7 @@ from app import bootstrap, settings
 from app.auth import Auth
 from app.config import load_config
 from app.main import create_app
-from app.transport import PosixTransport, TransportError, _err
+from app.transport import PosixTransport, TransportError, _fail
 from app.config import Device
 
 
@@ -108,8 +108,11 @@ def test_keyscan_uses_arg_list_no_shell(monkeypatch):
 def test_changed_host_key_gives_clear_error():
     p = subprocess.CompletedProcess(
         [], 255, b"", b"@@@ WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED! @@@\nHost key verification failed.")
-    msg = _err(p, Device(name="Equipo", host="10.0.0.5", user="u", os="linux"))
-    assert "CAMBIADO" in msg and "No se sobrescribe" in msg
+    e = _fail("err.transport.ssh_failed", p, Device(name="Equipo", host="10.0.0.5", user="u", os="linux"))
+    assert (e.code, e.params) == ("err.bootstrap.host_key_changed", {"host": "10.0.0.5", "port": 22})
+    other = _fail("err.transport.ssh_failed", subprocess.CompletedProcess([], 255, b"", b"boom"),
+                  Device(name="Equipo", host="10.0.0.5", user="u", os="linux"))
+    assert (other.code, other.params) == ("err.transport.ssh_failed", {"detail": "boom"})
 
 
 def test_check_marks_first_use_and_fails_if_keyscan_fails(tmp_path, monkeypatch):

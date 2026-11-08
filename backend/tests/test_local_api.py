@@ -129,7 +129,7 @@ def test_config_con_local_ya_en_fichero_y_docker_se_ve_el_error(client, monkeypa
 # ---- /api/devices/test ----
 def test_test_local_sin_ruta(client):
     r = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"}}).json()
-    assert r["ok"] and "sin SSH" in r["message"]
+    assert r["ok"] and r["code"] == "err.transport.local_info"
 
 
 def test_test_local_no_toca_ssh(client, monkeypatch):
@@ -146,13 +146,13 @@ def test_test_local_no_toca_ssh(client, monkeypatch):
 def test_test_local_ruta_ok_inexistente_creable_y_fichero(client):
     t = client.tmp
     ok = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"}, "paths": [str(t)]}).json()
-    assert ok == {"ok": True, "message": "carpeta OK: existe, es legible y escribible"}
+    assert ok["ok"] and ok["code"] == "err.transport.folder_ok"
     nueva = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"},
                                                     "paths": [str(t / "a" / "b")]}).json()
-    assert nueva["ok"] and "se creará" in nueva["message"]
+    assert nueva["ok"] and nueva["code"] == "err.transport.folder_will_be_created"
     (t / "f").write_text("x")
     f = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"}, "paths": [str(t / "f")]}).json()
-    assert not f["ok"] and "no es una carpeta" in f["message"]
+    assert not f["ok"] and f["code"] == "err.transport.not_a_folder_short"
 
 
 @pytest.mark.skipif(hasattr(os, "geteuid") and os.geteuid() == 0, reason="root")
@@ -169,16 +169,16 @@ def test_test_local_ruta_ilegible_y_no_escribible(client):
     finally:
         (t / "ni").chmod(0o755)
         (t / "ro").chmod(0o755)
-    assert not a["ok"] and "leer" in a["message"]
-    assert not b["ok"] and "escribir" in b["message"]
-    assert not c["ok"] and "no se puede crear" in c["message"]
+    assert not a["ok"] and a["code"] == "err.transport.unreadable"
+    assert not b["ok"] and b["code"] == "err.transport.not_writable"
+    assert not c["ok"] and c["code"] == "err.transport.cannot_create_no_permission"
 
 
 def test_test_local_varias_rutas_y_rutas_invalidas(client):
     t = client.tmp
     r = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"},
                                                 "paths": [str(t), "relativa", "/a/../b"]}).json()
-    assert not r["ok"] and r["message"].count("\n") == 2 and [x.get("code") for x in r["results"]] == [None, "err.config.path_absolute", "err.config.path_dotdot"]
+    assert not r["ok"] and r["message"].count("\n") == 2 and [x.get("code") for x in r["results"]] == ["err.transport.folder_ok", "err.config.path_absolute", "err.config.path_dotdot"]
     r = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"}, "paths": "x"}).json()
     assert not r["ok"]
     r = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"}, "paths": [1]}).json()
@@ -207,7 +207,7 @@ def test_test_remoto_sigue_igual(client, monkeypatch):
             return None
     monkeypatch.setattr("app.main.get_transport", lambda d: T(d))
     r = client.post("/api/devices/test", json={"device": {"host": "192.0.2.1", "user": "u", "os": "linux"}}).json()
-    assert r == {"ok": True, "message": "conexión OK"}
+    assert r["ok"] and r["code"] == "err.transport.connection_ok" and r["first_use"] is False
 
 
 # ---- sync, conflicto y resolución por API ----
