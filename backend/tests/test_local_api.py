@@ -286,7 +286,7 @@ def test_sync_por_api_en_docker_con_local_no_arranca(papi, monkeypatch):
     monkeypatch.setenv("CHECKPOINT_RUNTIME", "docker")
     settings.CONFIG_PATH.write_text(settings.CONFIG_PATH.read_text() + "\n")
     r = papi.post("/api/sync/g1", json={})
-    assert r.status_code == 500 and "sin Docker" in r.json()["detail"]
+    assert r.status_code == 500 and "sin Docker" in r.json()["detail"]["params"]["reason"]
 
 
 def test_remoto_offline_via_api_con_local(papi, monkeypatch):

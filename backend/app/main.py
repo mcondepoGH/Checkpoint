@@ -7,7 +7,7 @@ import uuid
 from contextlib import asynccontextmanager
 from typing import Dict, List, Optional
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
+from fastapi import Depends, FastAPI, Query, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
@@ -17,6 +17,7 @@ from . import bootstrap
 from . import history
 from . import runtime
 from . import updates
+from .apierror import ApiError, error_body, error_response
 from .auth import Auth
 from .config import LOCAL_DOCKER_MSG, Config, ConfigError, Device, normalize_path, resolve_ref, validate_config
 from .configstore import Conflict, ConfigStore, InvalidConfig, parse_text, config_events_gen, diff_configs, render_yaml
@@ -66,20 +67,20 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
 
     def require(request: Request):
         if not auth.valid(request.cookies.get(COOKIE)):
-            raise HTTPException(401, "sesión requerida")
+            raise ApiError(401, "err.main.session_required")
         if request.method not in ("GET", "HEAD"):
             origin = request.headers.get("origin")
             host = request.headers.get("host")
             if origin and host and origin.split("://", 1)[-1] != host:
-                raise HTTPException(403, "origen no permitido")
+                raise ApiError(403, "err.main.origin_forbidden")
 
     async def body_json(request: Request) -> dict:
         try:
             body = await request.json()
         except Exception:
-            raise HTTPException(400, "cuerpo JSON requerido")
+            raise ApiError(400, "err.main.json_body_required")
         if not isinstance(body, dict):
-            raise HTTPException(400, "cuerpo JSON requerido")
+            raise ApiError(400, "err.main.json_body_required")
         return body
 
     # ---- sesión ----
@@ -90,11 +91,10 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         try:
             tok = auth.login(ip, str(body.get("user", "")), str(body.get("password", "")))
         except PermissionError as e:
-            return JSONResponse({"detail": f"demasiados intentos; espera {e.args[0]} s",
-                                 "retry_after": e.args[0]}, status_code=429,
-                                headers={"Retry-After": str(e.args[0])})
+            return error_response(429, "err.main.too_many_attempts", headers={"Retry-After": str(e.args[0])},
+                                  extra={"retry_after": e.args[0]}, seconds=e.args[0])
         if not tok:
-            return JSONResponse({"detail": "credenciales incorrectas"}, status_code=401)
+            return error_response(401, "err.main.bad_credentials")
         r = JSONResponse({"ok": True})
         r.set_cookie(COOKIE, tok, max_age=int(auth.ttl), httponly=True, samesite="strict",
                      secure=settings.COOKIE_SECURE, path="/")
@@ -120,10 +120,10 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         return cfg
 
     def invalid_response(e: InvalidConfig):
-        return JSONResponse({"detail": "config no válida", "errors": e.errors}, status_code=422)
+        return error_response(422, "err.main.config_invalid", extra={"errors": e.errors})
 
     def conflict_response(e: Conflict):
-        return JSONResponse({"detail": str(e), "current_version": e.current_version}, status_code=409)
+        return error_response(409, "err.main.config_changed", extra={"current_version": e.current_version})
 
     @app.get("/api/config", dependencies=[Depends(require)])
     def get_config():
@@ -149,10 +149,10 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             try:
                 text = store.read_backup(str(body["backup"]))
             except FileNotFoundError:
-                raise HTTPException(404, "copia desconocida")
+                raise ApiError(404, "err.main.backup_unknown")
             cfg, err = parse_text(text)
             if err:
-                raise HTTPException(422, f"la copia no es válida: {err}")
+                raise ApiError(422, "err.main.backup_invalid", reason=err)
         else:
             try:
                 cfg = draft(body)
@@ -173,7 +173,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         body = await body_json(request)
         base = body.get("base_version")
         if not isinstance(base, str) or not base:
-            raise HTTPException(428, "falta base_version (recarga la configuración)")
+            raise ApiError(428, "err.main.base_version_required")
         try:
             cfg = draft(body)
             res = store.save(base, cfg)
@@ -192,11 +192,11 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         body = await body_json(request)
         base = body.get("base_version")
         if not isinstance(base, str) or not base:
-            raise HTTPException(428, "falta base_version (recarga la configuración)")
+            raise ApiError(428, "err.main.base_version_required")
         try:
             res = store.restore(base, str(body.get("name", "")))
         except FileNotFoundError:
-            raise HTTPException(404, "copia desconocida")
+            raise ApiError(404, "err.main.backup_unknown")
         except InvalidConfig as e:
             return invalid_response(e)
         except Conflict as e:
@@ -213,7 +213,9 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         try:
             dev = Device.model_validate(raw)
         except ValidationError as e:
-            return {"ok": False, "message": "datos del dispositivo inválidos: " + _errs(e)}
+            reason = _errs(e)
+            return {"ok": False, "message": "datos del dispositivo inválidos: " + reason,
+                    "code": "err.main.device_invalid", "params": {"reason": reason}}
         if dev.local:
             return await run_in_threadpool(_test_local, dev, body)
         return await run_in_threadpool(_test_conn, dev)
@@ -224,7 +226,8 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             return {"ok": False, "message": LOCAL_DOCKER_MSG}
         paths = body.get("paths", [])
         if not isinstance(paths, list) or len(paths) > 50 or not all(isinstance(p, str) for p in paths):
-            return {"ok": False, "message": "paths debe ser una lista de rutas (máx. 50)"}
+            return {"ok": False, "message": "paths debe ser una lista de rutas (máx. 50)",
+                    "code": "err.main.paths_invalid", "params": {"max": 50}}
         if not paths:
             return local_folder_status(None)
         results = []
@@ -254,21 +257,21 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     def ssh_public_key():
         pub = bootstrap.public_key()
         if not pub:
-            raise HTTPException(404, "clave SSH aún no generada")
+            raise ApiError(404, "err.main.ssh_key_missing")
         return {"public_key": pub}
 
     def _config(error) -> Config:
         snap = store.snapshot()  # recarga si el fichero cambió; cada ejecución conserva la Config con la que empezó
         if snap.error:
-            raise error(f"config.yaml inválido: {snap.error}")
+            raise error(snap.error)
         return snap.cfg
 
     def _cfg() -> Config:
-        return _config(lambda msg: HTTPException(500, msg))
+        return _config(lambda reason: ApiError(500, "err.main.config_file_invalid", reason=reason))
 
     # ---- sync automática ----
     def _auto_cfg() -> Config:
-        return _config(RuntimeError)
+        return _config(lambda reason: RuntimeError(f"config.yaml inválido: {reason}"))
 
     scheduler = Scheduler(_auto_cfg, lambda g: any(r.game == g and not r.done for r in runs.values()))
     holder["scheduler"] = scheduler
@@ -283,7 +286,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         try:
             return scheduler.update(body)
         except ValueError as e:
-            return JSONResponse({"detail": "ajustes no válidos", "errors": e.args[0]}, status_code=422)
+            return error_response(422, "err.main.settings_invalid", extra={"errors": e.args[0]})
 
     # ---- versión y actualizaciones (solo detección) ----
     checker = updates.UpdateChecker()
@@ -295,18 +298,17 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     @app.put("/api/updates", dependencies=[Depends(require)])
     async def put_updates(request: Request):
         if not updates.applicable():
-            return JSONResponse({"detail": "La comprobación de actualizaciones no se aplica en Docker "
-                                 "(la versión la fija la imagen)", "aplicable": False}, status_code=409)
+            return error_response(409, "err.main.updates_not_applicable", extra={"aplicable": False})
         body = await body_json(request)
         errors = {}
         if "enabled" in body and not isinstance(body["enabled"], bool):
-            errors["enabled"] = "debe ser verdadero o falso"
+            errors["enabled"] = error_body("err.main.updates.enabled_bool")
         if "channel" in body and body["channel"] not in updates.CHANNELS:
-            errors["channel"] = "debe ser «stable» o «beta»"
+            errors["channel"] = error_body("err.main.updates.channel_invalid")
         if not errors and "enabled" not in body and "channel" not in body:
-            errors["enabled"] = "indica «enabled» o «channel»"
+            errors["enabled"] = error_body("err.main.updates.field_required")
         if errors:
-            return JSONResponse({"detail": "ajustes no válidos", "errors": errors}, status_code=422)
+            return error_response(422, "err.main.settings_invalid", extra={"errors": errors})
         if "enabled" in body:
             checker.set_enabled(body["enabled"])
         if "channel" in body:
@@ -325,9 +327,9 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         try:
             gid = resolve_ref(cfg.games, ref)
         except ConfigError as e:
-            raise HTTPException(409, str(e))
+            raise ApiError(409, "err.main.game_ambiguous", reason=str(e))
         if gid is None:
-            raise HTTPException(404, "juego desconocido")
+            raise ApiError(404, "err.main.game_unknown")
         return gid
 
     # ---- sync ----
@@ -344,13 +346,13 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         dry = bool(body.get("dry_run", False))
         resolution = body.get("resolution")
         if resolution is not None and not valid_resolution(resolution):
-            raise HTTPException(422, "resolution debe ser 'newest', 'hub' o 'device:<id o nombre>'")
+            raise ApiError(422, "err.main.resolution_invalid")
         expect = body.get("expect")
         if expect is not None and not (isinstance(expect, dict) and all(
                 isinstance(k, str) and (v is None or isinstance(v, str)) for k, v in expect.items())):
-            raise HTTPException(422, "expect debe ser un mapa origen -> hash")
+            raise ApiError(422, "err.main.expect_invalid")
         if scheduler.current == game or any(r.game == game and not r.done for r in runs.values()):
-            raise HTTPException(409, "ya hay una ejecución en curso de este juego")
+            raise ApiError(409, "err.main.run_in_progress")
         run = Run(game, dry, cfg.games[game].name)
         runs[run.id] = run
         for old in [k for k, v in runs.items() if v.done][:-20]:
@@ -372,7 +374,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     def stream(run_id: str):
         run = runs.get(run_id)
         if not run:
-            raise HTTPException(404, "ejecución desconocida")
+            raise ApiError(404, "err.main.run_unknown")
 
         def gen():
             i = 0
@@ -432,7 +434,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             msg = restore_version(cfg, game, str(body.get("version", "")), str(body.get("source", "")),
                                   settings.DATA_DIR)
         except SyncAbort as e:
-            raise HTTPException(400, str(e))
+            raise ApiError(400, "err.main.restore_failed", reason=str(e))
         return {"ok": True, "message": msg}
 
     # ---- web (SPA) ----
@@ -440,7 +442,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     @app.get("/{path:path}")
     def spa(path: str):
         if path.startswith("api/"):
-            raise HTTPException(404)
+            raise ApiError(404, "err.main.not_found")
         root = settings.STATIC_DIR.resolve()
         f = (root / path).resolve()
         if path and f.is_file() and root in f.parents:
@@ -451,7 +453,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         idx = root / "index.html"
         if idx.is_file():
             return FileResponse(idx, headers=NO_CACHE)
-        raise HTTPException(404, "frontend no construido")
+        raise ApiError(404, "err.main.frontend_not_built")
 
     return app
 
