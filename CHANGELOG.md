@@ -4,7 +4,7 @@
 
 ### Novedades
 
-- Interfaz en **español e inglés**. Selector de idioma en la cabecera y en la pantalla de acceso (Automático, Español, English); la elección se recuerda en el navegador y se aplica sin recargar. Fechas, tamaños, duraciones y plurales siguen el idioma activo.
+- Interfaz en **español e inglés**. Selector de idioma en la cabecera, una vez iniciada la sesión (Automático, Español, English; la pantalla de acceso no lleva selectores de idioma ni de tema); la elección se recuerda en el navegador y se aplica sin recargar. Fechas, tamaños, duraciones y plurales siguen el idioma activo.
 - Variable opcional `CHECKPOINT_LANG` (`es` o `en`, por defecto `es`): idioma por defecto del servidor. Sin elección guardada en el navegador se usa este; «Automático» sigue usando el idioma del navegador. Un valor no soportado se ignora (español) y se avisa en el log de arranque. Comentada en `docker-compose.yml` y en `.env.example`.
 - `GET /api/public` (sin sesión) informa del idioma por defecto para la pantalla de acceso.
 

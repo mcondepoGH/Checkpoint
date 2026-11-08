@@ -58,7 +58,7 @@ const NEW = { actual: '0.4.2', ultima: '0.5.0', hay_actualizacion: true, habilit
 const SPANISH = /\b(Sincronizar|Configuración|Versiones|Eliminar|Cancelar|Cerrar|Guardar|Nombre|Dispositivo|Puerto|Usuario|Contraseña|Entrar|Salir|Conflicto|Restaurar|Aplicar|Atrás|fichero|ficheros|Juego|Cargando|Probar|Comprobar|Sin |Ruta|Proceso|Simulación|Novedades|Instalada|Ganador|Destinos|Actualizados|Resolver)\b/;
 
 const screens = () => [
-  ['Login', h(m.Login, { onDone() {}, theme: 'auto', cycleTheme() {} })],
+  ['Login', h(m.Login, { onDone() {} })],
   ['LanguageSelect', h(m.LanguageSelect, {})],
   ['DeviceCard', h(m.DeviceCard, { dev, errors: {}, idText: 'pc-1', renamed: true, onChange() {}, onTest() {}, onRemove() {}, runtime: 'native', platform: 'linux', canLocal: true, test: { ok: true, code: 'err.transport.connection_ok', params: {}, first_use: true } })],
   ['GameCard', h(m.GameCard, { game, devices, errors: {}, globalMax: '20', nameA: 'PC', nameB: 'PC2', idA: 'pc-1', idB: 'pc-2', idText: 'g-1', renamed: false, onChange() {}, onRemove() {} })],
@@ -90,12 +90,27 @@ test('modo español: textos en español', { skip }, () => {
 
 test('cambio de idioma sin recargar: el mismo componente se repinta', { skip }, () => {
   m.i18n.setLocale('es');
-  assert.match(h(m.Login, { onDone() {}, theme: 'dark', cycleTheme() {} }), /Entrar/);
+  assert.match(h(m.Login, { onDone() {} }), /Entrar/);
   m.i18n.setLocale('en');
-  const en = h(m.Login, { onDone() {}, theme: 'dark', cycleTheme() {} });
+  const en = h(m.Login, { onDone() {} });
   assert.match(en, /Sign in/);
-  assert.match(en, /Theme: dark/);
   m.i18n.setLocale('es');
+});
+
+test('login limpio: sin selector de idioma ni de tema', { skip }, () => {
+  m.i18n.setLocale('es');
+  const html = h(m.Login, { onDone() {} });
+  assert.doesNotMatch(html, /<select/);
+  assert.doesNotMatch(html, /Tema|Theme/);
+  assert.equal((html.match(/<button/g) || []).length, 1);
+});
+
+test('cabecera de la app (con sesión) conserva idioma y tema', () => {
+  const app = fs.readFileSync(path.join(SRC, 'App.jsx'), 'utf8');
+  const login = fs.readFileSync(path.join(SRC, 'pages', 'Login.jsx'), 'utf8');
+  assert.match(app, /<LanguageSelect \/>/);
+  assert.match(app, /onClick=\{cycleTheme\}/);
+  assert.doesNotMatch(login, /LanguageSelect|cycleTheme/);
 });
 
 test('LanguageSelect: Automático + Español + English', { skip }, () => {

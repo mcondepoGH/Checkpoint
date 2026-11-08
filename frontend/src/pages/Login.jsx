@@ -2,9 +2,8 @@ import React, { useState } from 'react';
 import logo from '../assets/logo-icon.svg';
 import { api } from '../api.js';
 import { errText, useI18n } from '../useI18n.js';
-import LanguageSelect from '../components/LanguageSelect.jsx';
 
-export default function Login({ onDone, theme, cycleTheme }) {
+export default function Login({ onDone }) {
   const { t } = useI18n();
   const [user, setUser] = useState('');
   const [password, setPassword] = useState('');
@@ -31,8 +30,6 @@ export default function Login({ onDone, theme, cycleTheme }) {
         </label>
         {error && <div className="alert error">{errText(error)}</div>}
         <button className="btn primary" disabled={busy}>{t('login.submit')}</button>
-        <button type="button" className="btn ghost" onClick={cycleTheme}>{t('app.themeLabel', { theme: t(`app.theme.${theme}`) })}</button>
-        <LanguageSelect />
       </form>
     </div>
   );

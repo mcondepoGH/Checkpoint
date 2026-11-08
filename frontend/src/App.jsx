@@ -96,7 +96,7 @@ export default function App() {
 
   if (authed === null) return <div className="center muted">{t('common.loading')}</div>;
   if (!authed) {
-    return <Login onDone={() => { setAuthed(true); loadConfig(true); }} theme={theme} cycleTheme={cycleTheme} />;
+    return <Login onDone={() => { setAuthed(true); loadConfig(true); }} />;
   }
 
   return (

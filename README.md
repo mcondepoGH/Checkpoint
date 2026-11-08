@@ -225,7 +225,7 @@ La clave de cada juego y dispositivo es su **ID interno**, que no cambia nunca; 
 
 ## Idioma
 
-La interfaz está en español e inglés. El selector de la cabecera (y el de la pantalla de acceso) ofrece **Automático (navegador)**, **Español** y **English**, y recuerda la elección en ese navegador (`localStorage`, clave `checkpoint.lang`); se aplica al instante, sin recargar.
+La interfaz está en español e inglés. El selector de la cabecera (una vez iniciada la sesión; la pantalla de acceso no lleva selectores y usa el idioma y tema ya guardados) ofrece **Automático (navegador)**, **Español** y **English**, y recuerda la elección en ese navegador (`localStorage`, clave `checkpoint.lang`); se aplica al instante, sin recargar.
 
 Orden de prioridad:
 
