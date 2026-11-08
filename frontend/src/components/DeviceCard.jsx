@@ -2,11 +2,13 @@ import React, { useId } from 'react';
 import Field from './Field.jsx';
 import { LOCAL_DOCKER_MSG, LOCAL_HELP, LOCAL_LABEL, NAME_HINT, NAME_MAX, OS_OPTIONS, localPatch } from '../draft.js';
 import IdNote from './IdNote.jsx';
-import { errText } from '../useI18n.js';
+import { errText, t } from '../useI18n.js';
 
 // `runtime` ('docker' | 'native') y `platform` vienen de /api/config. «Este equipo» solo se ofrece en modo nativo.
 // Resultado de «Probar conexión»/«Comprobar carpeta»: con varias carpetas, una línea por ruta (cada una con su code si lo hay).
-const testText = (test) => (test.results ? test.results.map((r) => `${r.path}: ${errText(r)}`).join('\n') : errText(test));
+// Si se guardó una host key nueva (`first_use`), se añade el aviso: « (…)» tras un OK y « […]» tras un fallo.
+const firstUse = (test) => (test.first_use ? (test.ok ? ` (${t('err.bootstrap.first_use')})` : ` [${t('err.bootstrap.first_use')}]`) : '');
+const testText = (test) => (test.results ? test.results.map((r) => `${r.path}: ${errText(r)}`).join('\n') : errText(test) + firstUse(test));
 
 export default function DeviceCard({ dev, errors, localError, localFlagError, canLocal, runtime, platform, test, idText, renamed, onChange, onTest, onRemove }) {
   const set = (k) => (e) => onChange({ [k]: e.target.value });

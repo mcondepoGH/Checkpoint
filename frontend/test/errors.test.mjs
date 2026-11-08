@@ -67,3 +67,34 @@ test('todos los err.config.* y err.configstore.* que emite el backend existen en
   assert.ok(codes.length >= 50, `solo ${codes.length} códigos`);
   for (const c of codes) assert.notEqual(t(c, { reason: 'r', max: 1 }), c, `falta ${c}`);
 });
+
+test('todas las claves err.sync/transport/bootstrap que emite el backend existen en es.json', () => {
+  const dir = new URL('../../backend/app/', import.meta.url);
+  const src = ['sync.py', 'transport.py', 'bootstrap.py', 'main.py'].map((f) => fs.readFileSync(new URL(f, dir), 'utf8')).join('\n');
+  const codes = [...new Set([...src.matchAll(/"(err\.(?:sync|transport|bootstrap)\.[a-z_]+)"/g)].map((m) => m[1]))]
+    .filter((c) => !c.endsWith('_'));
+  for (const r of ['indeterminate', 'stale', 'no_baseline', 'inconsistent', 'both_changed']) codes.push(`err.sync.conflict_${r}`);
+  assert.ok(codes.length > 50, `solo ${codes.length} códigos`);
+  for (const c of codes) assert.notEqual(t(c, { x: 1 }), c, `falta ${c}`);
+});
+
+test('estado de sync con code+params se traduce, también con causas anidadas y lista de fallos', () => {
+  assert.equal(errorText({ result: 'ok', code: 'err.sync.already_synced', params: {}, message: 'err.sync.already_synced' }, t), 'ya sincronizado');
+  assert.equal(errorText({ code: 'err.sync.conflict', params: { sides: 'PC, Portátil', cause: { code: 'err.sync.conflict_both_changed', params: {} } } }, t),
+    'conflicto en PC, Portátil: ambos lados cambiaron desde la última sincronización');
+  assert.equal(errorText({ code: 'err.sync.conflict_indeterminate', params: { seconds: 2 } }, t), 'los relojes difieren menos de 2 s: no se puede saber cuál es más reciente');
+  const failed = [{ path: 'PC', code: 'err.transport.rsync_push_failed', params: { detail: 'Permission denied' } }];
+  assert.equal(errorText({ code: 'err.sync.partial', params: { winner: 'A', updated: 'hub', failed } }, t),
+    'ganador A; actualizados hub; fallaron PC: rsync push falló: Permission denied');
+  assert.equal(errorText({ code: 'err.sync.process_check_failed', params: { device: 'PC', cause: { code: 'err.transport.pgrep_failed', params: { detail: 'x' } } } }, t),
+    'no se pudo comprobar el proceso en PC: pgrep falló: x');
+});
+
+test('estado persistido antiguo (texto en español, sin code) se muestra tal cual', () => {
+  assert.equal(errorText({ result: 'ok', message: 'ya sincronizado' }, t), 'ya sincronizado');
+});
+
+test('versión restaurada y restore_failed con causa anidada', () => {
+  assert.equal(errorText({ ok: true, code: 'err.sync.restored', params: { version: 'v1', source: 'PC' } }, t), 'hub restaurado desde v1/PC; ejecuta Sincronizar para propagarlo');
+  assert.equal(errorText({ code: 'err.main.restore_failed', params: { cause: { code: 'err.sync.version_unknown', params: {} } } }, t), 'no existe esa versión');
+});

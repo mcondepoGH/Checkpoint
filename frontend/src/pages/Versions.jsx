@@ -19,7 +19,7 @@ export default function Versions({ config, onGoSettings }) {
     if (!window.confirm(`¿Restaurar ${version}/${sourceName} en el hub? La copia actual del hub se guarda como versión.`)) return;
     try {
       const r = await api(`/api/versions/${encodeURIComponent(game)}/restore`, { method: 'POST', body: { version, source } });
-      setMsg({ text: r.message }); load(game); loadLimit(game);
+      setMsg({ text: errText(r) }); load(game); loadLimit(game);
     } catch (e) { setMsg({ error: true, text: errText(e) }); }
   };
 

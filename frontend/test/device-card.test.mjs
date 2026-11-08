@@ -91,6 +91,16 @@ test('resultado del test se pinta, también multilínea', { skip }, () => {
   assert.ok(has(busy, 'Comprobando…') && has(busy, 'disabled'));
 });
 
+test('resultado con code+params se traduce; first_use añade el aviso', { skip }, () => {
+  const ok = render({ dev: dev(), test: { ok: true, code: 'err.transport.connection_ok', params: {}, first_use: true } });
+  assert.ok(has(ok, 'alert ok') && has(ok, 'conexión OK (host key guardada (primer uso))'));
+  const bad = render({ dev: dev(), test: { ok: false, code: 'err.transport.ssh_failed', params: { detail: 'boom' }, first_use: true } });
+  assert.ok(has(bad, 'SSH falló: boom [host key guardada (primer uso)]'));
+  const multi = render({ dev: dev({ local: true }), test: { ok: false, results: [{ path: '/a', ok: true, code: 'err.transport.folder_ok', params: {} },
+    { path: 'r', ok: false, code: 'err.transport.path_not_absolute', params: { path: 'r' } }] } });
+  assert.ok(has(multi, '/a: carpeta OK') && has(multi, 'r: la ruta no es absoluta en este sistema: r'));
+});
+
 test('accesibilidad: casilla etiquetada y con descripción asociada', { skip }, () => {
   const h = render({});
   const m = h.match(/<input type="checkbox"[^>]*aria-describedby="([^"]+)"/);

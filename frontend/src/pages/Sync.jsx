@@ -34,15 +34,15 @@ function LastRun({ s, devName }) {
                   : <span>{s.finished?.replace('T', ' ') || '—'}</span>}
           {s.dry_run && <span className="lr-tag">Simulación (dry-run)</span>}</dd>
       </div>
-      {s.result === 'conflict' && <div className="lr-row"><dt>Conflicto</dt><dd className="lr-msg">{s.message}</dd></div>}
-      {s.result === 'partial' && <div className="lr-row"><dt>Parcial</dt><dd className="lr-msg">{s.message}</dd></div>}
+      {s.result === 'conflict' && <div className="lr-row"><dt>Conflicto</dt><dd className="lr-msg">{errText(s)}</dd></div>}
+      {s.result === 'partial' && <div className="lr-row"><dt>Parcial</dt><dd className="lr-msg">{errText(s)}</dd></div>}
       {s.offline?.length > 0 && <div className="lr-row"><dt>Offline</dt><dd className="pills">{s.offline.map((d) => <span className="pill" key={d}>{devName(d)}</span>)}</dd></div>}
       {winner && <div className="lr-row"><dt>Ganador</dt><dd><span className="pill win">{winner}</span></dd></div>}
       {list.length > 0 && (
         <div className="lr-row"><dt>{planned ? 'Destinos' : 'Actualizados'}</dt>
           <dd className="pills">{list.map((d) => <span className="pill" key={d}>{d}</span>)}</dd></div>
       )}
-      {!structured && s.message && <div className="lr-row"><dt>Detalle</dt><dd className="lr-msg">{s.message}</dd></div>}
+      {!structured && (s.code || s.message) && <div className="lr-row"><dt>Detalle</dt><dd className="lr-msg">{errText(s)}</dd></div>}
     </dl>
   );
 }
