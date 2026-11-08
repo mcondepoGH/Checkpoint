@@ -98,13 +98,13 @@ def test_copia_no_valida(client, monkeypatch):
     r = client.post("/api/config/diff", json={"backup": "x"})
     assert r.status_code == 422
     code, params = det(r)
-    assert code == "err.main.backup_invalid" and params["reason"]
+    assert code == "err.main.backup_invalid" and params["cause"]["code"].startswith("err.config.yaml_")
 
 
 def test_dispositivo_invalido_y_paths(client):
     login(client)
     r = client.post("/api/devices/test", json={"device": {"host": "x y"}}).json()
-    assert r["ok"] is False and r["code"] == "err.main.device_invalid" and r["params"]["reason"] and r["message"]
+    assert r["ok"] is False and r["code"] == "err.main.device_invalid" and r["params"]["causes"] and r["message"]
     r = client.post("/api/devices/test", json={"device": {"name": "PC", "local": True, "os": "linux"}, "paths": "x"}).json()
     assert r["ok"] is False and r["code"] == "err.main.paths_invalid" and r["params"] == {"max": 50}
 
@@ -124,7 +124,7 @@ def test_config_yaml_invalido_500(client):
     r = client.get("/api/versions/g")
     assert r.status_code == 500
     code, params = det(r)
-    assert code == "err.main.config_file_invalid" and params["reason"]
+    assert code == "err.main.config_file_invalid" and params["cause"]["code"].startswith("err.")
 
 
 def test_ajustes_no_validos_scheduler(client):
@@ -162,10 +162,10 @@ def test_juego_ambiguo(client, monkeypatch):
     put_cfg(client)
 
     def amb(items, ref):
-        raise ConfigError("'Dup' es ambiguo")
+        raise ConfigError("err.config.ref_ambiguous", ref="Dup", matches="a, b")
     monkeypatch.setattr("app.main.resolve_ref", amb)
     r = client.get("/api/versions/Dup")
-    assert r.status_code == 409 and det(r) == ("err.main.game_ambiguous", {"reason": "'Dup' es ambiguo"})
+    assert r.status_code == 409 and det(r) == ("err.main.game_ambiguous", {"cause": {"code": "err.config.ref_ambiguous", "params": {"ref": "Dup", "matches": "a, b"}}})
 
 
 def test_sync_422_y_409_y_run_desconocido(client):

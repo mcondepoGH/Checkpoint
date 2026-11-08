@@ -82,7 +82,7 @@ def test_guardar_local_en_docker_422_con_mensaje(client, monkeypatch):
     monkeypatch.setenv("CHECKPOINT_RUNTIME", "docker")
     r = put_config(client, cfg(client.tmp))
     assert r.status_code == 422
-    assert "sin Docker" in r.json()["errors"][f"devices.{PC}.local"]
+    assert r.json()["errors"][f"devices.{PC}.local"]["code"] == "err.config.local_docker"
     assert not settings.CONFIG_PATH.exists() or "local" not in settings.CONFIG_PATH.read_text()
 
 
@@ -123,7 +123,7 @@ def test_config_con_local_ya_en_fichero_y_docker_se_ve_el_error(client, monkeypa
     monkeypatch.setenv("CHECKPOINT_RUNTIME", "docker")
     settings.CONFIG_PATH.write_text(settings.CONFIG_PATH.read_text() + "\n")  # fuerza recarga
     j = client.get("/api/config").json()
-    assert j["error"] and "sin Docker" in j["error"] and j["runtime"] == "docker"
+    assert j["error"]["params"]["causes"][0]["code"] == "err.config.local_docker" and j["runtime"] == "docker"
 
 
 # ---- /api/devices/test ----
@@ -178,7 +178,7 @@ def test_test_local_varias_rutas_y_rutas_invalidas(client):
     t = client.tmp
     r = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"},
                                                 "paths": [str(t), "relativa", "/a/../b"]}).json()
-    assert not r["ok"] and r["message"].count("\n") == 2 and "absoluta" in r["message"] and ".." in r["message"]
+    assert not r["ok"] and r["message"].count("\n") == 2 and [x.get("code") for x in r["results"]] == [None, "err.config.path_absolute", "err.config.path_dotdot"]
     r = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"}, "paths": "x"}).json()
     assert not r["ok"]
     r = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"}, "paths": [1]}).json()
@@ -187,13 +187,13 @@ def test_test_local_varias_rutas_y_rutas_invalidas(client):
 
 def test_test_local_con_host_es_invalido(client):
     r = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux", "host": "192.0.2.1"}}).json()
-    assert not r["ok"] and "host" in r["message"]
+    assert not r["ok"] and r["params"]["causes"][0]["path"] == "host"
 
 
 def test_test_local_en_docker_rechazado(client, monkeypatch):
     monkeypatch.setenv("CHECKPOINT_RUNTIME", "docker")
     r = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"}}).json()
-    assert not r["ok"] and "sin Docker" in r["message"]
+    assert not r["ok"] and r["code"] == "err.config.local_docker"
 
 
 def test_test_remoto_sigue_igual(client, monkeypatch):
@@ -286,7 +286,7 @@ def test_sync_por_api_en_docker_con_local_no_arranca(papi, monkeypatch):
     monkeypatch.setenv("CHECKPOINT_RUNTIME", "docker")
     settings.CONFIG_PATH.write_text(settings.CONFIG_PATH.read_text() + "\n")
     r = papi.post("/api/sync/g1", json={})
-    assert r.status_code == 500 and "sin Docker" in r.json()["detail"]["params"]["reason"]
+    assert r.status_code == 500 and r.json()["detail"]["params"]["cause"]["params"]["causes"][0]["code"] == "err.config.local_docker"
 
 
 def test_remoto_offline_via_api_con_local(papi, monkeypatch):

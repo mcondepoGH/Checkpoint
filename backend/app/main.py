@@ -19,7 +19,7 @@ from . import runtime
 from . import updates
 from .apierror import ApiError, error_body, error_response
 from .auth import Auth
-from .config import LOCAL_DOCKER_MSG, Config, ConfigError, Device, normalize_path, resolve_ref, validate_config
+from .config import Config, ConfigError, Device, pyd_body, describe, normalize_path, resolve_ref, validate_config
 from .configstore import Conflict, ConfigStore, InvalidConfig, parse_text, config_events_gen, diff_configs, render_yaml
 from .redact import redact
 from .scheduler import Scheduler
@@ -152,7 +152,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
                 raise ApiError(404, "err.main.backup_unknown")
             cfg, err = parse_text(text)
             if err:
-                raise ApiError(422, "err.main.backup_invalid", reason=err)
+                raise ApiError(422, "err.main.backup_invalid", cause=err)
         else:
             try:
                 cfg = draft(body)
@@ -213,9 +213,9 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         try:
             dev = Device.model_validate(raw)
         except ValidationError as e:
-            reason = _errs(e)
-            return {"ok": False, "message": "datos del dispositivo inválidos: " + reason,
-                    "code": "err.main.device_invalid", "params": {"reason": reason}}
+            causes = [{"path": ".".join(str(x) for x in err["loc"]), **pyd_body(err)} for err in e.errors()]
+            return {"ok": False, "message": "err.main.device_invalid",
+                    "code": "err.main.device_invalid", "params": {"causes": causes}}
         if dev.local:
             return await run_in_threadpool(_test_local, dev, body)
         return await run_in_threadpool(_test_conn, dev)
@@ -223,7 +223,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     def _test_local(dev: Device, body: dict):
         """«Este equipo»: sin SSH. Comprueba las carpetas de saves que se indiquen (`paths`: lista de rutas)."""
         if runtime.running_in_docker():
-            return {"ok": False, "message": LOCAL_DOCKER_MSG}
+            return {"ok": False, "message": "err.config.local_docker", "code": "err.config.local_docker", "params": {}}
         paths = body.get("paths", [])
         if not isinstance(paths, list) or len(paths) > 50 or not all(isinstance(p, str) for p in paths):
             return {"ok": False, "message": "paths debe ser una lista de rutas (máx. 50)",
@@ -234,14 +234,16 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         for raw_path in paths:
             try:
                 norm = normalize_path(dev.os, raw_path)
-            except ValueError as e:
-                results.append((raw_path, {"ok": False, "message": str(e)}))
+            except ConfigError as e:
+                results.append((raw_path, {"ok": False, "message": str(e), **e.body()}))
                 continue
             results.append((norm, local_folder_status(norm)))
         if len(results) == 1:
             return results[0][1]
+        # `message`: texto plano de respaldo; `results`: por ruta, con code/params donde los hay (la UI los traduce).
         return {"ok": all(r["ok"] for _, r in results),
-                "message": "\n".join(f"{p}: {r['message']}" for p, r in results)}
+                "message": "\n".join(f"{p}: {r['message']}" for p, r in results),
+                "results": [{"path": p, **r} for p, r in results]}
 
     def _test_conn(dev: Device):
         first = False
@@ -267,11 +269,11 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         return snap.cfg
 
     def _cfg() -> Config:
-        return _config(lambda reason: ApiError(500, "err.main.config_file_invalid", reason=reason))
+        return _config(lambda cause: ApiError(500, "err.main.config_file_invalid", cause=cause))
 
     # ---- sync automática ----
     def _auto_cfg() -> Config:
-        return _config(lambda reason: RuntimeError(f"config.yaml inválido: {reason}"))
+        return _config(lambda cause: RuntimeError(f"config.yaml inválido: {describe(cause)}"))
 
     scheduler = Scheduler(_auto_cfg, lambda g: any(r.game == g and not r.done for r in runs.values()))
     holder["scheduler"] = scheduler
@@ -327,7 +329,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         try:
             gid = resolve_ref(cfg.games, ref)
         except ConfigError as e:
-            raise ApiError(409, "err.main.game_ambiguous", reason=str(e))
+            raise ApiError(409, "err.main.game_ambiguous", cause=e.body())
         if gid is None:
             raise ApiError(404, "err.main.game_unknown")
         return gid
@@ -456,13 +458,6 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         raise ApiError(404, "err.main.frontend_not_built")
 
     return app
-
-
-def _errs(e) -> str:
-    if isinstance(e, ValidationError):
-        return "; ".join(f"{'.'.join(str(x) for x in err['loc'])}: {err['msg'].removeprefix('Value error, ')}"
-                         for err in e.errors())
-    return str(e)
 
 
 def app_factory():

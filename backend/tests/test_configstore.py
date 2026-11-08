@@ -57,7 +57,7 @@ def test_validate_errors_by_field_path():
     assert cfg is None
     assert set(errs) >= {"devices.pc.host", "devices.pc.port", "games.ejemplo.process",
                          "games.ejemplo.keep_versions", "games.ejemplo.paths.pc"}
-    assert "absoluta" in errs["games.ejemplo.paths.pc"]
+    assert errs["games.ejemplo.paths.pc"]["code"] == "err.config.path_absolute"
     assert "games.ejemplo.paths.laptop" not in errs
 
 
@@ -65,17 +65,17 @@ def test_validate_incomplete_game_and_duplicates():
     d = copy.deepcopy(CFG)
     d["games"] = {"g": {"name": "Juego g", "devices": ["a", "a"], "paths": {"a": "/x/y"}}}
     _, errs = validate_config(d)
-    assert errs["games.g.devices.1"].startswith("debe ser distinto")
+    assert errs["games.g.devices.1"]["code"] == "err.config.device_same"
     d["games"]["g"] = {"name": "Juego g", "devices": ["a", ""], "paths": {"a": "/x/y"}}
     _, errs = validate_config(d)
-    assert errs == {"games.g.devices.1": "elige un dispositivo"}
+    assert errs == {"games.g.devices.1": {"code": "err.config.device_required", "params": {}}}
     d["games"]["g"] = {"name": "Juego g", "devices": ["a", "zz"], "paths": {"a": "/x/y"}}
     assert "games.g.devices.1" in validate_config(d)[1]
     d["games"]["g"] = {"name": "Juego g", "devices": ["a", "b"], "paths": {"a": "/x/y"}}
-    assert validate_config(d)[1] == {"games.g.paths.b": "falta la ruta del save"}
+    assert validate_config(d)[1] == {"games.g.paths.b": {"code": "err.config.path_missing", "params": {}}}
     d["games"]["g"] = {"keep_versions": "x"}
     errs = validate_config(d)[1]
-    assert errs["games.g.devices"] == "campo obligatorio" and errs["games.g.paths"] == "campo obligatorio"
+    assert errs["games.g.devices"]["code"] == errs["games.g.paths"]["code"] == "err.config.required"
     assert "games.g.keep_versions" in errs
 
 
@@ -191,7 +191,7 @@ def test_invalid_external_edit_reported_not_crashing(env):
     snap = store.snapshot()
     assert snap.error and snap.cfg is None
     settings.CONFIG_PATH.write_text("devices:\n  a: {host: 'x y', user: u, os: linux}\n")
-    assert "devices.a.host" in store.snapshot().error
+    assert {"path": "devices.a.host", "code": "err.config.host_invalid", "params": {}} in store.snapshot().error["params"]["causes"]
 
 
 # ---------- restauración ----------

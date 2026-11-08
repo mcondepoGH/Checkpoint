@@ -82,18 +82,18 @@ def errs(d):
 def test_duplicate_yaml_ids_are_a_clear_error(tmp_path):
     p = tmp_path / "c.yaml"
     p.write_text("devices:\n  a: {name: A, host: h, user: u, os: linux}\n  a: {name: B, host: h, user: u, os: linux}\n")
-    with pytest.raises(ConfigError, match="clave repetida"):
+    with pytest.raises(ConfigError, match="yaml_duplicate_key"):
         load_config(p)
     from app.configstore import parse_text
     cfg, err = parse_text(p.read_text())
-    assert cfg is None and "clave repetida" in err
+    assert cfg is None and err["code"] == "err.config.yaml_duplicate_key"
 
 
 def test_broken_references_are_errors():
     e = errs(mod(NEW, "games/zelda-0a1b2c3d/devices", ["pc-1a2b3c4d", "nope-00000000"]))
-    assert "inexistente" in e["games.zelda-0a1b2c3d.devices.1"]
+    assert e["games.zelda-0a1b2c3d.devices.1"]["code"] == "err.config.device_unknown"
     d = mod(NEW, "games/zelda-0a1b2c3d/paths", {"pc-1a2b3c4d": "C:/a", "laptop-5e6f7a8b": "/x/y", "ghost": "/z"})
-    assert "inexistente" in errs(d)["games.zelda-0a1b2c3d.paths.ghost"]
+    assert errs(d)["games.zelda-0a1b2c3d.paths.ghost"]["code"] == "err.config.path_device_unknown"
 
 
 @pytest.mark.parametrize("bad", ["hub", "HUB", "con espacio", "a/b", "", "x" * 65, "ñ", "a.b"])
@@ -110,7 +110,7 @@ def test_bad_device_ids(bad):
 def test_ids_case_insensitive_duplicate_and_non_string():
     d = copy.deepcopy(NEW)
     d["devices"]["PC-1A2B3C4D"] = {**d["devices"]["pc-1a2b3c4d"], "name": "Otro"}
-    assert any("repetido" in m for m in errs(d).values())
+    assert any(m["code"] == "err.config.id_duplicate" for m in errs(d).values())
     d = copy.deepcopy(NEW)
     d["games"][5] = d["games"]["zelda-0a1b2c3d"]
     assert any(k.startswith("games.5") for k in errs(d))
@@ -119,10 +119,10 @@ def test_ids_case_insensitive_duplicate_and_non_string():
 def test_duplicate_names_are_errors_case_insensitive():
     d = copy.deepcopy(NEW)
     d["devices"]["other-00000000"] = {**d["devices"]["pc-1a2b3c4d"], "name": "mi pc"}
-    assert "repetido" in errs(d)["devices.other-00000000.name"]
+    assert errs(d)["devices.other-00000000.name"]["code"] == "err.config.name_duplicate"
     d = copy.deepcopy(NEW)
     d["games"]["z2-00000000"] = {**d["games"]["zelda-0a1b2c3d"], "name": "ZELDA"}
-    assert "repetido" in errs(d)["games.z2-00000000.name"]
+    assert errs(d)["games.z2-00000000.name"]["code"] == "err.config.name_duplicate"
     # dos ids distintos con el mismo nombre en secciones distintas: permitido
     d = mod(NEW, "games/zelda-0a1b2c3d/name", "Mi PC")
     assert errs(d) == {}
@@ -157,7 +157,7 @@ def test_resolve_ref_by_id_name_and_ambiguity():
     assert resolve_ref(items, "b-2") == "b-2" and resolve_ref(items, "Mario") == "b-2"
     assert resolve_ref(items, "mario") == "b-2"  # sin mayúsculas si es único
     assert resolve_ref(items, "nope") is None and resolve_ref(items, "") is None and resolve_ref(items, 3) is None
-    with pytest.raises(ConfigError, match="ambiguo"):
+    with pytest.raises(ConfigError, match="ref_ambiguous"):
         resolve_ref(items, "Zelda")  # id de uno y nombre de otro
 
 
@@ -366,7 +366,7 @@ def test_cli_ambiguous_name_is_clear_error(cli_env, capsys):
     capsys.readouterr()
     assert cli.main(["sync", "x", "--dry-run"]) == 2
     err = capsys.readouterr().err
-    assert "ambiguo" in err and "Mario" in err and "usa el id" in err
+    assert "ref_ambiguous" in err and "Mario" in err
     assert cli.main(["versions", "x"]) == 2
 
 
@@ -459,7 +459,7 @@ def test_api_validate_reports_id_paths_and_test_device_without_name(api):
     r = api.post("/api/config/validate", json={"config": bad}).json()
     assert r["ok"] is False and "games.zelda-0a1b2c3d.devices.1" in r["errors"]
     r = api.post("/api/devices/test", json={"device": {"host": "-x", "user": "u", "os": "linux"}}).json()
-    assert r["ok"] is False and "host" in r["message"]
+    assert r["ok"] is False and r["code"] == "err.main.device_invalid" and r["params"]["causes"][0]["path"] == "host"
 
 
 def _legacy_api(client, tmp_path):
