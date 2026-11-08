@@ -111,6 +111,11 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     async def session(request: Request):
         return {"authenticated": auth.valid(request.cookies.get(COOKIE))}
 
+    @app.get("/api/public")
+    async def public():
+        """Ajustes que necesita la pantalla de login (sin sesión): hoy solo el idioma por defecto."""
+        return {"default_lang": settings.default_lang()}
+
     # ---- config ----
     def draft(body: dict):
         """Valida el borrador {config: ...}; devuelve Config o responde 422 con errores por campo."""

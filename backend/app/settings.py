@@ -1,5 +1,5 @@
 """Ajustes desde variables de entorno (CHECKPOINT_*): USER, PASSWORD, PORT, HOST, HOME_DIR, SESSION_HOURS,
-COOKIE_SECURE, TRUST_PROXY y RUNTIME. El resto de rutas y valores se derivan de ellas o son constantes."""
+COOKIE_SECURE, TRUST_PROXY, RUNTIME y LANG. El resto de rutas y valores se derivan de ellas o son constantes."""
 import os
 from pathlib import Path
 
@@ -69,3 +69,25 @@ def _float_env(suffix, default):
 SESSION_HOURS = _float_env("SESSION_HOURS", "12")
 COOKIE_SECURE = env("COOKIE_SECURE", "0") == "1"
 TRUST_PROXY = env("TRUST_PROXY", "0") == "1"
+
+
+# Idioma por defecto de la interfaz (CHECKPOINT_LANG, opcional). El backend no traduce nada: solo lo informa al
+# frontend, que lo usa si el usuario no ha elegido idioma en su navegador. Sin valor o no soportado = español.
+SUPPORTED_LANGS = ("es", "en")
+DEFAULT_LANG = "es"
+
+
+def resolve_lang(environ=None):
+    """(idioma, aviso). Acepta 'en', 'EN', 'en-US', 'en_GB'. Valor no soportado: español y un aviso para el log."""
+    raw = env("LANG", None, environ)
+    if raw is None or not raw.strip():
+        return DEFAULT_LANG, None
+    short = raw.strip().lower().replace("_", "-").split("-")[0]
+    if short in SUPPORTED_LANGS:
+        return short, None
+    return DEFAULT_LANG, (f"CHECKPOINT_LANG={raw!r} no es un idioma soportado ({', '.join(SUPPORTED_LANGS)}); "
+                          f"se usa '{DEFAULT_LANG}'")
+
+
+def default_lang(environ=None) -> str:
+    return resolve_lang(environ)[0]

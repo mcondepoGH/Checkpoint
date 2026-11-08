@@ -96,6 +96,9 @@ def public_key(key: str = None) -> Optional[str]:
 
 def startup() -> None:
     """Se llama al arrancar la app. Un fallo de escritura se registra, no tumba el servicio."""
+    warning = settings.resolve_lang()[1]
+    if warning:
+        log.warning("arranque: %s", warning)
     for fn in (ensure_config, ensure_ssh_key):
         try:
             fn()
