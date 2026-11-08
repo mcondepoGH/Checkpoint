@@ -36,7 +36,7 @@ test('plural sin categoría exacta cae a other', () => {
 });
 
 test('clave que falta en el idioma activo cae al base (es)', () => {
-  const i = createI18n({ catalogs: { es, en }, storage: mem(), languages: ['en-US'] });
+  const i = createI18n({ catalogs: { es, en }, storage: mem({ [STORAGE_KEY]: 'auto' }), languages: ['en-US'] });
   assert.equal(i.locale, 'en');
   assert.equal(i.t('solo'), 'solo es');
 });
@@ -44,10 +44,39 @@ test('clave que falta en el idioma activo cae al base (es)', () => {
 test('pickLocale: guardado > navegador > base', () => {
   const av = ['es', 'en'];
   assert.equal(pickLocale({ stored: 'en', languages: ['es-ES'], available: av }), 'en');
-  assert.equal(pickLocale({ stored: 'fr', languages: ['en-GB', 'es'], available: av }), 'en');
+  assert.equal(pickLocale({ stored: 'fr', languages: ['en-GB', 'es'], available: av }), 'es'); // guardado inválido = sin elección
   assert.equal(pickLocale({ stored: null, languages: ['fr', 'de'], available: av }), 'es');
   assert.equal(pickLocale({ stored: null, languages: [], available: av }), 'es');
+  // sin elección guardada manda el idioma por defecto (compose), no el del navegador
+  assert.equal(pickLocale({ stored: null, languages: ['en'], available: av }), 'es');
+  assert.equal(pickLocale({ stored: null, languages: ['es'], available: av, defaultLocale: 'en' }), 'en');
+  assert.equal(pickLocale({ stored: null, languages: [], available: av, defaultLocale: 'fr' }), 'es');
+  // «Automático» (guardado) sí usa el navegador y cae al por defecto
+  assert.equal(pickLocale({ stored: 'auto', languages: ['es'], available: av, defaultLocale: 'en' }), 'es');
+  assert.equal(pickLocale({ stored: 'auto', languages: ['fr'], available: av, defaultLocale: 'en' }), 'en');
+  // la elección manual gana al por defecto
+  assert.equal(pickLocale({ stored: 'es', languages: ['en'], available: av, defaultLocale: 'en' }), 'es');
   assert.equal(pickLocale({ stored: 'auto', languages: ['en'], available: av }), 'en');
+});
+
+test('idioma por defecto del compose: prioridad guardado > por defecto; sin guardar ignora el navegador', () => {
+  const st = mem();
+  const i = createI18n({ catalogs: { es, en }, storage: st, languages: ['es'] });
+  let n = 0; i.subscribe(() => { n++; });
+  assert.equal(i.locale, 'es');
+  i.setDefaultLocale('en');
+  assert.equal(i.locale, 'en'); assert.equal(i.preference, 'en'); assert.equal(n, 1);
+  assert.equal(st.m[STORAGE_KEY], undefined, 'el por defecto no se guarda como elección');
+  i.setDefaultLocale('zz'); // no soportado: sin cambios
+  assert.equal(i.locale, 'en');
+  i.setLocale('es'); // elección manual
+  i.setDefaultLocale('en');
+  assert.equal(i.locale, 'es');
+  i.setLocale('auto'); // Automático: navegador (es)
+  assert.equal(i.locale, 'es'); assert.equal(i.preference, 'auto');
+  const j = createI18n({ catalogs: { es, en }, storage: mem({ [STORAGE_KEY]: 'auto' }), languages: ['en-GB'] });
+  j.setDefaultLocale('es');
+  assert.equal(j.locale, 'en');
 });
 
 test('setLocale recuerda la elección; auto la olvida y vuelve al navegador', () => {
@@ -59,6 +88,7 @@ test('setLocale recuerda la elección; auto la olvida y vuelve al navegador', ()
   i.setLocale('auto');
   assert.equal(i.locale, 'es');
   assert.equal(i.preference, 'auto');
+  assert.equal(createI18n({ catalogs: { es, en }, storage: st, languages: ['en'] }).locale, 'en');
   assert.equal(st.m[STORAGE_KEY], 'auto');
 });
 

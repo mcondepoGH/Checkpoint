@@ -1,0 +1,593 @@
+{
+  "lang": {
+    "label": "Language",
+    "auto": "Automatic (browser)"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "loading": "Loading…",
+    "delete": "Delete",
+    "copy": "Copy",
+    "copied": "Copied",
+    "on": "Enabled",
+    "off": "Disabled",
+    "unnamed": "(unnamed)",
+    "goSettings": "Go to Settings",
+    "dryRun": "Dry run (simulation)"
+  },
+  "files": {
+    "one": "{count} file",
+    "other": "{count} files"
+  },
+  "app": {
+    "tab": {
+      "sync": {
+        "full": "Sync",
+        "short": "Sync"
+      },
+      "versions": {
+        "full": "Versions",
+        "short": "Versions"
+      },
+      "settings": {
+        "full": "Settings",
+        "short": "Settings"
+      }
+    },
+    "sections": "Sections",
+    "themeTitle": "Change theme",
+    "themeAria": "Change theme (current: {theme})",
+    "themeLabel": "Theme: {theme}",
+    "theme": {
+      "auto": "auto",
+      "light": "light",
+      "dark": "dark"
+    },
+    "logout": "Log out"
+  },
+  "login": {
+    "user": "Username",
+    "password": "Password",
+    "submit": "Sign in"
+  },
+  "result": {
+    "ok": "successful",
+    "error": "with errors",
+    "aborted": "aborted",
+    "skipped": "skipped",
+    "conflict": "with conflicts",
+    "partial": "partial"
+  },
+  "conflictPolicy": {
+    "skip": "Skip saving (safe)",
+    "newest": "Newest wins"
+  },
+  "sync": {
+    "title": "Sync",
+    "state": {
+      "conflict": "Conflict",
+      "partial": "Partial",
+      "dry-run": "Dry run (simulation)",
+      "running": "running"
+    },
+    "none": {
+      "title": "No runs yet",
+      "text": "This game has not been synced yet."
+    },
+    "last": "Last sync",
+    "conflict": "Conflict",
+    "partial": "Partial",
+    "offline": "Offline",
+    "winner": "Winner",
+    "targets": "Targets",
+    "updated": "Updated",
+    "detail": "Details",
+    "noGames": {
+      "title": "No games configured",
+      "text": "Add a game in Settings to sync its saved games between devices."
+    },
+    "idTitle": "Internal ID: {id}",
+    "meterAria": "Status of {game}",
+    "flagLead": "Conflict:",
+    "flagText": "two different versions, nothing has been saved.",
+    "resolve": "Resolve",
+    "run": "Sync",
+    "running": "Running…",
+    "log": {
+      "title": "Log: {game} {state}",
+      "done": "(finished)",
+      "live": "(live)",
+      "waiting": "Waiting…"
+    }
+  },
+  "conflict": {
+    "title": "Conflict in {game}",
+    "note": "Nothing has been modified. Before overwriting, the losing copy is saved in versions.",
+    "reason": {
+      "both_changed": "Both sides have changed since the last sync and their contents differ.",
+      "no_baseline": "This is the first comparison with this data and the contents differ.",
+      "inconsistent": "The contents differ and no changes are recorded.",
+      "indeterminate": "The dates differ by less than 2 seconds: it is impossible to tell which is newer. Choose manually.",
+      "stale": "The data has changed since the previous notice was shown. Review and choose again."
+    },
+    "hub": "Hub (copy in Checkpoint)",
+    "sidesAria": "Conflicting versions",
+    "pick": "Which save should win?",
+    "newest": "Newest wins",
+    "choose": "Choose device",
+    "back": "Back",
+    "apply": "Apply"
+  },
+  "versions": {
+    "title": "Versions",
+    "gameAria": "Game",
+    "limit": {
+      "unlimited": "{count} (no limit)",
+      "max": "{count} of max. {max}",
+      "override": " (this game's setting)",
+      "global": " (global setting)"
+    },
+    "confirm": "Restore {version}/{source} to the hub? The current hub copy is saved as a version.",
+    "noGames": {
+      "text": "Once you add a game and it syncs, its saved versions will appear here."
+    },
+    "none": {
+      "title": "No saved versions",
+      "text": "There are no versions of this game yet. They are saved automatically when a copy is overwritten during sync."
+    },
+    "restore": "Restore"
+  },
+  "settings": {
+    "title": "Settings",
+    "invalid": "config.yaml is not valid: {cause}. Fix it by hand or restore an earlier copy.",
+    "stale": {
+      "lead": "config.yaml was changed externally.",
+      "text": "Saving is disabled so those changes are not overwritten.",
+      "reload": "Reload (discard my draft)",
+      "diff": "View differences"
+    },
+    "versions": {
+      "legend": "Saved versions",
+      "max": "Max. versions per game"
+    },
+    "devices": "Devices",
+    "addDevice": "Add device",
+    "noDevices": {
+      "title": "No devices",
+      "text": "Add at least two devices to sync saved games between them."
+    },
+    "games": "Games",
+    "addGame": "Add game",
+    "needTwo": "Define (and name) at least two devices to add games.",
+    "delDevice": "The device {device} is used by: {games}.\nThose games will lose this device and you will need to choose another. Delete it?",
+    "bar": {
+      "aria": "Settings actions",
+      "errorsAria": {
+        "one": "{count} error to fix: go to the first",
+        "other": "{count} errors to fix: go to the first"
+      },
+      "errors": "There are errors to fix",
+      "validating": "Validating…",
+      "dirty": "Unsaved changes",
+      "dirtyShort": "Unsaved",
+      "clean": "No changes",
+      "backups": "Restore earlier version",
+      "yaml": "View YAML",
+      "discardTitle": "Discard changes",
+      "discard": "Discard",
+      "save": "Save…"
+    },
+    "saved": "Saved and applied instantly.",
+    "restored": "Version restored and applied."
+  },
+  "game": {
+    "new": "New game",
+    "name": "Name",
+    "namePh": "e.g. My Game: Edition",
+    "dev1": "Device 1",
+    "dev2": "Device 2",
+    "choose": "— choose —",
+    "pathOn": "Save path on {device}",
+    "process": "Process (optional)",
+    "processHint": "Not copied while it is running",
+    "processPh": "game.exe",
+    "keep": "Max. versions (this game)",
+    "keepHint": "Empty = use the global one ({max}). {hint}",
+    "onConflict": "On conflict (auto sync)",
+    "onConflictHint": "Overrides the global Automatic sync setting for this game only.",
+    "useGlobal": "Use the global setting",
+    "deleteAria": "Delete game {title}"
+  },
+  "device": {
+    "new": "New device",
+    "namePh": "e.g. My PC (living room)",
+    "localLabel": "This computer",
+    "localHelp": "This is the computer where Checkpoint runs: its folders are accessed directly, without SSH.",
+    "os": "Operating system",
+    "osHint": "Detected from the computer; change it only if it does not match",
+    "host": "Host / IP",
+    "port": "Port",
+    "user": "User",
+    "checking": "Checking…",
+    "testing": "Testing…",
+    "checkFolder": "Check folder",
+    "test": "Test connection",
+    "deleteAria": "Delete device {title}"
+  },
+  "draft": {
+    "nameHint": "Up to {max} characters. Spaces, symbols, accents and emoji are allowed; no / or \\",
+    "versionsHint": "0 = no limit; when exceeded, the oldest are deleted"
+  },
+  "idnote": {
+    "keeps": "The internal ID does not change: your saves and versions stay linked.",
+    "title": "Internal identifier: it does not change when renaming",
+    "label": "Internal ID:",
+    "pending": " (set on save)"
+  },
+  "diff": {
+    "general": "General",
+    "devices": "Devices",
+    "games": "Games",
+    "add": "+ Add",
+    "change": "~ Change",
+    "remove": "− Remove",
+    "arrow": "changes to",
+    "none": {
+      "title": "No changes",
+      "text": "There are no differences from the current config.yaml."
+    }
+  },
+  "save": {
+    "invalid": "The configuration is no longer valid: check the highlighted fields.",
+    "titleStale": "config.yaml was changed externally",
+    "title": "Review changes",
+    "staleText": "The file was modified since you loaded it. Below are the differences between your draft and the current version: anything missing from your draft will be removed. You can confirm anyway or reload and discard your changes.",
+    "reload": "Reload and discard my changes",
+    "saving": "Saving…",
+    "overwrite": "Save over the new version",
+    "confirm": "Confirm and save"
+  },
+  "yaml": {
+    "title": "YAML (read-only)",
+    "invalid": "The draft has errors: fix them to see the YAML.",
+    "generating": "Generating…",
+    "label": "Resulting YAML"
+  },
+  "backups": {
+    "title": "Restore earlier version",
+    "stale": "config.yaml was changed externally in the meantime: close, reload and try again.",
+    "none": {
+      "title": "No backups",
+      "text": "A backup is made each time you save (maximum 10)."
+    },
+    "view": "View changes",
+    "prompt": "Restoring <code>{when}</code> would change the current config.yaml like this (the current one is also kept in the backups):",
+    "dirty": "You have unsaved changes in the draft: they will be discarded.",
+    "back": "Back",
+    "restore": "Restore",
+    "restoring": "Restoring…"
+  },
+  "autosync": {
+    "title": "Automatic sync",
+    "running": "Running",
+    "active": "Active",
+    "disabled": "Disabled",
+    "intro": "Syncs all games at regular intervals. If a sync is already running, that cycle is skipped.",
+    "hours": "Every X hours",
+    "hoursHint": "Between {min} and {max} (decimals allowed, e.g. 0.5).",
+    "range": "Enter a number between {min} and {max} hours.",
+    "presets": "Quick intervals",
+    "hoursShort": "{count} h",
+    "runOnStart": "Also run when the application starts",
+    "onConflict": "On conflict",
+    "help": {
+      "skip": "Skip: nothing is saved and the game is marked “Conflict” so you can resolve it by hand. This is the safe option.",
+      "newest": "Newest wins: the save with the newest date is applied and the other is kept in versions. If the dates differ by less than 2 s, it is skipped."
+    },
+    "saved": "Saved.",
+    "lastRun": "Last run:",
+    "nextRun": "Next:",
+    "nextOff": "disabled"
+  },
+  "autolog": {
+    "title": "Run log",
+    "refreshAria": "Refresh log",
+    "refresh": "Refresh",
+    "refreshing": "Refreshing…",
+    "none": {
+      "title": "No runs",
+      "text": "No automatic sync has run yet. Runs will appear here."
+    },
+    "listAria": "Automatic runs, newest to oldest",
+    "trigger": {
+      "scheduled": "Scheduled",
+      "startup": "Startup"
+    },
+    "noDetail": "No per-game detail."
+  },
+  "updates": {
+    "badge": "New version available: {version}",
+    "badgePre": "New pre-release version available: {version}",
+    "badgeLabel": "New version available",
+    "pre": "pre-release",
+    "dialog": {
+      "installed": "Installed",
+      "new": "New",
+      "preWarn": "This is a pre-release from the testing channel: it may fail.",
+      "notesTitle": "What's new",
+      "noNotes": "This version has no release notes.",
+      "link": "View the release on GitHub",
+      "manual": "Checkpoint does not update itself: download the new version, rebuild the web app and restart Checkpoint."
+    },
+    "check": {
+      "title": "Check for updates",
+      "text": "Looks up the versions published on GitHub (read-only, every few hours) and notifies you if there is a new one. It installs nothing.",
+      "channel": "Channel",
+      "now": "Check now",
+      "limited": "You just checked; wait a minute before checking again."
+    },
+    "channel": {
+      "stable": "Stable",
+      "beta": "Testing",
+      "help": "Stable: only versions published as final. Testing: also includes pre-release versions, which may fail."
+    },
+    "summary": {
+      "disabled": "Checking is disabled: no requests are made to the internet.",
+      "newer": "A new version is available: {latest} (installed: {current}).",
+      "newerPre": "A new pre-release version is available: {latest} (installed: {current}).",
+      "upToDate": "You are up to date (version {current}).",
+      "noData": "Installed version: {current}. There is no data on the latest version yet."
+    }
+  },
+  "keyhelp": {
+    "summary": "SSH public key",
+    "intro": "Copy it and add it to <code>authorized_keys</code> on each device. Press <b>?</b> to see the steps.",
+    "infoAria": "Info: steps to register the key",
+    "infoTitle": "Info",
+    "placeholder": "PASTE_THE_KEY_HERE",
+    "lead": "Checkpoint uses its own SSH key to log in, without a password, to each device and copy its saved games. The <b>public</b> part must be registered on each device.",
+    "s1": {
+      "title": "Copy the key",
+      "hint": "On this web page.",
+      "text": "Press <b>{copy}</b> under the public key box. It is Checkpoint's key: you do not need to generate one on your PC."
+    },
+    "s2": {
+      "title": "Paste it on the remote device",
+      "hint": "On each device Checkpoint connects to. Choose its system."
+    },
+    "tabs": {
+      "system": "Remote device system",
+      "distro": "Linux distribution"
+    },
+    "noKey": "No key is visible yet: replace <code>{placeholder}</code> with the copied key.",
+    "oneLine": "In <code>authorized_keys</code> the key takes a single line, looking like this:",
+    "windowsNote": "Keep the default shell (cmd.exe) and use a local user.",
+    "s3": {
+      "title": "Check the connection",
+      "text": "On the device card, press <b>{test}</b>. It should answer <code>{ok}</code>. The first time, it saves the device's fingerprint."
+    },
+    "warn": "Paste only the public key (one line starting with <code>ssh-ed25519</code>). NEVER a private key.",
+    "copied": "Copied",
+    "step": {
+      "winServer": {
+        "title": "Enable the OpenSSH server",
+        "hint": "In PowerShell opened as administrator."
+      },
+      "winUser": {
+        "title": "Paste the key (regular user)",
+        "hint": "In PowerShell, as the user Checkpoint will connect with."
+      },
+      "winAdmin": {
+        "title": "Paste the key (administrator user)",
+        "hint": "If that user is an administrator, the key goes in a different file. PowerShell as administrator."
+      },
+      "archInstall": {
+        "title": "Install and enable the SSH server",
+        "hint": "In a terminal. The service is called sshd."
+      },
+      "archFirewall": {
+        "title": "Open port 22 (only if there is a firewall)",
+        "hint": "Arch has no firewall enabled by default. Use whichever you have."
+      },
+      "linuxKey": {
+        "title": "Paste the key into authorized_keys",
+        "hint": "As the user Checkpoint will connect with (no sudo)."
+      },
+      "debInstall": {
+        "title": "Install and enable the SSH server",
+        "hint": "In a terminal. The service is called ssh."
+      },
+      "debFirewall": {
+        "title": "Open port 22 (only if ufw is active)",
+        "hint": "Check first with sudo ufw status."
+      }
+    }
+  },
+  "err": {
+    "main": {
+      "session_required": "session required",
+      "origin_forbidden": "origin not allowed",
+      "json_body_required": "JSON body required",
+      "too_many_attempts": "too many attempts; wait {seconds} s",
+      "bad_credentials": "wrong credentials",
+      "config_invalid": "invalid config",
+      "config_changed": "config.yaml changed since you loaded it",
+      "base_version_required": "base_version is missing (reload the configuration)",
+      "backup_unknown": "unknown backup",
+      "backup_invalid": "the backup is not valid: {cause}",
+      "device_invalid": "invalid device data: {causes}",
+      "paths_invalid": "paths must be a list of paths (max. {max})",
+      "ssh_key_missing": "SSH key not generated yet",
+      "config_file_invalid": "invalid config.yaml: {cause}",
+      "settings_invalid": "invalid settings",
+      "updates_not_applicable": "Update checking does not apply in Docker (the image sets the version)",
+      "updates": {
+        "enabled_bool": "must be true or false",
+        "channel_invalid": "must be “stable” or “beta”",
+        "field_required": "provide “enabled” or “channel”"
+      },
+      "game_ambiguous": "{cause}",
+      "game_unknown": "unknown game",
+      "resolution_invalid": "resolution must be 'newest', 'hub' or 'device:<id or name>'",
+      "expect_invalid": "expect must be a source -> hash map",
+      "run_in_progress": "a run of this game is already in progress",
+      "run_unknown": "unknown run",
+      "restore_failed": "{cause}",
+      "not_found": "not found",
+      "frontend_not_built": "frontend not built"
+    },
+    "config": {
+      "required": "required field",
+      "int": "must be an integer",
+      "text": "must be text",
+      "extra": "field not allowed",
+      "map": "must be a map",
+      "list": "must be a list",
+      "bool_required": "must be true or false",
+      "invalid": "{reason}",
+      "inconsistent": "{errors}",
+      "not_map": "config must be a YAML map",
+      "yaml_syntax": "malformed YAML: {problem}",
+      "yaml_malformed": "malformed YAML: syntax error",
+      "yaml_duplicate_key": "duplicate key: {key} (ids cannot be repeated)",
+      "name_missing": "the name field is missing (required): the item's display name",
+      "name_not_text": "invalid name: must be text",
+      "name_empty": "the name is required",
+      "name_spaces": "invalid name: no leading, trailing or double spaces",
+      "name_too_long": "name too long (max. {max} characters)",
+      "name_slash": "invalid name: / and \\ are not allowed",
+      "name_control": "invalid name: no control characters or special spaces",
+      "name_dots": "invalid name: it cannot be only dots",
+      "name_duplicate": "duplicate name (case-insensitive): {other}",
+      "id_invalid": "invalid internal id: 1 to 64 characters from letters, numbers, _ and -",
+      "id_reserved": "reserved id",
+      "id_duplicate": "id repeated or equal (case-insensitive) to {other}",
+      "local_docker": "“This computer” is only available when Checkpoint runs without Docker",
+      "local_one": "there can be only one “This computer” device",
+      "local_no_remote": "does not apply to “This computer” (the local file system is accessed directly)",
+      "host_invalid": "invalid host",
+      "user_invalid": "invalid user",
+      "port_range": "port out of range",
+      "os_invalid": "os must be one of {options}",
+      "on_conflict_invalid": "on_conflict must be 'skip' or 'newest'",
+      "process_invalid": "invalid process",
+      "versions_range": "must be an integer between 0 and {max} (0 = no limit)",
+      "devices_pair": "choose exactly two devices",
+      "device_required": "choose a device",
+      "device_unknown": "unknown device (nonexistent id): {id}",
+      "device_same": "must be different from device 1",
+      "paths_map": "paths must be a device -> path map",
+      "path_extra": "extra: this device does not belong to the game",
+      "path_device_unknown": "nonexistent device id",
+      "path_missing": "the save path is missing",
+      "path_text": "path must be text",
+      "path_windows": "Windows path must be absolute, like C:/Users/...",
+      "path_absolute": "path must be absolute (start with /)",
+      "path_chars": "path contains disallowed characters: {path}",
+      "path_dotdot": "'..' is not allowed in paths",
+      "path_root": "path too broad (root)",
+      "ref_ambiguous": "{ref} is ambiguous: it matches {matches}; use the id"
+    },
+    "configstore": {
+      "conflict": "config.yaml changed since you loaded it",
+      "invalid": "invalid config: {causes}",
+      "backup_invalid": "the backup is not valid: {cause}"
+    },
+    "sync": {
+      "op_in_progress": "an operation on this game is already in progress",
+      "sync_in_progress": "a sync of this game is already in progress",
+      "resolution_invalid": "invalid resolution: {value}",
+      "side_unavailable": "{name} is not available to resolve (offline or unknown)",
+      "side_empty": "{name} has no data: it cannot win",
+      "ref_invalid": "{cause}",
+      "game_unknown": "unknown game: {ref}",
+      "policy_invalid": "invalid conflict policy: {value}",
+      "process_check_failed": "could not check the process on {device}: {cause}",
+      "process_open": "{process} is running on {device}",
+      "all_offline": "{devices} not responding; nothing is touched",
+      "version_invalid": "invalid version/source",
+      "version_unknown": "that version does not exist",
+      "restored": "hub restored from {version}/{source}; run Sync to propagate it",
+      "unexpected": "{type}: {detail}",
+      "nothing_to_sync": "nothing to sync (everything is empty)",
+      "already_synced": "already in sync",
+      "conflict": "conflict in {sides}: {cause}",
+      "conflict_indeterminate": "clocks differ by less than {seconds} s: cannot tell which is newer",
+      "conflict_stale": "the data changed since the conflict was shown",
+      "conflict_no_baseline": "first sync with different contents",
+      "conflict_inconsistent": "contents differ with no recorded changes",
+      "conflict_both_changed": "both sides changed since the last sync",
+      "dry_run": "winner {winner}; targets {targets}",
+      "partial": "winner {winner}; updated {updated}; failed {failed}",
+      "partial_none": "winner {winner}; updated none; failed {failed}",
+      "done": "winner {winner}; updated {updated}",
+      "done_pending": "winner {winner}; updated {updated} ({offline} offline: pending)"
+    },
+    "transport": {
+      "timeout": "timed out",
+      "missing_binary": "missing binary: {binary}",
+      "ssh_failed": "SSH failed: {detail}",
+      "rsync_pull_failed": "rsync pull failed: {detail}",
+      "rsync_push_failed": "rsync push failed: {detail}",
+      "mkdir_failed": "remote mkdir failed: {detail}",
+      "pgrep_failed": "pgrep failed: {detail}",
+      "tasklist_failed": "tasklist failed: {detail}",
+      "tar_pull_failed": "tar pull failed: {detail}",
+      "tar_push_failed": "tar push failed: {detail}",
+      "process_invalid": "invalid process name",
+      "process_timeout": "timed out checking processes",
+      "pgrep_missing": "cannot check the process: pgrep is missing",
+      "path_empty": "empty path",
+      "path_null": "invalid path (null character)",
+      "path_dotdot": "'..' is not allowed in paths",
+      "path_not_absolute": "the path is not absolute on this system: {path}",
+      "path_unresolvable": "path cannot be resolved: {detail}",
+      "read_failed": "could not read {path}: {detail}",
+      "copy_failed": "could not copy {file}: {detail}",
+      "not_a_folder": "the path exists but is not a folder: {path}",
+      "no_read_permission": "no read permission on {path}",
+      "access_denied": "no permission to access {path}: {detail}",
+      "access_failed": "could not access {path}: {detail}",
+      "folder_missing": "the folder does not exist: {path}",
+      "mkdir_local_failed": "could not create {path}: {detail}",
+      "write_failed": "could not write to {path}: {detail}",
+      "place_failed": "could not put the new folder in place: {detail}",
+      "write_file_failed": "could not write {file}: {detail}",
+      "delete_failed": "could not delete {file}: {detail}",
+      "connection_ok": "connection OK",
+      "local_info": "This computer: direct local access, no SSH. Set the save path in each game.",
+      "folder_ok": "folder OK: it exists and is readable and writable",
+      "folder_will_be_created": "the folder does not exist yet; it will be created on sync (treated as empty)",
+      "not_a_folder_short": "the path exists but is not a folder",
+      "unreadable": "the folder exists but cannot be read (no permission)",
+      "not_writable": "the folder can be read but not written (no permission or read-only)",
+      "cannot_create_not_folder": "cannot create the folder: {path} is not a folder",
+      "cannot_create_no_permission": "the folder does not exist and cannot be created: no write permission on {path}",
+      "check_failed": "could not check the folder: {detail}"
+    },
+    "bootstrap": {
+      "first_use": "host key saved (first use)",
+      "host_key_changed": "the host key of {host}:{port} has CHANGED compared with the one saved in known_hosts (possible spoofing or device reinstall). It is not overwritten. If the change is legitimate, delete that entry from known_hosts by hand",
+      "keygen_failed": "could not generate the SSH key: {detail}",
+      "keygen_error": "ssh-keygen failed: {detail}",
+      "host_invalid": "invalid host",
+      "port_invalid": "invalid port",
+      "port_range": "port out of range",
+      "known_hosts_read": "could not read known_hosts: {detail}",
+      "keyscan_failed": "ssh-keyscan failed: {detail}",
+      "hostkey_unavailable": "could not get the host key of {host}:{port} (is SSH running and reachable?)"
+    },
+    "scheduler": {
+      "bool_required": "must be true or false",
+      "interval_not_number": "must be a number",
+      "interval_range": "must be between {min} and {max} hours",
+      "conflict_policy_invalid": "must be 'skip' or 'newest' (newest wins)",
+      "busy": "already running",
+      "skipped_busy": "skipped (already running)",
+      "skipped_conflict": "skipped due to conflict: {cause}",
+      "summary": "{causes}"
+    }
+  }
+}
