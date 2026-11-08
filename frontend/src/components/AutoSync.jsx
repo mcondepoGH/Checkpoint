@@ -3,7 +3,8 @@ import { api } from '../api.js';
 import Field from './Field.jsx';
 import AutoSyncLog from './AutoSyncLog.jsx';
 import { fmtDateTime, ON_CONFLICT_OPTIONS, RESULT_CLASS, RESULT_TEXT } from '../format.js';
-import { errText } from '../useI18n.js';
+import { errText, t } from '../useI18n.js';
+import { recordText } from '../errors.js';
 
 const PRESETS = [1, 6, 12, 24];
 const ON_CONFLICT_HELP = {
@@ -57,7 +58,7 @@ export default function AutoSync() {
       apply(await api('/api/scheduler', { method: 'PUT', body: { enabled, interval_hours: num, run_on_start: runOnStart, on_conflict: onConflict } }));
       setMsg({ kind: 'ok', text: 'Guardado.' });
     } catch (e) {
-      setServerErr(e.data?.errors?.interval_hours || e.data?.errors?.on_conflict || '');
+      setServerErr(e.data?.errors?.interval_hours || e.data?.errors?.on_conflict || ''); // {code, params} o texto: Field lo traduce
       setMsg({ kind: 'error', text: errText(e) });
     } finally { setBusy(false); }
   };
@@ -119,7 +120,7 @@ export default function AutoSync() {
           Última ejecución: {fmtDateTime(saved.last_run)}
           {ls && <> <span className={`badge ${RESULT_CLASS[ls.result] || ''}`}>{RESULT_TEXT[ls.result] || ls.result}</span></>}
           {' · '}Próxima: {saved.enabled ? fmtDateTime(saved.next_run) : 'desactivada'}
-          {ls?.message && <small className="muted block">{ls.message}</small>}
+          {recordText(ls, t) && <small className="muted block">{recordText(ls, t)}</small>}
         </p>
       )}
     </section>

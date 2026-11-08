@@ -31,3 +31,6 @@ export function errorText(e, t) {
 
 // Error de un campo del formulario: puede llegar como {code, params} (actual) o como texto (antiguo).
 export const fieldErrorText = (v, t) => (v && typeof v === 'object' ? errorText(v, t) : v);
+
+// Texto de un registro del scheduler/historial (last_status, entrada o juego): {code, params} nuevo, o `message` antiguo.
+export const recordText = (r, t) => (r?.code ? errorText(r, t) : (r?.message ?? ''));

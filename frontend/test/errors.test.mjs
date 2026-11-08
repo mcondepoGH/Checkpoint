@@ -98,3 +98,20 @@ test('versión restaurada y restore_failed con causa anidada', () => {
   assert.equal(errorText({ ok: true, code: 'err.sync.restored', params: { version: 'v1', source: 'PC' } }, t), 'hub restaurado desde v1/PC; ejecuta Sincronizar para propagarlo');
   assert.equal(errorText({ code: 'err.main.restore_failed', params: { cause: { code: 'err.sync.version_unknown', params: {} } } }, t), 'no existe esa versión');
 });
+
+test('recordText: registros de scheduler/historial con code+params, fallback al texto antiguo', async () => {
+  const { recordText } = await import('../src/errors.js');
+  assert.equal(recordText({ code: 'err.scheduler.busy', params: {}, message: '' }, t), 'ya en curso');
+  const sum = { code: 'err.scheduler.summary', params: { causes: [
+    { path: 'Zelda', code: 'err.scheduler.skipped_busy', params: {} },
+    { path: 'Mario', code: 'err.scheduler.skipped_conflict', params: { cause: { code: 'err.sync.conflict_stale', params: {} } } }] } };
+  assert.equal(recordText(sum, t), 'Zelda: omitido (ya en curso); Mario: omitido por conflicto: los datos cambiaron desde que se mostró el conflicto');
+  assert.equal(recordText({ message: 'Zelda: texto antiguo' }, t), 'Zelda: texto antiguo');
+  assert.equal(recordText({}, t), '');
+  assert.equal(recordText(null, t), '');
+});
+
+test('errores de validación del scheduler: {code, params} traducen y el texto antiguo pasa', () => {
+  assert.equal(fieldErrorText({ code: 'err.scheduler.interval_range', params: { min: 0.25, max: 168 } }, t), 'debe estar entre 0.25 y 168 horas');
+  assert.equal(fieldErrorText('debe ser un número', t), 'debe ser un número');
+});

@@ -2,7 +2,8 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { api } from '../api.js';
 import EmptyState from './EmptyState.jsx';
 import { fmtDateTime, RESULT_CLASS, RESULT_TEXT } from '../format.js';
-import { errText } from '../useI18n.js';
+import { errText, t } from '../useI18n.js';
+import { recordText } from '../errors.js';
 
 const TRIG_TXT = { scheduled: 'Programada', startup: 'Arranque' };
 
@@ -59,14 +60,14 @@ export default function AutoSyncLog() {
                   <span className={`badge ${RESULT_CLASS[e.result] || ''}`}>{RESULT_TEXT[e.result] || e.result}</span>
                 </summary>
                 <div className="detail">
-                  {e.message && <p className={`msg ${e.result === 'error' ? 'is-error' : ''}`}>{e.message}</p>}
+                  {recordText(e, t) && <p className={`msg ${e.result === 'error' ? 'is-error' : ''}`}>{recordText(e, t)}</p>}
                   {Object.keys(e.games || {}).length === 0 ? <p className="muted">Sin detalle por juego.</p> : (
                     <ul className="games">
                       {Object.entries(e.games).map(([g, d]) => (
                         <li key={g}>
                           <b>{d.name || g}</b>
                           <span className={`badge ${RESULT_CLASS[d.result] || ''}`}>{RESULT_TEXT[d.result] || d.result}</span>
-                          {d.message && <small className="muted">{d.message}</small>}
+                          {recordText(d, t) && <small className="muted">{recordText(d, t)}</small>}
                         </li>
                       ))}
                     </ul>
