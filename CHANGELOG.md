@@ -1,5 +1,29 @@
 # Cambios
 
+## Sin publicar
+
+### Novedades
+
+- Interfaz en **español e inglés**. Selector de idioma en la cabecera y en la pantalla de acceso (Automático, Español, English); la elección se recuerda en el navegador y se aplica sin recargar. Fechas, tamaños, duraciones y plurales siguen el idioma activo.
+- Variable opcional `CHECKPOINT_LANG` (`es` o `en`, por defecto `es`): idioma por defecto del servidor. Sin elección guardada en el navegador se usa este; «Automático» sigue usando el idioma del navegador. Un valor no soportado se ignora (español) y se avisa en el log de arranque. Comentada en `docker-compose.yml` y en `.env.example`.
+- `GET /api/public` (sin sesión) informa del idioma por defecto para la pantalla de acceso.
+
+### Cambios en el contrato de la API
+
+El backend ya no devuelve texto para mostrar: devuelve códigos y parámetros y el frontend traduce (`frontend/src/locales/*.json`). Quien consuma la API desde fuera debe tenerlo en cuenta. Donde sigue habiendo un campo `message`, es un texto técnico de respaldo (el código con sus parámetros), no traducido.
+
+| Dónde | Antes | Ahora |
+|---|---|---|
+| Errores HTTP (`detail`) | texto | `{"code": "err.<módulo>.<causa>", "params": {...}}` |
+| `errors` de las respuestas 422 (config, ajustes, scheduler) | `{"campo": "texto"}` | `{"campo": {"code", "params"}}` (causas anidadas en `params.cause` / `params.causes`) |
+| Estado de una sincronización (`GET /api/status`, evento `done` del stream) | `message` con texto | `code` y `params` (`message` es texto técnico de respaldo) |
+| `error` de `GET /api/config` y del evento `config` (config.yaml inválido; `Snapshot.error`) | texto | `{code, params}` |
+| `POST /api/config/restore`, `POST /api/versions/{juego}/restore` | `message` con texto | `code` y `params` (más `message` técnico) |
+| `POST /api/devices/test` | `message` con texto | `code` y `params`; con varias rutas, `results` con `code`/`params` por ruta |
+| `GET /api/scheduler` (`last_status`) y `GET /api/scheduler/history` (entradas y juegos) | `message` con texto | `code` y `params`; las entradas guardadas antes de este cambio se leen tal cual (solo `message`, en español) |
+
+Se mantienen en español: la CLI, los logs internos del servidor y las líneas del log técnico de cada ejecución.
+
 ## 1.0.0 (2026-11-08)
 
 Primera versión estable.

@@ -1,4 +1,23 @@
-# Inventario de literales en español (i18n, fase 1)
+# Inventario de literales en español (i18n)
+
+## Estado de la migración (fase 3 completada)
+
+Las listas de abajo son el inventario original de la fase 1 (histórico, no se actualiza línea a línea). Estado actual:
+
+| Área | Estado |
+|---|---|
+| Frontend (`App`, `Login`, `Sync`, `Versions`, `Settings` y todos los componentes) | **Migrado** a `t()` con claves jerárquicas (`frontend/src/locales/es.json` y `en.json`, mismas claves) |
+| `format.js` (`RESULT_TEXT`, `ON_CONFLICT_OPTIONS`), `updates.js` (`CHANNEL_*`, `updateSummary`), `draft.js` (`NAME_HINT`, `LOCAL_*`, `localErrors`) | **Migrado**: guardan claves o `{code, params}` y se traducen al pintar; ids y valores (`skip`, `newest`, `stable`, `beta`) estables |
+| Backend: `config.py`, `configstore.py`, `main.py`, `auth.py`, `sync.py`, `transport.py`, `bootstrap.py`, `scheduler.py`, `history.py` | **Migrado** a `code` + `params` (`err.<módulo>.<causa>`); el backend no traduce |
+| Fechas, tamaños, duraciones y plurales | **Migrado**: `Intl` según el idioma activo; `files` con `Intl.PluralRules` |
+| Idioma por defecto | **Hecho**: `CHECKPOINT_LANG` + `GET /api/public` |
+| Backend: `cli.py` | **Fuera a propósito**: la CLI sigue en español |
+| Backend: logs internos (`log.*`), `redact.py`, avisos de arranque | **Fuera a propósito** |
+| `sync.py`: líneas de log por ejecución `L(...)` (registro en vivo y fichero de log) | **Fuera a propósito**: log técnico en español |
+| Datos: ids de juego/dispositivo, nombres puestos por el usuario, rutas, valores `skip`/`newest`/`hub`, comandos de la guía SSH, nombres propios (Windows, Linux, Debian / Ubuntu, Arch Linux, Checkpoint, YAML, GitHub) | **No se traducen** |
+| `status/*.json` e historial guardados antes del cambio | Se leen con su `message` antiguo (en español) como respaldo |
+
+Comprobaciones automáticas (`frontend/test/locales.test.mjs`, `render-locales.test.mjs`): paridad de claves y `{params}` entre idiomas, existencia de todos los códigos `err.*` que emite el backend, JSX sin literales y pantallas renderizadas en inglés sin palabras en español.
 
 **Total: 517 literales** (barrido automático + revisión de estructura).
 

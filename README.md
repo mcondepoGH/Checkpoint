@@ -60,6 +60,7 @@ Variables (todas con prefijo `CHECKPOINT_`, salvo `TZ`). El `docker-compose.yml`
 | `CHECKPOINT_SESSION_HOURS` | `12` | Horas de validez de la sesión |
 | `CHECKPOINT_COOKIE_SECURE` / `CHECKPOINT_TRUST_PROXY` | `0` | Pon `1` tras un proxy inverso con HTTPS |
 | `CHECKPOINT_RUNTIME` | automático | `docker` o `native`: fuerza el modo (la imagen lo fija a `docker`) |
+| `CHECKPOINT_LANG` | `es` | Idioma por defecto de la interfaz: `es` o `en` (también `en-US`, `EN`…). Opcional; sin marcar es español. Un valor no soportado se ignora (español) y se avisa en el log de arranque. Ver [Idioma](#idioma) |
 | `TZ` | `UTC` | Zona horaria de los registros y la sincronización automática (p. ej. `Europe/London`); solo Docker, se añade a `environment:` |
 
 Si la contraseña lleva `$`, ponla entre comillas simples.
@@ -222,6 +223,24 @@ games:
 
 La clave de cada juego y dispositivo es su **ID interno**, que no cambia nunca; `name` es solo una etiqueta y se puede renombrar libremente sin perder saves, versiones ni logs. `name` es obligatorio en cada juego y dispositivo. La CLI y la API aceptan el ID o el nombre.
 
+## Idioma
+
+La interfaz está en español e inglés. El selector de la cabecera (y el de la pantalla de acceso) ofrece **Automático (navegador)**, **Español** y **English**, y recuerda la elección en ese navegador (`localStorage`, clave `checkpoint.lang`); se aplica al instante, sin recargar.
+
+Orden de prioridad:
+
+1. La elección manual guardada en el navegador (`Español` o `English`).
+2. Si se eligió **Automático**, el idioma del navegador (si no es uno soportado, el de 3).
+3. El idioma por defecto del servidor: `CHECKPOINT_LANG` (`es` o `en`) o español si no está marcado.
+
+Es decir, sin elección guardada manda el servidor, no el navegador: así una instalación se puede dejar en inglés para todos los usuarios que no hayan elegido. Para fijarlo en Docker, descomenta `CHECKPOINT_LANG` en el `environment:` de `docker-compose.yml` (o añádelo al `.env`).
+
+El backend no traduce nada: devuelve códigos y parámetros (`{"code": "err.sync.dry_run", "params": {...}}`) y la traducción vive en `frontend/src/locales/*.json`. Para añadir un idioma, crea `<código>.json` con las mismas claves que `es.json` (el test `locales.test.mjs` lo comprueba), regístralo en `frontend/src/locales/index.js` y añade el código a `SUPPORTED_LANGS` de `backend/app/settings.py`.
+
+Se mantienen en español a propósito: la CLI, los logs internos del servidor, el log técnico de cada ejecución (las líneas del registro en vivo de «Sincronizar») y los textos de estado antiguos guardados en `data/` antes de este cambio.
+
+API: `GET /api/public` (sin sesión) devuelve `{"default_lang": "es"|"en"}`.
+
 ## Seguridad
 
 - Cambia el usuario y la contraseña del `.env` y restringe sus permisos (`chmod 600 .env`).
@@ -237,7 +256,7 @@ La clave de cada juego y dispositivo es su **ID interno**, que no cambia nunca; 
 cd backend && python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt -r requirements-dev.txt && pytest
 cd ../frontend && npm install && npm run dev     # desarrollo
-npm test                                         # pruebas de node (borrador, formato, tarjeta de dispositivo y avisos de versión)
+npm test                                         # pruebas de node (borrador, formato, i18n es/en, tarjeta de dispositivo y avisos de versión)
 npm run build                                    # producción
 ```
 
