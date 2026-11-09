@@ -1,8 +1,7 @@
 {
   "lang": {
     "label": "Language",
-    "auto": "Automatic",
-    "autoShort": "Auto"
+    "auto": "Automatic"
   },
   "common": {
     "save": "Save",
@@ -38,8 +37,6 @@
       }
     },
     "sections": "Sections",
-    "themeTitle": "Change theme",
-    "themeAria": "Change theme (current: {theme})",
     "theme": {
       "auto": "auto",
       "light": "light",
@@ -444,7 +441,11 @@
       "run_unknown": "unknown run",
       "restore_failed": "{cause}",
       "not_found": "not found",
-      "frontend_not_built": "frontend not built"
+      "frontend_not_built": "frontend not built",
+      "photo_type": "the photo must be JPG, PNG or WebP",
+      "photo_too_large": "the photo is larger than {max_mb} MB",
+      "photo_empty": "the photo is empty",
+      "photo_unknown": "there is no profile photo"
     },
     "config": {
       "required": "required field",
@@ -596,6 +597,20 @@
       "skipped_busy": "skipped (already running)",
       "skipped_conflict": "skipped due to conflict: {cause}",
       "summary": "{causes}"
+    }
+  },
+  "profile": {
+    "open": "Profile and options",
+    "title": "Profile",
+    "theme": "Theme: {theme}",
+    "version": "Version {version}",
+    "photo": {
+      "change": "Change photo",
+      "remove": "Remove photo",
+      "type": "Invalid format: use JPG, PNG or WebP",
+      "empty": "The image is empty",
+      "tooLarge": "The image is larger than 2 MB",
+      "failed": "The image could not be processed"
     }
   }
 }

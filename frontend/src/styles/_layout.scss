@@ -13,8 +13,6 @@
 .brand-logo { width: 32px; height: 32px; flex: none; }
 .tabs { display: flex; gap: .25rem; flex-wrap: wrap; }
 .tab .short { display: none; }
-// Botón de cabecera con icono + texto (salir): flex centrado con hueco; en móvil el texto se oculta y queda el icono (ver @media).
-.tool-label { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; }
 .tab { font: inherit; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; font-size: v.$fs-hint; background: none; border: 1px solid transparent;
   padding: .4rem .8rem; border-radius: 10px; color: var(--muted); cursor: pointer; transition: all .15s;
   &:hover { color: var(--text); border-color: var(--border); }
@@ -33,7 +31,7 @@
 .app-footer { text-align: center; font-size: v.$fs-label; padding: .5rem var(--pad-r) .75rem var(--pad-l); }
 .content > section.fill { flex: 1; display: flex; flex-direction: column; }
 
-// Móvil: cabecera de una sola fila (~52 px): icono, pestañas con etiqueta corta y herramientas solo con icono.
+// Móvil: cabecera de una sola fila (~52 px): icono de la app a la izquierda, pestañas con etiqueta corta y perfil a la derecha.
 @media (max-width: v.$bp-sm) {
   .two { grid-template-columns: 1fr; }
   .topbar { flex-wrap: nowrap; gap: .25rem; min-height: 52px; padding-top: calc(.25rem + var(--st)); padding-bottom: .25rem; }
@@ -48,27 +46,10 @@
   .tool { flex: none; width: v.$touch; min-width: v.$touch; height: v.$touch; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
   .content { padding-top: .75rem; padding-bottom: .75rem; }
 }
-// En móvil el nombre ya va oculto (solo icono); en pantallas muy estrechas se oculta también el logo para dejar el sitio a las pestañas.
+// Pantallas muy estrechas (<= 380 px): el icono de la app se queda, pero con menos aire para que quepan las pestañas.
 @media (max-width: v.$bp-xs) {
-  .brand { display: none; }
+  .brand-logo { width: 24px; height: 24px; }
   .topbar { padding-left: max(.5rem, var(--sl)); padding-right: max(.5rem, var(--sr)); }
-  .tab { padding: 0 .35rem; font-size: v.$fs-tab-narrow; letter-spacing: .02em; }
-}
-
-// Selector de idioma de la cabecera: desplegable pequeño (la etiqueta solo la leen los lectores de pantalla).
-.topbar .lang-select { margin: 0; display: inline-flex; width: auto; }
-.topbar .lang-select select { width: auto; min-width: 0; padding: .3rem .5rem; font-size: v.$fs-hint; }
-
-// Móvil: el selector muestra solo el código corto (ES/EN/Auto) y el select real, transparente y superpuesto, abre el selector nativo.
-// font-size 16px en el select evita el zoom automático de iOS al enfocarlo. Así la cabecera cabe entera, sin scroll lateral.
-.topbar .lang-select .lang-code { display: none; }
-@media (max-width: v.$bp-sm) {
-  .topbar .lang-select { flex: none; position: relative; }
-  .topbar .lang-select .lang-code { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: 2.6rem; height: 2.1rem;
-    // letter-spacing añade hueco tras la última letra: se compensa a la izquierda para que los márgenes queden iguales.
-    padding: 0 .55rem 0 calc(.55rem + .04em);
-    font-size: v.$fs-hint; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text);
-    border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
-  .topbar .lang-select select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; padding: 0; font-size: v.$fs-input-mobile; cursor: pointer; }
-  .topbar .lang-select:focus-within .lang-code { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); }
+  .tab { padding: 0 .3rem; font-size: v.$fs-tab-narrow; letter-spacing: .02em; }
+  .profile-btn.btn { margin-left: 0; }
 }

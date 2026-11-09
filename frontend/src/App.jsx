@@ -1,10 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { api, ApiError } from './api.js';
-import logo from './assets/logo-icon.svg';
-import Icon from './components/Icon.jsx';
+import AppIcon from './components/AppIcon.jsx';
 import PwaInstall from './components/PwaInstall.jsx';
 import UpdateBadge from './components/UpdateBadge.jsx';
-import LanguageSelect from './components/LanguageSelect.jsx';
+import ProfileMenu from './components/ProfileMenu.jsx';
 import UpdateDialog from './components/UpdateDialog.jsx';
 import { installedVersion, updatesApplicable } from './updates.js';
 import Login from './pages/Login.jsx';
@@ -12,7 +11,7 @@ import Settings from './pages/Settings.jsx';
 import Sync from './pages/Sync.jsx';
 import Versions from './pages/Versions.jsx';
 import { errText, initDefaultLang, useI18n } from './useI18n.js';
-import { Alert, Button } from './components/ui/index.js';
+import { Alert } from './components/ui/index.js';
 
 // Pestañas: el id es estable; las etiquetas (completa y corta, para móvil) son claves `app.tab.<id>.full|short`.
 const TABS = ['sync', 'versions', 'settings'];
@@ -51,6 +50,7 @@ export default function App() {
   const [error, setError] = useState(null); // error de la API (se traduce al pintar)
   const [updates, setUpdates] = useState(null); // estado de /api/updates; un fallo aquí nunca molesta
   const [showUpdate, setShowUpdate] = useState(false);
+  const [profile, setProfile] = useState({ name: '', photo: null }); // nombre y foto (versión) del perfil; un fallo aquí nunca molesta
   const [theme, cycleTheme, effectiveTheme] = useTheme();
   const config = loaded.config;
 
@@ -100,6 +100,10 @@ export default function App() {
     return () => { if (timer) clearInterval(timer); };
   }, [authed]);
 
+  useEffect(() => {
+    if (authed) api('/api/profile').then(setProfile).catch(() => {});
+  }, [authed]);
+
   const stale = latest !== null && latest !== loaded.version;
   // Sin borrador pendiente se recarga solo; con borrador, Configuración avisa y no pisa nada.
   useEffect(() => { if (stale && !dirty) loadConfig(); }, [stale, dirty, loadConfig]);
@@ -114,7 +118,7 @@ export default function App() {
   return (
     <div className="app">
       <header className="topbar">
-        <strong className="brand"><img src={logo} alt="" aria-hidden="true" className="brand-logo" /><span className="brand-name">Checkpoint</span></strong>
+        <strong className="brand"><AppIcon className="brand-logo" /><span className="brand-name">Checkpoint</span></strong>
         <nav className="tabs" aria-label={t('app.sections')}>
           {TABS.map((id) => (
             <button key={id} className={tab === id ? 'tab active' : 'tab'} aria-current={tab === id ? 'page' : undefined} aria-label={t(`app.tab.${id}.full`)} onClick={() => setTab(id)}>
@@ -124,13 +128,8 @@ export default function App() {
         </nav>
         <div className="spacer" />
         <UpdateBadge info={updates} onOpen={() => setShowUpdate(true)} />
-        <LanguageSelect />
-        <Button variant="ghost" iconOnly onClick={cycleTheme} title={t('app.themeTitle')} aria-label={t('app.themeAria', { theme: t(`app.theme.${theme}`) })}>
-          <Icon name={effectiveTheme === 'dark' ? 'moon' : 'sun'} />
-        </Button>
-        <Button variant="ghost" className="tool tool-label" onClick={logout} title={t('app.logout')} aria-label={t('app.logout')}>
-          <Icon name="logout" /><span className="lbl">{t('app.logout')}</span>
-        </Button>
+        <ProfileMenu profile={profile} version={installedVersion(updates)} theme={theme} effectiveTheme={effectiveTheme}
+          onCycleTheme={cycleTheme} onLogout={logout} onPhoto={(photo) => setProfile((p) => ({ ...p, photo }))} />
       </header>
       <main className="content">
         <PwaInstall />

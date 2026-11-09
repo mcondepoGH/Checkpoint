@@ -26,9 +26,11 @@ try {
         import UpdateDialog from './components/UpdateDialog.jsx';
         import UpdateBadge from './components/UpdateBadge.jsx';
         import PublicKey from './components/PublicKey.jsx';
+        import ProfileMenu from './components/ProfileMenu.jsx';
+        import Avatar from './components/Avatar.jsx';
         import Sync from './pages/Sync.jsx';
         import Versions from './pages/Versions.jsx';
-        export { React, renderToStaticMarkup, i18n, initDefaultLang, Login, LanguageSelect, DeviceCard, GameCard, ConflictDialog, DiffView, UpdateDialog, UpdateBadge, PublicKey, Sync, Versions };`,
+        export { React, renderToStaticMarkup, i18n, initDefaultLang, Login, LanguageSelect, DeviceCard, GameCard, ConflictDialog, DiffView, UpdateDialog, UpdateBadge, PublicKey, ProfileMenu, Avatar, Sync, Versions };`,
       resolveDir: SRC, loader: 'jsx',
     },
     bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'transform',
@@ -57,6 +59,8 @@ const NEW = { actual: '0.4.2', ultima: '0.5.0', hay_actualizacion: true, habilit
 // Palabras españolas que no deben aparecer en modo inglés (los datos de prueba están en inglés/neutros).
 const SPANISH = /\b(Sincronizar|Configuración|Versiones|Eliminar|Cancelar|Cerrar|Guardar|Nombre|Dispositivo|Puerto|Usuario|Contraseña|Entrar|Salir|Conflicto|Restaurar|Aplicar|Atrás|fichero|ficheros|Juego|Cargando|Probar|Comprobar|Sin |Ruta|Proceso|Simulación|Novedades|Instalada|Ganador|Destinos|Actualizados|Resolver)\b/;
 
+const PROFILE = { profile: { name: 'admin', photo: null }, version: '1.4.0', theme: 'auto', effectiveTheme: 'dark', onCycleTheme() {}, onLogout() {}, onPhoto() {} };
+
 const screens = () => [
   ['Login', h(m.Login, { onDone() {} })],
   ['LanguageSelect', h(m.LanguageSelect, {})],
@@ -68,6 +72,8 @@ const screens = () => [
   ['UpdateDialog', h(m.UpdateDialog, { info: { ...NEW, prerelease: true }, onClose() {} })],
   ['UpdateBadge', h(m.UpdateBadge, { info: NEW, onOpen() {} })],
   ['PublicKey', h(m.PublicKey, {})],
+  ['ProfileMenu abierto', h(m.ProfileMenu, { ...PROFILE, open: true })],
+  ['ProfileMenu abierto con foto', h(m.ProfileMenu, { ...PROFILE, open: true, profile: { name: 'admin', photo: { version: 'abc' } } })],
   ['Sync', h(m.Sync, { config: { devices: {}, games: {} }, onGoSettings() {} })],
   ['Versions', h(m.Versions, { config: { devices: {}, games: {} }, onGoSettings() {} })],
 ];
@@ -105,22 +111,22 @@ test('login limpio: sin selector de idioma ni de tema', { skip }, () => {
   assert.equal((html.match(/<button/g) || []).length, 1);
 });
 
-test('cabecera de la app (con sesión) conserva idioma y tema', () => {
+test('cabecera de la app (con sesión): idioma, tema y salir viven en el perfil, no en la barra', () => {
   const app = fs.readFileSync(path.join(SRC, 'App.jsx'), 'utf8');
   const login = fs.readFileSync(path.join(SRC, 'pages', 'Login.jsx'), 'utf8');
-  assert.match(app, /<LanguageSelect \/>/);
-  assert.match(app, /onClick=\{cycleTheme\}/);
-  assert.match(app, /<Icon name=\{effectiveTheme === 'dark' \? 'moon' : 'sun'\} \/>/);
-  // Tema: solo icono (variante iconOnly), sin texto visible; el botón de salir conserva .tool con etiqueta.
-  assert.match(app, /iconOnly onClick=\{cycleTheme\}/);
-  assert.doesNotMatch(app, /themeLabel/);
+  const header = app.slice(app.indexOf('<header'), app.indexOf('</header>'));
+  assert.match(header, /<AppIcon className="brand-logo" \/>/);
+  assert.match(header, /<ProfileMenu /);
+  assert.doesNotMatch(header, /LanguageSelect|<Icon |tool-label/);
+  // El perfil es lo último de la barra (extremo derecho).
+  assert.ok(header.lastIndexOf('<ProfileMenu') > header.lastIndexOf('<UpdateBadge'));
   const css = fs.readFileSync(path.join(SRC, 'styles', '_layout.scss'), 'utf8');
-  // Pestañas: etiqueta corta oculta en escritorio. Salir: icono + texto (el icono ya no se oculta en escritorio), solo icono en móvil.
+  // Pestañas: etiqueta corta oculta en escritorio. Sin restos de los controles movidos.
   assert.match(css, /\.tab \.short \{ display: none; \}/);
-  assert.doesNotMatch(css, /\.tool \.ico/);
-  assert.match(css, /\.tool-label \{ display: inline-flex; align-items: center; justify-content: center; gap: \.5rem; \}/);
-  assert.match(app, /className="tool tool-label" onClick=\{logout\}/);
-  assert.doesNotMatch(login, /LanguageSelect|cycleTheme/);
+  assert.doesNotMatch(css, /tool-label|lang-select|lang-code/);
+  // El icono de la app se ve también en móvil estrecho (a la izquierda).
+  assert.doesNotMatch(css, /\.brand \{ display: none; \}/);
+  assert.doesNotMatch(login, /LanguageSelect|cycleTheme|ProfileMenu/);
 });
 
 test('LanguageSelect: Automático + Español + English', { skip }, () => {
@@ -153,4 +159,35 @@ test('idioma por defecto del servidor (/api/public): se aplica sin elección gua
     globalThis.fetch = async () => ({ ok: false, status: 500, statusText: 'x', json: async () => ({}) });
     await assert.doesNotReject(m.initDefaultLang());
   } finally { globalThis.fetch = realFetch; }
+});
+
+test('ProfileMenu: botón cerrado con aria correctos y silueta sin foto', { skip }, () => {
+  m.i18n.setLocale('es');
+  const html = h(m.ProfileMenu, PROFILE);
+  assert.match(html, /aria-haspopup="dialog"/);
+  assert.match(html, /aria-expanded="false"/);
+  assert.match(html, /aria-label="Perfil y opciones"/);
+  assert.doesNotMatch(html, /role="dialog"/);
+  assert.doesNotMatch(html, /<img/); // silueta (svg), no foto
+  assert.match(html, /class="ico"/);
+});
+
+test('ProfileMenu: popup abierto con nombre, idioma, tema, salir y versión; sin foto no hay «Quitar foto»', { skip }, () => {
+  m.i18n.setLocale('es');
+  const html = h(m.ProfileMenu, { ...PROFILE, open: true });
+  assert.match(html, /aria-expanded="true"/);
+  assert.match(html, /role="dialog"[^>]*aria-label="Perfil"/);
+  for (const txt of ['admin', 'Cambiar foto', 'Idioma', 'Tema: automático', 'Salir', 'Versión 1.4.0']) assert.ok(html.includes(txt), txt);
+  assert.ok(!html.includes('Quitar foto'));
+  assert.match(html, /<select/);
+  assert.match(html, /type="file"[^>]*accept="image\/jpeg,image\/png,image\/webp"|accept="image\/jpeg,image\/png,image\/webp"[^>]*type="file"/);
+});
+
+test('ProfileMenu: con foto se pinta la imagen versionada y aparece «Quitar foto»; sin versión no hay pie', { skip }, () => {
+  m.i18n.setLocale('es');
+  const html = h(m.ProfileMenu, { ...PROFILE, open: true, version: '', profile: { name: '', photo: { version: 'abc' } } });
+  assert.ok(html.includes('src="/api/profile/photo?v=abc"'));
+  assert.ok(html.includes('Quitar foto'));
+  assert.ok(html.includes('<strong class="profile-name">Checkpoint</strong>')); // el servidor no dio nombre: marca
+  assert.ok(!html.includes('Versión'));
 });
