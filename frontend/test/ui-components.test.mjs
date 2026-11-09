@@ -41,7 +41,13 @@ test('Button: clases por variante, type=button por defecto y submit explícito',
   assert.match(r('Button', { variant: 'primary' }, 'x'), /class="btn primary"/);
   assert.match(r('Button', { variant: 'ghost', className: 'tool' }, 'x'), /class="btn ghost tool"/);
   assert.match(r('Button', { variant: 'danger', disabled: true }, 'x'), /class="btn danger"[^>]*disabled/);
-  assert.match(r('Button', { type: 'submit' }, 'x'), /type="submit"/);
+  assert.match(r('Button', { type: 'submit' }, 'x'), /type="submit"/);  assert.match(r('Button', { variant: 'ghost', iconOnly: true }, 'x'), /class="btn ghost btn-icon"/);
+});
+
+test('Button iconOnly: .btn-icon va anidada en .btn (partial del botón), no suelta antes de ella', () => {
+  const scss = fs.readFileSync(path.join(SRC, 'styles', 'ui', '_button.scss'), 'utf8');
+  assert.match(scss, /&\.btn-icon\s*\{[^}]*padding: 0/);
+  assert.ok(!/^\.btn-icon/m.test(fs.readFileSync(path.join(SRC, 'styles', '_components.scss'), 'utf8')));
 });
 
 test('Badge: estado como clase; sin estado queda neutra', { skip }, () => {
