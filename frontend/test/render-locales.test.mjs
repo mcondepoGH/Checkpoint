@@ -126,6 +126,12 @@ test('cabecera de la app (con sesión): idioma, tema y salir viven en el perfil,
   assert.doesNotMatch(css, /tool-label|lang-select|lang-code/);
   // El icono de la app se ve también en móvil estrecho (a la izquierda).
   assert.doesNotMatch(css, /\.brand \{ display: none; \}/);
+  // A <= 340 px (con el aviso de actualización) se reduce el relleno/gap de las pestañas; los textos siguen completos.
+  const vars = fs.readFileSync(path.join(SRC, 'styles', '_variables.scss'), 'utf8');
+  assert.match(vars, /\$bp-xxs: 340px/);
+  const narrow = css.slice(css.indexOf('@media (max-width: v.$bp-xxs)'));
+  assert.match(narrow, /\.tab \{ padding: 0 \.15rem; \}/);
+  assert.doesNotMatch(narrow, /overflow|display: none|font-size/);
   assert.doesNotMatch(login, /LanguageSelect|cycleTheme|ProfileMenu/);
 });
 
