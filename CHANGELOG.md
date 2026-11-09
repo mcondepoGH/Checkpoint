@@ -6,9 +6,11 @@
 
 - API key de usuario en el perfil (sección «API key» del menú): generar, ver siempre con botón de copiar, regenerar (con confirmación; invalida la anterior) y revocar. Nuevos `GET|POST|DELETE /api/profile/apikey`. Se guarda cifrada en `data/profile/<id>/apikey.enc`; se cifra con Fernet (librería `cryptography`, nueva dependencia con wheels musllinux; clave derivada de `hub.secret`, 0600, junto a `config.yaml`, fuera de `data/`; el id de usuario va dentro del payload). Si la copia de seguridad cubre `/config` y `/data` juntos, excluye `hub.secret`.
 - `GET /api/hook/ping` con `Authorization: Bearer ck_...` y router `/api/hook/*` con autenticación propia por API key (sin cookie ni Origin; alcance mínimo; `401` único para cualquier fallo; límite de frecuencia por IP con `429`). Base del futuro aviso de apertura de juego.
+- `POST /api/hook/{juego}/opened?device=<dispositivo>` (Bearer): aviso de apertura de juego con sincronización previa bloqueante (copia al dispositivo el save más nuevo del hub antes de arrancar). Misma política de conflictos que la sincronización automática: un conflicto no toca nada y queda en el historial. Fallo de sync o dispositivo sin conexión: `200` con `outcome`, sin reintentos; ejecución en curso: `409`. Nuevo disparador `hook` («Aviso del juego») en el historial. Docs de lanzadores (Steam, Lutris) en el README, sección «Hooks». Aún sin cierre automático.
 
 ### Cambios
 
+- La lógica de ejecutar un juego y traducir su resultado se extrae del ciclo del scheduler a `Scheduler.run_game` (sin cambios de comportamiento).
 - `Input` (componente de UI) acepta `ref`; la función de copiar al portapapeles pasa a `src/clipboard.js` y la comparten `PublicKey` y la API key.
 
 ## 1.5.1 (2026-11-09)

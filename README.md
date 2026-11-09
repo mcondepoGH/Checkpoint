@@ -260,7 +260,7 @@ Todos operan sobre el usuario de la sesión (sin ids en la URL). Hoy solo existe
 
 Una sola API key por usuario, para que lanzadores y plugins avisen al hub sin iniciar sesión. Se gestiona en la sección «API key» del menú del perfil: **Generar** (nunca se crea sola), verla siempre (campo de solo lectura con botón **Copiar**), **Regenerar** (con confirmación: la anterior deja de valer y hay que actualizar los comandos y plugins ya vinculados) y **Revocar**. Formato: `ck_` + 32 bytes aleatorios en base64 urlsafe (46 caracteres).
 
-- **Alcance mínimo:** solo sirve para las rutas `/api/hook/*` (hoy `GET /api/hook/ping`; el aviso de apertura de juego colgará de aquí). No da acceso al login, ajustes, versiones ni a restaurar, y la cookie de sesión no vale en esas rutas.
+- **Alcance mínimo:** solo sirve para las rutas `/api/hook/*` (`GET /api/hook/ping` y `POST /api/hook/{juego}/opened`, ver «Hooks»). No da acceso al login, ajustes, versiones ni a restaurar, y la cookie de sesión no vale en esas rutas.
 - **Autenticación:** cabecera `Authorization: Bearer ck_...`, sin cookie ni comprobación de `Origin`. Cualquier fallo (sin cabecera, mal formada, inválida, revocada o regenerada) es el mismo `401` con `err.apikey.invalid`; la comparación es en tiempo constante (`hmac.compare_digest`). Tras 3 fallos seguidos desde una IP, `429` con `Retry-After` (misma escala que el login, con contador propio: un lanzador mal configurado no bloquea el login web).
 - **Dónde se guarda:** como la key se vuelve a mostrar, no vale guardar solo un hash. Se guarda cifrada en `data/profile/<id>/apikey.enc` (permisos 0600, misma carpeta por usuario que la foto). La clave de cifrado se deriva del **secreto del hub**, `hub.secret` (32 bytes aleatorios, 0600), que se crea la primera vez junto a `config.yaml` (en Docker, el volumen `/config`; sin Docker, `config/` del directorio de datos de la app), **fuera de `data/`**: una copia de seguridad solo de `data/` no expone la key. Haz copia de `hub.secret` si quieres conservar la key; sin él (o si lo cambias) la key guardada no se puede descifrar, la interfaz muestra «sin key» y basta generar una nueva.
 - **Cifrado:** [Fernet](https://cryptography.io/en/latest/fernet/) de la librería `cryptography` (AES-128-CBC + HMAC-SHA256). La clave Fernet se deriva del secreto del hub con HMAC-SHA256. Fernet no admite datos asociados, así que el id de usuario va dentro del payload cifrado y se verifica al descifrar: un fichero manipulado, copiado a otro usuario o cifrado con otro secreto no descifra (la interfaz muestra «sin key»).
@@ -277,6 +277,47 @@ API (con sesión de cookie, como el resto del perfil; las escrituras comprueban 
 ```bash
 curl -H "Authorization: Bearer ck_..." http://HOST:PORT/api/hook/ping
 ```
+
+## Hooks
+
+Rutas `/api/hook/*` para que un lanzador avise al hub con la API key (ver «API key de usuario»). Hoy: el aviso de apertura.
+
+### `POST /api/hook/{juego}/opened?device=<dispositivo>`
+
+Se llama justo antes de arrancar el juego. El hub hace una **sincronización previa y bloqueante** de ese juego: si tiene un save más nuevo, lo copia al dispositivo antes de que el juego arranque; si no toca, termina sin copiar. Usa la misma política de conflictos que la sincronización automática (la del juego o, si no, el ajuste global; `skip` por defecto): ante un conflicto **no se toca nada**, la respuesta lo indica y queda en el historial; nunca se pregunta ni se resuelve solo.
+
+- **Autenticación:** `Authorization: Bearer ck_...` (nada de cookie).
+- **Juego:** id o nombre, como `POST /api/sync/{juego}`.
+- **Dispositivo (`?device=`):** id o nombre. Se valida que pertenezca al juego; hoy solo se registra (lo usará el cierre automático). Es obligatorio si el juego está en más de un dispositivo (todos los juegos actuales tienen dos); si el juego estuviera en uno solo, se deduce.
+- **Respuesta `200`:** `{"ok": bool, "outcome": "...", "game": "<id>", "device": "<id>", "run_id": "...", "code": "err.sync....", "params": {...}}`. `outcome` es `ok`, `conflict`, `aborted` (dispositivo sin conexión, proceso del juego abierto...), `partial`, `error` o `timeout`. `ok` es `true` solo con `outcome: ok`. `code`/`params` detallan qué pasó (p. ej. `err.sync.done`, `err.sync.already_synced`, `err.sync.conflict`). Un fallo de la sincronización **no** es un 5xx y no se reintenta: el cron de la sincronización automática sigue como red de seguridad. `timeout`: la sincronización superó los 55 s del servidor; sigue ejecutándose en segundo plano y deja su entrada en el historial al acabar.
+- **Errores:** `401` `err.apikey.invalid` (sin key, inválida, revocada o cookie de sesión; se comprueba antes que nada, así que no revela si el juego existe), `404` `err.main.game_unknown` o `err.hook.device_unknown`, `400` `err.hook.device_required` (falta `?device=` y es ambiguo) o `err.hook.device_ambiguous`, `409` `err.main.run_in_progress` (ya hay una ejecución de ese juego: cron, manual u otro aviso), `429` tras varios fallos de key seguidos desde una IP.
+- **Historial:** la ejecución aparece en el registro de la sincronización automática con el disparador «Aviso del juego» (`trigger: "hook"`).
+
+```bash
+curl -fsS -m 60 -X POST -H "Authorization: Bearer ck_..." "http://HOST:8088/api/hook/MiJuego/opened?device=MiPC"
+```
+
+Pon la URL **entre comillas**: el `?` lo interpretaría el shell como comodín.
+
+### Lanzadores
+
+El cliente debe esperar (hasta 60 s) y arrancar el juego **aunque falle el aviso** (hub caído, conflicto...), por eso se encadena con `;` y no con `&&`.
+
+- **Steam** (Opciones de lanzamiento del juego):
+
+  ```
+  curl -fsS -m 60 --retry 3 -X POST -H "Authorization: Bearer <API_KEY>" "http://<HUB>:8088/api/hook/<JUEGO>/opened?device=<DISPOSITIVO>"; %command%
+  ```
+
+- **Lutris** (Configurar > Opciones del sistema > *Pre-launch script*, con «Wait for pre-launch completion» activado para que Lutris espere al aviso antes de arrancar):
+
+  ```
+  curl -fsS -m 60 --retry 3 -X POST -H "Authorization: Bearer <API_KEY>" "http://<HUB>:8088/api/hook/<JUEGO>/opened?device=<DISPOSITIVO>"
+  ```
+
+  Si el script sale con error, Lutris arranca igualmente el juego; sin la opción de espera, el juego arrancaría a la vez que la sincronización.
+
+Aviso: **el cierre automático** (sincronizar al cerrar el juego) **aún no existe**; llegará en una fase posterior. Por ahora el `opened` solo trae a este equipo el save más reciente; para subir lo jugado, el cron o una sincronización manual.
 
 ## Instalar como app (PWA)
 

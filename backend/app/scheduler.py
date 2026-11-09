@@ -146,6 +146,56 @@ class Scheduler:
         return self.state()
 
     # ---- ciclo ----
+    def policy_for(self, cfg, game: str) -> str:
+        """Política ante conflictos de un juego: la suya, si no la global de la sync automática (por defecto `skip`)."""
+        return cfg.games[game].on_conflict or self.cfg.get("on_conflict", "skip")
+
+    def run_game(self, cfg, game: str, log: Callable = lambda m: None) -> tuple:
+        """Ejecuta un juego (modo normal, política de conflictos del scheduler) y traduce el resultado.
+        Devuelve (resultado, texto técnico para logs, {code, params} | {message} | None para UI e historial, estado
+        crudo de run_sync o None si falló). Nunca lanza: lo comparten el ciclo y el aviso `opened` del hook."""
+        m, c, st = "", None, None
+        try:
+            st = self.runner(cfg, game, False, log=log, conflict_policy=self.policy_for(cfg, game))
+            res = st["result"]
+            sc = {"code": st["code"], "params": st.get("params") or {}} if st.get("code") else None
+            if st["result"] == "conflict":
+                m = "omitido por conflicto: " + st.get("message", "")
+                c = ({"code": "err.scheduler.skipped_conflict", "params": {"cause": sc}} if sc else None)
+            elif st["result"] != "ok":
+                m, c = st.get("message", ""), sc
+            if not c and m:
+                c = {"message": m}  # sin code (runner ajeno): texto tal cual
+        except SyncAbort as e:
+            res, m, c = "aborted", str(e), {"code": e.code, "params": e.params}
+        except Exception as e:  # un juego roto no frena a los demás
+            res, m = "error", f"{type(e).__name__}: {e}"
+            c = {"code": "err.sync.unexpected", "params": {"type": type(e).__name__, "detail": str(e)}}
+        return res, m, c, st
+
+    @staticmethod
+    def game_detail(name: str, res: str, m: str, c: Optional[dict]) -> tuple:
+        """(item de resumen | None, detalle del juego para el historial) a partir de run_game."""
+        if c and "code" in c:
+            return {"path": name, **c}, {"result": res, "name": name, **c}
+        item = {"path": name, "message": c["message"]} if c else None
+        return item, {"result": res, "message": history.short(m), "name": name}
+
+    @staticmethod
+    def summarize(res: dict, items: list, det: dict) -> dict:
+        """Resultado global y mensaje/code del resumen a partir de {juego: resultado}, items y detalles."""
+        vals = set(res.values())
+        result = ("error" if "error" in vals else "aborted" if "aborted" in vals
+                  else "partial" if "partial" in vals else "conflict" if "conflict" in vals
+                  else "skipped" if vals == {"skipped"} else "ok")
+        out = {"result": result, "games": res, "message": "", "details": det}
+        coded = [i for i in items if "code" in i]
+        if coded and len(coded) == len(items):
+            out.update(code="err.scheduler.summary", params={"causes": items})
+        elif items:  # alguno sin code (runner ajeno): texto técnico unido, como antes
+            out["message"] = "; ".join(f"{i['path']}: {i.get('message') or describe_code(i['code'], i['params'])}" for i in items)
+        return out
+
     def run_cycle(self) -> dict:
         """Sincroniza todos los juegos (modo normal), uno tras otro. Salta los que ya están en curso."""
         cfg = self.get_cfg()
@@ -159,46 +209,16 @@ class Scheduler:
                 log.info("auto-sync juego=%s resultado=skipped (ya en curso)", name)
                 continue
             self.current = game
-            m, c = "", None  # m: texto técnico para logs; c: {code, params} para UI e historial
-            policy = cfg.games[game].on_conflict or self.cfg.get("on_conflict", "skip")
             try:
-                st = self.runner(cfg, game, False, log=lambda m: None, conflict_policy=policy)
-                res[game] = st["result"]
-                sc = {"code": st["code"], "params": st.get("params") or {}} if st.get("code") else None
-                if st["result"] == "conflict":
-                    m = "omitido por conflicto: " + st.get("message", "")
-                    c = ({"code": "err.scheduler.skipped_conflict", "params": {"cause": sc}} if sc else None)
-                elif st["result"] != "ok":
-                    m, c = st.get("message", ""), sc
-                if not c and m:
-                    c = {"message": m}  # sin code (runner ajeno): texto tal cual
-            except SyncAbort as e:
-                res[game], m, c = "aborted", str(e), {"code": e.code, "params": e.params}
-            except Exception as e:  # un juego roto no frena a los demás
-                res[game], m = "error", f"{type(e).__name__}: {e}"
-                c = {"code": "err.sync.unexpected", "params": {"type": type(e).__name__, "detail": str(e)}}
+                res[game], m, c, _st = self.run_game(cfg, game)
             finally:
                 self.current = None
-            if c and "code" in c:
-                items.append({"path": name, **c})
-                det[game] = {"result": res[game], "name": name, **c}
-            else:
-                if c:
-                    items.append({"path": name, "message": c["message"]})
-                det[game] = {"result": res[game], "message": history.short(m), "name": name}
+            item, det[game] = self.game_detail(name, res[game], m, c)
+            if item:
+                items.append(item)
             (log.error if res[game] == "error" else log.info)(
                 "auto-sync juego=%s resultado=%s%s", name, res[game], f" ({history.short(m, 120)})" if m else "")
-        vals = set(res.values())
-        result = ("error" if "error" in vals else "aborted" if "aborted" in vals
-                  else "partial" if "partial" in vals else "conflict" if "conflict" in vals
-                  else "skipped" if vals == {"skipped"} else "ok")
-        out = {"result": result, "games": res, "message": "", "details": det}
-        coded = [i for i in items if "code" in i]
-        if coded and len(coded) == len(items):
-            out.update(code="err.scheduler.summary", params={"causes": items})
-        elif items:  # alguno sin code (runner ajeno): texto técnico unido, como antes
-            out["message"] = "; ".join(f"{i['path']}: {i.get('message') or describe_code(i['code'], i['params'])}" for i in items)
-        return out
+        return self.summarize(res, items, det)
 
     async def _cycle(self, trigger: str = "scheduled"):
         if self.running:

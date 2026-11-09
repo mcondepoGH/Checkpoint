@@ -225,7 +225,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     def hook_ping(user: str = Depends(hook_user)):
         return {"ok": True, "user": user}
 
-    app.include_router(hook)
+    # (el router se incluye tras definir `opened`, más abajo)
 
     # ---- config ----
     def draft(body: dict):
@@ -492,6 +492,74 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
 
         threading.Thread(target=work, daemon=True).start()
         return {"run_id": run.id}
+
+    @hook.post("/{game}/opened")
+    async def hook_opened(game: str, device: Optional[str] = Query(None)):
+        """Aviso «se va a abrir el juego»: sync previo bloqueante (misma política de conflictos que la sync automática).
+        No arma vigilancia de proceso (eso es otra fase). Un fallo de la sync no es un 5xx: 200 con `outcome` descriptivo."""
+        cfg = _cfg()
+        game = game_id(game)  # el 401 ya lo dio hook_user: no se revela si el juego existe
+        g = cfg.games[game]
+        devs = {d: cfg.devices[d] for d in g.devices if d in cfg.devices}
+        if not device:
+            if len(devs) != 1:
+                raise ApiError(400, "err.hook.device_required",
+                               devices=", ".join(f"{d.name} ({i})" for i, d in devs.items()))
+            dev = next(iter(devs))
+        else:
+            try:
+                dev = resolve_ref(devs, device)
+            except ConfigError as e:
+                raise ApiError(400, "err.hook.device_ambiguous", cause=e.body())
+            if dev is None:
+                raise ApiError(404, "err.hook.device_unknown")
+        if scheduler.current == game or any(r.game == game and not r.done for r in runs.values()):
+            raise ApiError(409, "err.main.run_in_progress")
+        run = Run(game, False, g.name)
+        runs[run.id] = run
+        finished = threading.Event()
+        started, t0 = scheduler.clock(), time.monotonic()
+        box: dict = {}
+
+        def work():
+            try:
+                res, m, c, st = scheduler.run_game(cfg, game, log=run.lines.append)
+                box.update(res=res, m=m, c=c, st=st or {})
+                run.status = st or {"result": res, "game": game, "name": g.name, "message": m,
+                                    **(c if c and "code" in c else {})}
+                if c and c.get("code") == "err.sync.sync_in_progress":  # lock tomado por otro proceso: no cuenta como run
+                    box["busy"] = True
+                    return
+                item, det = scheduler.game_detail(g.name, res, m, c)
+                summary = scheduler.summarize({game: res}, [item] if item else [], {game: det})
+                try:
+                    history.append(history.make_entry(started, time.monotonic() - t0, "hook", summary["result"],
+                                                      {game: det}, summary["message"], summary.get("code"),
+                                                      summary.get("params")), now=scheduler.clock())
+                except Exception:  # el registro nunca rompe el aviso
+                    pass
+            finally:
+                run.done = True
+                finished.set()
+
+        threading.Thread(target=work, daemon=True).start()
+        for old in [k for k, v in runs.items() if v.done][:-20]:
+            runs.pop(old, None)
+        if not await run_in_threadpool(finished.wait, settings.HOOK_WAIT):
+            # El SSH sigue colgado: se responde ya (el cliente tiene su propio -m) y la sync termina por su cuenta.
+            return {"ok": False, "outcome": "timeout", "game": game, "device": dev, "run_id": run.id,
+                    "code": "err.hook.timeout", "params": {"seconds": settings.HOOK_WAIT}}
+        if box.get("busy"):
+            raise ApiError(409, "err.main.run_in_progress")
+        out = {"ok": box["res"] == "ok", "outcome": box["res"], "game": game, "device": dev, "run_id": run.id}
+        st = box["st"]
+        if st.get("code"):
+            out.update(code=st["code"], params=history.clean_params(st.get("params") or {}))
+        elif box["c"] and "code" in box["c"]:
+            out.update(code=box["c"]["code"], params=history.clean_params(box["c"].get("params") or {}))
+        return out
+
+    app.include_router(hook)
 
     @app.get("/api/runs/{run_id}/stream", dependencies=[Depends(require)])
     def stream(run_id: str):

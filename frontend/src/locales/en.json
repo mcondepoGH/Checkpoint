@@ -301,7 +301,8 @@
     "listAria": "Automatic runs, newest to oldest",
     "trigger": {
       "scheduled": "Scheduled",
-      "startup": "Startup"
+      "startup": "Startup",
+      "hook": "Game opened"
     },
     "noDetail": "No per-game detail."
   },
@@ -446,6 +447,12 @@
       "photo_too_large": "the photo is larger than {max_mb} MB",
       "photo_empty": "the photo is empty",
       "photo_unknown": "there is no profile photo"
+    },
+    "hook": {
+      "device_required": "pass the device with ?device=<name or id>; the game is on: {devices}",
+      "device_unknown": "the device does not belong to this game",
+      "device_ambiguous": "{cause}",
+      "timeout": "the sync is still running after {seconds} s"
     },
     "apikey": {
       "invalid": "API key missing or invalid"

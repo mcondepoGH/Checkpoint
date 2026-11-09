@@ -301,7 +301,8 @@
     "listAria": "Ejecuciones automáticas, de más reciente a más antigua",
     "trigger": {
       "scheduled": "Programada",
-      "startup": "Arranque"
+      "startup": "Arranque",
+      "hook": "Aviso del juego"
     },
     "noDetail": "Sin detalle por juego."
   },
@@ -446,6 +447,12 @@
       "photo_too_large": "la foto supera {max_mb} MB",
       "photo_empty": "la foto está vacía",
       "photo_unknown": "no hay foto de perfil"
+    },
+    "hook": {
+      "device_required": "indica el dispositivo con ?device=<nombre o id>; el juego está en: {devices}",
+      "device_unknown": "el dispositivo no pertenece a este juego",
+      "device_ambiguous": "{cause}",
+      "timeout": "la sincronización sigue en curso tras {seconds} s"
     },
     "apikey": {
       "invalid": "API key ausente o no válida"

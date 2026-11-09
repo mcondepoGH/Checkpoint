@@ -7,7 +7,7 @@ import { recordText } from '../errors.js';
 import { Alert, Badge, Button } from './ui/index.js';
 
 // Disparadores conocidos (ids del backend): clave `autolog.trigger.<id>`; otro se muestra tal cual.
-const TRIGGERS = ['scheduled', 'startup'];
+const TRIGGERS = ['scheduled', 'startup', 'hook'];
 
 // Registro de ejecuciones automáticas (endpoint /api/scheduler/history). Refresca cada 30 s.
 export default function AutoSyncLog() {

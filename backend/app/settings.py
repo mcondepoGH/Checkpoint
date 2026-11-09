@@ -6,6 +6,7 @@ from pathlib import Path
 from .runtime import platform_name, running_in_docker
 
 SSH_TIMEOUT = 8  # s de conexión SSH
+HOOK_WAIT = 55  # s máx. que `POST /api/hook/{game}/opened` espera a la sync (el cliente suele usar curl -m 60)
 
 
 def env(suffix, default=None, environ=None):
