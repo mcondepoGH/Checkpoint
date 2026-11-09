@@ -503,7 +503,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         return {"run_id": run.id}
 
     # ---- aviso de apertura / cierre automático ----
-    def start_hook_run(cfg, game: str, trigger: str):
+    def start_hook_run(cfg, game: str, trigger: str, device: Optional[str] = None):
         """Lanza en un hilo el checkpoint de un juego para el hook (`opened`: trigger `hook`; cierre: `hook_closed`):
         política de conflictos siempre `skip`, deja su entrada en el historial. Devuelve (run, finished, box)."""
         g = cfg.games[game]
@@ -528,7 +528,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
                 try:
                     history.append(history.make_entry(started, time.monotonic() - t0, trigger, summary["result"],
                                                       {game: det}, summary["message"], summary.get("code"),
-                                                      summary.get("params")), now=scheduler.clock())
+                                                      summary.get("params"), device=device), now=scheduler.clock())
                 except Exception:  # el registro nunca rompe el aviso
                     pass
                 hook_log.info("hook %s juego=%s resultado=%s", trigger, g.name, res)
@@ -556,7 +556,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         if game_busy(game):
             hook_log.info("hook hook_closed juego=%s omitido: ejecución en curso, sin reintento", cfg.games[game].name)
             return
-        start_hook_run(cfg, game, "hook_closed")
+        start_hook_run(cfg, game, "hook_closed", device)
 
     hook_log = logging.getLogger("checkpoint.hook")
     watcher = Watcher(watch_probe, close_checkpoint)
@@ -591,7 +591,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
                 raise ApiError(404, "err.hook.device_unknown")
         if game_busy(game):
             raise ApiError(409, "err.main.run_in_progress")
-        run, finished, box = start_hook_run(cfg, game, "hook")
+        run, finished, box = start_hook_run(cfg, game, "hook", dev)
         if not await run_in_threadpool(finished.wait, settings.HOOK_WAIT):
             # El SSH sigue colgado: se responde ya (el cliente tiene su propio -m) y la sync termina por su cuenta.
             out = {"ok": False, "outcome": "timeout", "game": game, "device": dev, "run_id": run.id,
@@ -610,6 +610,23 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         return out
 
     app.include_router(hook)
+
+    @app.get("/api/games/{game}/hook-status", dependencies=[Depends(require)])
+    def hook_status(game: str):
+        """Por dispositivo del juego: último evento de hook (`opened` = hook, cierre = hook_closed) y vigilancia activa.
+        {devices: [{device, last: {trigger, at, outcome} | null, watching: {state, since} | null}]}. Solo lectura, sin datos sensibles."""
+        cfg = _cfg()
+        game = game_id(game)
+        entries = [e for e in history.read() if e.get("trigger") in ("hook", "hook_closed")]  # más reciente primero
+        watching = {w["device"]: w for w in watcher.list() if w["game"] == game}
+        out = []
+        for dev in cfg.games[game].devices:
+            e = next((x for x in entries if x.get("device") == dev and game in x["games"]), None)
+            w = watching.get(dev)
+            out.append({"device": dev,
+                        "last": {"trigger": e["trigger"], "at": e["started"], "outcome": e["games"][game].get("result")} if e else None,
+                        "watching": {"state": w["state"], "since": w["since"]} if w else None})
+        return {"devices": out}
 
     @app.get("/api/runs/{run_id}/stream", dependencies=[Depends(require)])
     def stream(run_id: str):
