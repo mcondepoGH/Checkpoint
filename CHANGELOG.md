@@ -2,6 +2,17 @@
 
 ## Sin publicar
 
+## 1.2.1 (2026-11-09)
+
+### Correcciones
+
+- El botón de tema muestra solo el icono sol/luna en todos los viewports.
+- El botón de salir recupera su aspecto anterior (corrige el efecto colateral de 1.2.0).
+
+### Novedades
+
+- Nueva prop `iconOnly` en Button.
+
 ## 1.2.0 (2026-11-09)
 
 ### Novedades

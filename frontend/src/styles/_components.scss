@@ -95,3 +95,6 @@ label { font-size: v.$fs-body; color: var(--muted); }
   .versions-head { select { flex: 1 1 100%; max-width: 100%; } }
   .version-src { flex-wrap: wrap; .version-info { flex: 1 1 100%; } .btn { flex: 1 1 100%; } }
 }
+
+// Variante de Button solo con icono (sin texto visible, mismo tamaño en todos los viewports).
+.btn-icon { flex: none; width: v.$touch; min-width: v.$touch; height: v.$touch; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
