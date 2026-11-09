@@ -119,11 +119,11 @@ def test_scheduler_history_endpoint(client):
     now = datetime.now(timezone.utc)
     for i in range(205):
         history.append(history.make_entry(now, 0.5, "scheduled", "ok", {"g": {"result": "ok", "message": ""}}, f"e{i}"), now=now)
-    assert len(client.get("/api/scheduler/history").json()["entries"]) == 50
-    r = client.get("/api/scheduler/history?limit=200").json()["entries"]
-    assert len(r) == 200 and r[0]["message"] == "e204"
+    assert len(client.get("/api/scheduler/history").json()["entries"]) == 10
+    r = client.get("/api/scheduler/history?limit=10").json()["entries"]
+    assert len(r) == 10 and r[0]["message"] == "e204"
     assert client.get("/api/scheduler/history?limit=3").json()["entries"][2]["message"] == "e202"
-    for bad in ("0", "201", "-1", "abc"):
+    for bad in ("0", "11", "200", "-1", "abc"):
         assert client.get(f"/api/scheduler/history?limit={bad}").status_code == 422, bad
 
 
