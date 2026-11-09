@@ -1,7 +1,8 @@
 {
   "lang": {
     "label": "Language",
-    "auto": "Automatic"
+    "auto": "Automatic",
+    "autoShort": "Auto"
   },
   "common": {
     "save": "Save",

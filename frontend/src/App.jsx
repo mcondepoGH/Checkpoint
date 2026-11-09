@@ -24,8 +24,18 @@ function useTheme() {
     else document.documentElement.setAttribute('data-theme', theme);
     try { localStorage.setItem('theme', theme); } catch { /* ignorar */ }
   }, [theme]);
+  // Tema efectivo (para el icono): en «auto» manda la preferencia del sistema.
+  const [systemDark, setSystemDark] = useState(() => { try { return window.matchMedia('(prefers-color-scheme: dark)').matches; } catch { return false; } });
+  useEffect(() => {
+    let mq = null;
+    try { mq = window.matchMedia('(prefers-color-scheme: dark)'); } catch { return undefined; }
+    const on = (e) => setSystemDark(e.matches);
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
   const next = { auto: 'light', light: 'dark', dark: 'auto' }[theme];
-  return [theme, () => setTheme(next)];
+  const effective = theme === 'auto' ? (systemDark ? 'dark' : 'light') : theme;
+  return [theme, () => setTheme(next), effective];
 }
 
 export default function App() {
@@ -39,7 +49,7 @@ export default function App() {
   const [error, setError] = useState(null); // error de la API (se traduce al pintar)
   const [updates, setUpdates] = useState(null); // estado de /api/updates; un fallo aquí nunca molesta
   const [showUpdate, setShowUpdate] = useState(false);
-  const [theme, cycleTheme] = useTheme();
+  const [theme, cycleTheme, effectiveTheme] = useTheme();
   const config = loaded.config;
 
   const loadConfig = useCallback(async (first = false) => {
@@ -114,7 +124,7 @@ export default function App() {
         <UpdateBadge info={updates} onOpen={() => setShowUpdate(true)} />
         <LanguageSelect />
         <button className="btn ghost tool" onClick={cycleTheme} title={t('app.themeTitle')} aria-label={t('app.themeAria', { theme: t(`app.theme.${theme}`) })}>
-          <Icon name="theme" /><span className="lbl">{t('app.themeLabel', { theme: t(`app.theme.${theme}`) })}</span>
+          <Icon name={effectiveTheme === 'dark' ? 'moon' : 'sun'} /><span className="lbl">{t('app.themeLabel', { theme: t(`app.theme.${theme}`) })}</span>
         </button>
         <button className="btn ghost tool" onClick={logout} title={t('app.logout')} aria-label={t('app.logout')}>
           <Icon name="logout" /><span className="lbl">{t('app.logout')}</span>
