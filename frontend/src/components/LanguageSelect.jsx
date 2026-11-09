@@ -1,7 +1,7 @@
 import React from 'react';
 import { useI18n } from '../useI18n.js';
 
-// Selector de idioma: "Automático" (navegador) o uno concreto, que se recuerda. Cada idioma con su propio nombre.
+// Selector de idioma: "Automático" (idioma del navegador) o uno concreto, que se recuerda. Cada idioma con su propio nombre.
 export default function LanguageSelect() {
   const { t, preference, available, setLocale } = useI18n();
   // Nombre del idioma en su propio idioma, con inicial mayúscula («español» -> «Español»).
