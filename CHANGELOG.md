@@ -2,6 +2,10 @@
 
 ## Sin publicar
 
+### Cambios
+
+- El registro de ejecuciones de la sincronización automática guarda como máximo las últimas 50 ejecuciones (límite fijo, antes 200). Un historial existente con más se recorta solo al leerlo o en la siguiente ejecución. Se mantiene el tope de 30 días. `GET /api/scheduler/history` acepta `limit` de 1 a 50 (por defecto 50).
+
 ## 1.5.0 (2026-11-09)
 
 ### Novedades

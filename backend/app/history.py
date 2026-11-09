@@ -1,7 +1,7 @@
 """Registro persistente de ciclos de la sincronización automática.
 
 Un fichero JSONL (DATA_DIR/scheduler-history.jsonl), una entrada por línea. Retención acotada por número
-(MAX_ENTRIES) y por antigüedad (MAX_DAYS). Las líneas ilegibles se ignoran y se descartan al reescribir.
+(MAX_ENTRIES, fijo: nunca más de 50 en disco ni en la API) y por antigüedad (MAX_DAYS). Las líneas ilegibles se ignoran y se descartan al reescribir.
 Nunca guarda secretos: los mensajes pasan por redact() y se truncan."""
 import json
 import os
@@ -14,7 +14,7 @@ from . import settings
 from .redact import redact
 
 FILE = "scheduler-history.jsonl"
-MAX_ENTRIES = 200
+MAX_ENTRIES = 50
 MAX_DAYS = 30
 MSG_LEN = 300
 RESULTS = {"ok", "error", "aborted", "skipped", "conflict", "partial"}
@@ -108,6 +108,14 @@ def _parse(s) -> Optional[datetime]:
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
+def _write(entries: List[dict]) -> None:
+    p = path()
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tmp = p.with_name(f".{p.name}.tmp")
+    tmp.write_text("".join(json.dumps(e, ensure_ascii=False) + "\n" for e in entries), encoding="utf-8")
+    os.replace(tmp, p)
+
+
 def append(entry: dict, now: Optional[datetime] = None) -> None:
     """Añade la entrada y aplica la retención. Reescritura atómica (tmp + os.replace)."""
     now = now or datetime.now(timezone.utc)
@@ -116,11 +124,7 @@ def append(entry: dict, now: Optional[datetime] = None) -> None:
         entries, _bad = _read_all()
         entries.append(entry)
         entries = [e for e in entries if (_parse(e["started"]) or now) >= cutoff][-MAX_ENTRIES:]
-        p = path()
-        p.parent.mkdir(parents=True, exist_ok=True)
-        tmp = p.with_name(f".{p.name}.tmp")
-        tmp.write_text("".join(json.dumps(e, ensure_ascii=False) + "\n" for e in entries), encoding="utf-8")
-        os.replace(tmp, p)
+        _write(entries)
 
 
 def annotate(entries: List[dict], games: dict) -> List[dict]:
@@ -143,7 +147,10 @@ def annotate(entries: List[dict], games: dict) -> List[dict]:
 
 
 def read(limit: int = 50) -> List[dict]:
-    """Más reciente primero."""
+    """Más reciente primero, como mucho MAX_ENTRIES. Un fichero con más (de una versión anterior) se poda al leer."""
     with _lock:
         entries, _bad = _read_all()
-    return list(reversed(entries))[: max(0, limit)]
+        if len(entries) > MAX_ENTRIES:
+            entries = entries[-MAX_ENTRIES:]
+            _write(entries)
+    return list(reversed(entries))[: max(0, min(limit, MAX_ENTRIES))]

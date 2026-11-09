@@ -385,7 +385,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         return await run_in_threadpool(checker.state)
 
     @app.get("/api/scheduler/history", dependencies=[Depends(require)])
-    def get_scheduler_history(limit: int = Query(50, ge=1, le=200)):
+    def get_scheduler_history(limit: int = Query(50, ge=1, le=50)):
         snap = store.snapshot()
         games = snap.cfg.games if snap.cfg else {}
         return {"entries": history.annotate(history.read(limit), games)}
