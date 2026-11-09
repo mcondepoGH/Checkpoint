@@ -203,7 +203,7 @@ En todos los casos la copia perdedora se guarda antes en versiones. En la primer
 |---|---|
 | `config/` | `config.yaml` (dispositivos y juegos) |
 | `keys/` | clave SSH generada y `known_hosts` |
-| `data/` | copias, versiones, logs y registro de la sync automática |
+| `data/` | copias, versiones, logs, registro de la sync automática y la foto de perfil (`data/profile/`) |
 
 Se crean solas al arrancar. `config.yaml` se edita desde la UI (valida, muestra diff y guarda copias) o a mano; ver [`config.example.yaml`](config.example.yaml). Ejemplo mínimo:
 
@@ -225,7 +225,7 @@ La clave de cada juego y dispositivo es su **ID interno**, que no cambia nunca; 
 
 ## Idioma
 
-La interfaz está en español e inglés. El selector de la cabecera (una vez iniciada la sesión; la pantalla de acceso no lleva selectores y usa el idioma y tema ya guardados) ofrece **Automático**, **Español** y **English**, y recuerda la elección en ese navegador (`localStorage`, clave `checkpoint.lang`); se aplica al instante, sin recargar. En móvil el selector muestra solo el código (ES, EN, Auto) para que la cabecera quepa entera; al tocarlo se abre el selector nativo con los nombres completos. El botón de tema muestra un sol (tema claro) o una luna (oscuro); en «automático» refleja el tema del sistema.
+La interfaz está en español e inglés. El selector de idioma está en el menú del perfil (el icono redondo del extremo derecho de la cabecera, una vez iniciada la sesión; la pantalla de acceso no lleva selectores y usa el idioma y tema ya guardados). Ofrece **Automático**, **Español** y **English**, y recuerda la elección en ese navegador (`localStorage`, clave `checkpoint.lang`); se aplica al instante, sin recargar. El mismo menú tiene el cambio de tema (automático, claro, oscuro; muestra un sol o una luna según el tema efectivo) y **Salir**.
 
 Orden de prioridad:
 
@@ -240,6 +240,19 @@ El backend no traduce nada: devuelve códigos y parámetros (`{"code": "err.sync
 Se mantienen en español a propósito: la CLI, los logs internos del servidor, el log técnico de cada ejecución (las líneas del registro en vivo de «Sincronizar») y los textos de estado antiguos guardados en `data/` antes de este cambio.
 
 API: `GET /api/public` (sin sesión) devuelve `{"default_lang": "es"|"en"}`.
+
+## Perfil y foto
+
+El icono redondo del extremo derecho de la cabecera abre el menú del perfil: foto, nombre (el usuario del login, `CHECKPOINT_USER`), idioma, tema, **Salir** y la versión instalada. Sin foto se ve una silueta.
+
+La foto se guarda en el servidor (`data/profile/photo.jpg|png|webp`, nombre fijo), así que se ve igual desde cualquier dispositivo. El navegador la recorta al centro, la reduce a 256x256 y la sube como WebP (JPEG si no puede). Entrada máxima: 2 MB, solo JPG, PNG o WebP; se valida en el navegador y en el servidor (tipo real por los bytes, sin dependencias nuevas: firma y estructura mínima, no se decodifica la imagen). Se sirve con el tipo fijado por el servidor, `nosniff`, `Content-Security-Policy: sandbox` y `ETag`.
+
+API (requiere sesión; las escrituras comprueban el origen como el resto):
+
+- `GET /api/profile`: `{"name": "...", "photo": {"version": "..."} | null}`. `version` sirve de cache-busting (`/api/profile/photo?v=<version>`).
+- `GET /api/profile/photo`: la imagen (`404` si no hay; `304` con `If-None-Match`).
+- `PUT /api/profile/photo`: cuerpo = la imagen en bruto con su `Content-Type` (`image/jpeg`, `image/png` o `image/webp`). `415` si el tipo o los bytes no cuadran, `413` por encima de 2 MB, `400` si está vacía. Responde `{"ok": true, "photo": {"version": "..."}}`.
+- `DELETE /api/profile/photo`: borra la foto (idempotente).
 
 ## Instalar como app (PWA)
 
