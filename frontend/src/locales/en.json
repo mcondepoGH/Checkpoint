@@ -308,6 +308,13 @@
     },
     "noDetail": "No per-game detail."
   },
+  "pwa": {
+    "title": "Install Checkpoint as an app",
+    "install": "Install",
+    "dismiss": "Not now",
+    "android": "It opens full screen, from an icon on your home screen.",
+    "ios": "In Safari, tap Share and then \"Add to Home Screen\"."
+  },
   "updates": {
     "badge": "New version available: {version}",
     "badgePre": "New pre-release version available: {version}",

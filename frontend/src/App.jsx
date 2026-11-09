@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { api, ApiError } from './api.js';
 import logo from './assets/logo-icon.svg';
 import Icon from './components/Icon.jsx';
+import PwaInstall from './components/PwaInstall.jsx';
 import UpdateBadge from './components/UpdateBadge.jsx';
 import LanguageSelect from './components/LanguageSelect.jsx';
 import UpdateDialog from './components/UpdateDialog.jsx';
@@ -132,6 +133,7 @@ export default function App() {
         </Button>
       </header>
       <main className="content">
+        <PwaInstall />
         {error && <Alert variant="error" role="alert">{errText(error)}</Alert>}
         <div hidden={tab !== 'settings'}>
           <Settings loaded={loaded} stale={stale && dirty} configError={loaded.error} runtime={loaded.runtime} platform={loaded.platform}

@@ -2,6 +2,10 @@
 
 ## Sin publicar
 
+### Novedades
+
+- Instalable como app (PWA): manifest, iconos y aviso de instalación en móvil (instrucciones en iOS; botón "Instalar" en Android con HTTPS).
+
 ## 1.3.0 (2026-11-09)
 
 ### Correcciones
