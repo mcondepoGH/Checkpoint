@@ -20,3 +20,16 @@ $themes: (
          log-bg: #03020d, log-text: #4ff5c4,
          page-bg: (radial-gradient(900px 500px at 8% -10%, rgba(139, 92, 246, .22), transparent 60%), radial-gradient(800px 500px at 100% 0%, rgba(34, 211, 238, .14), transparent 60%), radial-gradient(700px 600px at 50% 120%, rgba(244, 63, 158, .12), transparent 60%))),
 );
+
+// Escala tipográfica (html base 16 px: rem = px/16). Usar siempre estos tokens, nunca tamaños sueltos.
+$fs-label: .75rem;     // 12 px: badges, etiquetas en mayúsculas, pie, encabezados de lista
+$fs-hint: .8125rem;    // 13 px: ayudas, texto secundario/meta, código, logs, pestañas de escritorio
+$fs-body: .9375rem;    // 15 px: texto normal, botones, etiquetas de campo, avisos
+$fs-subtitle: 1.0625rem; // 17 px: h3, título de tarjeta, valores destacados
+$fs-title: 1.25rem;    // 20 px: h2, títulos de sección/estado vacío
+$fs-page: 1.75rem;     // 28 px: h1 (login)
+$fs-icon: 2.25rem;     // 36 px: icono de estado vacío compacto
+$fs-hero: clamp(3rem, 12vw, 4.5rem); // icono de estado vacío
+$fs-input-mobile: 16px; // campos en móvil: >=16 px evita el zoom de iOS
+$fs-tab-mobile: .74rem;  // pestañas móvil (<=640 px): ajustadas para que la barra quepa sin scroll lateral
+$fs-tab-narrow: .7rem;   // pestañas en móviles estrechos (<=380 px)

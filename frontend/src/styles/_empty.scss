@@ -8,14 +8,14 @@
   &.inline { min-height: 8rem; padding: 1rem; }
 }
 .empty-icon {
-  font-size: clamp(3rem, 12vw, 4.5rem); line-height: 1; filter: drop-shadow(0 0 14px var(--glow)) drop-shadow(0 0 4px var(--accent));
+  font-size: v.$fs-hero; line-height: 1; filter: drop-shadow(0 0 14px var(--glow)) drop-shadow(0 0 4px var(--accent));
   animation: empty-float 3.2s ease-in-out infinite;
 }
-.empty-title { margin: 0; font-family: v.$display; font-size: 1.2rem; letter-spacing: .08em; text-transform: uppercase; color: var(--text); }
+.empty-title { margin: 0; font-family: v.$display; font-size: v.$fs-title; letter-spacing: .08em; text-transform: uppercase; color: var(--text); }
 .empty-text { margin: 0; max-width: 42ch; color: var(--muted); line-height: 1.5; }
 .empty-action { margin-top: .6rem; display: flex; gap: .5rem; flex-wrap: wrap; justify-content: center; }
-.empty-state.inline .empty-icon { font-size: 2.25rem; }
-.empty-state.inline .empty-title { font-size: 1rem; }
+.empty-state.inline .empty-icon { font-size: v.$fs-icon; }
+.empty-state.inline .empty-title { font-size: v.$fs-subtitle; }
 
 @keyframes empty-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 @media (prefers-reduced-motion: reduce) {

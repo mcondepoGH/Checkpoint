@@ -6,13 +6,13 @@ html { background: var(--bg); -webkit-text-size-adjust: 100%; }
 :root { --sl: env(safe-area-inset-left, 0px); --sr: env(safe-area-inset-right, 0px); --sb: env(safe-area-inset-bottom, 0px); --st: env(safe-area-inset-top, 0px);
   --pad-l: max(#{v.$gap}, var(--sl)); --pad-r: max(#{v.$gap}, var(--sr)); }
 body {
-  margin: 0; min-height: 100vh; min-height: 100dvh; color: var(--text); font: 500 17px/1.45 v.$font;
+  margin: 0; min-height: 100vh; min-height: 100dvh; color: var(--text); font: 500 #{v.$fs-body}/1.45 v.$font;
   background: var(--page-bg), var(--bg); background-attachment: fixed;
 }
 h1, h2, h3 { margin: 0 0 .5rem; font-family: v.$display; letter-spacing: .04em; }
-h2 { font-size: 1.35rem; text-transform: uppercase;
+h2 { font-size: v.$fs-title; text-transform: uppercase;
   background: linear-gradient(90deg, var(--accent), var(--primary), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-h3 { font-size: 1rem; }
+h3 { font-size: v.$fs-subtitle; }
 code, pre { font-family: v.$mono; }
 code { font-size: .85em; word-break: break-all; }
 .muted { color: var(--muted); margin: .25rem 0; }
