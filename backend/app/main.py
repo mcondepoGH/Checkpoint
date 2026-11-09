@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
+from . import avatar
 from . import settings
 from . import bootstrap
 from . import history
@@ -115,6 +116,55 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     async def public():
         """Ajustes que necesita la pantalla de login (sin sesión): hoy solo el idioma por defecto."""
         return {"default_lang": settings.default_lang()}
+
+    # ---- perfil (nombre y foto) ----
+    PHOTO_HEADERS = {"Cache-Control": "private, no-cache", "X-Content-Type-Options": "nosniff",
+                     "Content-Security-Policy": "default-src 'none'; sandbox"}
+
+    @app.get("/api/profile", dependencies=[Depends(require)])
+    def profile():
+        """Nombre (el usuario del login: hay un único usuario, el de CHECKPOINT_USER) y versión de la foto, si hay."""
+        v = avatar.version()
+        return {"name": auth.user, "photo": {"version": v} if v else None}
+
+    @app.get("/api/profile/photo", dependencies=[Depends(require)])
+    def get_photo(request: Request):
+        got = avatar.load()
+        if not got:
+            raise ApiError(404, "err.main.photo_unknown")
+        data, mime, ver = got
+        headers = {**PHOTO_HEADERS, "ETag": f'"{ver}"'}
+        if request.headers.get("if-none-match", "").strip() == f'"{ver}"':
+            return Response(status_code=304, headers=headers)
+        return Response(content=data, media_type=mime, headers=headers)  # tipo fijado por nosotros, no por el cliente
+
+    @app.put("/api/profile/photo", dependencies=[Depends(require)])
+    async def put_photo(request: Request):
+        """Cuerpo = la imagen en bruto (JPEG, PNG o WebP, máx. 2 MB) con su Content-Type; se valida por los bytes."""
+        declared = request.headers.get("content-type", "").split(";")[0].strip().lower()
+        if declared not in avatar.EXT:
+            raise ApiError(415, "err.main.photo_type")
+        try:
+            if int(request.headers.get("content-length", "0")) > avatar.MAX_BYTES:
+                raise ApiError(413, "err.main.photo_too_large", max_mb=avatar.MAX_BYTES // (1024 * 1024))
+        except ValueError:
+            raise ApiError(400, "err.main.photo_empty")
+        buf = bytearray()
+        async for chunk in request.stream():
+            buf += chunk
+            if len(buf) > avatar.MAX_BYTES:
+                raise ApiError(413, "err.main.photo_too_large", max_mb=avatar.MAX_BYTES // (1024 * 1024))
+        if not buf:
+            raise ApiError(400, "err.main.photo_empty")
+        if avatar.sniff(bytes(buf)) != declared:
+            raise ApiError(415, "err.main.photo_type")
+        ver = await run_in_threadpool(avatar.save, bytes(buf), declared)
+        return {"ok": True, "photo": {"version": ver}}
+
+    @app.delete("/api/profile/photo", dependencies=[Depends(require)])
+    def delete_photo():
+        avatar.delete()
+        return {"ok": True, "photo": None}
 
     # ---- config ----
     def draft(body: dict):
