@@ -58,3 +58,13 @@
 // Selector de idioma de la cabecera: desplegable pequeño (la etiqueta solo la leen los lectores de pantalla).
 .topbar .lang-select { margin: 0; display: inline-flex; width: auto; }
 .topbar .lang-select select { width: auto; min-width: 0; padding: .3rem .5rem; font-size: .85rem; }
+
+// Móvil: el selector no se estira ni se comprime (flex: none) y se limita su ancho; el texto largo se recorta con «…».
+// Las pestañas ceden el espacio (ya hacen scroll horizontal) y el botón de tema y el de salir quedan siempre visibles y pulsables.
+@media (max-width: v.$bp-sm) {
+  .topbar .lang-select { flex: none; max-width: 6.5rem; }
+  .topbar .lang-select select { width: 100%; max-width: 100%; padding: .3rem 1.4rem .3rem .45rem; text-overflow: ellipsis; }
+}
+@media (max-width: v.$bp-xs) {
+  .topbar .lang-select { max-width: 5.5rem; }
+}
