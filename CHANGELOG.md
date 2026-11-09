@@ -2,6 +2,8 @@
 
 ## Sin publicar
 
+## 1.5.0 (2026-11-09)
+
 ### Novedades
 
 - Cabecera más limpia: pestañas y, en el extremo derecho, un icono de perfil que abre un menú con la foto, el nombre, el idioma, el tema, "Salir" y la versión. En móvil, el icono de la app va a la izquierda y la barra cabe sin scroll lateral.
