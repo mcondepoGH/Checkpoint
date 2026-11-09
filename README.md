@@ -241,6 +241,16 @@ Se mantienen en español a propósito: la CLI, los logs internos del servidor, e
 
 API: `GET /api/public` (sin sesión) devuelve `{"default_lang": "es"|"en"}`.
 
+## Instalar como app (PWA)
+
+Checkpoint se puede instalar en el móvil y abrirse a pantalla completa. En móvil, la interfaz propone instalarla (se puede descartar con «Ahora no»).
+
+- **iOS (Safari):** funciona también por `http://`. Compartir, «Añadir a pantalla de inicio».
+- **Android (Chrome):** el botón «Instalar» y el service worker exigen contexto seguro: **HTTPS** (o `localhost`). Con `http://IP-LAN` Chrome no lanza el evento de instalación y la interfaz no muestra el aviso. Pon Checkpoint detrás de un proxy inverso con TLS (Caddy, Traefik, nginx) y entra por el dominio HTTPS.
+- Para probarlo sin certificado propio: en el móvil, `chrome://flags/#unsafely-treat-insecure-origin-as-secure` con tu `http://IP-LAN:8088` (solo para pruebas), o un túnel HTTPS al puerto 8088.
+- El service worker no cachea nada: la app sigue necesitando el servidor, y las actualizaciones se ven al recargar.
+- Los iconos se regeneran con `node frontend/scripts/make-icons.mjs` (sin dependencias).
+
 ## Seguridad
 
 - Cambia el usuario y la contraseña del `.env` y restringe sus permisos (`chmod 600 .env`).
