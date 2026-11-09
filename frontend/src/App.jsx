@@ -127,7 +127,7 @@ export default function App() {
         <Button variant="ghost" iconOnly onClick={cycleTheme} title={t('app.themeTitle')} aria-label={t('app.themeAria', { theme: t(`app.theme.${theme}`) })}>
           <Icon name={effectiveTheme === 'dark' ? 'moon' : 'sun'} />
         </Button>
-        <Button variant="ghost" className="tool" onClick={logout} title={t('app.logout')} aria-label={t('app.logout')}>
+        <Button variant="ghost" className="tool tool-label" onClick={logout} title={t('app.logout')} aria-label={t('app.logout')}>
           <Icon name="logout" /><span className="lbl">{t('app.logout')}</span>
         </Button>
       </header>
