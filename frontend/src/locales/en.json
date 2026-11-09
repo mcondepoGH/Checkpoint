@@ -288,7 +288,6 @@
       "newest": "Newest wins: the save with the newest date is applied and the other is kept in versions. If the dates differ by less than 2 s, it is skipped."
     },
     "saved": "Saved.",
-    "lastRun": "Last run:",
     "nextRun": "Next:",
     "nextOff": "disabled"
   },
