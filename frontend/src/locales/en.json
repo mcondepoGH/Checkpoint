@@ -302,7 +302,8 @@
     "trigger": {
       "scheduled": "Scheduled",
       "startup": "Startup",
-      "hook": "Game opened"
+      "hook": "Game opened",
+      "hook_closed": "Game closed"
     },
     "noDetail": "No per-game detail."
   },

@@ -302,7 +302,8 @@
     "trigger": {
       "scheduled": "Programada",
       "startup": "Arranque",
-      "hook": "Aviso del juego"
+      "hook": "Aviso del juego",
+      "hook_closed": "Cierre del juego"
     },
     "noDetail": "Sin detalle por juego."
   },

@@ -1,6 +1,7 @@
 """API FastAPI. Motivo de FastAPI: pydantic ya valida la config y SSE/streaming vienen incluidos."""
 import asyncio
 import json
+import logging
 import threading
 import time
 import uuid
@@ -18,6 +19,7 @@ from . import settings
 from . import bootstrap
 from . import history
 from . import runtime
+from . import sync as sync_mod
 from . import updates
 from .apierror import ApiError, describe_code, error_body, error_response
 from .auth import Auth
@@ -25,6 +27,7 @@ from .config import Config, ConfigError, Device, pyd_body, describe, normalize_p
 from .configstore import Conflict, ConfigStore, InvalidConfig, parse_text, config_events_gen, diff_configs, render_yaml
 from .redact import redact
 from .scheduler import Scheduler
+from .watcher import Watcher
 from .sync import SyncAbort, count_versions, list_versions, restore_version, run_sync, valid_resolution
 from .transport import TransportError, get_transport, local_folder_status
 
@@ -54,6 +57,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             yield
         finally:
             task.cancel()
+            await holder["watcher"].cancel_all()
 
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     if auth is None:
@@ -224,6 +228,11 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     @hook.get("/ping")
     def hook_ping(user: str = Depends(hook_user)):
         return {"ok": True, "user": user}
+
+    @hook.get("/watches")
+    def hook_watches():
+        """Vigilancias de cierre activas (en memoria): [{game, device, state: waiting|running|settling, since}]."""
+        return watcher.list()
 
     # (el router se incluye tras definir `opened`, más abajo)
 
@@ -493,10 +502,77 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         threading.Thread(target=work, daemon=True).start()
         return {"run_id": run.id}
 
+    # ---- aviso de apertura / cierre automático ----
+    def start_hook_run(cfg, game: str, trigger: str):
+        """Lanza en un hilo el checkpoint de un juego para el hook (`opened`: trigger `hook`; cierre: `hook_closed`):
+        política de conflictos siempre `skip`, deja su entrada en el historial. Devuelve (run, finished, box)."""
+        g = cfg.games[game]
+        run = Run(game, False, g.name)
+        runs[run.id] = run
+        finished = threading.Event()
+        started, t0 = scheduler.clock(), time.monotonic()
+        box: dict = {}
+
+        def work():
+            try:
+                res, m, c, st = scheduler.run_game(cfg, game, log=run.lines.append, policy="skip")
+                box.update(res=res, m=m, c=c, st=st or {})
+                run.status = st or {"result": res, "game": game, "name": g.name, "message": m,
+                                    **(c if c and "code" in c else {})}
+                if c and c.get("code") == "err.sync.sync_in_progress":  # lock tomado por otro proceso: no cuenta como run
+                    box["busy"] = True
+                    hook_log.info("hook %s juego=%s omitido: lock ocupado (sync_in_progress), sin reintento", trigger, g.name)
+                    return
+                item, det = scheduler.game_detail(g.name, res, m, c)
+                summary = scheduler.summarize({game: res}, [item] if item else [], {game: det})
+                try:
+                    history.append(history.make_entry(started, time.monotonic() - t0, trigger, summary["result"],
+                                                      {game: det}, summary["message"], summary.get("code"),
+                                                      summary.get("params")), now=scheduler.clock())
+                except Exception:  # el registro nunca rompe el aviso
+                    pass
+                hook_log.info("hook %s juego=%s resultado=%s", trigger, g.name, res)
+            finally:
+                run.done = True
+                finished.set()
+
+        threading.Thread(target=work, daemon=True).start()
+        for old in [k for k, v in runs.items() if v.done][:-20]:
+            runs.pop(old, None)
+        return run, finished, box
+
+    def game_busy(game: str) -> bool:
+        return scheduler.current == game or any(r.game == game and not r.done for r in runs.values())
+
+    def watch_probe(game: str, device: str) -> bool:
+        cfg = _auto_cfg()
+        return sync_mod.get_transport(cfg.devices[device]).process_running(cfg.games[game].process)
+
+    async def close_checkpoint(game: str, device: str):
+        """Checkpoint al cerrarse el juego: mismo lock y lógica que `opened`, política `skip`, sin reintentos."""
+        cfg = _auto_cfg()
+        if game not in cfg.games:
+            return
+        if game_busy(game):
+            hook_log.info("hook hook_closed juego=%s omitido: ejecución en curso, sin reintento", cfg.games[game].name)
+            return
+        start_hook_run(cfg, game, "hook_closed")
+
+    hook_log = logging.getLogger("checkpoint.hook")
+    watcher = Watcher(watch_probe, close_checkpoint)
+    holder["watcher"] = watcher
+    app.state.watcher = watcher
+
+    def arm_watch(g, game: str, dev: str) -> dict:
+        if not g.process:
+            return {"watching": False, "watch_reason": "no_process"}
+        watcher.arm(game, dev)
+        return {"watching": True}
+
     @hook.post("/{game}/opened")
     async def hook_opened(game: str, device: Optional[str] = Query(None)):
         """Aviso «se va a abrir el juego»: sync previo bloqueante con política de conflictos siempre `skip` (ignora la del juego y la del scheduler).
-        No arma vigilancia de proceso (eso es otra fase). Un fallo de la sync no es un 5xx: 200 con `outcome` descriptivo."""
+        Tras el aviso (salvo 400/401/404/409) arma la vigilancia de cierre si el juego tiene `process` (`watching`). Un fallo de la sync no es un 5xx: 200 con `outcome` descriptivo."""
         cfg = _cfg()
         game = game_id(game)  # el 401 ya lo dio hook_user: no se revela si el juego existe
         g = cfg.games[game]
@@ -513,42 +589,15 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
                 raise ApiError(400, "err.hook.device_ambiguous", cause=e.body())
             if dev is None:
                 raise ApiError(404, "err.hook.device_unknown")
-        if scheduler.current == game or any(r.game == game and not r.done for r in runs.values()):
+        if game_busy(game):
             raise ApiError(409, "err.main.run_in_progress")
-        run = Run(game, False, g.name)
-        runs[run.id] = run
-        finished = threading.Event()
-        started, t0 = scheduler.clock(), time.monotonic()
-        box: dict = {}
-
-        def work():
-            try:
-                res, m, c, st = scheduler.run_game(cfg, game, log=run.lines.append, policy="skip")
-                box.update(res=res, m=m, c=c, st=st or {})
-                run.status = st or {"result": res, "game": game, "name": g.name, "message": m,
-                                    **(c if c and "code" in c else {})}
-                if c and c.get("code") == "err.sync.sync_in_progress":  # lock tomado por otro proceso: no cuenta como run
-                    box["busy"] = True
-                    return
-                item, det = scheduler.game_detail(g.name, res, m, c)
-                summary = scheduler.summarize({game: res}, [item] if item else [], {game: det})
-                try:
-                    history.append(history.make_entry(started, time.monotonic() - t0, "hook", summary["result"],
-                                                      {game: det}, summary["message"], summary.get("code"),
-                                                      summary.get("params")), now=scheduler.clock())
-                except Exception:  # el registro nunca rompe el aviso
-                    pass
-            finally:
-                run.done = True
-                finished.set()
-
-        threading.Thread(target=work, daemon=True).start()
-        for old in [k for k, v in runs.items() if v.done][:-20]:
-            runs.pop(old, None)
+        run, finished, box = start_hook_run(cfg, game, "hook")
         if not await run_in_threadpool(finished.wait, settings.HOOK_WAIT):
             # El SSH sigue colgado: se responde ya (el cliente tiene su propio -m) y la sync termina por su cuenta.
-            return {"ok": False, "outcome": "timeout", "game": game, "device": dev, "run_id": run.id,
-                    "code": "err.hook.timeout", "params": {"seconds": settings.HOOK_WAIT}}
+            out = {"ok": False, "outcome": "timeout", "game": game, "device": dev, "run_id": run.id,
+                   "code": "err.hook.timeout", "params": {"seconds": settings.HOOK_WAIT}}
+            out.update(arm_watch(g, game, dev))
+            return out
         if box.get("busy"):
             raise ApiError(409, "err.main.run_in_progress")
         out = {"ok": box["res"] == "ok", "outcome": box["res"], "game": game, "device": dev, "run_id": run.id}
@@ -557,6 +606,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             out.update(code=st["code"], params=history.clean_params(st.get("params") or {}))
         elif box["c"] and "code" in box["c"]:
             out.update(code=box["c"]["code"], params=history.clean_params(box["c"].get("params") or {}))
+        out.update(arm_watch(g, game, dev))
         return out
 
     app.include_router(hook)

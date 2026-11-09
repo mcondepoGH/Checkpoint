@@ -280,7 +280,7 @@ curl -H "Authorization: Bearer ck_..." http://HOST:PORT/api/hook/ping
 
 ## Hooks
 
-Rutas `/api/hook/*` para que un lanzador avise al hub con la API key (ver «API key de usuario»). Hoy: el aviso de apertura.
+Rutas `/api/hook/*` para que un lanzador avise al hub con la API key (ver «API key de usuario»). Hoy: el aviso de apertura (que además arma el **cierre automático**) y la consulta de vigilancias.
 
 ### `POST /api/hook/{juego}/opened?device=<dispositivo>`
 
@@ -288,10 +288,11 @@ Se llama justo antes de arrancar el juego. El hub hace una **sincronización pre
 
 - **Autenticación:** `Authorization: Bearer ck_...` (nada de cookie).
 - **Juego:** id o nombre, como `POST /api/sync/{juego}`.
-- **Dispositivo (`?device=`):** id o nombre. Se valida que pertenezca al juego; hoy solo se registra (lo usará el cierre automático). Es obligatorio si el juego está en más de un dispositivo (todos los juegos actuales tienen dos); si el juego estuviera en uno solo, se deduce.
+- **Dispositivo (`?device=`):** id o nombre. Se valida que pertenezca al juego; es el dispositivo donde se vigila el proceso del juego (ver «Cierre automático»). Es obligatorio si el juego está en más de un dispositivo (todos los juegos actuales tienen dos); si el juego estuviera en uno solo, se deduce.
 - **Respuesta `200`:** `{"ok": bool, "outcome": "...", "game": "<id>", "device": "<id>", "run_id": "...", "code": "err.sync....", "params": {...}}`. `outcome` es `ok`, `conflict`, `aborted` (dispositivo sin conexión, proceso del juego abierto...), `partial`, `error` o `timeout`. `ok` es `true` solo con `outcome: ok`. `code`/`params` detallan qué pasó (p. ej. `err.sync.done`, `err.sync.already_synced`, `err.sync.conflict`). Un fallo de la sincronización **no** es un 5xx y no se reintenta: el cron de la sincronización automática sigue como red de seguridad. `timeout`: la sincronización superó los 55 s del servidor; sigue ejecutándose en segundo plano y deja su entrada en el historial al acabar.
 - **Errores:** `401` `err.apikey.invalid` (sin key, inválida, revocada o cookie de sesión; se comprueba antes que nada, así que no revela si el juego existe), `404` `err.main.game_unknown` o `err.hook.device_unknown`, `400` `err.hook.device_required` (falta `?device=` y es ambiguo) o `err.hook.device_ambiguous`, `409` `err.main.run_in_progress` (ya hay una ejecución de ese juego: cron, manual u otro aviso), `429` tras varios fallos de key seguidos desde una IP.
 - **Historial:** la ejecución aparece en el registro de la sincronización automática con el disparador «Aviso del juego» (`trigger: "hook"`).
+- **`watching`:** la respuesta añade `watching: true` si se armó la vigilancia de cierre, o `watching: false` con `watch_reason: "no_process"` si el juego no tiene `process`. Se arma con cualquier `200` (también `conflict`, `aborted` o `timeout`), nunca con `400`/`401`/`404`/`409`.
 
 ```bash
 curl -fsS -m 60 -X POST -H "Authorization: Bearer ck_..." "http://HOST:8088/api/hook/MiJuego/opened?device=MiPC"
@@ -317,7 +318,35 @@ El cliente debe esperar (hasta 60 s) y arrancar el juego **aunque falle el aviso
 
   Si el script sale con error, Lutris arranca igualmente el juego; sin la opción de espera, el juego arrancaría a la vez que la sincronización.
 
-Aviso: **el cierre automático** (sincronizar al cerrar el juego) **aún no existe**; llegará en una fase posterior. Por ahora el `opened` solo trae a este equipo el save más reciente; para subir lo jugado, el cron o una sincronización manual.
+### Cierre automático
+
+Tras `opened`, el hub **vigila el proceso del juego en ese dispositivo** (el `process` del juego; mismo sondeo que usa la sincronización: `pgrep -f` por SSH en Linux, `tasklist` en Windows, `/proc` en «Este equipo») y, cuando se cierra, hace el checkpoint solo. El lanzador no necesita ningún hook de cierre: basta la línea de `opened` de Steam o Lutris.
+
+1. `opened` sincroniza y arma la vigilancia (una por juego; un nuevo `opened` del mismo juego **reemplaza** la anterior).
+2. Sondeo cada **15 s**. No se da el juego por cerrado hasta haberlo visto abierto al menos una vez. Si en **2 min** no se ve nunca, se descarta la vigilancia (suele ser un `process` mal puesto) y queda anotado en el log del hub (`vigilante never_seen`), no en el historial.
+3. Al dejar de verse el proceso, o si el dispositivo deja de responder (SSH caído, suspensión), espera **10 s** (para que se liberen los ficheros) y lanza el checkpoint.
+4. El checkpoint usa la política de conflictos `skip` (nunca resuelve solo), el mismo lock y la misma lógica que `opened`, y aparece en el historial con el disparador «Cierre del juego» (`trigger: "hook_closed"`). Si aborta o el lock está tomado **no se reintenta**; el cron de la sincronización automática sigue como red de seguridad.
+
+Tiempos configurables con variables de entorno (en segundos):
+
+| Variable | Por defecto | Qué es |
+|---|---|---|
+| `CHECKPOINT_HOOK_POLL` | `15` | Cada cuánto se sondea el proceso |
+| `CHECKPOINT_HOOK_SETTLE` | `10` | Espera tras dejar de verlo, antes del checkpoint |
+| `CHECKPOINT_HOOK_FIRST_SEEN` | `120` | Tiempo máximo para verlo abierto por primera vez |
+
+Limitaciones:
+
+- La vigilancia **vive en memoria**: si el hub se reinicia se pierde y solo la cubre el cron.
+- `process` debe coincidir con el proceso real del juego (en Proton/Wine, el `.exe` bajo Wine; **sin verificar**). Con `pgrep -f` basta un fragmento del nombre o de la línea de comandos.
+
+#### `GET /api/hook/watches`
+
+Con `Authorization: Bearer ck_...` (sin cookie; `401` sin key). Lista las vigilancias activas, sin datos sensibles: `[{"game": "<id>", "device": "<id>", "state": "waiting|running|settling", "since": "<UTC ISO 8601>"}]`. `waiting`: aún no se ha visto el proceso; `running`: visto abierto; `settling`: cerrado, esperando antes del checkpoint.
+
+```bash
+curl -fsS -H "Authorization: Bearer ck_..." "http://HOST:8088/api/hook/watches"
+```
 
 ## Instalar como app (PWA)
 
