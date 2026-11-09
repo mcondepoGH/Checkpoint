@@ -47,6 +47,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(_app):
+        await run_in_threadpool(avatar.migrate_legacy, auth.user)
         task = asyncio.create_task(holder["scheduler"].loop())
         try:
             yield
@@ -121,15 +122,22 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     PHOTO_HEADERS = {"Cache-Control": "private, no-cache", "X-Content-Type-Options": "nosniff",
                      "Content-Security-Policy": "default-src 'none'; sandbox"}
 
+    def current_user(request: Request, _s=Depends(require)) -> str:
+        """ÚNICO punto que dice quién es el usuario de la sesión. Hoy hay un solo usuario (CHECKPOINT_USER);
+        con registro de usuarios se sustituye por la búsqueda del usuario ligado al token de sesión."""
+        user = auth.user
+        avatar.migrate_legacy(user)  # foto de antes de las carpetas por usuario, si queda alguna
+        return user
+
     @app.get("/api/profile", dependencies=[Depends(require)])
-    def profile():
-        """Nombre (el usuario del login: hay un único usuario, el de CHECKPOINT_USER) y versión de la foto, si hay."""
-        v = avatar.version()
-        return {"name": auth.user, "photo": {"version": v} if v else None}
+    def profile(user: str = Depends(current_user)):
+        """Nombre y versión de la foto, si hay, del usuario de la sesión."""
+        v = avatar.version(user)
+        return {"name": user, "photo": {"version": v} if v else None}
 
     @app.get("/api/profile/photo", dependencies=[Depends(require)])
-    def get_photo(request: Request):
-        got = avatar.load()
+    def get_photo(request: Request, user: str = Depends(current_user)):
+        got = avatar.load(user)
         if not got:
             raise ApiError(404, "err.main.photo_unknown")
         data, mime, ver = got
@@ -139,7 +147,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         return Response(content=data, media_type=mime, headers=headers)  # tipo fijado por nosotros, no por el cliente
 
     @app.put("/api/profile/photo", dependencies=[Depends(require)])
-    async def put_photo(request: Request):
+    async def put_photo(request: Request, user: str = Depends(current_user)):
         """Cuerpo = la imagen en bruto (JPEG, PNG o WebP, máx. 2 MB) con su Content-Type; se valida por los bytes."""
         declared = request.headers.get("content-type", "").split(";")[0].strip().lower()
         if declared not in avatar.EXT:
@@ -158,12 +166,12 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             raise ApiError(400, "err.main.photo_empty")
         if avatar.sniff(bytes(buf)) != declared:
             raise ApiError(415, "err.main.photo_type")
-        ver = await run_in_threadpool(avatar.save, bytes(buf), declared)
+        ver = await run_in_threadpool(avatar.save, bytes(buf), declared, user)
         return {"ok": True, "photo": {"version": ver}}
 
     @app.delete("/api/profile/photo", dependencies=[Depends(require)])
-    def delete_photo():
-        avatar.delete()
+    def delete_photo(user: str = Depends(current_user)):
+        avatar.delete(user)
         return {"ok": True, "photo": None}
 
     # ---- config ----

@@ -1,10 +1,12 @@
 """Perfil: nombre y foto (subida, tipo, tamaño, borrado, caché y sesión obligatoria)."""
+import re
 import struct
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app import avatar, settings
+from app.avatar import user_dir
 from app.auth import Auth
 from app.main import create_app
 
@@ -29,6 +31,11 @@ def client(tmp_path, monkeypatch):
 def logged(client):
     assert client.post("/api/login", json={"user": "admin", "password": PW}).status_code == 200
     return client
+
+
+def UD(c):
+    """Carpeta de foto del admin (id derivado del nombre de usuario)."""
+    return c.tmp / "data" / "profile" / avatar.user_id("admin")
 
 
 def put(c, data, ctype="image/jpeg"):
@@ -58,7 +65,7 @@ def test_upload_valid_roundtrip(logged, data, ctype, ext):
     assert g.headers["x-content-type-options"] == "nosniff" and g.headers["etag"] == f'"{ver}"'
     assert g.headers["cache-control"] == "private, no-cache" and "sandbox" in g.headers["content-security-policy"]
     # nombre fijo en disco, sin nombre del cliente
-    assert [p.name for p in (logged.tmp / "data" / "profile").iterdir()] == [f"photo.{ext}"]
+    assert [p.name for p in UD(logged).iterdir()] == [f"photo.{ext}"]
     assert logged.get("/api/profile/photo", headers={"If-None-Match": f'"{ver}"'}).status_code == 304
 
 
@@ -66,7 +73,7 @@ def test_replace_removes_previous_format_and_changes_version(logged):
     v1 = put(logged, JPG).json()["photo"]["version"]
     v2 = put(logged, PNG, "image/png").json()["photo"]["version"]
     assert v1 != v2
-    assert [p.name for p in (logged.tmp / "data" / "profile").iterdir()] == ["photo.png"]
+    assert [p.name for p in UD(logged).iterdir()] == ["photo.png"]
 
 
 def test_invalid_type(logged):
@@ -117,7 +124,62 @@ def test_foreign_origin_blocked_on_write(logged):
 
 
 def test_tampered_file_on_disk_is_ignored(logged):
-    d = logged.tmp / "data" / "profile"
+    d = UD(logged)
     d.mkdir(parents=True)
     (d / "photo.png").write_bytes(b"no soy un png")
     assert logged.get("/api/profile").json()["photo"] is None
+
+
+def test_storage_under_user_id_folder(logged):
+    put(logged, JPG)
+    uid = avatar.user_id("admin")
+    assert re.fullmatch(r"[0-9a-f]{32}", uid) and "admin" not in uid
+    assert [p.name for p in (logged.tmp / "data" / "profile").iterdir()] == [uid]
+
+
+def test_legacy_photo_migrated_on_first_access(logged):
+    base = logged.tmp / "data" / "profile"
+    base.mkdir(parents=True)
+    (base / "photo.png").write_bytes(PNG)
+    (base / ".photo-abc.tmp").write_bytes(b"x")
+    ver = logged.get("/api/profile").json()["photo"]["version"]
+    g = logged.get("/api/profile/photo")
+    assert g.content == PNG and g.headers["etag"] == f'"{ver}"'
+    assert sorted(p.name for p in base.iterdir()) == [avatar.user_id("admin")]
+    assert [p.name for p in UD(logged).iterdir()] == ["photo.png"]
+
+
+def test_legacy_photo_migrated_at_startup(logged):
+    base = logged.tmp / "data" / "profile"
+    base.mkdir(parents=True)
+    (base / "photo.jpg").write_bytes(JPG)
+    assert avatar.migrate_legacy("admin") is True
+    assert not (base / "photo.jpg").exists() and (UD(logged) / "photo.jpg").read_bytes() == JPG
+    assert avatar.migrate_legacy("admin") is False  # idempotente
+
+
+def test_legacy_does_not_overwrite_existing_and_leaves_no_orphans(logged):
+    put(logged, PNG, "image/png")
+    base = logged.tmp / "data" / "profile"
+    (base / "photo.jpg").write_bytes(JPG)
+    assert logged.get("/api/profile/photo").content == PNG
+    assert [p.name for p in base.iterdir()] == [avatar.user_id("admin")]
+
+
+def test_legacy_invalid_is_removed(logged):
+    base = logged.tmp / "data" / "profile"
+    base.mkdir(parents=True)
+    (base / "photo.png").write_bytes(b"basura")
+    assert logged.get("/api/profile").json()["photo"] is None
+    assert list(base.iterdir()) == []
+
+
+def test_lifespan_runs_migration(tmp_path, monkeypatch):
+    monkeypatch.setattr(settings, "CONFIG_PATH", tmp_path / "config" / "config.yaml")
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path / "data")
+    monkeypatch.setattr(settings, "STATIC_DIR", tmp_path / "static")
+    (tmp_path / "data" / "profile").mkdir(parents=True)
+    (tmp_path / "data" / "profile" / "photo.jpg").write_bytes(JPG)
+    with TestClient(create_app(Auth("admin", PW, 1, rounds=4))):
+        assert (user_dir("admin") / "photo.jpg").is_file()
+        assert not (tmp_path / "data" / "profile" / "photo.jpg").exists()
