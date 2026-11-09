@@ -275,6 +275,8 @@ Los tamaños de texto viven como tokens en `frontend/src/styles/_variables.scss`
 
 Excepciones explícitas: `$fs-input-mobile` (1rem = 16 px, evita el zoom de iOS), `$fs-tab-mobile` y `$fs-tab-narrow` (pestañas móviles compactas), `$fs-icon` y `$fs-hero` (iconos).
 
+`esbuild` no está declarado en `frontend/package.json`: llega como dependencia transitiva de `vite`.
+
 ### Componentes de UI
 
 Los elementos que se repiten viven en `frontend/src/components/ui/` (importa desde `components/ui/index.js`), cada uno con su partial en `frontend/src/styles/ui/`. Para cambiar el aspecto de todos los usos, edita el partial; para cambiar el marcado, el componente. No escribas a mano `className="btn"`, `badge`, `alert`, etc.
@@ -291,8 +293,6 @@ Los elementos que se repiten viven en `frontend/src/components/ui/` (importa des
 | `Input` | props del input (texto sin autocompletar ni corrector por defecto) | `_control.scss` |
 
 Los tests `test/ui-components.test.mjs` fijan las clases y atributos que producen.
-
-`esbuild` no está declarado en `frontend/package.json`: llega como dependencia transitiva de `vite`.
 
 ## Licencia
 
