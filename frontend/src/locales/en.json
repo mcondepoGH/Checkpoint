@@ -193,12 +193,14 @@
     "process": "Process (optional)",
     "processHint": "Not copied while it is running",
     "processPh": "game.exe",
-    "keep": "Max. versions (this game)",
+    "keep": "Max. versions",
     "keepHint": "Empty = use the global one ({max}). {hint}",
     "onConflict": "On conflict (auto sync)",
     "onConflictHint": "Overrides the global Automatic sync setting for this game only.",
     "useGlobal": "Use the global setting",
-    "deleteAria": "Delete game {title}"
+    "deleteAria": "Delete game {title}",
+    "showMore": "Show more",
+    "showLess": "Show less"
   },
   "device": {
     "new": "New device",
