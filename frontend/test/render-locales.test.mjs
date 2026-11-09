@@ -111,9 +111,11 @@ test('cabecera de la app (con sesión) conserva idioma y tema', () => {
   assert.match(app, /<LanguageSelect \/>/);
   assert.match(app, /onClick=\{cycleTheme\}/);
   assert.match(app, /<Icon name=\{effectiveTheme === 'dark' \? 'moon' : 'sun'\} \/>/);
-  // El icono sol/luna no se oculta por viewport: ninguna regla esconde `.tool .ico`.
+  // Tema: solo icono (variante iconOnly), sin texto visible; el botón de salir conserva .tool con etiqueta.
+  assert.match(app, /iconOnly onClick=\{cycleTheme\}/);
+  assert.doesNotMatch(app, /themeLabel/);
   const css = fs.readFileSync(path.join(SRC, 'styles', '_layout.scss'), 'utf8');
-  assert.doesNotMatch(css, /\.tool \.ico/);
+  assert.match(css, /\.tab \.short, \.tool \.ico \{ display: none; \}/);
   assert.doesNotMatch(login, /LanguageSelect|cycleTheme/);
 });
 

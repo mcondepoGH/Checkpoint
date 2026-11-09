@@ -40,7 +40,6 @@
     "sections": "Secciones",
     "themeTitle": "Cambiar tema",
     "themeAria": "Cambiar tema (actual: {theme})",
-    "themeLabel": "Tema: {theme}",
     "theme": {
       "auto": "automático",
       "light": "claro",

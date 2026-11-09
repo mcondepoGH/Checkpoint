@@ -40,7 +40,6 @@
     "sections": "Sections",
     "themeTitle": "Change theme",
     "themeAria": "Change theme (current: {theme})",
-    "themeLabel": "Theme: {theme}",
     "theme": {
       "auto": "auto",
       "light": "light",
