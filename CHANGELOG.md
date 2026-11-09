@@ -2,6 +2,14 @@
 
 ## Sin publicar
 
+## 1.2.0 (2026-11-09)
+
+### Novedades
+
+- Escala tipográfica tokenizada en rem (texto normal de 15px).
+- Componentes de UI compartidos (Button, Alert, Badge, Pill, Select, Checkbox, Switch, Input), con un único estilo cada uno.
+- Icono sol/luna en el botón de tema en todos los viewports; el botón de salir también lleva icono en escritorio.
+
 ## 1.1.1 (2026-11-09)
 
 ### Correcciones
