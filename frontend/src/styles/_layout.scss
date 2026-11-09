@@ -12,7 +12,8 @@
   display: inline-flex; align-items: center; gap: .5rem; }
 .brand-logo { width: 32px; height: 32px; flex: none; }
 .tabs { display: flex; gap: .25rem; flex-wrap: wrap; }
-.tab .short, .tool .ico { display: none; }
+.tab .short { display: none; }
+.tool { display: inline-flex; align-items: center; gap: .4rem; }
 .tab { font: inherit; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; font-size: v.$fs-hint; background: none; border: 1px solid transparent;
   padding: .4rem .8rem; border-radius: 10px; color: var(--muted); cursor: pointer; transition: all .15s;
   &:hover { color: var(--text); border-color: var(--border); }
@@ -43,7 +44,7 @@
   .tabs { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; gap: .1rem; }
   .tab { flex: none; min-height: v.$touch; padding: 0 .45rem; font-size: v.$fs-tab-mobile; letter-spacing: .03em; white-space: nowrap; display: inline-flex; align-items: center; }
   .tab .full, .tool .lbl { display: none; }
-  .tab .short, .tool .ico { display: inline; }
+  .tab .short { display: inline; }
   .tool { flex: none; width: v.$touch; min-width: v.$touch; height: v.$touch; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
   .content { padding-top: .75rem; padding-bottom: .75rem; }
 }
