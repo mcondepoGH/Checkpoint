@@ -302,6 +302,10 @@ Pon la URL **entre comillas**: el `?` lo interpretaría el shell como comodín.
 
 ### Lanzadores
 
+**Copiar los comandos de la web:** Configuración → tarjeta del juego → «Mostrar más» → bloque **Lanzador**. Eliges el dispositivo, y en cada pestaña (Steam / Steam Deck, Lutris, Heroic, Windows con Playnite) tienes el comando completo con tu API key, el id del juego y el dispositivo ya codificados, listo para copiar (con una nota de dónde se pega). Necesita la API key del perfil (sin ella el bloque pide generarla). La URL del hub se rellena con la de la página, se puede editar y se recuerda en el navegador; por HTTP fuera de localhost avisa de que la key viaja en claro. Si el juego no tiene `process`, avisa de que el hub no podrá vigilar el cierre. Debajo, **Último aviso** por dispositivo: último `opened` / cierre recibido, hace cuánto, su resultado y, si hay vigilancia activa, su estado (se refresca al abrir el bloque y cada 15 s).
+
+Los comandos de abajo son los mismos que genera la web.
+
 El cliente debe esperar (hasta 60 s) y arrancar el juego **aunque falle el aviso** (hub caído, conflicto...), por eso se encadena con `;` y no con `&&`.
 
 - **Steam** (Opciones de lanzamiento del juego):
@@ -317,6 +321,16 @@ El cliente debe esperar (hasta 60 s) y arrancar el juego **aunque falle el aviso
   ```
 
   Si el script sale con error, Lutris arranca igualmente el juego; sin la opción de espera, el juego arrancaría a la vez que la sincronización.
+
+- **Heroic** (**sin verificar**; ajustes del juego → Avanzado → script antes de lanzar): el mismo `curl` que Lutris.
+
+- **Windows / Playnite** (**sin verificar**; script previo del juego, PowerShell 5.1):
+
+  ```
+  Invoke-WebRequest -Method Post -Uri "http://<HUB>:8088/api/hook/<JUEGO>/opened?device=<DISPOSITIVO>" -Headers @{Authorization='Bearer <API_KEY>'} -TimeoutSec 60 -UseBasicParsing
+  ```
+
+  Alternativa con `curl.exe` (incluido en Windows 10/11): el mismo comando que en Lutris con `curl.exe` en lugar de `curl`.
 
 ### Cierre automático
 
@@ -339,6 +353,10 @@ Limitaciones:
 
 - La vigilancia **vive en memoria**: si el hub se reinicia se pierde y solo la cubre el cron.
 - `process` debe coincidir con el proceso real del juego (en Proton/Wine, el `.exe` bajo Wine; **sin verificar**). Con `pgrep -f` basta un fragmento del nombre o de la línea de comandos.
+
+#### `GET /api/games/{juego}/hook-status`
+
+Con **sesión de cookie** (la usa la web; la API key no vale aquí). Por cada dispositivo del juego: el último evento de hook y la vigilancia activa, sin datos sensibles: `{"devices": [{"device": "<id>", "last": {"trigger": "hook|hook_closed", "at": "<UTC ISO 8601>", "outcome": "ok|conflict|..."} | null, "watching": {"state": "waiting|running|settling", "since": "..."} | null}]}`. `404` si el juego no existe. Las entradas de historial de `hook` y `hook_closed` guardan ahora el dispositivo (campo `device`); las anteriores no lo tienen y no cuentan como «último aviso».
 
 #### `GET /api/hook/watches`
 
@@ -408,9 +426,11 @@ Los elementos que se repiten viven en `frontend/src/components/ui/` (importa des
 | `Select` | `options` (`[{ value, label }]`), `placeholder` | `_control.scss` |
 | `Checkbox` | `label` + props del input | `_control.scss` |
 | `Switch` | `label` + props del input | `_switch.scss` |
+| `Tabs` | `tabs` (`[{ id, label }]`), `value`, `onChange`, `label`; los hijos son el panel activo. Roles `tablist`/`tab`/`tabpanel`, flechas, Inicio y Fin | `_tabs.scss` |
+| `CopyBox` | `value`, `label`, `describedBy`; caja de código monoespaciada que ajusta líneas + botón copiar (`copy` → `check` 2 s, `clipboard.js` con fallback) | `_copybox.scss` |
 | `Input` | props del input (texto sin autocompletar ni corrector por defecto); acepta `ref` | `_control.scss` |
 
-El perfil usa estos componentes: la sección «API key» es un bloque con fondo `--surface-2` (encabezado con icono `key`), la key completa en un cuadro monoespaciado que ajusta en varias líneas, `Button iconOnly` para copiar (`copy` → `check` 2 s), `Button` y `Button variant="danger"` (Regenerar / Revocar, mismo ancho) y `Alert compact` para el aviso de HTTP.
+El perfil usa estos componentes: la sección «API key» es un bloque con fondo `--surface-2` (encabezado con icono `key`), la key completa en un cuadro monoespaciado que ajusta en varias líneas, `CopyBox` para la key y para los comandos del bloque Lanzador (copia con icono `copy` → `check` 2 s), `Button` y `Button variant="danger"` (Regenerar / Revocar, mismo ancho) y `Alert compact` para el aviso de HTTP.
 
 Los tests `test/ui-components.test.mjs` fijan las clases y atributos que producen.
 

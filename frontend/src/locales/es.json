@@ -199,6 +199,33 @@
     "showMore": "Mostrar más",
     "showLess": "Mostrar menos"
   },
+  "launcher": {
+    "title": "Lanzador",
+    "hint": "Comandos para que el lanzador avise al hub antes de abrir el juego. El cierre lo vigila el hub solo: no hace falta hook de cierre.",
+    "saveFirst": "Guarda el juego para obtener sus comandos.",
+    "noDevices": "Elige los dispositivos del juego para obtener sus comandos.",
+    "noKey": "Genera primero la API key en tu perfil.",
+    "noProcess": "Sin <code>process</code>: el hub no podrá vigilar el cierre (el aviso de apertura seguirá funcionando).",
+    "device": "Dispositivo del lanzador",
+    "hubUrl": "URL del hub",
+    "hubUrlHint": "Dirección con la que el lanzador llega al hub. Por defecto, la de esta página; se recuerda en este navegador.",
+    "invalidUrl": "URL no válida: usa http:// o https://, sin espacios ni comillas.",
+    "tabsAria": "Lanzador",
+    "tab": { "steam": "Steam / Steam Deck", "lutris": "Lutris", "heroic": "Heroic (sin verificar)", "windows": "Windows (Playnite)" },
+    "where": {
+      "steam": "Pégalo en Propiedades del juego → Opciones de lanzamiento (una sola línea).",
+      "lutris": "Pégalo en Configurar → Opciones del sistema → Pre-launch script. Activa “Wait for pre-launch completion”.",
+      "heroic": "Pégalo en los ajustes del juego → Avanzado → script antes de lanzar. Sin verificar.",
+      "windows": "Pégalo en Playnite → Editar juego → Scripts → script previo (PowerShell 5.1)."
+    },
+    "closeNote": "El cierre lo vigila el hub solo.",
+    "cmd": { "main": "Comando", "powershell": "PowerShell", "curl": "Alternativa con curl.exe" },
+    "cmdAria": "Comando para {launcher}",
+    "lastTitle": "Último aviso",
+    "lastNone": "{device}: sin avisos todavía",
+    "last": "{device}: {trigger}, {ago}, {outcome}",
+    "watch": { "waiting": "vigilando: esperando al juego", "running": "vigilando: juego abierto", "settling": "vigilando: cerrado, a punto de sincronizar" }
+  },
   "device": {
     "new": "Dispositivo nuevo",
     "namePh": "p. ej. Mi PC (salón)",

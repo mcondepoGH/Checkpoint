@@ -14,7 +14,7 @@ const KEY = 'ck_' + 'A'.repeat(43);
 
 // ---- lógica ----
 test('estado inicial: sin cargar y sin key', () => {
-  assert.deepEqual(initialState, { loaded: false, exists: false, key: null, confirm: null, busy: false, copied: false, error: null });
+  assert.deepEqual(initialState, { loaded: false, exists: false, key: null, confirm: null, busy: false, error: null });
 });
 
 test('generar: pide POST y el estado pasa a «con key»', async () => {
@@ -112,28 +112,21 @@ const WITH = { loaded: true, exists: true, key: KEY };
 test('sin key: botón «Generar» y sin campo ni copiar', { skip }, () => {
   const h = section({ loaded: true });
   assert.ok(has(h, 'API key') && has(h, 'Generar') && has(h, 'Aún no hay API key'));
-  assert.ok(!has(h, 'apikey-field') && !has(h, 'Copiar') && !has(h, 'Regenerar'));
+  assert.ok(!has(h, 'copybox-field') && !has(h, 'Copiar') && !has(h, 'Regenerar'));
 });
 
 test('con key: la key completa se renderiza sin truncar en un cuadro monoespaciado', { skip }, () => {
   const h = section(WITH);
-  assert.ok(has(h, `>${KEY}</code>`) && has(h, 'class="apikey-field"') && has(h, 'aria-label="API key (solo lectura)"'), h);
+  assert.ok(has(h, `>${KEY}</code>`) && has(h, 'class="copybox-field"') && has(h, 'aria-label="API key (solo lectura)"'), h);
   assert.ok(!has(h, '<input') && !has(h, '…'));
 });
 
 test('con key: Copiar es botón de icono accesible; Regenerar y Revocar usan Button (danger en Revocar)', { skip }, () => {
   const h = section(WITH);
-  assert.match(h, /<button[^>]*class="btn btn-icon apikey-copy"[^>]*aria-label="Copiar"/);
+  assert.match(h, /<button[^>]*class="btn btn-icon copybox-copy"[^>]*aria-label="Copiar"/);
   assert.match(h, /<button[^>]*class="btn"[^>]*>Regenerar<\/button>/);
   assert.match(h, /<button[^>]*class="btn danger"[^>]*>Revocar<\/button>/);
   assert.ok(has(h, 'Regenerar') && has(h, 'Revocar') && !has(h, 'Generar<'));
-});
-
-test('copiado: el botón cambia a «Copiado» con icono de check', { skip }, () => {
-  const h = section({ ...WITH, copied: true });
-  assert.match(h, /aria-label="Copiado"/);
-  assert.ok(has(h, 'M20 6 9 17l-5-5') && !has(h, 'aria-label="Copiar"'));
-  assert.ok(!has(section(WITH), 'M20 6 9 17l-5-5'));
 });
 
 test('aviso HTTP: Alert compacto solo cuando aplica', { skip }, () => {
@@ -161,7 +154,7 @@ test('error traducido', { skip }, () => {
 });
 
 test('en inglés no queda nada en español', { skip }, () => {
-  for (const st of [{ loaded: true }, WITH, { ...WITH, confirm: 'regenerate' }, { ...WITH, confirm: 'revoke' }, { ...WITH, copied: true }]) {
+  for (const st of [{ loaded: true }, WITH, { ...WITH, confirm: 'regenerate' }, { ...WITH, confirm: 'revoke' }]) {
     const h = section(st, 'en', { insecure: true });
     assert.ok(!/Generar|Regenerar|Revocar|Copiar|Cancelar|Aún|vinculados|Sí,/.test(h), h);
   }

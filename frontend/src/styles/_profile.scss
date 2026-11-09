@@ -23,11 +23,6 @@
 // Bloque «API key»: tarjeta con fondo propio, separada de Idioma y de los ítems Tema/Salir.
 .apikey { display: flex; flex-direction: column; gap: .5rem; min-width: 0; margin: .25rem 0; padding: .625rem .75rem; border: 1px solid var(--border); border-radius: v.$radius; background: var(--surface-2); }
 .apikey-title { display: flex; align-items: center; gap: .5rem; margin: 0; font-size: v.$fs-body; .ico { flex: none; color: var(--accent); } }
-.apikey-keyrow { display: flex; align-items: flex-start; gap: .25rem; min-width: 0; }
-// Key completa, monoespaciada, ajustada en varias líneas dentro de un cuadro hundido; un clic la selecciona entera.
-.apikey-field { flex: 1; min-width: 0; box-sizing: border-box; padding: .4rem .6rem; border-radius: 10px; border: 1px solid var(--border); background: var(--bg);
-  font-family: v.$mono; font-size: v.$fs-hint; line-height: 1.4; overflow-wrap: anywhere; word-break: break-all; user-select: all;
-  &:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(34, 211, 238, .22); } }
 .apikey-none { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
 // Regenerar y Revocar: mismo ancho; solo bajan a otra fila si no caben (min-width).
 .apikey-actions { display: flex; flex-wrap: wrap; gap: .5rem;

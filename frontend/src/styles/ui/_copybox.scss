@@ -1,0 +1,7 @@
+@use '../variables' as v;
+
+// Caja de código con botón de copiar (componente CopyBox): monoespaciada, ajusta en varias líneas (sin scroll lateral), un clic la selecciona.
+.copybox { display: flex; align-items: flex-start; gap: .25rem; min-width: 0; }
+.copybox-field { flex: 1; min-width: 0; box-sizing: border-box; padding: .4rem .6rem; border-radius: 10px; border: 1px solid var(--border); background: var(--bg);
+  font-family: v.$mono; font-size: v.$fs-hint; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-all; user-select: all;
+  &:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(34, 211, 238, .22); } }
