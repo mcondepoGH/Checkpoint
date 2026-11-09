@@ -12,13 +12,14 @@
   display: inline-flex; align-items: center; gap: .5rem; }
 .brand-logo { width: 32px; height: 32px; flex: none; }
 .tabs { display: flex; gap: .25rem; flex-wrap: wrap; }
-.tab .short, .tool .ico { display: none; }
+.tab .short { display: none; }
+// Botón de cabecera con icono + texto (salir): flex centrado con hueco; en móvil el texto se oculta y queda el icono (ver @media).
+.tool-label { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; }
 .tab { font: inherit; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; font-size: v.$fs-hint; background: none; border: 1px solid transparent;
   padding: .4rem .8rem; border-radius: 10px; color: var(--muted); cursor: pointer; transition: all .15s;
   &:hover { color: var(--text); border-color: var(--border); }
   &.active { background: var(--bg); color: var(--accent); border-color: var(--accent); box-shadow: 0 0 14px -3px var(--accent); } }
-.update-badge { color: var(--accent-2); border-color: var(--accent-2); font-weight: 700; flex: none; white-space: nowrap;
-  .ico { display: inline; } }
+.update-badge { color: var(--accent-2); border-color: var(--accent-2); font-weight: 700; flex: none; white-space: nowrap; }
 .pre-tag { display: inline-block; margin-left: .4rem; padding: 0 .45rem; border: 1px solid var(--warn); border-radius: 999px; color: var(--warn);
   font-size: v.$fs-label; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; vertical-align: middle; white-space: nowrap; }
 .update-channel { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin: .75rem 0 .25rem; label { font-weight: 600; }
@@ -43,7 +44,7 @@
   .tabs { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; gap: .1rem; }
   .tab { flex: none; min-height: v.$touch; padding: 0 .45rem; font-size: v.$fs-tab-mobile; letter-spacing: .03em; white-space: nowrap; display: inline-flex; align-items: center; }
   .tab .full, .tool .lbl { display: none; }
-  .tab .short, .tool .ico { display: inline; }
+  .tab .short { display: inline; }
   .tool { flex: none; width: v.$touch; min-width: v.$touch; height: v.$touch; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
   .content { padding-top: .75rem; padding-bottom: .75rem; }
 }

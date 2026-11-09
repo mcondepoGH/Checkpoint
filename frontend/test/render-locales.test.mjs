@@ -115,7 +115,11 @@ test('cabecera de la app (con sesión) conserva idioma y tema', () => {
   assert.match(app, /iconOnly onClick=\{cycleTheme\}/);
   assert.doesNotMatch(app, /themeLabel/);
   const css = fs.readFileSync(path.join(SRC, 'styles', '_layout.scss'), 'utf8');
-  assert.match(css, /\.tab \.short, \.tool \.ico \{ display: none; \}/);
+  // Pestañas: etiqueta corta oculta en escritorio. Salir: icono + texto (el icono ya no se oculta en escritorio), solo icono en móvil.
+  assert.match(css, /\.tab \.short \{ display: none; \}/);
+  assert.doesNotMatch(css, /\.tool \.ico/);
+  assert.match(css, /\.tool-label \{ display: inline-flex; align-items: center; justify-content: center; gap: \.5rem; \}/);
+  assert.match(app, /className="tool tool-label" onClick=\{logout\}/);
   assert.doesNotMatch(login, /LanguageSelect|cycleTheme/);
 });
 
