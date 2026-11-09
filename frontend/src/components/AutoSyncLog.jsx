@@ -19,7 +19,7 @@ export default function AutoSyncLog() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const d = await api('/api/scheduler/history?limit=10');
+      const d = await api('/api/scheduler/history?limit=50');
       setEntries(d.entries || []);
       setErr(null);
     } catch (e) { setErr(e); } finally { setLoading(false); }

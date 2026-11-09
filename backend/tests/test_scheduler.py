@@ -120,23 +120,23 @@ def test_history_retention_count_and_age(tmp_path, monkeypatch):
     assert all(e["message"] != "e99" for e in history.read(200))
 
 
-def test_history_fixed_cap_10(tmp_path, monkeypatch):
+def test_history_fixed_cap_50(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
-    assert history.MAX_ENTRIES == 10
-    for i in range(15):
+    assert history.MAX_ENTRIES == 50
+    for i in range(60):
         history.append(_entry(i), now=NOW)
-    assert len(history.path().read_text().splitlines()) == 10
-    assert [e["message"] for e in history.read(200)][:2] == ["e14", "e13"]
-    assert len(history.read(200)) == 10
+    assert len(history.path().read_text().splitlines()) == 50
+    assert [e["message"] for e in history.read(200)][:2] == ["e59", "e58"]
+    assert len(history.read(200)) == 50
 
 
 def test_history_prunes_old_file_on_read(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
     import json
-    tmp_path.joinpath(history.FILE).write_text("".join(json.dumps(_entry(i)) + "\n" for i in range(25)))
+    tmp_path.joinpath(history.FILE).write_text("".join(json.dumps(_entry(i)) + "\n" for i in range(75)))
     r = history.read(200)
-    assert [e["message"] for e in r] == [f"e{i}" for i in range(24, 14, -1)]
-    assert len(history.path().read_text().splitlines()) == 10
+    assert [e["message"] for e in r] == [f"e{i}" for i in range(74, 24, -1)]
+    assert len(history.path().read_text().splitlines()) == 50
 
 
 def test_history_corrupt_lines_ignored(tmp_path, monkeypatch):

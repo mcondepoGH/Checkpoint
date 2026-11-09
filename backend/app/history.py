@@ -1,7 +1,7 @@
 """Registro persistente de ciclos de la sincronización automática.
 
 Un fichero JSONL (DATA_DIR/scheduler-history.jsonl), una entrada por línea. Retención acotada por número
-(MAX_ENTRIES, fijo: nunca más de 10 en disco ni en la API) y por antigüedad (MAX_DAYS). Las líneas ilegibles se ignoran y se descartan al reescribir.
+(MAX_ENTRIES, fijo: nunca más de 50 en disco ni en la API) y por antigüedad (MAX_DAYS). Las líneas ilegibles se ignoran y se descartan al reescribir.
 Nunca guarda secretos: los mensajes pasan por redact() y se truncan."""
 import json
 import os
@@ -14,7 +14,7 @@ from . import settings
 from .redact import redact
 
 FILE = "scheduler-history.jsonl"
-MAX_ENTRIES = 10
+MAX_ENTRIES = 50
 MAX_DAYS = 30
 MSG_LEN = 300
 RESULTS = {"ok", "error", "aborted", "skipped", "conflict", "partial"}
