@@ -447,6 +447,9 @@
       "photo_empty": "la foto está vacía",
       "photo_unknown": "no hay foto de perfil"
     },
+    "apikey": {
+      "invalid": "API key ausente o no válida"
+    },
     "config": {
       "required": "campo obligatorio",
       "int": "debe ser un número entero",
@@ -611,6 +614,20 @@
       "empty": "La imagen está vacía",
       "tooLarge": "La imagen supera los 2 MB",
       "failed": "No se pudo procesar la imagen"
+    },
+    "apikey": {
+      "title": "API key",
+      "hint": "Sirve solo para las rutas /api/hook/* (avisos de los lanzadores y plugins). No da acceso a la web ni a los ajustes.",
+      "none": "Aún no hay API key.",
+      "generate": "Generar",
+      "regenerate": "Regenerar",
+      "revoke": "Revocar",
+      "field": "API key (solo lectura)",
+      "insecure": "Con HTTP la key viaja en claro por la red: usa HTTPS o una VPN fuera de tu LAN de confianza.",
+      "confirm": {
+        "regenerate": { "title": "Regenerar la API key", "text": "La key actual dejará de valer: los comandos y plugins ya vinculados dejarán de funcionar hasta que pongas la nueva.", "yes": "Sí, regenerar" },
+        "revoke": { "title": "Revocar la API key", "text": "Los comandos y plugins vinculados dejarán de funcionar. Podrás generar una key nueva cuando quieras.", "yes": "Sí, revocar" }
+      }
     }
   }
 }

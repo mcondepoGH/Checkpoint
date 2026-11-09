@@ -20,6 +20,11 @@
 .profile-head { display: flex; flex-direction: column; align-items: center; gap: .5rem; text-align: center; min-width: 0; }
 .profile-name { font-size: v.$fs-subtitle; max-width: 100%; overflow-wrap: anywhere; }
 .profile-photo-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem; }
+.apikey { display: flex; flex-direction: column; gap: .5rem; min-width: 0; padding-top: .5rem; border-top: 1px solid var(--border); }
+.apikey-title { margin: 0; font-size: v.$fs-body; }
+.apikey-field { width: 100%; min-width: 0; box-sizing: border-box; font-family: v.$mono; font-size: v.$fs-hint; }
+.apikey-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.apikey-confirm { margin: 0 0 .5rem; overflow-wrap: anywhere; }
 .profile-row.btn { display: flex; align-items: center; justify-content: flex-start; gap: .75rem; width: 100%; text-align: left; }
 .profile-version { text-align: center; padding-top: .5rem; border-top: 1px solid var(--border); font-size: v.$fs-label; }
 @keyframes profile-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
