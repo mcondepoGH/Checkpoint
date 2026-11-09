@@ -3,6 +3,7 @@
 export const LAUNCHERS = ['steam', 'lutris', 'heroic', 'windows'];
 
 const STORE = 'checkpoint.hubUrl';
+const STORE_GAME = 'checkpoint.launcherGame';
 
 // encodeURIComponent deja sin codificar ! ' ( ) *; se codifican también para que nada se interprete dentro de comillas.
 const enc = (s) => encodeURIComponent(String(s)).replace(/[!'()*]/g, (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`);
@@ -40,6 +41,14 @@ export function loadHubUrl(storage, fallback) {
 }
 export function saveHubUrl(storage, url) {
   try { storage?.setItem(STORE, url); } catch { /* sin almacenamiento: no se recuerda */ }
+}
+
+// Juego elegido en la sección «Lanzadores» (localStorage inyectable; nunca lanza).
+export function loadGameSel(storage) {
+  try { return storage?.getItem(STORE_GAME) || ''; } catch { return ''; }
+}
+export function saveGameSel(storage, sel) {
+  try { storage?.setItem(STORE_GAME, sel); } catch { /* sin almacenamiento: no se recuerda */ }
 }
 
 // «hace 3 minutos» en el idioma pedido; '' si la fecha no es válida. Un instante futuro (reloj desfasado) cuenta como ahora.

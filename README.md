@@ -302,7 +302,7 @@ Pon la URL **entre comillas**: el `?` lo interpretaría el shell como comodín.
 
 ### Lanzadores
 
-**Copiar los comandos de la web:** Configuración → tarjeta del juego → «Mostrar más» → bloque **Lanzador**. Eliges el dispositivo, y en cada pestaña (Steam / Steam Deck, Lutris, Heroic, Windows con Playnite) tienes el comando completo con tu API key, el id del juego y el dispositivo ya codificados, listo para copiar (con una nota de dónde se pega). Necesita la API key del perfil (sin ella el bloque pide generarla). La URL del hub se rellena con la de la página, se puede editar y se recuerda en el navegador; por HTTP fuera de localhost avisa de que la key viaja en claro. Si el juego no tiene `process`, avisa de que el hub no podrá vigilar el cierre. Debajo, **Último aviso** por dispositivo: último `opened` / cierre recibido, hace cuánto, su resultado y, si hay vigilancia activa, su estado (se refresca al abrir el bloque y cada 15 s).
+**Copiar los comandos de la web:** Configuración → sección **Lanzadores** (tarjeta propia tras la lista de juegos, plegada por defecto: botón Mostrar/Ocultar; también se abre con «Ver comandos de lanzador» en la tarjeta de cada juego guardado, que lo elige y baja hasta ella). Un único panel para todos los juegos: eliges el **juego** (se recuerda en el navegador) y su **dispositivo**, y en cada pestaña (Steam / Steam Deck, Lutris, Heroic, Windows con Playnite) tienes el comando completo con tu API key, el id del juego y el dispositivo ya codificados, listo para copiar (con una nota de dónde se pega). Necesita la API key del perfil (sin ella el panel pide generarla). La URL del hub se rellena con la de la página, se puede editar y se recuerda en el navegador; por HTTP fuera de localhost avisa de que la key viaja en claro. Si el juego no tiene `process`, avisa de que el hub no podrá vigilar el cierre; un juego sin guardar pide guardarlo antes. Debajo, **Último aviso** por dispositivo del juego elegido: último `opened` / cierre recibido, hace cuánto, su resultado y, si hay vigilancia activa, su estado (la key y el estado solo se piden con el panel desplegado; el estado se refresca cada 15 s).
 
 Los comandos de abajo son los mismos que genera la web.
 
@@ -427,10 +427,10 @@ Los elementos que se repiten viven en `frontend/src/components/ui/` (importa des
 | `Checkbox` | `label` + props del input | `_control.scss` |
 | `Switch` | `label` + props del input | `_switch.scss` |
 | `Tabs` | `tabs` (`[{ id, label }]`), `value`, `onChange`, `label`; los hijos son el panel activo. Roles `tablist`/`tab`/`tabpanel`, flechas, Inicio y Fin | `_tabs.scss` |
-| `CopyBox` | `value`, `label`, `describedBy`; caja de código monoespaciada que ajusta líneas + botón copiar (`copy` → `check` 2 s, `clipboard.js` con fallback) | `_copybox.scss` |
+| `CopyBox` | `value`, `label`, `what` (qué se copia: el botón dice «Copiar {what}», p. ej. «Copiar comando de Steam» o «Copiar clave API»), `describedBy`; caja de código monoespaciada que ajusta líneas + botón copiar (`copy` → `check` 2 s, `clipboard.js` con fallback) | `_copybox.scss` |
 | `Input` | props del input (texto sin autocompletar ni corrector por defecto); acepta `ref` | `_control.scss` |
 
-El perfil usa estos componentes: la sección «API key» es un bloque con fondo `--surface-2` (encabezado con icono `key`), la key completa en un cuadro monoespaciado que ajusta en varias líneas, `CopyBox` para la key y para los comandos del bloque Lanzador (copia con icono `copy` → `check` 2 s), `Button` y `Button variant="danger"` (Regenerar / Revocar, mismo ancho) y `Alert compact` para el aviso de HTTP.
+El perfil usa estos componentes: la sección «API key» es un bloque con fondo `--surface-2` (encabezado con icono `key`), la key completa en un cuadro monoespaciado que ajusta en varias líneas, `CopyBox` para la key y para los comandos de la sección Lanzadores (copia con icono `copy` → `check` 2 s), `Button` y `Button variant="danger"` (Regenerar / Revocar, mismo ancho) y `Alert compact` para el aviso de HTTP.
 
 Los tests `test/ui-components.test.mjs` fijan las clases y atributos que producen.
 

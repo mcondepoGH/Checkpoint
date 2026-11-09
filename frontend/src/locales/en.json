@@ -11,6 +11,7 @@
     "delete": "Delete",
     "copy": "Copy",
     "copied": "Copied",
+    "copyWhat": "Copy {what}",
     "on": "Enabled",
     "off": "Disabled",
     "unnamed": "(unnamed)",
@@ -197,10 +198,18 @@
     "useGlobal": "Use the global setting",
     "deleteAria": "Delete game {title}",
     "showMore": "Show more",
-    "showLess": "Show less"
+    "showLess": "Show less",
+    "launchers": "View launcher commands",
+    "launchersAria": "View launcher commands for {title}"
   },
   "launcher": {
-    "title": "Launcher",
+    "title": "Launchers",
+    "show": "Show",
+    "hide": "Hide",
+    "game": "Game",
+    "noGames": "Add a game to get its commands.",
+    "copyWhat": "{launcher} command",
+    "copyWhatCmd": "{launcher} command ({cmd})",
     "hint": "Commands for the launcher to notify the hub before the game starts. The hub watches for the close on its own: no close hook needed.",
     "saveFirst": "Save the game to get its commands.",
     "noDevices": "Choose the game's devices to get its commands.",
@@ -658,6 +667,7 @@
       "regenerate": "Regenerate",
       "revoke": "Revoke",
       "field": "API key (read-only)",
+      "copyWhat": "API key",
       "insecure": "Over HTTP the key travels in clear text: use HTTPS or a VPN outside your LAN.",
       "confirm": {
         "regenerate": { "title": "Regenerate the API key", "text": "The current key will stop working: commands and plugins already linked will fail until you use the new one.", "yes": "Yes, regenerate" },

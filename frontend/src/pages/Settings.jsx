@@ -6,6 +6,8 @@ import {
 import Field from '../components/Field.jsx';
 import DeviceCard from '../components/DeviceCard.jsx';
 import GameCard from '../components/GameCard.jsx';
+import LaunchersPanel from '../components/LaunchersPanel.jsx';
+import { loadGameSel, saveGameSel } from '../launchers.js';
 import PublicKey from '../components/PublicKey.jsx';
 import AutoSync from '../components/AutoSync.jsx';
 import UpdateCheck from '../components/UpdateCheck.jsx';
@@ -33,6 +35,9 @@ export default function Settings({ loaded, stale, configError, runtime, platform
   const [msg, setMsg] = useState(null); // {ok?, body}: `body` es un error de la API o un mensaje {code} (se traduce al pintar)
   const [busy, setBusy] = useState(false);
   const [staleDiff, setStaleDiff] = useState(null);
+  const [launchersOpen, setLaunchersOpen] = useState(false); // sección «Lanzadores»: plegada por defecto
+  const [launcherGame, setLauncherGame] = useState(() => { try { return loadGameSel(window.localStorage); } catch { return ''; } });
+  const chooseLauncherGame = (sel) => { setLauncherGame(sel); try { saveGameSel(window.localStorage, sel); } catch { /* sin almacenamiento */ } };
 
   // Cada versión nueva cargada (inicio, guardado, recarga) reinicia el borrador. Se hace durante el render
   // (no en un efecto): así nunca se compara un borrador viejo (p. ej. el vacío previo a la carga) con la
@@ -45,6 +50,16 @@ export default function Settings({ loaded, stale, configError, runtime, platform
   }
 
   const local = useMemo(() => localErrors(draft, runtime), [draft, runtime]);
+  // Juegos para el panel de lanzadores: dispositivos con nombre e id (los que el lanzador puede indicar en ?device=).
+  const launcherGames = useMemo(() => draft.games.map((g) => ({
+    sel: g.id || g.key, id: g.id, name: g.name, process: g.process,
+    devices: [g.a, g.b].map((k) => ({ id: deviceId(draft, k), name: nameOf(draft, k) })).filter((d) => d.id && d.name),
+  })), [draft]);
+  const showLaunchers = (g) => {
+    chooseLauncherGame(g.id || g.key);
+    setLaunchersOpen(true);
+    setTimeout(() => document.getElementById('launchers-section')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 0);
+  };
   const payload = useMemo(() => toConfig(draft), [draft]);
   const payloadKey = JSON.stringify(payload);
   const baseKey = useMemo(() => baseKeyOf(loaded.config), [loaded.config]);
@@ -205,10 +220,13 @@ export default function Settings({ loaded, stale, configError, runtime, platform
           <GameCard key={g.key} game={g} devices={draft.devices} errors={gameErrs(g)} localError={local[g.key]} keepError={local[`keep-${g.key}`]} globalMax={draft.maxVersions}
             nameA={nameOf(draft, g.a)} nameB={nameOf(draft, g.b)} idA={deviceId(draft, g.a)} idB={deviceId(draft, g.b)}
             idText={idOf(g, 'juego')} renamed={renamed(g)}
-            onChange={(p) => patch('games', g.key, p)}
+            onChange={(p) => patch('games', g.key, p)} onShowLaunchers={() => showLaunchers(g)}
             onRemove={() => setDraft((d) => ({ ...d, games: d.games.filter((x) => x.key !== g.key) }))} />
         ))}
       </div>
+
+      <LaunchersPanel id="launchers-section" open={launchersOpen} onToggle={() => setLaunchersOpen((o) => !o)}
+        games={launcherGames} selected={launcherGame} onSelect={chooseLauncherGame} />
 
       <div className="actionbar" role="group" aria-label={t('settings.bar.aria')}>
         {hasErrors && !validating ? (

@@ -5,9 +5,9 @@ import Icon from '../Icon.jsx';
 import Button from './Button.jsx';
 
 // Caja de código de solo lectura con botón de copiar (icono copiar -> check 2 s). El texto ajusta en varias líneas.
-// value: texto a copiar. label: aria-label de la caja. describedBy: id de una ayuda. initialCopied: solo para pintar el estado «copiado» en pruebas.
+// value: texto a copiar. label: aria-label de la caja. what: qué se copia («comando de Steam»); el botón dice «Copiar {what}» (sin él, «Copiar»). describedBy: id de una ayuda. initialCopied: solo para pintar el estado «copiado» en pruebas.
 // Copia con clipboard.js (fallback con execCommand cuando no hay API moderna, p. ej. HTTP en la LAN).
-export default function CopyBox({ value, label, describedBy, initialCopied = false, className }) {
+export default function CopyBox({ value, label, what, describedBy, initialCopied = false, className }) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(initialCopied);
   const timer = useRef(null);
@@ -19,7 +19,7 @@ export default function CopyBox({ value, label, describedBy, initialCopied = fal
     clearTimeout(timer.current);
     if (ok) timer.current = setTimeout(() => setCopied(false), 2000);
   };
-  const copyLabel = copied ? t('common.copied') : t('common.copy');
+  const copyLabel = copied ? t('common.copied') : what ? t('common.copyWhat', { what }) : t('common.copy');
   return (
     <div className={['copybox', className].filter(Boolean).join(' ')}>
       <code id={id} className="copybox-field" tabIndex={0} role="textbox" aria-readonly="true" aria-multiline="true" aria-label={label} aria-describedby={describedBy}>{value}</code>

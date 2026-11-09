@@ -123,7 +123,7 @@ test('con key: la key completa se renderiza sin truncar en un cuadro monoespacia
 
 test('con key: Copiar es botón de icono accesible; Regenerar y Revocar usan Button (danger en Revocar)', { skip }, () => {
   const h = section(WITH);
-  assert.match(h, /<button[^>]*class="btn btn-icon copybox-copy"[^>]*aria-label="Copiar"/);
+  assert.match(h, /<button[^>]*class="btn btn-icon copybox-copy"[^>]*aria-label="Copiar clave API"/);
   assert.match(h, /<button[^>]*class="btn"[^>]*>Regenerar<\/button>/);
   assert.match(h, /<button[^>]*class="btn danger"[^>]*>Revocar<\/button>/);
   assert.ok(has(h, 'Regenerar') && has(h, 'Revocar') && !has(h, 'Generar<'));
@@ -159,7 +159,7 @@ test('en inglés no queda nada en español', { skip }, () => {
     assert.ok(!/Generar|Regenerar|Revocar|Copiar|Cancelar|Aún|vinculados|Sí,/.test(h), h);
   }
   const h = section(WITH, 'en');
-  assert.ok(has(h, 'Regenerate') && has(h, 'Revoke') && has(h, 'aria-label="Copy"'));
+  assert.ok(has(h, 'Regenerate') && has(h, 'Revoke') && has(h, 'aria-label="Copy API key"'));
   m.i18n.setLocale('es');
 });
 

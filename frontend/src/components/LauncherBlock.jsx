@@ -12,18 +12,22 @@ const POLL_MS = 15000;
 const storage = () => { try { return window.localStorage; } catch { return null; } };
 const defaultUrl = () => (typeof window !== 'undefined' ? window.location.origin : '');
 
-// Bloque «Lanzador» de la tarjeta de juego: comandos listos para copiar (con la API key del usuario) y último aviso por dispositivo.
-// `devices`: [{ id, name }] del juego. `active`: bloque visible (solo entonces pide la key y consulta el estado, cada 15 s).
+// Contenido de la sección «Lanzadores»: un solo panel para todos los juegos. Selector de juego, dispositivo, URL del hub, comandos
+// listos para copiar (con la API key del usuario) y último aviso por dispositivo del juego elegido.
+// `games`: [{ sel, id, name, process, devices: [{ id, name }] }] (`sel` identifica el juego en el selector; `id` vacío = sin guardar).
+// `selected`/`onSelect`: juego elegido (controlado por quien lo recuerda). `active`: panel desplegado (solo entonces pide la key y consulta el estado, cada 15 s).
 // `defaultHub`: URL por defecto (si no, el origen de la página). `initial` ({ key, loaded, status, error }) y `api` permiten pintar cada estado en pruebas sin red; `now` fija la hora.
-export default function LauncherBlock({ game, devices, active, initial = null, api = realApi, now, defaultHub }) {
+export default function LauncherBlock({ games, selected, onSelect, active, initial = null, api = realApi, now, defaultHub }) {
   const { t, locale } = useI18n();
   const uid = useId();
   const [keyState, setKeyState] = useState(initial ? { loaded: !!initial.loaded, key: initial.key ?? null, error: initial.error ?? null } : { loaded: false, key: null, error: null });
   const [status, setStatus] = useState(initial?.status ?? null);
   const [hubUrl, setHubUrl] = useState(() => loadHubUrl(storage(), defaultHub ?? defaultUrl()));
+  const game = games.find((g) => g.sel === selected) || games[0] || null;
+  const devices = game?.devices || [];
   const [device, setDevice] = useState(devices[0]?.id || '');
   const [tab, setTab] = useState(LAUNCHERS[0]);
-  const gameId = game.id;
+  const gameId = game?.id || '';
   const devKey = devices.map((d) => d.id).join('|');
 
   useEffect(() => { if (!devices.some((d) => d.id === device)) setDevice(devices[0]?.id || ''); }, [devKey]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -65,7 +69,8 @@ export default function LauncherBlock({ game, devices, active, initial = null, a
   }).filter(Boolean);
 
   let body;
-  if (!gameId) body = <Alert variant="info">{t('launcher.saveFirst')}</Alert>;
+  if (!game) body = <Alert variant="info">{t('launcher.noGames')}</Alert>;
+  else if (!gameId) body = <Alert variant="info">{t('launcher.saveFirst')}</Alert>;
   else if (!devices.length) body = <Alert variant="info">{t('launcher.noDevices')}</Alert>;
   else if (keyState.error) body = <Alert variant="error" compact role="alert">{errText(keyState.error)}</Alert>;
   else if (!keyState.loaded) body = <small className="muted" role="status">{t('common.loading')}</small>;
@@ -89,7 +94,8 @@ export default function LauncherBlock({ game, devices, active, initial = null, a
           {cmds && cmds.map((c) => (
             <div key={`${tab}-${c.id}`} className="launcher-cmd">
               {cmds.length > 1 && <span className="launcher-cmd-title">{t(`launcher.cmd.${c.id}`)}</span>}
-              <CopyBox value={c.text} label={t('launcher.cmdAria', { launcher: t(`launcher.tab.${tab}`) })} describedBy={hintId} />
+              <CopyBox value={c.text} label={t('launcher.cmdAria', { launcher: t(`launcher.tab.${tab}`) })} describedBy={hintId}
+                what={t(cmds.length > 1 ? 'launcher.copyWhatCmd' : 'launcher.copyWhat', { launcher: t(`launcher.tab.${tab}`), cmd: t(`launcher.cmd.${c.id}`) })} />
             </div>
           ))}
         </Tabs>
@@ -97,16 +103,20 @@ export default function LauncherBlock({ game, devices, active, initial = null, a
     );
   }
   return (
-    <section className="launcher" aria-labelledby={`${uid}-t`}>
-      <h3 id={`${uid}-t`} className="launcher-title"><Icon name="code" />{t('launcher.title')}</h3>
+    <div className="launcher">
       <small className="muted">{t('launcher.hint')}</small>
+      {game && (
+        <Field label={t('launcher.game')}>
+          {(p) => <Select {...p} value={game.sel} onChange={(e) => onSelect(e.target.value)} options={games.map((g) => ({ value: g.sel, label: g.name || t('common.unnamed') }))} />}
+        </Field>
+      )}
       {body}
-      {gameId && lines.length > 0 && (
+      {game && gameId && lines.length > 0 && (
         <div>
           <span className="launcher-cmd-title">{t('launcher.lastTitle')}</span>
           <ul className="launcher-last" aria-live="polite">{lines}</ul>
         </div>
       )}
-    </section>
+    </div>
   );
 }

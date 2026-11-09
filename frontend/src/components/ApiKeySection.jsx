@@ -34,7 +34,7 @@ export default function ApiKeySection({ initial = null, api = realApi, insecure 
       )}
       {s.exists && (
         <>
-          <CopyBox value={s.key} label={t('profile.apikey.field')} describedBy={hintId} />
+          <CopyBox value={s.key} label={t('profile.apikey.field')} what={t('profile.apikey.copyWhat')} describedBy={hintId} />
           {warnInsecure && <Alert variant="warn" compact><Icon name="alert" /><span>{t('profile.apikey.insecure')}</span></Alert>}
           {s.confirm ? (
             <Alert variant="warn" role="alertdialog" aria-label={t(`profile.apikey.confirm.${s.confirm}.title`)}>

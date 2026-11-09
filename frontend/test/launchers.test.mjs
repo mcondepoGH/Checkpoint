@@ -1,7 +1,7 @@
 // Comandos de lanzador (funciones puras): sin navegador ni React.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { LAUNCHERS, commandsFor, hookUrl, normalizeHubUrl, ago, loadHubUrl, saveHubUrl } from '../src/launchers.js';
+import { LAUNCHERS, commandsFor, hookUrl, normalizeHubUrl, ago, loadHubUrl, saveHubUrl, loadGameSel, saveGameSel } from '../src/launchers.js';
 import { nextTabIndex } from '../src/tabs.js';
 
 const KEY = 'ck_AbC123xyz';
@@ -91,4 +91,16 @@ test('teclado de pestañas: flechas con vuelta, Inicio y Fin', () => {
   assert.equal(nextTabIndex(4, 2, 'Home'), 0);
   assert.equal(nextTabIndex(4, 1, 'End'), 3);
   assert.equal(nextTabIndex(4, 1, 'a'), null);
+});
+
+test('juego elegido: se recuerda y nunca lanza sin almacenamiento', () => {
+  const mem = {}; const st = { getItem: (k) => mem[k] ?? null, setItem: (k, v) => { mem[k] = v; } };
+  assert.equal(loadGameSel(st), '');
+  saveGameSel(st, 'juego-1');
+  assert.equal(loadGameSel(st), 'juego-1');
+  const boom = { getItem() { throw new Error('x'); }, setItem() { throw new Error('x'); } };
+  assert.equal(loadGameSel(boom), '');
+  assert.doesNotThrow(() => saveGameSel(boom, 'a'));
+  assert.equal(loadGameSel(null), '');
+  assert.doesNotThrow(() => saveGameSel(null, 'a'));
 });

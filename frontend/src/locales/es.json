@@ -11,6 +11,7 @@
     "delete": "Eliminar",
     "copy": "Copiar",
     "copied": "Copiado",
+    "copyWhat": "Copiar {what}",
     "on": "Activada",
     "off": "Desactivada",
     "unnamed": "(sin nombre)",
@@ -197,10 +198,18 @@
     "useGlobal": "Usar el ajuste global",
     "deleteAria": "Eliminar juego {title}",
     "showMore": "Mostrar más",
-    "showLess": "Mostrar menos"
+    "showLess": "Mostrar menos",
+    "launchers": "Ver comandos de lanzador",
+    "launchersAria": "Ver comandos de lanzador de {title}"
   },
   "launcher": {
-    "title": "Lanzador",
+    "title": "Lanzadores",
+    "show": "Mostrar",
+    "hide": "Ocultar",
+    "game": "Juego",
+    "noGames": "Añade un juego para obtener sus comandos.",
+    "copyWhat": "comando de {launcher}",
+    "copyWhatCmd": "comando de {launcher} ({cmd})",
     "hint": "Comandos para que el lanzador avise al hub antes de abrir el juego. El cierre lo vigila el hub solo: no hace falta hook de cierre.",
     "saveFirst": "Guarda el juego para obtener sus comandos.",
     "noDevices": "Elige los dispositivos del juego para obtener sus comandos.",
@@ -658,6 +667,7 @@
       "regenerate": "Regenerar",
       "revoke": "Revocar",
       "field": "API key (solo lectura)",
+      "copyWhat": "clave API",
       "insecure": "Por HTTP la key viaja en claro: usa HTTPS o VPN fuera de tu LAN.",
       "confirm": {
         "regenerate": { "title": "Regenerar la API key", "text": "La key actual dejará de valer: los comandos y plugins ya vinculados dejarán de funcionar hasta que pongas la nueva.", "yes": "Sí, regenerar" },

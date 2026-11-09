@@ -2,12 +2,11 @@ import React, { useEffect, useId, useState } from 'react';
 import Field from './Field.jsx';
 import { MAX_VERSIONS_LIMIT, NAME_HINT, NAME_MAX, VERSIONS_HINT } from '../draft.js';
 import IdNote from './IdNote.jsx';
-import LauncherBlock from './LauncherBlock.jsx';
 import { ON_CONFLICT_OPTIONS } from '../format.js';
 import { useI18n } from '../useI18n.js';
 import { Alert, Button, Input, Select } from './ui/index.js';
 
-export default function GameCard({ game, devices, errors, localError, keepError, globalMax, nameA, nameB, idA, idB, idText, renamed, onChange, onRemove }) {
+export default function GameCard({ game, devices, errors, localError, keepError, globalMax, nameA, nameB, idA, idB, idText, renamed, onChange, onRemove, onShowLaunchers }) {
   const { t } = useI18n();
   // Campos secundarios (proceso, versiones, conflicto, id) tras «Mostrar más»: la tarjeta arranca siempre plegada, tengan o no valor propio.
   // Solo se despliega sola si aparece un error de validación en esos campos (si no, quedaría invisible). Después puede plegarlos.
@@ -23,8 +22,6 @@ export default function GameCard({ game, devices, errors, localError, keepError,
     <Select {...p} value={game[key]} onChange={set(key)} placeholder={t('game.choose')}
       options={options(other).map((d) => ({ value: d.key, label: d.name }))} />
   );
-  // Dispositivos del juego con nombre e id (los que el lanzador puede indicar en ?device=).
-  const launcherDevices = [[game.a, idA, nameA], [game.b, idB, nameB]].filter(([k, id, name]) => k && id && name).map(([, id, name]) => ({ id, name }));
   const pathErr = (id) => (id ? errors[`paths.${id}`] : undefined);
   return (
     <fieldset className="card cfg-card">
@@ -63,10 +60,10 @@ export default function GameCard({ game, devices, errors, localError, keepError,
           )}
         </Field>
         <IdNote id={idText} isNew={!game.id} renamed={renamed} />
-        <LauncherBlock game={game} devices={launcherDevices} active={more} />
       </div>
       <div className="row between">
         <Button variant="ghost" onClick={() => setMore((m) => !m)} aria-expanded={more} aria-controls={extraId}>{t(more ? 'game.showLess' : 'game.showMore')}</Button>
+        {onShowLaunchers && game.id && <Button variant="ghost" onClick={onShowLaunchers} aria-label={t('game.launchersAria', { title })}>{t('game.launchers')}</Button>}
         <Button variant="danger" onClick={onRemove} aria-label={t('game.deleteAria', { title })}>{t('common.delete')}</Button>
       </div>
     </fieldset>
