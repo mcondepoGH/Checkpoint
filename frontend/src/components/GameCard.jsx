@@ -8,12 +8,11 @@ import { Alert, Button, Input, Select } from './ui/index.js';
 
 export default function GameCard({ game, devices, errors, localError, keepError, globalMax, nameA, nameB, idA, idB, idText, renamed, onChange, onRemove }) {
   const { t } = useI18n();
-  // Campos secundarios (proceso, versiones, conflicto, id) tras «Mostrar más». Se expanden solos si alguno tiene valor propio
-  // (distinto del de por defecto: vacío) o un error: así nunca queda oculto algo que el usuario deba ver. Después puede plegarlos.
+  // Campos secundarios (proceso, versiones, conflicto, id) tras «Mostrar más»: la tarjeta arranca siempre plegada, tengan o no valor propio.
+  // Solo se despliega sola si aparece un error de validación en esos campos (si no, quedaría invisible). Después puede plegarlos.
   const extraId = useId();
   const extraErr = Boolean(errors.process || errors.keep_versions || errors.on_conflict || keepError);
-  const extraSet = Boolean(game.process || String(game.keep).trim() !== '' || game.onConflict);
-  const [more, setMore] = useState(extraErr || extraSet);
+  const [more, setMore] = useState(extraErr);
   useEffect(() => { if (extraErr) setMore(true); }, [extraErr]);
   const set = (k) => (e) => onChange({ [k]: e.target.value });
   const title = game.name || t('game.new');

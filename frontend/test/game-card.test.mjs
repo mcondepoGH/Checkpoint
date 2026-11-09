@@ -1,4 +1,4 @@
-// Renderiza GameCard a HTML (react-dom/server): campos secundarios plegados, desplegados y auto-expansión. Usa esbuild, que ya viene con Vite;
+// Renderiza GameCard a HTML (react-dom/server): campos secundarios plegados y auto-expansión solo por error. Usa esbuild, que ya viene con Vite;
 // si no está disponible (p. ej. instalación solo de producción) el test se salta.
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -56,13 +56,13 @@ test('por defecto plegado: extras con hidden, botón Mostrar más con aria-expan
   assert.ok(has(h, 'Máx. de versiones') && !has(h, 'este juego)'));
 });
 
-test('con valor propio en un campo extra: expandido, botón Mostrar menos', { skip }, () => {
+test('con valor propio en un campo extra: sigue plegado, botón Mostrar más', { skip }, () => {
   for (const o of [{ process: 'juego.exe' }, { keep: '3' }, { keep: '0' }, { onConflict: 'skip' }]) {
     const h = render({ game: game(o) });
-    assert.ok(!more(h)[2], JSON.stringify(o));
+    assert.ok(more(h)[2], JSON.stringify(o));
     const b = btn(h);
-    assert.equal(b[1], 'true');
-    assert.equal(b[2], 'Mostrar menos');
+    assert.equal(b[1], 'false');
+    assert.equal(b[2], 'Mostrar más');
   }
 });
 
