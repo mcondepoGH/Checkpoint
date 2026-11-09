@@ -7,11 +7,12 @@ import uuid
 from contextlib import asynccontextmanager
 from typing import Dict, List, Optional
 
-from fastapi import Depends, FastAPI, Query, Request, Response
+from fastapi import APIRouter, Depends, FastAPI, Query, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
+from . import apikey
 from . import avatar
 from . import settings
 from . import bootstrap
@@ -173,6 +174,58 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     def delete_photo(user: str = Depends(current_user)):
         avatar.delete(user)
         return {"ok": True, "photo": None}
+
+    # ---- API key de usuario (gestión desde el perfil, con sesión de cookie) ----
+    NO_STORE = {"Cache-Control": "no-store"}
+
+    @app.get("/api/profile/apikey", dependencies=[Depends(require)])
+    def get_apikey(response: Response, user: str = Depends(current_user)):
+        """La key vigente en claro (se ve siempre en el perfil) o `exists: false`. Nunca se genera sola."""
+        response.headers.update(NO_STORE)
+        key = apikey.get(user)
+        return {"exists": key is not None, "key": key}
+
+    @app.post("/api/profile/apikey", dependencies=[Depends(require)])
+    def post_apikey(response: Response, user: str = Depends(current_user)):
+        """Genera la key o, si ya había, la regenera (la anterior deja de valer al instante)."""
+        response.headers.update(NO_STORE)
+        return {"exists": True, "key": apikey.create(user)}
+
+    @app.delete("/api/profile/apikey", dependencies=[Depends(require)])
+    def delete_apikey(response: Response, user: str = Depends(current_user)):
+        response.headers.update(NO_STORE)
+        apikey.revoke(user)
+        return {"exists": False, "key": None}
+
+    # ---- rutas /api/hook/*: autenticación Bearer con la API key, sin cookie ni Origin ----
+    def hook_user(request: Request) -> str:
+        """Usuario dueño de la API key `Authorization: Bearer ck_...`. Es la contraparte de `current_user` para las
+        rutas /api/hook/*: ignora la cookie de sesión y no comprueba Origin (lo llaman curl, lanzadores y plugins).
+        Todo fallo (sin cabecera, mal formada, inválida, revocada, regenerada) es el mismo 401; los fallos cuentan
+        por IP y, pasado el umbral, 429 (mismo mecanismo que el login, con contador propio). Con registro de
+        usuarios, aquí se buscaría el dueño de la key en lugar de comparar con el único usuario."""
+        ip = client_ip(request)
+        wait = auth.hook_wait(ip)
+        if wait > 0:
+            raise ApiError(429, "err.main.too_many_attempts", headers={"Retry-After": str(wait)}, seconds=wait)
+        parts = request.headers.get("authorization", "").split()
+        token = parts[1] if len(parts) == 2 and parts[0].lower() == "bearer" else ""
+        user = auth.user
+        if apikey.is_well_formed(token) and apikey.verify(user, token):
+            auth.hook_ok(ip)
+            return user
+        apikey.verify(user, token)  # mismo trabajo con entrada mal formada: sin diferencias de tiempo
+        auth.hook_fail(ip)
+        raise ApiError(401, "err.apikey.invalid", headers={"WWW-Authenticate": "Bearer"})
+
+    # Todo lo de /api/hook/* cuelga de este router y de su dependencia (aquí irá `POST /api/hook/{game}/opened`).
+    hook = APIRouter(prefix="/api/hook", dependencies=[Depends(hook_user)])
+
+    @hook.get("/ping")
+    def hook_ping(user: str = Depends(hook_user)):
+        return {"ok": True, "user": user}
+
+    app.include_router(hook)
 
     # ---- config ----
     def draft(body: dict):

@@ -31,3 +31,6 @@ venv/
 *.log
 *.bak*
 .DS_Store
+
+# Secreto del hub (cifra la API key; vive fuera de data/)
+config/hub.secret
