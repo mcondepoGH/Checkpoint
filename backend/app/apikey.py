@@ -5,13 +5,14 @@ DATA_DIR/profile/<id>/apikey.enc (misma carpeta por usuario que la foto; ver ava
 sale de un secreto del hub (`hub.secret`, 32 bytes aleatorios, permisos 0600) que vive en la carpeta de CONFIG, fuera
 de data/: una copia de seguridad solo de data/ no expone la key.
 
-Cifrado: solo biblioteca estándar (cryptography no es dependencia del proyecto). Cifrar-y-autenticar con HMAC-SHA256:
-flujo de claves HMAC(k_enc, nonce || contador) XOR texto, y etiqueta HMAC(k_mac, cabecera || id de usuario || nonce || cifrado)
-(encrypt-then-MAC, claves derivadas del secreto con etiquetas distintas). Un fichero manipulado, de otro usuario o
-cifrado con otro secreto no descifra (se trata como «sin key»)."""
+Cifrado: Fernet de la librería `cryptography` (AES-128-CBC + HMAC-SHA256, con marca de tiempo). La clave Fernet
+(32 bytes en base64 urlsafe) se deriva del secreto con HMAC-SHA256. Fernet no tiene datos asociados (AAD): el id de
+usuario va DENTRO del payload cifrado y se verifica al descifrar. Un fichero manipulado, de otro usuario o cifrado con
+otro secreto no descifra (se trata como «sin key»)."""
 import base64
 import hashlib
 import hmac
+import json
 import os
 import re
 import secrets
@@ -19,15 +20,14 @@ import tempfile
 from pathlib import Path
 from typing import Optional
 
+from cryptography.fernet import Fernet, InvalidToken
+
 from . import settings
 from .avatar import user_dir, user_id
 
 PREFIX = "ck_"
 FILE = "apikey.enc"
 SECRET_FILE = "hub.secret"
-MAGIC = b"CK1"
-NONCE = 16
-TAG = 32
 KEY_RE = re.compile(r"ck_[A-Za-z0-9_-]{43}")  # 32 bytes en base64 urlsafe sin relleno = 43 caracteres
 
 
@@ -69,37 +69,26 @@ def hub_secret() -> bytes:
     return data
 
 
-def _keys(secret: bytes):
-    return (hmac.new(secret, b"checkpoint/apikey/enc", hashlib.sha256).digest(),
-            hmac.new(secret, b"checkpoint/apikey/mac", hashlib.sha256).digest())
-
-
-def _stream(k_enc: bytes, nonce: bytes, n: int) -> bytes:
-    out = bytearray()
-    i = 0
-    while len(out) < n:
-        out += hmac.new(k_enc, nonce + i.to_bytes(4, "big"), hashlib.sha256).digest()
-        i += 1
-    return bytes(out[:n])
+def _fernet(secret: bytes) -> Fernet:
+    raw = hmac.new(secret, b"checkpoint/apikey/fernet", hashlib.sha256).digest()  # 32 bytes
+    return Fernet(base64.urlsafe_b64encode(raw))
 
 
 def encrypt(plain: bytes, secret: bytes, uid: str) -> bytes:
-    k_enc, k_mac = _keys(secret)
-    nonce = secrets.token_bytes(NONCE)
-    ct = bytes(a ^ b for a, b in zip(plain, _stream(k_enc, nonce, len(plain))))
-    tag = hmac.new(k_mac, MAGIC + uid.encode() + nonce + ct, hashlib.sha256).digest()
-    return MAGIC + nonce + ct + tag
+    payload = json.dumps({"u": uid, "k": plain.decode("ascii")}).encode()
+    return _fernet(secret).encrypt(payload)
 
 
 def decrypt(blob: bytes, secret: bytes, uid: str) -> Optional[bytes]:
-    if len(blob) < len(MAGIC) + NONCE + TAG or not blob.startswith(MAGIC):
+    """El texto en claro, o None si el token no es válido, no es de este secreto o el id de usuario no coincide."""
+    try:
+        data = json.loads(_fernet(secret).decrypt(blob))
+        if not isinstance(data, dict) or not isinstance(data.get("k"), str) or not hmac.compare_digest(
+                str(data.get("u", "")).encode(), uid.encode()):
+            return None
+        return data["k"].encode("ascii")
+    except (InvalidToken, ValueError, TypeError, UnicodeError):
         return None
-    k_enc, k_mac = _keys(secret)
-    nonce = blob[len(MAGIC):len(MAGIC) + NONCE]
-    ct, tag = blob[len(MAGIC) + NONCE:-TAG], blob[-TAG:]
-    if not hmac.compare_digest(tag, hmac.new(k_mac, MAGIC + uid.encode() + nonce + ct, hashlib.sha256).digest()):
-        return None
-    return bytes(a ^ b for a, b in zip(ct, _stream(k_enc, nonce, len(ct))))
 
 
 # ---- key del usuario ----

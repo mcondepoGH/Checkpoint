@@ -81,6 +81,7 @@ def test_file_is_encrypted_and_private(logged):
     key = logged.post("/api/profile/apikey").json()["key"]
     blob = enc_file(logged).read_bytes()
     assert key.encode() not in blob and key[3:].encode() not in blob
+    assert blob.startswith(b"gAAAA")  # token Fernet
     assert stat.S_IMODE(enc_file(logged).stat().st_mode) == 0o600
 
 
@@ -256,3 +257,23 @@ def test_key_format():
     ks = {apikey.new_key() for _ in range(50)}
     assert len(ks) == 50 and all(apikey.is_well_formed(k) for k in ks)
     assert not apikey.is_well_formed("ck_" + "A" * 42) and not apikey.is_well_formed(None)
+
+
+def test_user_id_is_bound_inside_the_payload(logged):
+    key = logged.post("/api/profile/apikey").json()["key"]
+    blob = enc_file(logged).read_bytes()
+    uid = avatar.user_id("admin")
+    # un token válido del mismo secreto pero con otro id dentro no vale para este usuario
+    forged = apikey.encrypt(key.encode(), apikey.hub_secret(), avatar.user_id("otro"))
+    assert apikey.decrypt(forged, apikey.hub_secret(), uid) is None
+    enc_file(logged).write_bytes(forged)
+    assert apikey.get("admin") is None
+    enc_file(logged).write_bytes(blob)
+    assert apikey.get("admin") == key
+
+
+def test_garbage_files_give_no_key(logged):
+    logged.post("/api/profile/apikey")
+    for junk in (b"", b"gAAAA", b"\x00" * 200, b"CK1" + b"\x01" * 100):
+        enc_file(logged).write_bytes(junk)
+        assert logged.get("/api/profile/apikey").json() == {"exists": False, "key": None}

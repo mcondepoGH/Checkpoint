@@ -4,7 +4,7 @@
 
 ### Novedades
 
-- API key de usuario en el perfil (sección «API key» del menú): generar, ver siempre con botón de copiar, regenerar (con confirmación; invalida la anterior) y revocar. Nuevos `GET|POST|DELETE /api/profile/apikey`. Se guarda cifrada en `data/profile/<id>/apikey.enc`; el secreto del hub (`hub.secret`, 0600) vive junto a `config.yaml`, fuera de `data/`.
+- API key de usuario en el perfil (sección «API key» del menú): generar, ver siempre con botón de copiar, regenerar (con confirmación; invalida la anterior) y revocar. Nuevos `GET|POST|DELETE /api/profile/apikey`. Se guarda cifrada en `data/profile/<id>/apikey.enc`; se cifra con Fernet (librería `cryptography`, nueva dependencia con wheels musllinux; clave derivada de `hub.secret`, 0600, junto a `config.yaml`, fuera de `data/`; el id de usuario va dentro del payload). Si la copia de seguridad cubre `/config` y `/data` juntos, excluye `hub.secret`.
 - `GET /api/hook/ping` con `Authorization: Bearer ck_...` y router `/api/hook/*` con autenticación propia por API key (sin cookie ni Origin; alcance mínimo; `401` único para cualquier fallo; límite de frecuencia por IP con `429`). Base del futuro aviso de apertura de juego.
 
 ### Cambios
