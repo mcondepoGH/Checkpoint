@@ -256,6 +256,27 @@ API (requiere sesión; las escrituras comprueban el origen como el resto):
 
 Todos operan sobre el usuario de la sesión (sin ids en la URL). Hoy solo existe el usuario de `CHECKPOINT_USER`; el almacenamiento por carpeta de usuario y un único punto de código que resuelve el usuario de la sesión dejan el diseño listo para un futuro registro de usuarios (aún no hay roles ni registro). Una foto antigua en `data/profile/photo.<ext>` se mueve sola a la carpeta del usuario al arrancar o en el primer acceso.
 
+### API key de usuario
+
+Una sola API key por usuario, para que lanzadores y plugins avisen al hub sin iniciar sesión. Se gestiona en la sección «API key» del menú del perfil: **Generar** (nunca se crea sola), verla siempre (campo de solo lectura con botón **Copiar**), **Regenerar** (con confirmación: la anterior deja de valer y hay que actualizar los comandos y plugins ya vinculados) y **Revocar**. Formato: `ck_` + 32 bytes aleatorios en base64 urlsafe (46 caracteres).
+
+- **Alcance mínimo:** solo sirve para las rutas `/api/hook/*` (hoy `GET /api/hook/ping`; el aviso de apertura de juego colgará de aquí). No da acceso al login, ajustes, versiones ni a restaurar, y la cookie de sesión no vale en esas rutas.
+- **Autenticación:** cabecera `Authorization: Bearer ck_...`, sin cookie ni comprobación de `Origin`. Cualquier fallo (sin cabecera, mal formada, inválida, revocada o regenerada) es el mismo `401` con `err.apikey.invalid`; la comparación es en tiempo constante (`hmac.compare_digest`). Tras 3 fallos seguidos desde una IP, `429` con `Retry-After` (misma escala que el login, con contador propio: un lanzador mal configurado no bloquea el login web).
+- **Dónde se guarda:** como la key se vuelve a mostrar, no vale guardar solo un hash. Se guarda cifrada en `data/profile/<id>/apikey.enc` (permisos 0600, misma carpeta por usuario que la foto). La clave de cifrado se deriva del **secreto del hub**, `hub.secret` (32 bytes aleatorios, 0600), que se crea la primera vez junto a `config.yaml` (en Docker, el volumen `/config`; sin Docker, `config/` del directorio de datos de la app), **fuera de `data/`**: una copia de seguridad solo de `data/` no expone la key. Haz copia de `hub.secret` si quieres conservar la key; sin él (o si lo cambias) la key guardada no se puede descifrar, la interfaz muestra «sin key» y basta generar una nueva.
+- **Cifrado:** solo biblioteca estándar de Python (sin dependencias nuevas): flujo de claves HMAC-SHA256 en modo contador y etiqueta HMAC-SHA256 (cifrar y luego autenticar), con claves distintas derivadas del secreto y la etiqueta atada al id de usuario. Un fichero manipulado o copiado a otro usuario no descifra.
+- **HTTP en LAN:** la key viaja en claro; la interfaz lo avisa. Usa HTTPS (proxy inverso) o una VPN fuera de tu red de confianza.
+
+API (con sesión de cookie, como el resto del perfil; las escrituras comprueban el origen; respuestas con `Cache-Control: no-store`):
+
+- `GET /api/profile/apikey`: `{"exists": true, "key": "ck_..."}` o `{"exists": false, "key": null}`.
+- `POST /api/profile/apikey`: genera o regenera; devuelve `{"exists": true, "key": "ck_..."}`.
+- `DELETE /api/profile/apikey`: revoca (idempotente); devuelve `{"exists": false, "key": null}`.
+- `GET /api/hook/ping` (Bearer): `{"ok": true, "user": "<nombre>"}`.
+
+```bash
+curl -H "Authorization: Bearer ck_..." http://HOST:PORT/api/hook/ping
+```
+
 ## Instalar como app (PWA)
 
 Checkpoint se puede instalar en el móvil y abrirse a pantalla completa. En móvil, la interfaz propone instalarla (se puede descartar con «Ahora no»).
@@ -271,6 +292,7 @@ Checkpoint se puede instalar en el móvil y abrirse a pantalla completa. En móv
 - Cambia el usuario y la contraseña del `.env` y restringe sus permisos (`chmod 600 .env`).
 - No expongas el servicio a Internet sin un proxy inverso con TLS (activa `CHECKPOINT_COOKIE_SECURE=1` y `CHECKPOINT_TRUST_PROXY=1`).
 - La clave privada vive en `keys/` y no debe compartirse ni subirse a ningún repositorio.
+- La API key de usuario (ver «API key de usuario») se guarda cifrada en `data/`; su secreto, `hub.secret`, vive junto a `config.yaml`, fuera de `data/`. No subas ninguno de los dos a un repositorio y trata la key como una contraseña: regenérala si se filtra.
 - Si cambia la huella de un dispositivo, la conexión falla; revisa la entrada de `keys/known_hosts` antes de borrarla.
 - Usa una cuenta limitada en los dispositivos siempre que sea posible.
 - Sin Docker, `serve` escucha en `127.0.0.1`: ábrelo a la red solo si lo necesitas. «Este equipo» da acceso al sistema de ficheros de quien ejecuta Checkpoint, con sus permisos; no lo ejecutes como administrador/root.
@@ -315,7 +337,7 @@ Los elementos que se repiten viven en `frontend/src/components/ui/` (importa des
 | `Select` | `options` (`[{ value, label }]`), `placeholder` | `_control.scss` |
 | `Checkbox` | `label` + props del input | `_control.scss` |
 | `Switch` | `label` + props del input | `_switch.scss` |
-| `Input` | props del input (texto sin autocompletar ni corrector por defecto) | `_control.scss` |
+| `Input` | props del input (texto sin autocompletar ni corrector por defecto); acepta `ref` | `_control.scss` |
 
 Los tests `test/ui-components.test.mjs` fijan las clases y atributos que producen.
 

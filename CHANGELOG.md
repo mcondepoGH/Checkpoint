@@ -2,6 +2,15 @@
 
 ## Sin publicar
 
+### Novedades
+
+- API key de usuario en el perfil (sección «API key» del menú): generar, ver siempre con botón de copiar, regenerar (con confirmación; invalida la anterior) y revocar. Nuevos `GET|POST|DELETE /api/profile/apikey`. Se guarda cifrada en `data/profile/<id>/apikey.enc`; el secreto del hub (`hub.secret`, 0600) vive junto a `config.yaml`, fuera de `data/`.
+- `GET /api/hook/ping` con `Authorization: Bearer ck_...` y router `/api/hook/*` con autenticación propia por API key (sin cookie ni Origin; alcance mínimo; `401` único para cualquier fallo; límite de frecuencia por IP con `429`). Base del futuro aviso de apertura de juego.
+
+### Cambios
+
+- `Input` (componente de UI) acepta `ref`; la función de copiar al portapapeles pasa a `src/clipboard.js` y la comparten `PublicKey` y la API key.
+
 ## 1.5.1 (2026-11-09)
 
 ### Cambios
