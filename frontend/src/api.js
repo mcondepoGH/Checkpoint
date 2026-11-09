@@ -16,8 +16,9 @@ export async function api(path, { method = 'GET', body } = {}) {
   const res = await fetch(path, {
     method,
     credentials: 'same-origin',
-    headers: body !== undefined ? { 'Content-Type': 'application/json' } : undefined,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    // Un Blob (p. ej. la foto de perfil) se envía en bruto con su tipo; el resto, como JSON.
+    headers: body !== undefined ? { 'Content-Type': body instanceof Blob ? body.type : 'application/json' } : undefined,
+    body: body !== undefined ? (body instanceof Blob ? body : JSON.stringify(body)) : undefined,
   });
   let data = null;
   try { data = await res.json(); } catch { /* sin cuerpo */ }
