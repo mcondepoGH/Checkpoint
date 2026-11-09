@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import Modal from './Modal.jsx';
 import { fmtSize, fmtWhen } from '../format.js';
 import { useI18n } from '../useI18n.js';
+import { Button } from './ui/index.js';
 
 // Motivos del conflicto (ids estables del backend) -> clave `conflict.reason.<id con _>`.
 const REASONS = ['both-changed', 'no-baseline', 'inconsistent', 'indeterminate', 'stale'];
@@ -48,17 +49,17 @@ export default function ConflictDialog({ game, conflict, busy, onCancel, onResol
         </fieldset>
       )}
       <div className="row end">
-        <button type="button" className="btn" onClick={onCancel} disabled={busy}>{t('common.cancel')}</button>
+        <Button onClick={onCancel} disabled={busy}>{t('common.cancel')}</Button>
         {!choosing && (
           <>
-            <button type="button" className="btn" disabled={busy} onClick={() => onResolve('newest', expect)}>{t('conflict.newest')}</button>
-            <button type="button" className="btn primary" disabled={busy} onClick={() => setChoosing(true)}>{t('conflict.choose')}</button>
+            <Button disabled={busy} onClick={() => onResolve('newest', expect)}>{t('conflict.newest')}</Button>
+            <Button variant="primary" disabled={busy} onClick={() => setChoosing(true)}>{t('conflict.choose')}</Button>
           </>
         )}
         {choosing && (
           <>
-            <button type="button" className="btn" disabled={busy} onClick={() => { setChoosing(false); setPick(''); }}>{t('conflict.back')}</button>
-            <button type="button" className="btn primary" disabled={busy || !pick} onClick={() => onResolve(pick, expect)}>{t('conflict.apply')}</button>
+            <Button disabled={busy} onClick={() => { setChoosing(false); setPick(''); }}>{t('conflict.back')}</Button>
+            <Button variant="primary" disabled={busy || !pick} onClick={() => onResolve(pick, expect)}>{t('conflict.apply')}</Button>
           </>
         )}
       </div>

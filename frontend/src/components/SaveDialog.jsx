@@ -4,6 +4,7 @@ import Modal from './Modal.jsx';
 import DiffView from './DiffView.jsx';
 import { errText, useI18n } from '../useI18n.js';
 import { ui } from '../errors.js';
+import { Alert, Button } from './ui/index.js';
 
 // Vista previa + confirmación de guardado. Ante 409 (config.yaml cambió por fuera) vuelve a calcular
 // el diff contra la versión nueva del fichero y deja confirmar o recargar.
@@ -38,18 +39,18 @@ export default function SaveDialog({ config, diff: initial, baseVersion, onSaved
   return (
     <Modal title={conflict ? t('save.titleStale') : t('save.title')} onClose={onClose} wide>
       {conflict && (
-        <div className="alert error" role="alert">
+        <Alert variant="error" role="alert">
           {t('save.staleText')}
-        </div>
+        </Alert>
       )}
       <DiffView diff={diff} />
-      {error && <div className="alert error" role="alert">{errText(error)}</div>}
+      {error && <Alert variant="error" role="alert">{errText(error)}</Alert>}
       <div className="row end">
-        {conflict && <button type="button" className="btn" onClick={onReload}>{t('save.reload')}</button>}
-        <button type="button" className="btn" onClick={onClose}>{t('common.cancel')}</button>
-        <button type="button" className="btn primary" disabled={busy || diff?.empty} onClick={confirm}>
+        {conflict && <Button onClick={onReload}>{t('save.reload')}</Button>}
+        <Button onClick={onClose}>{t('common.cancel')}</Button>
+        <Button variant="primary" disabled={busy || diff?.empty} onClick={confirm}>
           {busy ? t('save.saving') : conflict ? t('save.overwrite') : t('save.confirm')}
-        </button>
+        </Button>
       </div>
     </Modal>
   );

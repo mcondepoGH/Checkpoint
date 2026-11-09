@@ -4,6 +4,7 @@ import { LOCAL_DOCKER_MSG, LOCAL_HELP, LOCAL_LABEL, NAME_HINT, NAME_MAX, OS_OPTI
 import IdNote from './IdNote.jsx';
 import { fieldErrorText } from '../errors.js';
 import { errText, useI18n } from '../useI18n.js';
+import { Alert, Button, Checkbox, Input, Select } from './ui/index.js';
 
 // `runtime` ('docker' | 'native') y `platform` vienen de /api/config. «Este equipo» solo se ofrece en modo nativo.
 // Resultado de «Probar conexión»/«Comprobar carpeta»: con varias carpetas, una línea por ruta (cada una con su code si lo hay).
@@ -20,49 +21,42 @@ export default function DeviceCard({ dev, errors, localError, localFlagError, ca
     <fieldset className="card cfg-card">
       <legend className="cfg-title">{title}</legend>
       <Field label={t('game.name')} hint={t(NAME_HINT, { max: NAME_MAX })} error={localError || errors.name || errors['']}>
-        {(p) => <input {...p} value={dev.name} onChange={set('name')} maxLength={NAME_MAX} placeholder={t('device.namePh')} autoComplete="off" spellCheck="false" />}
+        {(p) => <Input {...p} value={dev.name} onChange={set('name')} maxLength={NAME_MAX} placeholder={t('device.namePh')} />}
       </Field>
       {(canLocal || dev.local) && runtime !== 'docker' && (
         <div className="local-opt">
-          <label className="check">
-            <input type="checkbox" checked={dev.local} aria-describedby={`${descId}-local`} aria-invalid={localFlagError || errors.local ? true : undefined}
-              onChange={(e) => onChange(localPatch(e.target.checked, platform))} />
-            <span>{t(LOCAL_LABEL)}</span>
-          </label>
+          <Checkbox checked={dev.local} aria-describedby={`${descId}-local`} aria-invalid={localFlagError || errors.local ? true : undefined}
+            onChange={(e) => onChange(localPatch(e.target.checked, platform))} label={t(LOCAL_LABEL)} />
           <small id={`${descId}-local`} className="muted">{t(LOCAL_HELP)}</small>
         </div>
       )}
-      {dev.local && runtime === 'docker' && <div className="alert error" role="alert">{errText(LOCAL_DOCKER_MSG)}.</div>}
+      {dev.local && runtime === 'docker' && <Alert variant="error" role="alert">{errText(LOCAL_DOCKER_MSG)}.</Alert>}
       {dev.local && runtime !== 'docker' && (localFlagError || errors.local) && (
-        <div className="alert error" role="alert">{fieldErrorText(localFlagError || errors.local, t)}</div>
+        <Alert variant="error" role="alert">{fieldErrorText(localFlagError || errors.local, t)}</Alert>
       )}
       {dev.local ? (
         <Field label={t('device.os')} hint={t('device.osHint')} error={errors.os}>
           {(p) => (
-            <select {...p} value={dev.os} onChange={set('os')}>
-              {OS_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
+            <Select {...p} value={dev.os} onChange={set('os')} options={OS_OPTIONS.map(([v, l]) => ({ value: v, label: l }))} />
           )}
         </Field>
       ) : (
         <>
           <div className="two">
             <Field label={t('device.host')} error={errors.host}>
-              {(p) => <input {...p} value={dev.host} onChange={set('host')} autoComplete="off" spellCheck="false" />}
+              {(p) => <Input {...p} value={dev.host} onChange={set('host')} />}
             </Field>
             <Field label={t('device.port')} error={errors.port}>
-              {(p) => <input {...p} type="number" inputMode="numeric" min="1" max="65535" value={dev.port} onChange={set('port')} />}
+              {(p) => <Input {...p} type="number" inputMode="numeric" min="1" max="65535" value={dev.port} onChange={set('port')} />}
             </Field>
           </div>
           <div className="two">
             <Field label={t('device.user')} error={errors.user}>
-              {(p) => <input {...p} value={dev.user} onChange={set('user')} autoComplete="off" spellCheck="false" />}
+              {(p) => <Input {...p} value={dev.user} onChange={set('user')} />}
             </Field>
             <Field label={t('device.os')} error={errors.os}>
               {(p) => (
-                <select {...p} value={dev.os} onChange={set('os')}>
-                  {OS_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-                </select>
+                <Select {...p} value={dev.os} onChange={set('os')} options={OS_OPTIONS.map(([v, l]) => ({ value: v, label: l }))} />
               )}
             </Field>
           </div>
@@ -70,14 +64,14 @@ export default function DeviceCard({ dev, errors, localError, localFlagError, ca
       )}
       <IdNote id={idText} isNew={!dev.id} renamed={renamed} />
       <div role="status" aria-live="polite">
-        {test && !test.busy && <div className={`alert ${test.ok ? 'ok' : 'error'}`} style={{ whiteSpace: 'pre-line' }}>{testText(test, t)}</div>}
+        {test && !test.busy && <Alert variant={test.ok ? 'ok' : 'error'} style={{ whiteSpace: 'pre-line' }}>{testText(test, t)}</Alert>}
       </div>
       <div className="row">
-        <button type="button" className="btn" disabled={test?.busy} onClick={onTest}>
+        <Button disabled={test?.busy} onClick={onTest}>
           {test?.busy ? (dev.local ? t('device.checking') : t('device.testing')) : (dev.local ? t('device.checkFolder') : t('device.test'))}
-        </button>
+        </Button>
         <span className="spacer" />
-        <button type="button" className="btn danger" onClick={onRemove} aria-label={t('device.deleteAria', { title })}>{t('common.delete')}</button>
+        <Button variant="danger" onClick={onRemove} aria-label={t('device.deleteAria', { title })}>{t('common.delete')}</Button>
       </div>
     </fieldset>
   );

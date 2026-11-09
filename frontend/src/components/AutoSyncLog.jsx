@@ -4,6 +4,7 @@ import EmptyState from './EmptyState.jsx';
 import { fmtDateTime, fmtDuration, RESULT_CLASS, resultText } from '../format.js';
 import { errText, useI18n } from '../useI18n.js';
 import { recordText } from '../errors.js';
+import { Alert, Badge, Button } from './ui/index.js';
 
 // Disparadores conocidos (ids del backend): clave `autolog.trigger.<id>`; otro se muestra tal cual.
 const TRIGGERS = ['scheduled', 'startup'];
@@ -34,11 +35,11 @@ export default function AutoSyncLog() {
     <section className="card autosync autosync-log" aria-labelledby="autosynclog-title">
       <div className="row between">
         <h3 id="autosynclog-title">{t('autolog.title')}</h3>
-        <button type="button" className="btn" onClick={load} disabled={loading} aria-label={t('autolog.refreshAria')}>
+        <Button onClick={load} disabled={loading} aria-label={t('autolog.refreshAria')}>
           {loading ? t('autolog.refreshing') : t('autolog.refresh')}
-        </button>
+        </Button>
       </div>
-      <div role="status" aria-live="polite">{err && <span className="alert error inline">{errText(err)}</span>}</div>
+      <div role="status" aria-live="polite">{err && <Alert as="span" variant="error" inline>{errText(err)}</Alert>}</div>
       {entries && entries.length === 0 && !err && (
         <EmptyState icon="📜" title={t('autolog.none.title')}
           text={t('autolog.none.text')} />
@@ -52,7 +53,7 @@ export default function AutoSyncLog() {
                   <span className="when">{fmtDateTime(e.started, locale)}</span>
                   <span className="trig">{TRIGGERS.includes(e.trigger) ? t(`autolog.trigger.${e.trigger}`) : e.trigger}</span>
                   <span className="dur">{fmtDuration(e.duration, locale)}</span>
-                  <span className={`badge ${RESULT_CLASS[e.result] || ''}`}>{resultText(e.result, t)}</span>
+                  <Badge status={RESULT_CLASS[e.result]}>{resultText(e.result, t)}</Badge>
                 </summary>
                 <div className="detail">
                   {recordText(e, t) && <p className={`msg ${e.result === 'error' ? 'is-error' : ''}`}>{recordText(e, t)}</p>}
@@ -61,7 +62,7 @@ export default function AutoSyncLog() {
                       {Object.entries(e.games).map(([g, d]) => (
                         <li key={g}>
                           <b>{d.name || g}</b>
-                          <span className={`badge ${RESULT_CLASS[d.result] || ''}`}>{resultText(d.result, t)}</span>
+                          <Badge status={RESULT_CLASS[d.result]}>{resultText(d.result, t)}</Badge>
                           {recordText(d, t) && <small className="muted">{recordText(d, t)}</small>}
                         </li>
                       ))}

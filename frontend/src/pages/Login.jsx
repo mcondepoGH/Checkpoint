@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import logo from '../assets/logo-icon.svg';
 import { api } from '../api.js';
 import { errText, useI18n } from '../useI18n.js';
+import { Alert, Button } from '../components/ui/index.js';
 
 export default function Login({ onDone }) {
   const { t } = useI18n();
@@ -28,8 +29,8 @@ export default function Login({ onDone }) {
         <label>{t('login.password')}
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
         </label>
-        {error && <div className="alert error">{errText(error)}</div>}
-        <button className="btn primary" disabled={busy}>{t('login.submit')}</button>
+        {error && <Alert variant="error">{errText(error)}</Alert>}
+        <Button type="submit" variant="primary" disabled={busy}>{t('login.submit')}</Button>
       </form>
     </div>
   );

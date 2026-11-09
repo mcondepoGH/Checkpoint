@@ -5,6 +5,7 @@ import Modal from './Modal.jsx';
 import DiffView from './DiffView.jsx';
 import { errText, useI18n } from '../useI18n.js';
 import { ui } from '../errors.js';
+import { Alert, Button } from './ui/index.js';
 
 const when = (iso) => iso.replace('T', ' ');
 const kb = (n) => `${Math.max(1, Math.round(n / 1024))} KB`;
@@ -35,7 +36,7 @@ export default function BackupsDialog({ baseVersion, dirty, onRestored, onClose 
 
   return (
     <Modal title={t('backups.title')} onClose={onClose} wide>
-      {error && <div className="alert error" role="alert">{errText(error)}</div>}
+      {error && <Alert variant="error" role="alert">{errText(error)}</Alert>}
       {!pick && (
         <>
           {list === null && !error && <p className="muted">{t('common.loading')}</p>}
@@ -47,7 +48,7 @@ export default function BackupsDialog({ baseVersion, dirty, onRestored, onClose 
             {list?.map((b) => (
               <li key={b.name} className="row between">
                 <span><code>{when(b.created)}</code> <span className="muted">· {kb(b.size)}</span></span>
-                <button type="button" className="btn" onClick={() => preview(b.name)}>{t('backups.view')}</button>
+                <Button onClick={() => preview(b.name)}>{t('backups.view')}</Button>
               </li>
             ))}
           </ul>
@@ -56,15 +57,15 @@ export default function BackupsDialog({ baseVersion, dirty, onRestored, onClose 
       {pick && (
         <>
           <p>{rich('backups.prompt', { when: when(pick.name.replace('config.yaml.bak-', '').replace('_', 'T').replace(/(\d\d)(\d\d)(\d\d)$/, '$1:$2:$3')) })}</p>
-          {dirty && <div className="alert">{t('backups.dirty')}</div>}
+          {dirty && <Alert>{t('backups.dirty')}</Alert>}
           <DiffView diff={pick.diff} />
           <div className="row end">
-            <button type="button" className="btn" onClick={() => setPick(null)}>{t('backups.back')}</button>
-            <button type="button" className="btn primary" disabled={busy} onClick={restore}>{busy ? t('backups.restoring') : t('backups.restore')}</button>
+            <Button onClick={() => setPick(null)}>{t('backups.back')}</Button>
+            <Button variant="primary" disabled={busy} onClick={restore}>{busy ? t('backups.restoring') : t('backups.restore')}</Button>
           </div>
         </>
       )}
-      {!pick && <div className="row end"><button type="button" className="btn" onClick={onClose}>{t('common.close')}</button></div>}
+      {!pick && <div className="row end"><Button onClick={onClose}>{t('common.close')}</Button></div>}
     </Modal>
   );
 }

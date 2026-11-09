@@ -5,6 +5,7 @@ import AutoSyncLog from './AutoSyncLog.jsx';
 import { fmtDateTime, ON_CONFLICT_OPTIONS } from '../format.js';
 import { errText, useI18n } from '../useI18n.js';
 import { ui } from '../errors.js';
+import { Alert, Badge, Button, Checkbox, Input, Select, Switch } from './ui/index.js';
 
 const PRESETS = [1, 6, 12, 24];
 const ON_CONFLICT_HELP = { skip: 'autosync.help.skip', newest: 'autosync.help.newest' }; // claves del catálogo
@@ -67,49 +68,41 @@ export default function AutoSync() {
       <div className="row between">
         <h3 id="autosync-title">{t('autosync.title')}</h3>
         {saved && (
-          <span className={`badge ${saved.running ? 'running' : saved.enabled ? 'ok' : ''}`}>
+          <Badge status={saved.running ? 'running' : saved.enabled ? 'ok' : ''}>
             {saved.running ? t('autosync.running') : saved.enabled ? t('autosync.active') : t('autosync.disabled')}
-          </span>
+          </Badge>
         )}
       </div>
       <p className="muted">{t('autosync.intro')}</p>
 
-      <label className="switch">
-        <input type="checkbox" role="switch" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
-        <span className="track" aria-hidden="true"><i /></span>
-        <span>{enabled ? t('common.on') : t('common.off')}</span>
-      </label>
+      <Switch checked={enabled} onChange={(e) => setEnabled(e.target.checked)} label={enabled ? t('common.on') : t('common.off')} />
 
       <div className="autosync-grid">
         <Field label={t('autosync.hours')} error={localErr || serverErr} hint={t('autosync.hoursHint', { min, max })}>
           {(p) => (
-            <input {...p} type="number" inputMode="decimal" min={min} max={max} step="any" value={hours}
+            <Input {...p} type="number" inputMode="decimal" min={min} max={max} step="any" value={hours}
               onChange={(e) => setHours(e.target.value)} />
           )}
         </Field>
         <div className="presets" role="group" aria-label={t('autosync.presets')}>
           {PRESETS.map((h) => (
-            <button key={h} type="button" className="btn preset" aria-pressed={num === h} onClick={() => setHours(String(h))}>{t('autosync.hoursShort', { count: h })}</button>
+            <Button className="preset" key={h} aria-pressed={num === h} onClick={() => setHours(String(h))}>{t('autosync.hoursShort', { count: h })}</Button>
           ))}
         </div>
       </div>
 
-      <label className="check">
-        <input type="checkbox" checked={runOnStart} onChange={(e) => setRunOnStart(e.target.checked)} />
-        {t('autosync.runOnStart')}
-      </label>
+      <Checkbox checked={runOnStart} onChange={(e) => setRunOnStart(e.target.checked)} label={t('autosync.runOnStart')} />
 
       <Field label={t('autosync.onConflict')} hint={ON_CONFLICT_HELP[onConflict] && t(ON_CONFLICT_HELP[onConflict])}>
         {(p) => (
-          <select {...p} value={onConflict} onChange={(e) => setOnConflict(e.target.value)}>
-            {ON_CONFLICT_OPTIONS.map(([v, l]) => <option key={v} value={v}>{t(l)}</option>)}
-          </select>
+          <Select {...p} value={onConflict} onChange={(e) => setOnConflict(e.target.value)}
+            options={ON_CONFLICT_OPTIONS.map(([v, l]) => ({ value: v, label: t(l) }))} />
         )}
       </Field>
 
       <div className="row">
-        <button type="button" className="btn primary" disabled={busy || !dirty || !!localErr} onClick={save}>{t('common.save')}</button>
-        <div role="status" aria-live="polite">{msg && <span className={`alert ${msg.kind} inline`}>{errText(msg.body)}</span>}</div>
+        <Button variant="primary" disabled={busy || !dirty || !!localErr} onClick={save}>{t('common.save')}</Button>
+        <div role="status" aria-live="polite">{msg && <Alert as="span" variant={msg.kind} inline>{errText(msg.body)}</Alert>}</div>
       </div>
 
       {saved && (

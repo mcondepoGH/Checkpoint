@@ -11,6 +11,7 @@ import Settings from './pages/Settings.jsx';
 import Sync from './pages/Sync.jsx';
 import Versions from './pages/Versions.jsx';
 import { errText, initDefaultLang, useI18n } from './useI18n.js';
+import { Alert, Button } from './components/ui/index.js';
 
 // Pestañas: el id es estable; las etiquetas (completa y corta, para móvil) son claves `app.tab.<id>.full|short`.
 const TABS = ['sync', 'versions', 'settings'];
@@ -123,15 +124,15 @@ export default function App() {
         <div className="spacer" />
         <UpdateBadge info={updates} onOpen={() => setShowUpdate(true)} />
         <LanguageSelect />
-        <button className="btn ghost tool" onClick={cycleTheme} title={t('app.themeTitle')} aria-label={t('app.themeAria', { theme: t(`app.theme.${theme}`) })}>
+        <Button variant="ghost" className="tool" onClick={cycleTheme} title={t('app.themeTitle')} aria-label={t('app.themeAria', { theme: t(`app.theme.${theme}`) })}>
           <Icon name={effectiveTheme === 'dark' ? 'moon' : 'sun'} /><span className="lbl">{t('app.themeLabel', { theme: t(`app.theme.${theme}`) })}</span>
-        </button>
-        <button className="btn ghost tool" onClick={logout} title={t('app.logout')} aria-label={t('app.logout')}>
+        </Button>
+        <Button variant="ghost" className="tool" onClick={logout} title={t('app.logout')} aria-label={t('app.logout')}>
           <Icon name="logout" /><span className="lbl">{t('app.logout')}</span>
-        </button>
+        </Button>
       </header>
       <main className="content">
-        {error && <div className="alert error" role="alert">{errText(error)}</div>}
+        {error && <Alert variant="error" role="alert">{errText(error)}</Alert>}
         <div hidden={tab !== 'settings'}>
           <Settings loaded={loaded} stale={stale && dirty} configError={loaded.error} runtime={loaded.runtime} platform={loaded.platform}
             onApplied={(r) => { setLoaded((l) => ({ ...l, version: r.version, config: r.config, error: null })); setLatest(r.version); }}

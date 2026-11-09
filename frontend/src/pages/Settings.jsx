@@ -18,6 +18,7 @@ import EmptyState from '../components/EmptyState.jsx';
 import DiffView from '../components/DiffView.jsx';
 import { errText, useI18n } from '../useI18n.js';
 import { errorText, fieldErrorText, ui } from '../errors.js';
+import { Alert, Button, Input } from '../components/ui/index.js';
 
 // Pantalla única de Configuración: dispositivos y juegos como tarjetas, validación en vivo con el
 // validador del backend, vista previa de cambios antes de guardar.
@@ -140,21 +141,21 @@ export default function Settings({ loaded, stale, configError, runtime, platform
     <section aria-labelledby="cfg-title" ref={rootRef}>
       <h2 id="cfg-title">{t('settings.title')}</h2>
 
-      {configError && <div className="alert error" role="alert">
+      {configError && <Alert variant="error" role="alert">
         {t('settings.invalid', { cause: errorText(configError, t) })}
-      </div>}
+      </Alert>}
       {stale && (
-        <div className="alert warn" role="alert">
+        <Alert variant="warn" role="alert">
           <strong>{t('settings.stale.lead')}</strong> {t('settings.stale.text')}
           <div className="row">
-            <button type="button" className="btn" onClick={onReload}>{t('settings.stale.reload')}</button>
-            <button type="button" className="btn" onClick={showStaleDiff}>{t('settings.stale.diff')}</button>
+            <Button onClick={onReload}>{t('settings.stale.reload')}</Button>
+            <Button onClick={showStaleDiff}>{t('settings.stale.diff')}</Button>
           </div>
           {staleDiff && <DiffBox diff={staleDiff} />}
-        </div>
+        </Alert>
       )}
-      {generalError && <div className="alert error" role="alert">{generalError}</div>}
-      <div role="status" aria-live="polite">{msg && <div className={`alert ${msg.ok ? 'ok' : 'error'}`}>{errText(msg.body)}</div>}</div>
+      {generalError && <Alert variant="error" role="alert">{generalError}</Alert>}
+      <div role="status" aria-live="polite">{msg && <Alert variant={msg.ok ? 'ok' : 'error'}>{errText(msg.body)}</Alert>}</div>
 
       {/* La clave SSH solo importa si hay (o puede haber) dispositivos remotos. */}
       {(draft.devices.length === 0 || draft.devices.some((d) => !d.local)) && <PublicKey />}
@@ -166,16 +167,16 @@ export default function Settings({ loaded, stale, configError, runtime, platform
       <fieldset className="card cfg-card">
         <legend className="cfg-title">{t('settings.versions.legend')}</legend>
         <Field label={t('settings.versions.max')} hint={t(VERSIONS_HINT)} error={local.maxVersions || fe(errors.max_versions)}>
-          {(p) => <input {...p} type="number" inputMode="numeric" min="0" max={MAX_VERSIONS_LIMIT} step="1"
+          {(p) => <Input {...p} type="number" inputMode="numeric" min="0" max={MAX_VERSIONS_LIMIT} step="1"
             value={draft.maxVersions} onChange={(e) => setDraft((d) => ({ ...d, maxVersions: e.target.value }))} />}
         </Field>
       </fieldset>
 
       <div className="row between section-head">
         <h3>{t('settings.devices')}</h3>
-        <button type="button" className="btn" onClick={() => setDraft((d) => ({ ...d, devices: [...d.devices, blankDevice()] }))}>
+        <Button onClick={() => setDraft((d) => ({ ...d, devices: [...d.devices, blankDevice()] }))}>
           {t('settings.addDevice')}
-        </button>
+        </Button>
       </div>
       <div className="grid">
         {draft.devices.map((d) => (
@@ -188,15 +189,15 @@ export default function Settings({ loaded, stale, configError, runtime, platform
       {draft.devices.length === 0 && (
         <EmptyState icon="💻" title={t('settings.noDevices.title')}
           text={t('settings.noDevices.text')}
-          action={<button type="button" className="btn primary" onClick={() => setDraft((d) => ({ ...d, devices: [...d.devices, blankDevice()] }))}>{t('settings.addDevice')}</button>} />
+          action={<Button variant="primary" onClick={() => setDraft((d) => ({ ...d, devices: [...d.devices, blankDevice()] }))}>{t('settings.addDevice')}</Button>} />
       )}
 
       <div className="row between section-head">
         <h3>{t('settings.games')}</h3>
-        <button type="button" className="btn" disabled={draft.devices.filter((d) => d.name).length < 2}
+        <Button disabled={draft.devices.filter((d) => d.name).length < 2}
           onClick={() => setDraft((d) => ({ ...d, games: [...d.games, blankGame()] }))}>
           {t('settings.addGame')}
-        </button>
+        </Button>
       </div>
       {draft.devices.filter((d) => d.name).length < 2 && <p className="muted">{t('settings.needTwo')}</p>}
       <div className="grid">
@@ -221,16 +222,16 @@ export default function Settings({ loaded, stale, configError, runtime, platform
           </span>
         )}
         <span className="spacer" />
-        <button type="button" className="btn ghost ab-tool" title={t('settings.bar.backups')} aria-label={t('settings.bar.backups')} onClick={() => setDialog({ kind: 'backups' })}>
+        <Button variant="ghost" className="ab-tool" title={t('settings.bar.backups')} aria-label={t('settings.bar.backups')} onClick={() => setDialog({ kind: 'backups' })}>
           <Icon name="history" /><span className="lbl">{t('settings.bar.backups')}</span>
-        </button>
-        <button type="button" className="btn ghost ab-tool" title={t('settings.bar.yaml')} aria-label={t('settings.bar.yaml')} onClick={() => setDialog({ kind: 'yaml', config: payload })} disabled={hasErrors}>
+        </Button>
+        <Button variant="ghost" className="ab-tool" title={t('settings.bar.yaml')} aria-label={t('settings.bar.yaml')} onClick={() => setDialog({ kind: 'yaml', config: payload })} disabled={hasErrors}>
           <Icon name="code" /><span className="lbl">{t('settings.bar.yaml')}</span>
-        </button>
-        <button type="button" className="btn ab-tool" title={t('settings.bar.discardTitle')} aria-label={t('settings.bar.discardTitle')} disabled={!dirty} onClick={() => { setDraft(fromConfig(loaded.config)); setMsg(null); }}>
+        </Button>
+        <Button className="ab-tool" title={t('settings.bar.discardTitle')} aria-label={t('settings.bar.discardTitle')} disabled={!dirty} onClick={() => { setDraft(fromConfig(loaded.config)); setMsg(null); }}>
           <Icon name="undo" /><span className="lbl">{t('settings.bar.discard')}</span>
-        </button>
-        <button type="button" className="btn primary" disabled={!canSave} onClick={openSave}>{t('settings.bar.save')}</button>
+        </Button>
+        <Button variant="primary" disabled={!canSave} onClick={openSave}>{t('settings.bar.save')}</Button>
       </div>
 
       {dialog?.kind === 'save' && (
