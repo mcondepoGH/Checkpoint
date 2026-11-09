@@ -2,6 +2,13 @@
 
 ## Sin publicar
 
+## 1.1.1 (2026-11-09)
+
+### Correcciones
+
+- Barra superior en móvil: se ven todas las pestañas completas sin scroll, el selector de idioma muestra un código corto centrado y el tema se cambia con un icono sol/luna.
+- Tarjeta de sincronización programada: muestra solo la próxima ejecución.
+
 ## 1.1.0 (2026-11-08)
 
 ### Novedades
