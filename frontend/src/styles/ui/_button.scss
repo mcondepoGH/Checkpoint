@@ -13,6 +13,13 @@
     &:disabled { animation: pulse-glow 1.4s infinite; opacity: .85; } }
   &.danger { color: var(--danger); &:hover:not(:disabled) { border-color: var(--danger); box-shadow: 0 0 14px -2px var(--danger); } }
   &.ghost { background: transparent; border-color: transparent; color: var(--muted); &:hover:not(:disabled) { color: var(--text); box-shadow: none; border-color: var(--border); } }
+  // Solo icono (Button iconOnly): cuadrado de v.$touch, sin texto visible, mismo tamaño en todos los viewports. Va DESPUÉS de la base y de las variantes:
+  // con la misma especificidad gana el orden, y `.btn` (padding .5rem 1rem) dejaba ~6 px de contenido y encogía el svg.
+  // Icono de v.$icon-btn (solo aquí; el resto de Icon conserva su tamaño). El cuadro (borde + fondo) aparece solo en hover, :focus-visible y :active; en reposo, borde transparente y sin fondo.
+  &.btn-icon { flex: none; width: v.$touch; min-width: v.$touch; height: v.$touch; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-color: transparent; background: transparent;
+    svg { flex: none; width: v.$icon-btn; height: v.$icon-btn; }
+    &:focus-visible, &:active:not(:disabled) { border-color: var(--border); background: var(--surface-2); color: var(--text); }
+    @media (hover: hover) { &:hover:not(:disabled) { border-color: var(--border); background: var(--surface-2); color: var(--text); } } }
 }
 
 @media (max-width: v.$bp-sm) {

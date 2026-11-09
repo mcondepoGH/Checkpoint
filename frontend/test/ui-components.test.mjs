@@ -41,7 +41,23 @@ test('Button: clases por variante, type=button por defecto y submit explícito',
   assert.match(r('Button', { variant: 'primary' }, 'x'), /class="btn primary"/);
   assert.match(r('Button', { variant: 'ghost', className: 'tool' }, 'x'), /class="btn ghost tool"/);
   assert.match(r('Button', { variant: 'danger', disabled: true }, 'x'), /class="btn danger"[^>]*disabled/);
-  assert.match(r('Button', { type: 'submit' }, 'x'), /type="submit"/);
+  assert.match(r('Button', { type: 'submit' }, 'x'), /type="submit"/);  assert.match(r('Button', { variant: 'ghost', iconOnly: true }, 'x'), /class="btn ghost btn-icon"/);
+});
+
+test('Button iconOnly: .btn-icon va anidada en .btn (partial del botón), no suelta antes de ella', () => {
+  const scss = fs.readFileSync(path.join(SRC, 'styles', 'ui', '_button.scss'), 'utf8');
+  assert.match(scss, /&\.btn-icon\s*\{[^}]*padding: 0/);
+  assert.ok(!/^\.btn-icon/m.test(fs.readFileSync(path.join(SRC, 'styles', '_components.scss'), 'utf8')));
+});
+
+test('Button iconOnly: borde transparente en reposo, cuadro en hover/focus-visible/active, icono a $icon-btn (1.25rem)', () => {
+  const scss = fs.readFileSync(path.join(SRC, 'styles', 'ui', '_button.scss'), 'utf8');
+  const block = scss.slice(scss.indexOf('&.btn-icon'));
+  assert.match(block, /border-color: transparent; background: transparent/);
+  assert.match(block, /&:focus-visible/);
+  assert.match(block, /&:hover:not\(:disabled\)/);
+  assert.match(block, /width: v\.\$icon-btn; height: v\.\$icon-btn/);
+  assert.match(fs.readFileSync(path.join(SRC, 'styles', '_variables.scss'), 'utf8'), /\$icon-btn: 1\.25rem/);
 });
 
 test('Badge: estado como clase; sin estado queda neutra', { skip }, () => {
