@@ -495,7 +495,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
 
     @hook.post("/{game}/opened")
     async def hook_opened(game: str, device: Optional[str] = Query(None)):
-        """Aviso «se va a abrir el juego»: sync previo bloqueante (misma política de conflictos que la sync automática).
+        """Aviso «se va a abrir el juego»: sync previo bloqueante con política de conflictos siempre `skip` (ignora la del juego y la del scheduler).
         No arma vigilancia de proceso (eso es otra fase). Un fallo de la sync no es un 5xx: 200 con `outcome` descriptivo."""
         cfg = _cfg()
         game = game_id(game)  # el 401 ya lo dio hook_user: no se revela si el juego existe
@@ -523,7 +523,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
 
         def work():
             try:
-                res, m, c, st = scheduler.run_game(cfg, game, log=run.lines.append)
+                res, m, c, st = scheduler.run_game(cfg, game, log=run.lines.append, policy="skip")
                 box.update(res=res, m=m, c=c, st=st or {})
                 run.status = st or {"result": res, "game": game, "name": g.name, "message": m,
                                     **(c if c and "code" in c else {})}

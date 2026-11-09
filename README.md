@@ -284,7 +284,7 @@ Rutas `/api/hook/*` para que un lanzador avise al hub con la API key (ver «API 
 
 ### `POST /api/hook/{juego}/opened?device=<dispositivo>`
 
-Se llama justo antes de arrancar el juego. El hub hace una **sincronización previa y bloqueante** de ese juego: si tiene un save más nuevo, lo copia al dispositivo antes de que el juego arranque; si no toca, termina sin copiar. Usa la misma política de conflictos que la sincronización automática (la del juego o, si no, el ajuste global; `skip` por defecto): ante un conflicto **no se toca nada**, la respuesta lo indica y queda en el historial; nunca se pregunta ni se resuelve solo.
+Se llama justo antes de arrancar el juego. El hub hace una **sincronización previa y bloqueante** de ese juego: si tiene un save más nuevo, lo copia al dispositivo antes de que el juego arranque; si no toca, termina sin copiar. Usa **siempre** la política de conflictos `skip`, ignorando la del juego y el ajuste global de la sincronización automática: ante un conflicto **no se toca nada**, la respuesta lo indica y queda en el historial; nunca se pregunta ni se resuelve solo.
 
 - **Autenticación:** `Authorization: Bearer ck_...` (nada de cookie).
 - **Juego:** id o nombre, como `POST /api/sync/{juego}`.

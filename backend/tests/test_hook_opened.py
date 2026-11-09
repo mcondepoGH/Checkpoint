@@ -121,14 +121,19 @@ def test_success_is_logged_with_trigger_hook(client):
     assert [x["trigger"] for x in history.read()] == ["hook"]
 
 
-def test_conflict_uses_scheduler_policy(client):
+def test_conflict_always_skips_even_with_newest_policies(client):
     e = client.env
     e.seed()
     e.write(e.d1, "pc1", 1000)
     e.write(e.d2, "pc2", 2000)
-    client.put("/api/scheduler", json={"on_conflict": "newest"})
-    assert opened(client).json()["outcome"] == "ok"  # misma política que el ciclo automático
-    assert e.read(e.d1) == "pc2"
+    client.put("/api/scheduler", json={"on_conflict": "newest"})  # global del scheduler
+    cp = settings.CONFIG_PATH
+    cfg = yaml.safe_load(cp.read_text())
+    cfg["games"]["g1"]["on_conflict"] = "newest"  # y la del juego
+    cp.write_text(yaml.safe_dump(cfg, allow_unicode=True))
+    r = opened(client)
+    assert r.status_code == 200 and r.json()["outcome"] == "conflict" and r.json()["ok"] is False  # el hook nunca resuelve
+    assert e.read(e.d1) == "pc1" and e.read(e.d2) == "pc2" and e.read(e.hub) == "base"
 
 
 def test_resolves_by_id_and_by_name_and_device_by_name(client):

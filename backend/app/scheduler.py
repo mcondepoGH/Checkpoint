@@ -150,13 +150,13 @@ class Scheduler:
         """Política ante conflictos de un juego: la suya, si no la global de la sync automática (por defecto `skip`)."""
         return cfg.games[game].on_conflict or self.cfg.get("on_conflict", "skip")
 
-    def run_game(self, cfg, game: str, log: Callable = lambda m: None) -> tuple:
-        """Ejecuta un juego (modo normal, política de conflictos del scheduler) y traduce el resultado.
+    def run_game(self, cfg, game: str, log: Callable = lambda m: None, policy: Optional[str] = None) -> tuple:
+        """Ejecuta un juego (modo normal; política de conflictos `policy` o, si no, la del scheduler) y traduce el resultado.
         Devuelve (resultado, texto técnico para logs, {code, params} | {message} | None para UI e historial, estado
         crudo de run_sync o None si falló). Nunca lanza: lo comparten el ciclo y el aviso `opened` del hook."""
         m, c, st = "", None, None
         try:
-            st = self.runner(cfg, game, False, log=log, conflict_policy=self.policy_for(cfg, game))
+            st = self.runner(cfg, game, False, log=log, conflict_policy=policy or self.policy_for(cfg, game))
             res = st["result"]
             sc = {"code": st["code"], "params": st.get("params") or {}} if st.get("code") else None
             if st["result"] == "conflict":
