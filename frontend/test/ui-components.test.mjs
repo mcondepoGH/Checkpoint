@@ -50,6 +50,16 @@ test('Button iconOnly: .btn-icon va anidada en .btn (partial del botón), no sue
   assert.ok(!/^\.btn-icon/m.test(fs.readFileSync(path.join(SRC, 'styles', '_components.scss'), 'utf8')));
 });
 
+test('Button iconOnly: borde transparente en reposo, cuadro en hover/focus-visible/active, icono a $icon-btn (1.125rem)', () => {
+  const scss = fs.readFileSync(path.join(SRC, 'styles', 'ui', '_button.scss'), 'utf8');
+  const block = scss.slice(scss.indexOf('&.btn-icon'));
+  assert.match(block, /border-color: transparent; background: transparent/);
+  assert.match(block, /&:focus-visible/);
+  assert.match(block, /&:hover:not\(:disabled\)/);
+  assert.match(block, /width: v\.\$icon-btn; height: v\.\$icon-btn/);
+  assert.match(fs.readFileSync(path.join(SRC, 'styles', '_variables.scss'), 'utf8'), /\$icon-btn: 1\.125rem/);
+});
+
 test('Badge: estado como clase; sin estado queda neutra', { skip }, () => {
   assert.equal(r('Badge', { status: 'running' }, 'x'), '<span class="badge running">x</span>');
   assert.equal(r('Badge', { status: '' }, 'x'), '<span class="badge">x</span>');
