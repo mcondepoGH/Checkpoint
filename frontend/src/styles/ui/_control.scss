@@ -1,0 +1,21 @@
+@use '../variables' as v;
+
+// Controles de formulario: casilla con etiqueta (Checkbox), campos de texto/número (Input) y desplegables (Select).
+label.check { display: flex; flex-direction: row; align-items: center; gap: .5rem; cursor: pointer; }
+input, select {
+  font: inherit; padding: .55rem .7rem; border-radius: 10px; color: var(--text);
+  background: var(--bg); border: 1px solid var(--border); min-width: 0; transition: border-color .15s, box-shadow .15s;
+  &:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(34, 211, 238, .22), 0 0 14px -2px var(--accent); }
+}
+input[type='checkbox'] { width: 1.05rem; height: 1.05rem; padding: 0; accent-color: var(--accent-2); }
+textarea {
+  font: inherit; font-family: ui-monospace, monospace; font-size: v.$fs-hint; padding: .5rem .6rem; border-radius: 10px;
+  color: var(--text); background: var(--bg); border: 1px solid var(--border); resize: vertical; word-break: break-all;
+}
+
+// Móvil: objetivos táctiles >= 40 px y campos a 1rem (>= 16 px: iOS no hace zoom al enfocarlos).
+@media (max-width: v.$bp-sm) {
+  input, select, textarea { font-size: v.$fs-input-mobile; min-height: v.$touch; }
+  input[type='checkbox'], input[type='radio'] { min-height: 0; width: 1.25rem; height: 1.25rem; }
+  label.check { min-height: v.$touch; }
+}

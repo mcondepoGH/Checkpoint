@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { errText, useI18n } from '../useI18n.js';
+import { Alert, Button } from './ui/index.js';
 
 function copyText(text, area) {
   return (async () => {
@@ -26,7 +27,7 @@ function CodeBlock({ text }) {
   return (
     <div className="codeblock">
       <pre><code>{text}</code></pre>
-      <button type="button" className="btn" onClick={copy}>{ok ? t('common.copied') : t('common.copy')}</button>
+      <Button onClick={copy}>{ok ? t('common.copied') : t('common.copy')}</Button>
     </div>
   );
 }
@@ -74,7 +75,7 @@ function Tabs({ label, idBase, items, value, onChange, small }) {
   return (
     <div role="tablist" aria-label={label} className={'keytabs' + (small ? ' sub' : '')} onKeyDown={onKey}>
       {items.map((o) => (
-        <button key={o} ref={(el) => { refs.current[o] = el; }} type="button" role="tab" id={`${idBase}-tab-${o}`} aria-selected={value === o} aria-controls={`${idBase}-panel`} tabIndex={value === o ? 0 : -1} className={'btn tab' + (value === o ? ' active' : '')} onClick={() => onChange(o)}>{o}</button>
+        <Button key={o} ref={(el) => { refs.current[o] = el; }} role="tab" id={`${idBase}-tab-${o}`} aria-selected={value === o} aria-controls={`${idBase}-panel`} tabIndex={value === o ? 0 : -1} className={'tab' + (value === o ? ' active' : '')} onClick={() => onChange(o)}>{o}</Button>
       ))}
     </div>
   );
@@ -108,7 +109,7 @@ function KeyHelp({ pubKey, children }) {
     <div className="keyhelp">
       <div className="keyhelp-head">
         <div className="keyhelp-intro">{children}</div>
-        <button type="button" className="btn chip" aria-label={t('keyhelp.infoAria')} title={t('keyhelp.infoTitle')} aria-expanded={open} aria-controls="keyhelp-panel" onClick={() => setOpen(!open)}>?</button>
+        <Button className="chip" aria-label={t('keyhelp.infoAria')} title={t('keyhelp.infoTitle')} aria-expanded={open} aria-controls="keyhelp-panel" onClick={() => setOpen(!open)}>?</Button>
       </div>
       {open && (
         <div id="keyhelp-panel" className="keyhelp-panel">
@@ -140,7 +141,7 @@ function KeyHelp({ pubKey, children }) {
               <p className="muted">{rich('keyhelp.s3.text', { test: t('device.test'), ok: t('err.transport.connection_ok') })}</p>
             </Step>
           </ol>
-          <div className="alert warn">{rich('keyhelp.warn')}</div>
+          <Alert variant="warn">{rich('keyhelp.warn')}</Alert>
         </div>
       )}
     </div>
@@ -170,13 +171,13 @@ export default function PublicKey() {
       <KeyHelp pubKey={key}>
         <p className="muted">{rich('keyhelp.intro')}</p>
       </KeyHelp>
-      {err && <div className="alert error">{errText(err)}</div>}
+      {err && <Alert variant="error">{errText(err)}</Alert>}
       {key && (
         <>
           <label htmlFor="pubkey-text" className="sr-only">{t('keyhelp.summary')}</label>
           <textarea id="pubkey-text" ref={area} readOnly rows={3} value={key} onFocus={(e) => e.target.select()} />
           <div className="row">
-            <button type="button" className="btn" onClick={copy}>{copied ? t('keyhelp.copied') : t('common.copy')}</button>
+            <Button onClick={copy}>{copied ? t('keyhelp.copied') : t('common.copy')}</Button>
           </div>
         </>
       )}

@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { updatesApplicable, updateSummary, channelOf, CHANNEL_OPTIONS, CHANNEL_HELP } from '../updates.js';
 import { errText, useI18n } from '../useI18n.js';
 import { ui } from '../errors.js';
+import { Alert, Button, Select, Switch } from './ui/index.js';
 
 // Tarjeta de Configuración: activar/desactivar la comprobación de versiones nuevas y forzarla a mano.
 export default function UpdateCheck({ info, onInfo }) {
@@ -30,24 +31,18 @@ export default function UpdateCheck({ info, onInfo }) {
     <section className="card" aria-labelledby="updates-title">
       <h3 id="updates-title">{t('updates.check.title')}</h3>
       <p className="muted">{t('updates.check.text')}</p>
-      <label className="switch">
-        <input type="checkbox" role="switch" checked={enabled} disabled={busy} onChange={(e) => toggle(e.target.checked)} />
-        <span className="track" aria-hidden="true"><i /></span>
-        <span>{enabled ? t('common.on') : t('common.off')}</span>
-      </label>
+      <Switch checked={enabled} disabled={busy} onChange={(e) => toggle(e.target.checked)} label={enabled ? t('common.on') : t('common.off')} />
       <div className="update-channel">
         <label htmlFor="update-channel">{t('updates.check.channel')}</label>
-        <select id="update-channel" value={channelOf(info)} disabled={busy || !enabled} onChange={(e) => setChannel(e.target.value)}
-          aria-describedby="update-channel-help">
-          {CHANNEL_OPTIONS.map((o) => <option key={o.value} value={o.value}>{t(o.label)}</option>)}
-        </select>
+        <Select id="update-channel" value={channelOf(info)} disabled={busy || !enabled} onChange={(e) => setChannel(e.target.value)}
+          aria-describedby="update-channel-help" options={CHANNEL_OPTIONS.map((o) => ({ value: o.value, label: t(o.label) }))} />
       </div>
       <p id="update-channel-help" className="muted">{t(CHANNEL_HELP)}</p>
       {info && <p className="muted" role="status">{updateSummary(info, t)}</p>}
       <div className="row">
-        <button className="btn ghost" onClick={refresh} disabled={busy || !enabled}>{t('updates.check.now')}</button>
+        <Button variant="ghost" onClick={refresh} disabled={busy || !enabled}>{t('updates.check.now')}</Button>
       </div>
-      <div role="status" aria-live="polite">{msg && <div className="alert error">{errText(msg)}</div>}</div>
+      <div role="status" aria-live="polite">{msg && <Alert variant="error">{errText(msg)}</Alert>}</div>
     </section>
   );
 }

@@ -7,29 +7,30 @@
   &::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
     background: linear-gradient(90deg, transparent, var(--accent), var(--accent-2), transparent); opacity: .8; }
 }
-.brand { margin-right: .75rem; font-family: v.$display; font-size: 1.15rem; letter-spacing: .12em; text-transform: uppercase;
+.brand { margin-right: .75rem; font-family: v.$display; font-size: v.$fs-subtitle; letter-spacing: .12em; text-transform: uppercase;
   background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent;
   display: inline-flex; align-items: center; gap: .5rem; }
 .brand-logo { width: 32px; height: 32px; flex: none; }
 .tabs { display: flex; gap: .25rem; flex-wrap: wrap; }
-.tab .short, .tool .ico { display: none; }
-.tab { font: inherit; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; font-size: .85rem; background: none; border: 1px solid transparent;
+.tab .short { display: none; }
+.tool { display: inline-flex; align-items: center; gap: .4rem; }
+.tab { font: inherit; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; font-size: v.$fs-hint; background: none; border: 1px solid transparent;
   padding: .4rem .8rem; border-radius: 10px; color: var(--muted); cursor: pointer; transition: all .15s;
   &:hover { color: var(--text); border-color: var(--border); }
   &.active { background: var(--bg); color: var(--accent); border-color: var(--accent); box-shadow: 0 0 14px -3px var(--accent); } }
 .update-badge { color: var(--accent-2); border-color: var(--accent-2); font-weight: 700; flex: none; white-space: nowrap;
   .ico { display: inline; } }
 .pre-tag { display: inline-block; margin-left: .4rem; padding: 0 .45rem; border: 1px solid var(--warn); border-radius: 999px; color: var(--warn);
-  font-size: .7rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; vertical-align: middle; white-space: nowrap; }
+  font-size: v.$fs-label; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; vertical-align: middle; white-space: nowrap; }
 .update-channel { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin: .75rem 0 .25rem; label { font-weight: 600; }
   select { width: auto; min-width: 9rem; max-width: 100%; } }
-.update-versions { display: flex; gap: 1.5rem; margin: 0 0 1rem; div { min-width: 0; } dt { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-  dd { margin: 0; font-size: 1.2rem; font-weight: 700; overflow-wrap: anywhere; } }
+.update-versions { display: flex; gap: 1.5rem; margin: 0 0 1rem; div { min-width: 0; } dt { font-size: v.$fs-label; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  dd { margin: 0; font-size: v.$fs-title; font-weight: 700; overflow-wrap: anywhere; } }
 .update-notes { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 40vh; overflow-y: auto; padding: .6rem .75rem; margin-bottom: 1rem;
-  border: 1px solid var(--border); border-radius: 10px; background: var(--bg); font-size: .9rem; }
+  border: 1px solid var(--border); border-radius: 10px; background: var(--bg); font-size: v.$fs-body; }
 .app { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
 .content { max-width: 1000px; width: 100%; box-sizing: border-box; margin: 0 auto; padding: v.$gap var(--pad-r) v.$gap var(--pad-l); flex: 1; display: flex; flex-direction: column; }
-.app-footer { text-align: center; font-size: .75rem; padding: .5rem var(--pad-r) .75rem var(--pad-l); }
+.app-footer { text-align: center; font-size: v.$fs-label; padding: .5rem var(--pad-r) .75rem var(--pad-l); }
 .content > section.fill { flex: 1; display: flex; flex-direction: column; }
 
 // Móvil: cabecera de una sola fila (~52 px): icono, pestañas con etiqueta corta y herramientas solo con icono.
@@ -41,9 +42,9 @@
   .brand-logo { width: 28px; height: 28px; }
   .brand-name { display: none; }
   .tabs { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; gap: .1rem; }
-  .tab { flex: none; min-height: v.$touch; padding: 0 .45rem; font-size: .74rem; letter-spacing: .03em; white-space: nowrap; display: inline-flex; align-items: center; }
+  .tab { flex: none; min-height: v.$touch; padding: 0 .45rem; font-size: v.$fs-tab-mobile; letter-spacing: .03em; white-space: nowrap; display: inline-flex; align-items: center; }
   .tab .full, .tool .lbl { display: none; }
-  .tab .short, .tool .ico { display: inline; }
+  .tab .short { display: inline; }
   .tool { flex: none; width: v.$touch; min-width: v.$touch; height: v.$touch; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
   .content { padding-top: .75rem; padding-bottom: .75rem; }
 }
@@ -51,12 +52,12 @@
 @media (max-width: v.$bp-xs) {
   .brand { display: none; }
   .topbar { padding-left: max(.5rem, var(--sl)); padding-right: max(.5rem, var(--sr)); }
-  .tab { padding: 0 .35rem; font-size: .7rem; letter-spacing: .02em; }
+  .tab { padding: 0 .35rem; font-size: v.$fs-tab-narrow; letter-spacing: .02em; }
 }
 
 // Selector de idioma de la cabecera: desplegable pequeño (la etiqueta solo la leen los lectores de pantalla).
 .topbar .lang-select { margin: 0; display: inline-flex; width: auto; }
-.topbar .lang-select select { width: auto; min-width: 0; padding: .3rem .5rem; font-size: .85rem; }
+.topbar .lang-select select { width: auto; min-width: 0; padding: .3rem .5rem; font-size: v.$fs-hint; }
 
 // Móvil: el selector muestra solo el código corto (ES/EN/Auto) y el select real, transparente y superpuesto, abre el selector nativo.
 // font-size 16px en el select evita el zoom automático de iOS al enfocarlo. Así la cabecera cabe entera, sin scroll lateral.
@@ -66,8 +67,8 @@
   .topbar .lang-select .lang-code { display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; min-width: 2.6rem; height: 2.1rem;
     // letter-spacing añade hueco tras la última letra: se compensa a la izquierda para que los márgenes queden iguales.
     padding: 0 .55rem 0 calc(.55rem + .04em);
-    font-size: .8rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text);
+    font-size: v.$fs-hint; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text);
     border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
-  .topbar .lang-select select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; padding: 0; font-size: 16px; cursor: pointer; }
+  .topbar .lang-select select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; padding: 0; font-size: v.$fs-input-mobile; cursor: pointer; }
   .topbar .lang-select:focus-within .lang-code { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); }
 }

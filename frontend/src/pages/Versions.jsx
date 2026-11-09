@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { labelOf } from '../names.js';
 import EmptyState from '../components/EmptyState.jsx';
 import { errText, useI18n } from '../useI18n.js';
+import { Alert, Button, Select } from '../components/ui/index.js';
 
 export default function Versions({ config, onGoSettings }) {
   const { t } = useI18n();
@@ -28,20 +29,19 @@ export default function Versions({ config, onGoSettings }) {
     <section className={list.length === 0 ? 'fill' : undefined}>
       <div className="row between versions-head">
         <h2>{t('versions.title')}</h2>
-        <select aria-label={t('versions.gameAria')} value={game} onChange={(e) => { setGame(e.target.value); setMsg(null); }}>
-          {games.map((g) => <option key={g} value={g}>{labelOf(config.games, g)}</option>)}
-        </select>
+        <Select aria-label={t('versions.gameAria')} value={game} onChange={(e) => { setGame(e.target.value); setMsg(null); }}
+          options={games.map((g) => ({ value: g, label: labelOf(config.games, g) }))} />
       </div>
       {limit && game && (
         <p className="muted versions-limit">
           {limit.max === 0 ? t('versions.limit.unlimited', { count: limit.count }) : t('versions.limit.max', { count: limit.count, max: limit.max })}{limit.override ? t('versions.limit.override') : t('versions.limit.global')}
         </p>
       )}
-      {msg && <div className={`alert ${msg.error ? 'error' : 'ok'}`}>{errText(msg.body)}</div>}
+      {msg && <Alert variant={msg.error ? 'error' : 'ok'}>{errText(msg.body)}</Alert>}
       {list.length === 0 && (games.length === 0 ? (
         <EmptyState variant="page" icon="🎮" title={t('sync.noGames.title')}
           text={t('versions.noGames.text')}
-          action={onGoSettings && <button type="button" className="btn primary" onClick={onGoSettings}>{t('common.goSettings')}</button>} />
+          action={onGoSettings && <Button variant="primary" onClick={onGoSettings}>{t('common.goSettings')}</Button>} />
       ) : (
         <EmptyState variant="page" icon="🗂️" title={t('versions.none.title')}
           text={t('versions.none.text')} />
@@ -53,7 +53,7 @@ export default function Versions({ config, onGoSettings }) {
             {v.sources.map((s) => (
               <div className="row between version-src" key={s.source}>
                 <span className="version-info"><b>{s.name || s.source}</b> · {t('files', { count: s.files })} · {s.mtime}</span>
-                <button className="btn" onClick={() => restore(v.version, s.source, s.name || s.source)}>{t('versions.restore')}</button>
+                <Button onClick={() => restore(v.version, s.source, s.name || s.source)}>{t('versions.restore')}</Button>
               </div>
             ))}
           </div>

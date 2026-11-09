@@ -1,0 +1,6 @@
+@use '../variables' as v;
+
+// Pastilla (componente Pill).
+.pill { display: inline-flex; align-items: center; padding: .1rem .65rem; border-radius: 99px; font-size: v.$fs-hint; font-weight: 700; color: var(--text);
+  border: 1px solid var(--border); background: var(--surface-2); max-width: 100%; overflow-wrap: anywhere;
+  &.win { color: var(--accent-2); border-color: var(--accent-2); background: rgba(244, 63, 158, .08); box-shadow: 0 0 10px -3px var(--accent-2); } }

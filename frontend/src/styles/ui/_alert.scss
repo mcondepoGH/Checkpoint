@@ -1,0 +1,8 @@
+@use '../variables' as v;
+
+// Aviso (componente Alert): variantes error, ok, warn e info.
+.alert { padding: .5rem .75rem; border-radius: 10px; border: 1px solid var(--border); font-size: v.$fs-body; margin: .5rem 0; background: var(--surface);
+  &.error { border-color: var(--danger); color: var(--danger); box-shadow: 0 0 12px -4px var(--danger); }
+  &.ok { border-color: var(--ok); color: var(--ok); box-shadow: 0 0 12px -4px var(--ok); } }
+.alert.warn { border-color: var(--warn); color: var(--warn); }
+.alert.info { margin: 0; font-size: v.$fs-hint; }

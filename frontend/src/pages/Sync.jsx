@@ -5,6 +5,7 @@ import { labelOf } from '../names.js';
 import { parseRun } from '../format.js';
 import ConflictDialog from '../components/ConflictDialog.jsx';
 import { errText, useI18n } from '../useI18n.js';
+import { Alert, Badge, Button, Checkbox, Pill } from '../components/ui/index.js';
 
 // Estados con texto propio en el distintivo: clave `sync.state.<resultado>`; otro resultado se muestra tal cual.
 const RES_KEYS = ['conflict', 'partial', 'dry-run'];
@@ -38,11 +39,11 @@ function LastRun({ s, devName }) {
       </div>
       {s.result === 'conflict' && <div className="lr-row"><dt>{t('sync.conflict')}</dt><dd className="lr-msg">{errText(s)}</dd></div>}
       {s.result === 'partial' && <div className="lr-row"><dt>{t('sync.partial')}</dt><dd className="lr-msg">{errText(s)}</dd></div>}
-      {s.offline?.length > 0 && <div className="lr-row"><dt>{t('sync.offline')}</dt><dd className="pills">{s.offline.map((d) => <span className="pill" key={d}>{devName(d)}</span>)}</dd></div>}
-      {winner && <div className="lr-row"><dt>{t('sync.winner')}</dt><dd><span className="pill win">{winner}</span></dd></div>}
+      {s.offline?.length > 0 && <div className="lr-row"><dt>{t('sync.offline')}</dt><dd className="pills">{s.offline.map((d) => <Pill key={d}>{devName(d)}</Pill>)}</dd></div>}
+      {winner && <div className="lr-row"><dt>{t('sync.winner')}</dt><dd><Pill highlight>{winner}</Pill></dd></div>}
       {list.length > 0 && (
         <div className="lr-row"><dt>{planned ? t('sync.targets') : t('sync.updated')}</dt>
-          <dd className="pills">{list.map((d) => <span className="pill" key={d}>{d}</span>)}</dd></div>
+          <dd className="pills">{list.map((d) => <Pill key={d}>{d}</Pill>)}</dd></div>
       )}
       {!structured && (s.code || s.message) && <div className="lr-row"><dt>{t('sync.detail')}</dt><dd className="lr-msg">{errText(s)}</dd></div>}
     </dl>
@@ -92,7 +93,7 @@ export default function Sync({ config, onGoSettings }) {
     } catch (e) { setError(e); }
   };
 
-  const badge = (s) => s && <span className={`badge ${s.result}`}>{RES_KEYS.includes(s.result) ? t(`sync.state.${s.result}`) : s.result}</span>;
+  const badge = (s) => s && <Badge status={s.result}>{RES_KEYS.includes(s.result) ? t(`sync.state.${s.result}`) : s.result}</Badge>;
   const openConflict = (g) => {
     const c = status[g]?.conflict;
     if (c) setConflict({ game: g, conflict: c });
@@ -107,11 +108,11 @@ export default function Sync({ config, onGoSettings }) {
   return (
     <section className={games.length === 0 ? 'fill' : undefined}>
       <h2>{t('sync.title')}</h2>
-      {error && <div className="alert error">{errText(error)}</div>}
+      {error && <Alert variant="error">{errText(error)}</Alert>}
       {games.length === 0 && (
         <EmptyState variant="page" icon="🎮" title={t('sync.noGames.title')}
           text={t('sync.noGames.text')}
-          action={onGoSettings && <button type="button" className="btn primary" onClick={onGoSettings}>{t('common.goSettings')}</button>} />
+          action={onGoSettings && <Button variant="primary" onClick={onGoSettings}>{t('common.goSettings')}</Button>} />
       )}
       <div className="grid">
         {games.map((g) => {
@@ -119,18 +120,18 @@ export default function Sync({ config, onGoSettings }) {
           const running = active && active.game === g && !active.done;
           return (
             <div className="card" key={g}>
-              <h3 title={t('sync.idTitle', { id: g })}>{gameName(g)} {running ? <span className="badge running">{t('sync.state.running')}</span> : badge(s)}</h3>
+              <h3 title={t('sync.idTitle', { id: g })}>{gameName(g)} {running ? <Badge status="running">{t('sync.state.running')}</Badge> : badge(s)}</h3>
               <p className="muted">{config.games[g].devices.map(devName).join(' ⇄ ')}</p>
               <div className={`meter ${running ? 'running' : (s?.result || '')}`} role="progressbar" aria-label={t('sync.meterAria', { game: gameName(g) })}><i /></div>
               <LastRun s={s} devName={devName} />
-              <label className="check"><input type="checkbox" checked={!!dry[g]} onChange={(e) => setDry({ ...dry, [g]: e.target.checked })} /> {t('common.dryRun')}</label>
+              <Checkbox checked={!!dry[g]} onChange={(e) => setDry({ ...dry, [g]: e.target.checked })} label={t('common.dryRun')} />
               {s?.result === 'conflict' && !running && (
                 <div className="conflict-flag" role="alert">
                   <span><b>{t('sync.flagLead')}</b> {t('sync.flagText')}</span>
-                  <button type="button" className="btn" onClick={() => openConflict(g)}>{t('sync.resolve')}</button>
+                  <Button onClick={() => openConflict(g)}>{t('sync.resolve')}</Button>
                 </div>
               )}
-              <button className="btn primary" disabled={running} onClick={() => run(g)}>{running ? t('sync.running') : t('sync.run')}</button>
+              <Button variant="primary" disabled={running} onClick={() => run(g)}>{running ? t('sync.running') : t('sync.run')}</Button>
             </div>
           );
         })}

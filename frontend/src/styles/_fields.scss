@@ -2,8 +2,8 @@
 
 // Campo = etiqueta + control + ayuda/error asociados.
 .field { display: flex; flex-direction: column; gap: .25rem; min-width: 0;
-  label { font-size: .9rem; color: var(--muted); }
-  small { font-size: .8rem; }
+  label { font-size: v.$fs-body; color: var(--muted); }
+  small { font-size: v.$fs-hint; }
   &.has-error {
     input, select { border-color: var(--danger); }
     label { color: var(--danger); }

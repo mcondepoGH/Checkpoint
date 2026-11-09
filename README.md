@@ -260,7 +260,39 @@ npm test                                         # pruebas de node (borrador, fo
 npm run build                                    # producción
 ```
 
+### Escala tipográfica
+
+Los tamaños de texto viven como tokens en `frontend/src/styles/_variables.scss` (`$fs-*`, en rem con html a 16 px). No uses tamaños sueltos.
+
+| Token | px | Uso |
+|---|---|---|
+| `$fs-label` | 12 | badges, etiquetas en mayúsculas, pie |
+| `$fs-hint` | 13 | ayudas, texto secundario, código, logs |
+| `$fs-body` | 15 | texto normal, botones, campos |
+| `$fs-subtitle` | 17 | h3, título de tarjeta |
+| `$fs-title` | 20 | h2, estado vacío |
+| `$fs-page` | 28 | h1 |
+
+Excepciones explícitas: `$fs-input-mobile` (1rem = 16 px, evita el zoom de iOS), `$fs-tab-mobile` y `$fs-tab-narrow` (pestañas móviles compactas), `$fs-icon` y `$fs-hero` (iconos).
+
 `esbuild` no está declarado en `frontend/package.json`: llega como dependencia transitiva de `vite`.
+
+### Componentes de UI
+
+Los elementos que se repiten viven en `frontend/src/components/ui/` (importa desde `components/ui/index.js`), cada uno con su partial en `frontend/src/styles/ui/`. Para cambiar el aspecto de todos los usos, edita el partial; para cambiar el marcado, el componente. No escribas a mano `className="btn"`, `badge`, `alert`, etc.
+
+| Componente | Props | Estilos |
+|---|---|---|
+| `Button` | `variant` (`primary`, `danger`, `ghost`), `className`, `type` (`button` por defecto) | `_button.scss` |
+| `Badge` | `status` (`ok`, `error`, `conflict`, `partial`, `aborted`, `dry-run`, `running`) | `_badge.scss` |
+| `Alert` | `variant` (`error`, `ok`, `warn`, `info`), `inline`, `as` | `_alert.scss` |
+| `Pill` | `highlight` | `_pill.scss` |
+| `Select` | `options` (`[{ value, label }]`), `placeholder` | `_control.scss` |
+| `Checkbox` | `label` + props del input | `_control.scss` |
+| `Switch` | `label` + props del input | `_switch.scss` |
+| `Input` | props del input (texto sin autocompletar ni corrector por defecto) | `_control.scss` |
+
+Los tests `test/ui-components.test.mjs` fijan las clases y atributos que producen.
 
 ## Licencia
 

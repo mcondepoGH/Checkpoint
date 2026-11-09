@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import Modal from './Modal.jsx';
 import { errText, useI18n } from '../useI18n.js';
 import { ui } from '../errors.js';
+import { Alert, Button } from './ui/index.js';
 
 // Solo lectura: el YAML tal como se escribiría (conserva los comentarios del fichero actual).
 export default function YamlDialog({ config, onClose }) {
@@ -16,7 +17,7 @@ export default function YamlDialog({ config, onClose }) {
   }, [config]);
   return (
     <Modal title={t('yaml.title')} onClose={onClose} wide>
-      {err && <div className="alert error" role="alert">{errText(err)}</div>}
+      {err && <Alert variant="error" role="alert">{errText(err)}</Alert>}
       {text === null && !err && <p className="muted">{t('yaml.generating')}</p>}
       {text !== null && (
         <>
@@ -24,7 +25,7 @@ export default function YamlDialog({ config, onClose }) {
           <textarea id="yaml-view" className="yaml" readOnly rows={18} value={text} wrap="off" />
         </>
       )}
-      <div className="row end"><button type="button" className="btn" onClick={onClose}>{t('common.close')}</button></div>
+      <div className="row end"><Button onClick={onClose}>{t('common.close')}</Button></div>
     </Modal>
   );
 }
