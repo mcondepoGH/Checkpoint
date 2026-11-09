@@ -2,6 +2,18 @@
 
 ## Sin publicar
 
+## 1.3.0 (2026-11-09)
+
+### Correcciones
+
+- El botón de tema pasa a 20px, con el cuadro solo en hover/foco (corrige el icono minúsculo de 1.2.0 y 1.2.1).
+
+### Novedades
+
+- El botón de salir lleva icono y texto en escritorio y solo icono en móvil.
+- La tarjeta de juego aparece plegada por defecto, con botón "Mostrar más/menos"; se despliega sola ante errores de validación en campos ocultos.
+- Literal "Máx. de versiones".
+
 ## 1.2.1 (2026-11-09)
 
 ### Correcciones
