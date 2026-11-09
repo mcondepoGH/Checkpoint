@@ -47,7 +47,7 @@ test('mismos {params} en cada clave y misma forma (cadena / plural)', () => {
 });
 
 test('ninguna traducción vacía y las de en no son copia literal del español (salvo términos comunes)', () => {
-  const SAME_OK = /^(sync\.log\.title|lang\.autoShort|app\.tab\.sync\.short|device\.host|diff\.general|keyhelp\.infoTitle|autosync\.hoursShort|sync\.offline|err\.main\.game_ambiguous|err\.main\.restore_failed|err\.config\.invalid|err\.config\.inconsistent|err\.sync\.(ref_invalid|unexpected)|err\.scheduler\.summary|err\.configstore\.backup_invalid)$/;
+  const SAME_OK = /^(sync\.log\.title|app\.tab\.sync\.short|device\.host|diff\.general|keyhelp\.infoTitle|autosync\.hoursShort|sync\.offline|err\.main\.game_ambiguous|err\.main\.restore_failed|err\.config\.invalid|err\.config\.inconsistent|err\.sync\.(ref_invalid|unexpected)|err\.scheduler\.summary|err\.configstore\.backup_invalid)$/;
   for (const k of Object.keys(F.en)) {
     const s = JSON.stringify(F.en[k]);
     assert.ok(s.length > 2 && !/^"\s*"$/.test(s), `vacía ${k}`);

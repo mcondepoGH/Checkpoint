@@ -2,6 +2,15 @@
 
 ## Sin publicar
 
+### Novedades
+
+- Cabecera más limpia: pestañas y, en el extremo derecho, un icono de perfil que abre un menú con la foto, el nombre, el idioma, el tema, "Salir" y la versión. En móvil, el icono de la app va a la izquierda y la barra cabe sin scroll lateral.
+- Foto de perfil guardada en el servidor (se ve igual en todos los dispositivos): se recorta al centro y se reduce a 256x256 en el navegador; JPG, PNG o WebP de hasta 2 MB. Nuevos endpoints `GET /api/profile`, `GET|PUT|DELETE /api/profile/photo`. La foto vive en `data/profile/<id>/` (id = SHA-256 truncado del usuario), lista para un futuro registro de usuarios; una foto en la ruta antigua `data/profile/photo.<ext>` se migra sola.
+
+### Cambios
+
+- El selector de idioma, el botón de tema y "Salir" salen de la cabecera y pasan al menú del perfil.
+
 ## 1.4.0 (2026-11-09)
 
 ### Novedades

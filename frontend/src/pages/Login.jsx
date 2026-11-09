@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import logo from '../assets/logo-icon.svg';
+import AppIcon from '../components/AppIcon.jsx';
 import { api } from '../api.js';
 import { errText, useI18n } from '../useI18n.js';
 import { Alert, Button } from '../components/ui/index.js';
@@ -22,7 +22,7 @@ export default function Login({ onDone }) {
   return (
     <div className="center">
       <form className="card login" onSubmit={submit}>
-        <h1><img src={logo} alt="" aria-hidden="true" className="login-logo" />Checkpoint</h1>
+        <h1><AppIcon className="login-logo" />Checkpoint</h1>
         <label>{t('login.user')}
           <input value={user} onChange={(e) => setUser(e.target.value)} autoComplete="username" autoFocus required />
         </label>

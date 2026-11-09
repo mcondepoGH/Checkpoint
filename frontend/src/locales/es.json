@@ -1,8 +1,7 @@
 {
   "lang": {
     "label": "Idioma",
-    "auto": "Automático",
-    "autoShort": "Auto"
+    "auto": "Automático"
   },
   "common": {
     "save": "Guardar",
@@ -38,8 +37,6 @@
       }
     },
     "sections": "Secciones",
-    "themeTitle": "Cambiar tema",
-    "themeAria": "Cambiar tema (actual: {theme})",
     "theme": {
       "auto": "automático",
       "light": "claro",
@@ -444,7 +441,11 @@
       "run_unknown": "ejecución desconocida",
       "restore_failed": "{cause}",
       "not_found": "no encontrado",
-      "frontend_not_built": "frontend no construido"
+      "frontend_not_built": "frontend no construido",
+      "photo_type": "la foto debe ser JPG, PNG o WebP",
+      "photo_too_large": "la foto supera {max_mb} MB",
+      "photo_empty": "la foto está vacía",
+      "photo_unknown": "no hay foto de perfil"
     },
     "config": {
       "required": "campo obligatorio",
@@ -596,6 +597,20 @@
       "skipped_busy": "omitido (ya en curso)",
       "skipped_conflict": "omitido por conflicto: {cause}",
       "summary": "{causes}"
+    }
+  },
+  "profile": {
+    "open": "Perfil y opciones",
+    "title": "Perfil",
+    "theme": "Tema: {theme}",
+    "version": "Versión {version}",
+    "photo": {
+      "change": "Cambiar foto",
+      "remove": "Quitar foto",
+      "type": "Formato no válido: usa JPG, PNG o WebP",
+      "empty": "La imagen está vacía",
+      "tooLarge": "La imagen supera los 2 MB",
+      "failed": "No se pudo procesar la imagen"
     }
   }
 }
