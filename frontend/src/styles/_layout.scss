@@ -37,7 +37,7 @@
   .topbar { flex-wrap: nowrap; gap: .25rem; min-height: 52px; padding-top: calc(.25rem + var(--st)); padding-bottom: .25rem; }
   .spacer { display: none; }
   .brand { margin: 0 .25rem 0 0; flex: none; }
-  .brand-logo { width: 28px; height: 28px; }
+  .brand-logo { width: 30px; height: 30px; }
   .brand-name { display: none; }
   .tabs { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; gap: .1rem; }
   .tab { flex: none; min-height: v.$touch; padding: 0 .45rem; font-size: v.$fs-tab-mobile; letter-spacing: .03em; white-space: nowrap; display: inline-flex; align-items: center; }
