@@ -5,4 +5,5 @@
   &.error { border-color: var(--danger); color: var(--danger); box-shadow: 0 0 12px -4px var(--danger); }
   &.ok { border-color: var(--ok); color: var(--ok); box-shadow: 0 0 12px -4px var(--ok); } }
 .alert.warn { border-color: var(--warn); color: var(--warn); }
+.alert.compact { display: flex; align-items: flex-start; gap: .5rem; margin: 0; padding: .375rem .625rem; font-size: v.$fs-hint; .ico { flex: none; margin-top: .0625rem; } }
 .alert.info { margin: 0; font-size: v.$fs-hint; }

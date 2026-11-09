@@ -16,7 +16,7 @@ RUN addgroup -g ${PGID} checkpoint && adduser -D -u ${PUID} -G checkpoint -h /ho
  && mkdir -p /config /keys /data /app && chown checkpoint:checkpoint /config /keys /data
 WORKDIR /app
 COPY backend/requirements.txt ./
-# bcrypt, pyyaml y pydantic-core publican wheels musllinux (x86_64 y arm64)
+# bcrypt, pyyaml, cryptography y pydantic-core publican wheels musllinux (x86_64 y arm64)
 RUN pip install --no-cache-dir -r requirements.txt
 COPY backend/app ./app
 COPY VERSION ./VERSION

@@ -7,11 +7,12 @@ import uuid
 from contextlib import asynccontextmanager
 from typing import Dict, List, Optional
 
-from fastapi import Depends, FastAPI, Query, Request, Response
+from fastapi import APIRouter, Depends, FastAPI, Query, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
+from . import apikey
 from . import avatar
 from . import settings
 from . import bootstrap
@@ -173,6 +174,58 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     def delete_photo(user: str = Depends(current_user)):
         avatar.delete(user)
         return {"ok": True, "photo": None}
+
+    # ---- API key de usuario (gestión desde el perfil, con sesión de cookie) ----
+    NO_STORE = {"Cache-Control": "no-store"}
+
+    @app.get("/api/profile/apikey", dependencies=[Depends(require)])
+    def get_apikey(response: Response, user: str = Depends(current_user)):
+        """La key vigente en claro (se ve siempre en el perfil) o `exists: false`. Nunca se genera sola."""
+        response.headers.update(NO_STORE)
+        key = apikey.get(user)
+        return {"exists": key is not None, "key": key}
+
+    @app.post("/api/profile/apikey", dependencies=[Depends(require)])
+    def post_apikey(response: Response, user: str = Depends(current_user)):
+        """Genera la key o, si ya había, la regenera (la anterior deja de valer al instante)."""
+        response.headers.update(NO_STORE)
+        return {"exists": True, "key": apikey.create(user)}
+
+    @app.delete("/api/profile/apikey", dependencies=[Depends(require)])
+    def delete_apikey(response: Response, user: str = Depends(current_user)):
+        response.headers.update(NO_STORE)
+        apikey.revoke(user)
+        return {"exists": False, "key": None}
+
+    # ---- rutas /api/hook/*: autenticación Bearer con la API key, sin cookie ni Origin ----
+    def hook_user(request: Request) -> str:
+        """Usuario dueño de la API key `Authorization: Bearer ck_...`. Es la contraparte de `current_user` para las
+        rutas /api/hook/*: ignora la cookie de sesión y no comprueba Origin (lo llaman curl, lanzadores y plugins).
+        Todo fallo (sin cabecera, mal formada, inválida, revocada, regenerada) es el mismo 401; los fallos cuentan
+        por IP y, pasado el umbral, 429 (mismo mecanismo que el login, con contador propio). Con registro de
+        usuarios, aquí se buscaría el dueño de la key en lugar de comparar con el único usuario."""
+        ip = client_ip(request)
+        wait = auth.hook_wait(ip)
+        if wait > 0:
+            raise ApiError(429, "err.main.too_many_attempts", headers={"Retry-After": str(wait)}, seconds=wait)
+        parts = request.headers.get("authorization", "").split()
+        token = parts[1] if len(parts) == 2 and parts[0].lower() == "bearer" else ""
+        user = auth.user
+        if apikey.is_well_formed(token) and apikey.verify(user, token):
+            auth.hook_ok(ip)
+            return user
+        apikey.verify(user, token)  # mismo trabajo con entrada mal formada: sin diferencias de tiempo
+        auth.hook_fail(ip)
+        raise ApiError(401, "err.apikey.invalid", headers={"WWW-Authenticate": "Bearer"})
+
+    # Todo lo de /api/hook/* cuelga de este router y de su dependencia (aquí irá `POST /api/hook/{game}/opened`).
+    hook = APIRouter(prefix="/api/hook", dependencies=[Depends(hook_user)])
+
+    @hook.get("/ping")
+    def hook_ping(user: str = Depends(hook_user)):
+        return {"ok": True, "user": user}
+
+    # (el router se incluye tras definir `opened`, más abajo)
 
     # ---- config ----
     def draft(body: dict):
@@ -439,6 +492,74 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
 
         threading.Thread(target=work, daemon=True).start()
         return {"run_id": run.id}
+
+    @hook.post("/{game}/opened")
+    async def hook_opened(game: str, device: Optional[str] = Query(None)):
+        """Aviso «se va a abrir el juego»: sync previo bloqueante con política de conflictos siempre `skip` (ignora la del juego y la del scheduler).
+        No arma vigilancia de proceso (eso es otra fase). Un fallo de la sync no es un 5xx: 200 con `outcome` descriptivo."""
+        cfg = _cfg()
+        game = game_id(game)  # el 401 ya lo dio hook_user: no se revela si el juego existe
+        g = cfg.games[game]
+        devs = {d: cfg.devices[d] for d in g.devices if d in cfg.devices}
+        if not device:
+            if len(devs) != 1:
+                raise ApiError(400, "err.hook.device_required",
+                               devices=", ".join(f"{d.name} ({i})" for i, d in devs.items()))
+            dev = next(iter(devs))
+        else:
+            try:
+                dev = resolve_ref(devs, device)
+            except ConfigError as e:
+                raise ApiError(400, "err.hook.device_ambiguous", cause=e.body())
+            if dev is None:
+                raise ApiError(404, "err.hook.device_unknown")
+        if scheduler.current == game or any(r.game == game and not r.done for r in runs.values()):
+            raise ApiError(409, "err.main.run_in_progress")
+        run = Run(game, False, g.name)
+        runs[run.id] = run
+        finished = threading.Event()
+        started, t0 = scheduler.clock(), time.monotonic()
+        box: dict = {}
+
+        def work():
+            try:
+                res, m, c, st = scheduler.run_game(cfg, game, log=run.lines.append, policy="skip")
+                box.update(res=res, m=m, c=c, st=st or {})
+                run.status = st or {"result": res, "game": game, "name": g.name, "message": m,
+                                    **(c if c and "code" in c else {})}
+                if c and c.get("code") == "err.sync.sync_in_progress":  # lock tomado por otro proceso: no cuenta como run
+                    box["busy"] = True
+                    return
+                item, det = scheduler.game_detail(g.name, res, m, c)
+                summary = scheduler.summarize({game: res}, [item] if item else [], {game: det})
+                try:
+                    history.append(history.make_entry(started, time.monotonic() - t0, "hook", summary["result"],
+                                                      {game: det}, summary["message"], summary.get("code"),
+                                                      summary.get("params")), now=scheduler.clock())
+                except Exception:  # el registro nunca rompe el aviso
+                    pass
+            finally:
+                run.done = True
+                finished.set()
+
+        threading.Thread(target=work, daemon=True).start()
+        for old in [k for k, v in runs.items() if v.done][:-20]:
+            runs.pop(old, None)
+        if not await run_in_threadpool(finished.wait, settings.HOOK_WAIT):
+            # El SSH sigue colgado: se responde ya (el cliente tiene su propio -m) y la sync termina por su cuenta.
+            return {"ok": False, "outcome": "timeout", "game": game, "device": dev, "run_id": run.id,
+                    "code": "err.hook.timeout", "params": {"seconds": settings.HOOK_WAIT}}
+        if box.get("busy"):
+            raise ApiError(409, "err.main.run_in_progress")
+        out = {"ok": box["res"] == "ok", "outcome": box["res"], "game": game, "device": dev, "run_id": run.id}
+        st = box["st"]
+        if st.get("code"):
+            out.update(code=st["code"], params=history.clean_params(st.get("params") or {}))
+        elif box["c"] and "code" in box["c"]:
+            out.update(code=box["c"]["code"], params=history.clean_params(box["c"].get("params") or {}))
+        return out
+
+    app.include_router(hook)
 
     @app.get("/api/runs/{run_id}/stream", dependencies=[Depends(require)])
     def stream(run_id: str):

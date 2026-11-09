@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { ui } from '../errors.js';
 import { PHOTO_ACCEPT, photoUrl, prepareAvatar, validatePhotoFile } from '../photo.js';
 import { errText, useI18n } from '../useI18n.js';
+import ApiKeySection from './ApiKeySection.jsx';
 import Avatar from './Avatar.jsx';
 import Icon from './Icon.jsx';
 import LanguageSelect from './LanguageSelect.jsx';
@@ -75,6 +76,7 @@ export default function ProfileMenu({ profile, version, theme, effectiveTheme, o
           </div>
           {error && <Alert variant="error" role="alert">{errText(error)}</Alert>}
           <LanguageSelect />
+          <ApiKeySection />
           <Button variant="ghost" className="profile-row" onClick={onCycleTheme}>
             <Icon name={effectiveTheme === 'dark' ? 'moon' : 'sun'} />{t('profile.theme', { theme: t(`app.theme.${theme}`) })}
           </Button>

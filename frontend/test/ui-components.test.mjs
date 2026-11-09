@@ -105,3 +105,4 @@ test('Input: texto sin autocompletar ni corrector; number y password sin añadid
   assert.match(r('Input', { autoComplete: 'username', value: '', onChange() {} }), /autocomplete="username"/i);
   assert.doesNotMatch(r('Input', { type: 'password', value: '', onChange() {} }), /spellcheck/);
 });
+test('Alert compact', { skip }, () => { assert.equal(r('Alert', { variant: 'warn', compact: true }, 'x'), '<div class="alert warn compact">x</div>'); });
