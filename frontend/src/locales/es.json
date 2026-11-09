@@ -193,12 +193,14 @@
     "process": "Proceso (opcional)",
     "processHint": "No copia si está abierto",
     "processPh": "juego.exe",
-    "keep": "Máx. de versiones (este juego)",
+    "keep": "Máx. de versiones",
     "keepHint": "Vacío = usar el global ({max}). {hint}",
     "onConflict": "En conflicto (sync automática)",
     "onConflictHint": "Sustituye al ajuste global de Sincronización automática solo para este juego.",
     "useGlobal": "Usar el ajuste global",
-    "deleteAria": "Eliminar juego {title}"
+    "deleteAria": "Eliminar juego {title}",
+    "showMore": "Mostrar más",
+    "showLess": "Mostrar menos"
   },
   "device": {
     "new": "Dispositivo nuevo",

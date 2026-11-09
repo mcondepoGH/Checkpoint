@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useId, useState } from 'react';
 import Field from './Field.jsx';
 import { MAX_VERSIONS_LIMIT, NAME_HINT, NAME_MAX, VERSIONS_HINT } from '../draft.js';
 import IdNote from './IdNote.jsx';
@@ -8,6 +8,13 @@ import { Alert, Button, Input, Select } from './ui/index.js';
 
 export default function GameCard({ game, devices, errors, localError, keepError, globalMax, nameA, nameB, idA, idB, idText, renamed, onChange, onRemove }) {
   const { t } = useI18n();
+  // Campos secundarios (proceso, versiones, conflicto, id) tras «Mostrar más». Se expanden solos si alguno tiene valor propio
+  // (distinto del de por defecto: vacío) o un error: así nunca queda oculto algo que el usuario deba ver. Después puede plegarlos.
+  const extraId = useId();
+  const extraErr = Boolean(errors.process || errors.keep_versions || errors.on_conflict || keepError);
+  const extraSet = Boolean(game.process || String(game.keep).trim() !== '' || game.onConflict);
+  const [more, setMore] = useState(extraErr || extraSet);
+  useEffect(() => { if (extraErr) setMore(true); }, [extraErr]);
   const set = (k) => (e) => onChange({ [k]: e.target.value });
   const title = game.name || t('game.new');
   // Solo dispositivos con nombre; el elegido en el otro selector no se ofrece.
@@ -38,22 +45,25 @@ export default function GameCard({ game, devices, errors, localError, keepError,
           {(p) => <Input {...p} value={game.pathB} onChange={set('pathB')} />}
         </Field>
       )}
-      <div className="two">
-        <Field label={t('game.process')} hint={t('game.processHint')} error={errors.process}>
-          {(p) => <Input {...p} value={game.process} onChange={set('process')} placeholder={t('game.processPh')} />}
+      <div id={extraId} className="cfg-more" hidden={!more}>
+        <div className="two">
+          <Field label={t('game.process')} hint={t('game.processHint')} error={errors.process}>
+            {(p) => <Input {...p} value={game.process} onChange={set('process')} placeholder={t('game.processPh')} />}
+          </Field>
+          <Field label={t('game.keep')} hint={t('game.keepHint', { max: globalMax, hint: t(VERSIONS_HINT) })} error={keepError || errors.keep_versions}>
+            {(p) => <Input {...p} type="number" inputMode="numeric" min="0" max={MAX_VERSIONS_LIMIT} step="1" value={game.keep} onChange={set('keep')} placeholder={String(globalMax)} />}
+          </Field>
+        </div>
+        <Field label={t('game.onConflict')} hint={t('game.onConflictHint')} error={errors.on_conflict}>
+          {(p) => (
+            <Select {...p} value={game.onConflict || ''} onChange={set('onConflict')} placeholder={t('game.useGlobal')}
+              options={ON_CONFLICT_OPTIONS.map(([v, l]) => ({ value: v, label: t(l) }))} />
+          )}
         </Field>
-        <Field label={t('game.keep')} hint={t('game.keepHint', { max: globalMax, hint: t(VERSIONS_HINT) })} error={keepError || errors.keep_versions}>
-          {(p) => <Input {...p} type="number" inputMode="numeric" min="0" max={MAX_VERSIONS_LIMIT} step="1" value={game.keep} onChange={set('keep')} placeholder={String(globalMax)} />}
-        </Field>
+        <IdNote id={idText} isNew={!game.id} renamed={renamed} />
       </div>
-      <Field label={t('game.onConflict')} hint={t('game.onConflictHint')} error={errors.on_conflict}>
-        {(p) => (
-          <Select {...p} value={game.onConflict || ''} onChange={set('onConflict')} placeholder={t('game.useGlobal')}
-            options={ON_CONFLICT_OPTIONS.map(([v, l]) => ({ value: v, label: t(l) }))} />
-        )}
-      </Field>
-      <IdNote id={idText} isNew={!game.id} renamed={renamed} />
-      <div className="row end">
+      <div className="row between">
+        <Button variant="ghost" onClick={() => setMore((m) => !m)} aria-expanded={more} aria-controls={extraId}>{t(more ? 'game.showLess' : 'game.showMore')}</Button>
         <Button variant="danger" onClick={onRemove} aria-label={t('game.deleteAria', { title })}>{t('common.delete')}</Button>
       </div>
     </fieldset>
