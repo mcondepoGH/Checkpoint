@@ -30,6 +30,6 @@ $fs-title: 1.25rem;    // 20 px: h2, títulos de sección/estado vacío
 $fs-page: 1.75rem;     // 28 px: h1 (login)
 $fs-icon: 2.25rem;     // 36 px: icono de estado vacío compacto
 $fs-hero: clamp(3rem, 12vw, 4.5rem); // icono de estado vacío
-$fs-input-mobile: 16px; // campos en móvil: >=16 px evita el zoom de iOS
+$fs-input-mobile: 1rem; // campos en móvil: >=16 px (1rem) evita el zoom de iOS
 $fs-tab-mobile: .74rem;  // pestañas móvil (<=640 px): ajustadas para que la barra quepa sin scroll lateral
 $fs-tab-narrow: .7rem;   // pestañas en móviles estrechos (<=380 px)

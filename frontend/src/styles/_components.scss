@@ -23,49 +23,14 @@
 
 label { font-size: v.$fs-body; color: var(--muted); }
 .login label { display: flex; flex-direction: column; gap: .25rem; }
-label.check { display: flex; flex-direction: row; align-items: center; gap: .5rem; cursor: pointer; }
-input, select {
-  font: inherit; padding: .55rem .7rem; border-radius: 10px; color: var(--text);
-  background: var(--bg); border: 1px solid var(--border); min-width: 0; transition: border-color .15s, box-shadow .15s;
-  &:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(34, 211, 238, .22), 0 0 14px -2px var(--accent); }
-}
-input[type='checkbox'] { width: 1.05rem; height: 1.05rem; padding: 0; accent-color: var(--accent-2); }
-textarea {
-  font: inherit; font-family: ui-monospace, monospace; font-size: v.$fs-hint; padding: .5rem .6rem; border-radius: 10px;
-  color: var(--text); background: var(--bg); border: 1px solid var(--border); resize: vertical; word-break: break-all;
-}
 
-.btn {
-  font: inherit; font-weight: 700; letter-spacing: .04em; cursor: pointer; padding: .5rem 1rem; border-radius: 10px;
-  border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
-  transition: transform .12s, box-shadow .2s, border-color .2s, filter .2s;
-  &:hover:not(:disabled) { border-color: var(--accent); box-shadow: 0 0 14px -2px var(--accent); transform: translateY(-1px); }
-  &:active:not(:disabled) { transform: translateY(1px); }
-  &:disabled { opacity: .55; cursor: not-allowed; }
-  &.primary { background: linear-gradient(135deg, var(--primary), var(--accent-2)); color: var(--primary-text); border-color: transparent; text-transform: uppercase; font-size: v.$fs-body;
-    &:hover:not(:disabled) { box-shadow: 0 0 22px -2px var(--accent-2); filter: brightness(1.1); }
-    &:disabled { animation: pulse-glow 1.4s infinite; opacity: .85; } }
-  &.danger { color: var(--danger); &:hover:not(:disabled) { border-color: var(--danger); box-shadow: 0 0 14px -2px var(--danger); } }
-  &.ghost { background: transparent; border-color: transparent; color: var(--muted); &:hover:not(:disabled) { color: var(--text); box-shadow: none; border-color: var(--border); } }
-}
 
 .row { display: flex; gap: .5rem; flex-wrap: wrap; align-items: center;
   &.between { justify-content: space-between; }
   &.end { justify-content: flex-end; } }
 .two { display: grid; gap: .5rem; grid-template-columns: 1fr 1fr; }
 
-.alert { padding: .5rem .75rem; border-radius: 10px; border: 1px solid var(--border); font-size: v.$fs-body; margin: .5rem 0; background: var(--surface);
-  &.error { border-color: var(--danger); color: var(--danger); box-shadow: 0 0 12px -4px var(--danger); }
-  &.ok { border-color: var(--ok); color: var(--ok); box-shadow: 0 0 12px -4px var(--ok); } }
 
-.badge { font-size: v.$fs-label; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: .15rem .6rem; border-radius: 99px;
-  border: 1px solid var(--border); vertical-align: middle; display: inline-flex; align-items: center; gap: .35rem; font-family: v.$font;
-  &::before { content: ''; width: .45rem; height: .45rem; border-radius: 50%; background: currentColor; box-shadow: 0 0 8px currentColor; }
-  &.ok { color: var(--ok); border-color: var(--ok); background: rgba(52, 245, 160, .08); }
-  &.error { color: var(--danger); border-color: var(--danger); background: rgba(255, 77, 121, .08); }
-  &.conflict, &.partial { color: var(--accent-2); border-color: var(--accent-2); background: rgba(244, 63, 158, .1); }
-  &.aborted, &.dry-run { color: var(--warn); border-color: var(--warn); background: rgba(255, 194, 71, .08); }
-  &.running { color: var(--accent); border-color: var(--accent); background: rgba(34, 211, 238, .08); &::before { animation: blink 1s infinite; } } }
 
 // Barra de estado/progreso de cada juego (indeterminada y animada mientras corre).
 .meter { height: 6px; border-radius: 99px; background: var(--bg); border: 1px solid var(--border); overflow: hidden; margin: .15rem 0;
@@ -95,9 +60,7 @@ textarea {
   .lr-msg { font-size: v.$fs-body; color: var(--text); }
   .pills { gap: .35rem; align-items: center; }
   @media (max-width: 360px) { .lr-row { grid-template-columns: 1fr; gap: .2rem; } } }
-.pill { display: inline-flex; align-items: center; padding: .1rem .65rem; border-radius: 99px; font-size: v.$fs-hint; font-weight: 700; color: var(--text);
-  border: 1px solid var(--border); background: var(--surface-2); max-width: 100%; overflow-wrap: anywhere;
-  &.win { color: var(--accent-2); border-color: var(--accent-2); background: rgba(244, 63, 158, .08); box-shadow: 0 0 10px -3px var(--accent-2); } }
+
 .grid > .card > .empty-state.inline { padding: .6rem 0; }
 .grid > .card > label.check { margin-top: .25rem; }
 .grid > .card > .btn.primary { margin-top: .15rem; }
@@ -117,10 +80,6 @@ textarea {
   &.on, &:focus-within { border-color: var(--accent-2); box-shadow: 0 0 12px -3px var(--accent-2); } }
 // Móvil: objetivos táctiles >= 40 px, campos a 16 px (iOS no hace zoom al enfocarlos) y diálogos a todo el ancho con botones apilados.
 @media (max-width: v.$bp-sm) {
-  input, select, textarea { font-size: v.$fs-input-mobile; min-height: v.$touch; }
-  input[type='checkbox'], input[type='radio'] { min-height: 0; width: 1.25rem; height: 1.25rem; }
-  .btn { min-height: v.$touch; }
-  label.check { min-height: v.$touch; }
   .login { padding: 1.25rem; }
   .modal { padding: max(.5rem, var(--st)) max(.5rem, var(--sr)) max(.5rem, var(--sb)) max(.5rem, var(--sl));
     .card { padding: .85rem; } }

@@ -8,8 +8,6 @@
 // Tarjeta que sigue a las de sincronización automática (p. ej. Versiones guardadas): misma separación que entre ellas.
 .autosync + .cfg-card { margin-top: v.$gap; }
 
-.alert.warn { border-color: var(--warn); color: var(--warn); }
-.alert.info { margin: 0; font-size: v.$fs-hint; }
 .idnote { margin: 0; font-size: v.$fs-hint; overflow-wrap: anywhere;  }
 .diffbox { margin-top: .5rem; color: var(--text); }
 

@@ -1,0 +1,14 @@
+@use '../variables' as v;
+
+// Interruptor (componente Switch).
+// Interruptor accesible (checkbox real con role=switch; el control visual es decorativo).
+.switch { position: relative; display: inline-flex; align-items: center; gap: .6rem; cursor: pointer; width: fit-content;
+  input { position: absolute; opacity: 0; width: 100%; height: 100%; margin: 0; cursor: pointer; }
+  .track { width: 2.8rem; height: 1.5rem; border-radius: 99px; background: var(--bg); border: 1px solid var(--border); position: relative; transition: border-color .2s, box-shadow .2s;
+    i { position: absolute; top: 2px; left: 2px; width: 1.1rem; height: 1.1rem; border-radius: 50%; background: var(--muted); transition: transform .2s, background .2s; } }
+  input:checked + .track { border-color: var(--accent); box-shadow: 0 0 12px -2px var(--accent);
+    i { transform: translateX(1.3rem); background: var(--accent); } }
+  input:focus-visible + .track { outline: 2px solid var(--primary); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { .track, .track i { transition: none; } } }
+
+@media (max-width: v.$bp-sm) { .switch { min-height: v.$touch; } }
