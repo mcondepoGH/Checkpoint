@@ -11,7 +11,7 @@
   &.primary { background: linear-gradient(135deg, var(--primary), var(--accent-2)); color: var(--primary-text); border-color: transparent; text-transform: uppercase; font-size: v.$fs-body;
     &:hover:not(:disabled) { box-shadow: 0 0 22px -2px var(--accent-2); filter: brightness(1.1); }
     &:disabled { animation: pulse-glow 1.4s infinite; opacity: .85; } }
-  &.danger { color: var(--danger); &:hover:not(:disabled) { border-color: var(--danger); box-shadow: 0 0 14px -2px var(--danger); } }
+  &.danger { color: var(--danger); border-color: var(--danger); &:hover:not(:disabled) { border-color: var(--danger); box-shadow: 0 0 14px -2px var(--danger); } }
   &.ghost { background: transparent; border-color: transparent; color: var(--muted); &:hover:not(:disabled) { color: var(--text); box-shadow: none; border-color: var(--border); } }
   // Solo icono (Button iconOnly): cuadrado de v.$touch, sin texto visible, mismo tamaño en todos los viewports. Va DESPUÉS de la base y de las variantes:
   // con la misma especificidad gana el orden, y `.btn` (padding .5rem 1rem) dejaba ~6 px de contenido y encogía el svg.

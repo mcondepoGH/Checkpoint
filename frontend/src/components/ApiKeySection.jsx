@@ -3,48 +3,54 @@ import { api as realApi } from '../api.js';
 import { initialState, isInsecure, reduce, run } from '../apikey.js';
 import { copyText } from '../clipboard.js';
 import { errText, useI18n } from '../useI18n.js';
-import { Alert, Button, Input } from './ui/index.js';
+import Icon from './Icon.jsx';
+import { Alert, Button } from './ui/index.js';
 
-// Sección «API key» del menú del perfil: generar, ver siempre, copiar, regenerar y revocar. Una sola key por usuario;
-// sirve solo para /api/hook/*. `initial` y `api` permiten pintar cada estado en pruebas sin red.
-export default function ApiKeySection({ initial = null, api = realApi }) {
+// Sección «API key» del menú del perfil: generar, ver siempre (completa, ajustada en varias líneas), copiar, regenerar y revocar.
+// Una sola key por usuario; sirve solo para /api/hook/*. `initial`, `api` e `insecure` permiten pintar cada estado en pruebas sin red.
+export default function ApiKeySection({ initial = null, api = realApi, insecure }) {
   const { t } = useI18n();
   const [s, dispatch] = useReducer(reduce, initial ? { ...initialState, ...initial } : initialState);
-  const field = useRef(null);
   const confirmBtn = useRef(null);
   const copyTimer = useRef(null);
   const hintId = useId();
-  const warnInsecure = typeof window !== 'undefined' && isInsecure(window.location);
+  const warnInsecure = insecure ?? (typeof window !== 'undefined' && isInsecure(window.location));
 
   const act = async (what) => { dispatch({ type: 'start' }); dispatch(await run(api, what)); };
   useEffect(() => { if (!initial) act('load'); return () => clearTimeout(copyTimer.current); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (s.confirm) confirmBtn.current?.focus(); }, [s.confirm]);
 
   const copy = async () => {
-    const ok = await copyText(s.key, field.current);
+    const ok = await copyText(s.key);
     dispatch({ type: 'copied', ok });
     clearTimeout(copyTimer.current);
     if (ok) copyTimer.current = setTimeout(() => dispatch({ type: 'copied', ok: false }), 2000);
   };
   const confirmed = () => act(s.confirm === 'revoke' ? 'revoke' : 'create');
+  const copyLabel = s.copied ? t('common.copied') : t('common.copy');
 
   return (
     <section className="apikey" aria-labelledby={`${hintId}-t`}>
-      <h3 id={`${hintId}-t`} className="apikey-title">{t('profile.apikey.title')}</h3>
+      <h3 id={`${hintId}-t`} className="apikey-title"><Icon name="key" />{t('profile.apikey.title')}</h3>
       <small className="muted" id={hintId}>{t('profile.apikey.hint')}</small>
-      {s.error && <Alert variant="error" role="alert">{errText(s.error)}</Alert>}
+      {s.error && <Alert variant="error" compact role="alert">{errText(s.error)}</Alert>}
       {!s.loaded && !s.error && <small className="muted" role="status">{t('common.loading')}</small>}
       {s.loaded && !s.exists && (
-        <div className="apikey-actions">
+        <div className="apikey-none">
           <small className="muted">{t('profile.apikey.none')}</small>
           <Button onClick={() => act('create')} disabled={s.busy}>{t('profile.apikey.generate')}</Button>
         </div>
       )}
       {s.exists && (
         <>
-          <Input ref={field} readOnly className="apikey-field" value={s.key} aria-label={t('profile.apikey.field')} aria-describedby={hintId}
-            onFocus={(e) => e.target.select()} />
-          {warnInsecure && <small className="muted">{t('profile.apikey.insecure')}</small>}
+          <div className="apikey-keyrow">
+            <code className="apikey-field" tabIndex={0} role="textbox" aria-readonly="true" aria-label={t('profile.apikey.field')} aria-describedby={hintId}>{s.key}</code>
+            <Button iconOnly className="apikey-copy" onClick={copy} title={copyLabel} aria-label={copyLabel}>
+              <Icon name={s.copied ? 'check' : 'copy'} />
+            </Button>
+            <span className="sr-only" role="status">{s.copied ? t('common.copied') : ''}</span>
+          </div>
+          {warnInsecure && <Alert variant="warn" compact><Icon name="alert" /><span>{t('profile.apikey.insecure')}</span></Alert>}
           {s.confirm ? (
             <Alert variant="warn" role="alertdialog" aria-label={t(`profile.apikey.confirm.${s.confirm}.title`)}>
               <p className="apikey-confirm">{t(`profile.apikey.confirm.${s.confirm}.text`)}</p>
@@ -55,9 +61,8 @@ export default function ApiKeySection({ initial = null, api = realApi }) {
             </Alert>
           ) : (
             <div className="apikey-actions">
-              <Button onClick={copy} aria-live="polite">{s.copied ? t('common.copied') : t('common.copy')}</Button>
               <Button onClick={() => dispatch({ type: 'ask', what: 'regenerate' })} disabled={s.busy}>{t('profile.apikey.regenerate')}</Button>
-              <Button variant="ghost" onClick={() => dispatch({ type: 'ask', what: 'revoke' })} disabled={s.busy}>{t('profile.apikey.revoke')}</Button>
+              <Button variant="danger" onClick={() => dispatch({ type: 'ask', what: 'revoke' })} disabled={s.busy}>{t('profile.apikey.revoke')}</Button>
             </div>
           )}
         </>

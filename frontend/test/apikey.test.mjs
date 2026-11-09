@@ -102,9 +102,9 @@ try {
 } catch (e) {
   skip = `esbuild no disponible: ${e.message}`;
 }
-const section = (initial, lang = 'es') => {
+const section = (initial, lang = 'es', props = {}) => {
   m.i18n.setLocale(lang);
-  return m.renderToStaticMarkup(m.React.createElement(m.ApiKeySection, { initial }));
+  return m.renderToStaticMarkup(m.React.createElement(m.ApiKeySection, { initial, ...props }));
 };
 const has = (h, s) => h.includes(s);
 const WITH = { loaded: true, exists: true, key: KEY };
@@ -112,25 +112,42 @@ const WITH = { loaded: true, exists: true, key: KEY };
 test('sin key: botón «Generar» y sin campo ni copiar', { skip }, () => {
   const h = section({ loaded: true });
   assert.ok(has(h, 'API key') && has(h, 'Generar') && has(h, 'Aún no hay API key'));
-  assert.ok(!has(h, '<input') && !has(h, 'Copiar') && !has(h, 'Regenerar'));
+  assert.ok(!has(h, 'apikey-field') && !has(h, 'Copiar') && !has(h, 'Regenerar'));
 });
 
-test('con key: campo de solo lectura monoespaciado con la key, Copiar, Regenerar y Revocar', { skip }, () => {
+test('con key: la key completa se renderiza sin truncar en un cuadro monoespaciado', { skip }, () => {
   const h = section(WITH);
-  assert.ok(has(h, `value="${KEY}"`) && has(h, 'readonly=""'), h);
-  assert.ok(has(h, 'class="apikey-field"') && has(h, 'aria-label="API key (solo lectura)"'));
-  assert.ok(has(h, 'Copiar') && has(h, 'Regenerar') && has(h, 'Revocar') && !has(h, 'Generar<'));
+  assert.ok(has(h, `>${KEY}</code>`) && has(h, 'class="apikey-field"') && has(h, 'aria-label="API key (solo lectura)"'), h);
+  assert.ok(!has(h, '<input') && !has(h, '…'));
 });
 
-test('copiado: el botón muestra «Copiado»', { skip }, () => {
+test('con key: Copiar es botón de icono accesible; Regenerar y Revocar usan Button (danger en Revocar)', { skip }, () => {
+  const h = section(WITH);
+  assert.match(h, /<button[^>]*class="btn btn-icon apikey-copy"[^>]*aria-label="Copiar"/);
+  assert.match(h, /<button[^>]*class="btn"[^>]*>Regenerar<\/button>/);
+  assert.match(h, /<button[^>]*class="btn danger"[^>]*>Revocar<\/button>/);
+  assert.ok(has(h, 'Regenerar') && has(h, 'Revocar') && !has(h, 'Generar<'));
+});
+
+test('copiado: el botón cambia a «Copiado» con icono de check', { skip }, () => {
   const h = section({ ...WITH, copied: true });
-  assert.ok(has(h, 'Copiado') && !has(h, '>Copiar<'));
+  assert.match(h, /aria-label="Copiado"/);
+  assert.ok(has(h, 'M20 6 9 17l-5-5') && !has(h, 'aria-label="Copiar"'));
+  assert.ok(!has(section(WITH), 'M20 6 9 17l-5-5'));
+});
+
+test('aviso HTTP: Alert compacto solo cuando aplica', { skip }, () => {
+  assert.ok(!has(section(WITH, 'es', { insecure: false }), 'alert warn compact'));
+  const h = section(WITH, 'es', { insecure: true });
+  assert.ok(has(h, 'class="alert warn compact"') && has(h, 'Por HTTP la key viaja en claro: usa HTTPS o VPN fuera de tu LAN.'), h);
+  assert.ok(has(section(WITH, 'en', { insecure: true }), 'Over HTTP the key travels in clear text'));
 });
 
 test('regenerar pide confirmación y avisa de que invalida comandos y plugins', { skip }, () => {
   const h = section({ ...WITH, confirm: 'regenerate' });
   assert.ok(has(h, 'role="alertdialog"') && has(h, 'comandos y plugins ya vinculados') && has(h, 'Sí, regenerar') && has(h, 'Cancelar'));
-  assert.ok(!has(h, '>Copiar<') && has(h, KEY));
+  assert.ok(!has(h, '>Regenerar<') && has(h, KEY));
+  assert.match(h, /class="btn danger"[^>]*>Sí, regenerar/);
 });
 
 test('revocar pide confirmación', { skip }, () => {
@@ -145,11 +162,11 @@ test('error traducido', { skip }, () => {
 
 test('en inglés no queda nada en español', { skip }, () => {
   for (const st of [{ loaded: true }, WITH, { ...WITH, confirm: 'regenerate' }, { ...WITH, confirm: 'revoke' }, { ...WITH, copied: true }]) {
-    const h = section(st, 'en');
+    const h = section(st, 'en', { insecure: true });
     assert.ok(!/Generar|Regenerar|Revocar|Copiar|Cancelar|Aún|vinculados|Sí,/.test(h), h);
   }
   const h = section(WITH, 'en');
-  assert.ok(has(h, 'Regenerate') && has(h, 'Revoke') && has(h, 'Copy'));
+  assert.ok(has(h, 'Regenerate') && has(h, 'Revoke') && has(h, 'aria-label="Copy"'));
   m.i18n.setLocale('es');
 });
 

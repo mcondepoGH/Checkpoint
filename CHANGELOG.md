@@ -10,6 +10,8 @@
 
 ### Cambios
 
+- Sección «API key» del perfil rediseñada: bloque con fondo y encabezado con icono, key completa ajustada en varias líneas (antes se cortaba), copiar como botón de icono (copia → check), Regenerar y Revocar (variante `danger`, con borde en el color de error) del mismo tamaño en una fila, texto de ayuda de una frase y aviso de HTTP como `Alert` compacto. Nuevos iconos `key`, `copy` y `check`; `Alert` admite `compact`.
+
 - La lógica de ejecutar un juego y traducir su resultado se extrae del ciclo del scheduler a `Scheduler.run_game` (sin cambios de comportamiento).
 - `Input` (componente de UI) acepta `ref`; la función de copiar al portapapeles pasa a `src/clipboard.js` y la comparten `PublicKey` y la API key.
 

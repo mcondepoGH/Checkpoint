@@ -624,13 +624,13 @@
     },
     "apikey": {
       "title": "API key",
-      "hint": "Only valid for the /api/hook/* routes (launcher and plugin notifications). It gives no access to the web UI or settings.",
+      "hint": "For launcher and plugin notifications (/api/hook/*). It gives no access to the web UI or settings.",
       "none": "There is no API key yet.",
       "generate": "Generate",
       "regenerate": "Regenerate",
       "revoke": "Revoke",
       "field": "API key (read-only)",
-      "insecure": "Over HTTP the key travels in clear text: use HTTPS or a VPN outside your trusted LAN.",
+      "insecure": "Over HTTP the key travels in clear text: use HTTPS or a VPN outside your LAN.",
       "confirm": {
         "regenerate": { "title": "Regenerate the API key", "text": "The current key will stop working: commands and plugins already linked will fail until you use the new one.", "yes": "Yes, regenerate" },
         "revoke": { "title": "Revoke the API key", "text": "Linked commands and plugins will stop working. You can generate a new key whenever you want.", "yes": "Yes, revoke" }
