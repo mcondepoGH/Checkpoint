@@ -2,9 +2,9 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { api } from '../api.js';
 import Field from './Field.jsx';
 import AutoSyncLog from './AutoSyncLog.jsx';
-import { fmtDateTime, ON_CONFLICT_OPTIONS, RESULT_CLASS, resultText } from '../format.js';
+import { fmtDateTime, ON_CONFLICT_OPTIONS } from '../format.js';
 import { errText, useI18n } from '../useI18n.js';
-import { recordText, ui } from '../errors.js';
+import { ui } from '../errors.js';
 
 const PRESETS = [1, 6, 12, 24];
 const ON_CONFLICT_HELP = { skip: 'autosync.help.skip', newest: 'autosync.help.newest' }; // claves del catálogo
@@ -35,7 +35,7 @@ export default function AutoSync() {
   }, []);
   useEffect(() => { load(); }, [load]);
 
-  // Refresca estado (última/próxima ejecución) sin pisar lo que se esté editando.
+  // Refresca estado (próxima ejecución) sin pisar lo que se esté editando.
   useEffect(() => {
     const timer = setInterval(async () => {
       try { setSaved(await api('/api/scheduler')); } catch { /* sin red: se reintenta */ }
@@ -61,7 +61,6 @@ export default function AutoSync() {
     } finally { setBusy(false); }
   };
 
-  const ls = saved?.last_status;
   return (
     <>
     <section className="card autosync" aria-labelledby="autosync-title">
@@ -115,10 +114,7 @@ export default function AutoSync() {
 
       {saved && (
         <p className="autosync-status" aria-live="polite">
-          {t('autosync.lastRun')} {fmtDateTime(saved.last_run, locale)}
-          {ls && <> <span className={`badge ${RESULT_CLASS[ls.result] || ''}`}>{resultText(ls.result, t)}</span></>}
-          {' · '}{t('autosync.nextRun')} {saved.enabled ? fmtDateTime(saved.next_run, locale) : t('autosync.nextOff')}
-          {recordText(ls, t) && <small className="muted block">{recordText(ls, t)}</small>}
+          {t('autosync.nextRun')} {saved.enabled ? fmtDateTime(saved.next_run, locale) : t('autosync.nextOff')}
         </p>
       )}
     </section>

@@ -111,5 +111,5 @@ test('locales/es.json es JSON válido con claves de prueba', async () => {
   const es = JSON.parse(fs.readFileSync(new URL('../src/locales/es.json', import.meta.url), 'utf8'));
   const i = createI18n({ catalogs: { es }, storage: mem(), languages: ['es'] });
   assert.equal(i.t('lang.label'), 'Idioma');
-  assert.equal(i.t('lang.auto'), 'Automático (navegador)');
+  assert.equal(i.t('lang.auto'), 'Automático');
 });

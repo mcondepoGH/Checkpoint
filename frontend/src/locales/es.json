@@ -1,7 +1,8 @@
 {
   "lang": {
     "label": "Idioma",
-    "auto": "Automático (navegador)"
+    "auto": "Automático",
+    "autoShort": "Auto"
   },
   "common": {
     "save": "Guardar",
@@ -287,7 +288,6 @@
       "newest": "Gana el más reciente: se aplica el save con fecha más nueva y el otro se guarda en versiones. Si las fechas difieren menos de 2 s, se omite."
     },
     "saved": "Guardado.",
-    "lastRun": "Última ejecución:",
     "nextRun": "Próxima:",
     "nextOff": "desactivada"
   },
