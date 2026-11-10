@@ -34,6 +34,7 @@
 // Fila del menú (idioma, tema, actualizar, API key, salir): mismo patrón icono + etiqueta + valor a la derecha, misma altura (44 px, valor local; no cambia $touch).
 $touch-profile: 44px;
 .profile-row.btn, .profile-pref { display: flex; align-items: center; justify-content: flex-start; gap: .75rem; width: 100%; min-height: $touch-profile; box-sizing: border-box; text-align: left; }
+.profile-row.btn:is(a) { text-decoration: none; } // enlace con aspecto de fila (Documentación de la API)
 .profile-pref { padding: .5rem 1rem; font-size: v.$fs-body; .ico { flex: none; } }
 .profile-pref.btn { font-weight: inherit; }
 .profile-row-label { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }

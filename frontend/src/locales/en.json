@@ -676,6 +676,7 @@
     "update": "Update to v{version}",
     "title": "Profile",
     "themeLabel": "Theme",
+    "apidocs": "API documentation",
     "group": { "prefs": "Preferences", "integration": "Integration", "account": "Account" },
     "photo": {
       "change": "Change photo",

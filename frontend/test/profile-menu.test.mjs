@@ -53,6 +53,19 @@ test('orden: identidad, actualización, Preferencias, Integración, Cuenta (sali
   assert.deepEqual(pos, [...pos].sort((a, b) => a - b), order.join(' < '));
 });
 
+test('enlace «Documentación de la API»: tras la API key, antes de Cuenta, a /api/docs en pestaña nueva (es y en)', { skip }, () => {
+  for (const [lang, txt, acct] of [['es', 'Documentación de la API', 'Cuenta'], ['en', 'API documentation', 'Account']]) {
+    const h = menu({}, lang);
+    const a = h.match(/<a [^>]*href="\/api\/docs"[^>]*>/);
+    assert.ok(a, `falta el enlace (${lang})`);
+    assert.match(a[0], /target="_blank"/); assert.match(a[0], /rel="noopener"/); assert.match(a[0], /class="[^"]*profile-row/);
+    const i = at(h, a[0]);
+    assert.ok(i > at(h, 'class="apikey"') && i < at(h, `>${acct}<`), lang);
+    assert.ok(h.slice(i).startsWith(a[0]) && h.slice(i, i + 800).includes(txt), lang);
+    assert.ok(h.slice(i, i + 300).includes('class="ico"'), 'lleva icono');
+  }
+});
+
 test('sin actualización no hay entrada; con ella va justo bajo la identidad y antes de Preferencias', { skip }, () => {
   assert.ok(!menu({ updates: null }).includes('profile-update'));
   const h = menu({ updates: UPD });
