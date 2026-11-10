@@ -2,6 +2,8 @@
 
 ## Sin publicar
 
+## 1.7.1 (2026-11-10)
+
 ### Cambios
 
 - Quitado el botón y el aviso de «Instalar como app» de la interfaz (componente, estilos, textos es/en, manejo de `beforeinstallprompt` y tests). El manifest, los iconos y el service worker se mantienen: la app sigue siendo instalable desde el menú del navegador.
