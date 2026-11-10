@@ -1,0 +1,127 @@
+"""Juegos con un solo dispositivo («solo checkpoint»): el hub guarda versiones, no hay copia entre equipos."""
+import os
+
+import pytest
+
+from app.config import parse_config
+from app.sync import decide, fingerprint, list_versions, load_baseline, restore_version, run_sync, save_baseline
+from fakes import LocalTransport
+
+CFG = parse_config({
+    "devices": {"pc": {"name": "pc", "host": "h1", "user": "u", "os": "windows"}},
+    "games": {"g": {"name": "g", "devices": ["pc"], "paths": {"pc": "C:/Saves/g"}, "process": "g.exe"}},
+})
+
+
+class Env:
+    def __init__(self, tmp):
+        self.data = tmp / "data"
+        self.root = tmp / "pc"
+        self.pc_dir = self.root / "C:/Saves/g"
+        self.hub = self.data / "hub" / "g"
+        self.logs = []
+
+    def write(self, d, name, content, mtime):
+        f = d / name
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text(content)
+        os.utime(f, (mtime, mtime))
+
+    def sync(self, dry=False, opts=None, **kw):
+        return run_sync(CFG, "g", dry, self.data, self.logs.append, {"pc": LocalTransport(self.root, **kw)}, **(opts or {}))
+
+    def seed(self, content="base"):
+        for d in (self.pc_dir, self.hub):
+            self.write(d, "s.sav", content, 500)
+        h = fingerprint(self.pc_dir).hash
+        save_baseline(self.data, "g", {"pc": h, "hub": h})
+
+
+@pytest.fixture
+def env(tmp_path):
+    return Env(tmp_path)
+
+
+def read(d, name):
+    return (d / name).read_text()
+
+
+def test_primera_vez_copia_al_hub_sin_version(env):
+    env.write(env.pc_dir, "s.sav", "x", 1000)
+    st = env.sync()
+    assert st["result"] == "ok" and st["winner"] == "pc"
+    assert read(env.hub, "s.sav") == "x" and list_versions(env.data, "g") == []
+    assert any("en pc (checkpoint)" in line and "entre" not in line for line in env.logs)
+
+
+def test_cambio_guarda_hub_antiguo_como_version(env):
+    env.seed("old")
+    env.write(env.pc_dir, "s.sav", "new", 2000)
+    st = env.sync()
+    assert st["result"] == "ok" and st["winner"] == "pc"
+    assert read(env.hub, "s.sav") == "new"
+    v = list_versions(env.data, "g")
+    assert len(v) == 1 and {x["source"] for x in v[0]["sources"]} == {"hub"}
+    assert read(env.data / "versions/g" / v[0]["version"] / "hub", "s.sav") == "old"
+
+
+def test_sin_cambios_ya_sincronizado(env):
+    env.seed("x")
+    assert env.sync()["code"] == "err.sync.already_synced"
+    assert list_versions(env.data, "g") == []
+
+
+def test_restaurar_version_y_sincronizar(env):
+    env.seed("old")
+    env.write(env.pc_dir, "s.sav", "new", 2000)
+    env.sync()
+    ver = list_versions(env.data, "g")[0]["version"]
+    assert restore_version(CFG, "g", ver, "hub", env.data)["code"] == "err.sync.restored"
+    assert read(env.hub, "s.sav") == "old"
+    st = env.sync()
+    assert st["result"] == "ok" and st["winner"] == "hub"
+    assert read(env.pc_dir, "s.sav") == "old"
+
+
+def test_carpeta_vacia_no_gana_al_hub(env):
+    env.seed("x")
+    for f in env.pc_dir.iterdir():
+        f.unlink()
+    st = env.sync()
+    assert st["result"] == "ok" and st["winner"] == "hub"
+    assert read(env.pc_dir, "s.sav") == "x"
+
+
+def test_sin_baseline_contenidos_distintos_es_conflicto(env):
+    env.write(env.pc_dir, "s.sav", "a", 1000)
+    env.write(env.hub, "s.sav", "b", 1000)
+    st = env.sync()
+    assert st["result"] == "conflict"
+    assert read(env.pc_dir, "s.sav") == "a" and read(env.hub, "s.sav") == "b"
+
+
+def test_dispositivo_offline_aborta_sin_tocar(env):
+    env.seed("x")
+    st = env.sync(down=True)
+    assert st["result"] == "aborted" and "pc" in st["message"]
+    assert read(env.hub, "s.sav") == "x"
+
+
+def test_dry_run_no_toca_nada(env):
+    env.seed("old")
+    env.write(env.pc_dir, "s.sav", "new", 2000)
+    before = load_baseline(env.data, "g")
+    assert env.sync(dry=True)["result"] == "dry-run"
+    assert read(env.hub, "s.sav") == "old" and load_baseline(env.data, "g") == before
+    assert not (env.data / "versions").exists()
+
+
+def test_decide_un_dispositivo():
+    from app.sync import Fingerprint
+    a, b, vacio = Fingerprint("A", 1, 1), Fingerprint("B", 1, 1), Fingerprint(None, 0, 0)
+    assert decide({"pc": a, "hub": a}, {})["kind"] == "same"
+    assert decide({"pc": a, "hub": vacio}, {})["winner"] == "pc"  # primera vez
+    assert decide({"pc": a, "hub": b}, {"pc": "B", "hub": "B"})["winner"] == "pc"  # cambió el dispositivo
+    assert decide({"pc": a, "hub": b}, {"pc": "A", "hub": "A"})["winner"] == "hub"  # hub restaurado
+    assert decide({"pc": a, "hub": b}, {})["reason"] == "no-baseline"
+    assert decide({"pc": vacio, "hub": b}, {"pc": "B", "hub": "B"})["winner"] == "hub"  # carpeta vacía
