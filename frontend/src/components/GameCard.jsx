@@ -4,7 +4,7 @@ import { MAX_VERSIONS_LIMIT, NAME_HINT, NAME_MAX, VERSIONS_HINT } from '../draft
 import IdNote from './IdNote.jsx';
 import { ON_CONFLICT_OPTIONS } from '../format.js';
 import { useI18n } from '../useI18n.js';
-import { Alert, Button, Input, Select } from './ui/index.js';
+import { Alert, Button, Input, Select, Switch } from './ui/index.js';
 
 export default function GameCard({ game, devices, errors, localError, keepError, globalMax, nameA, nameB, idA, idB, idText, renamed, onChange, onRemove, onShowLaunchers }) {
   const { t } = useI18n();
@@ -24,11 +24,16 @@ export default function GameCard({ game, devices, errors, localError, keepError,
   );
   const pathErr = (id) => (id ? errors[`paths.${id}`] : undefined);
   return (
-    <fieldset className="card cfg-card">
-      <legend className="cfg-title">{title}</legend>
+    <fieldset className={game.enabled === false ? 'card cfg-card cfg-card-disabled' : 'card cfg-card'}>
+      <legend className="cfg-title">{title}{game.enabled === false && <span className="cfg-tag">{t('game.disabledTag')}</span>}</legend>
       <Field label={t('game.name')} hint={t(NAME_HINT, { max: NAME_MAX })} error={localError || errors.name || errors['']}>
         {(p) => <Input {...p} value={game.name} onChange={set('name')} maxLength={NAME_MAX} placeholder={t('game.namePh')} />}
       </Field>
+      <div className="game-enabled">
+        <Switch checked={game.enabled !== false} aria-describedby={`${extraId}-enabled`}
+          onChange={(e) => onChange({ enabled: e.target.checked })} label={t('game.enabled')} />
+        <small id={`${extraId}-enabled`} className="muted">{t('game.enabledHelp')}</small>
+      </div>
       {errors.devices && <Alert variant="error" role="alert">{errors.devices}</Alert>}
       <div className="two">
         <Field label={t('game.dev1')} error={errors['devices.0']}>{sel('a', game.b, t('game.choose'))}</Field>
