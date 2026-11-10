@@ -133,6 +133,15 @@ R409 = error_response(
      {"cause": {"code": "err.config.ref_ambiguous", "params": {"ref": "Juego", "matches": "'Juego' (g1), 'juego' (g2)"}}}))
 
 
+def iter_api_routes(routes):
+    """Todas las APIRoute, incluidas las de routers incluidos (FastAPI reciente los guarda anidados en `original_router`)."""
+    for r in routes:
+        if isinstance(r, APIRoute):
+            yield r
+        elif hasattr(r, "original_router"):
+            yield from iter_api_routes(r.original_router.routes)
+
+
 def patch_schema(schema: dict) -> None:
     """Esquema de seguridad único, sin los 422 de validación (la API no los devuelve) y con la seguridad en cada operación."""
     comps = schema.setdefault("components", {})
@@ -154,8 +163,8 @@ def install(app: FastAPI, require: Callable) -> None:
     1. Oculta del esquema toda ruta que no sea del tag público (por defecto, una ruta nueva queda oculta).
     2. Sirve `/api/openapi.json`, `/api/docs` y los assets de Swagger UI (empaquetada: sin CDN, sin internet) solo con
     sesión. Sin sesión, el 401 de `require`, como el resto de rutas protegidas."""
-    for r in app.routes:
-        if isinstance(r, APIRoute) and TAG not in (r.tags or []):
+    for r in iter_api_routes(app.routes):
+        if TAG not in (r.tags or []):
             r.include_in_schema = False
 
     def openapi() -> dict:
