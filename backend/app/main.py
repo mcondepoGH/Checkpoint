@@ -8,7 +8,7 @@ import uuid
 from contextlib import asynccontextmanager
 from typing import Dict, List, Optional
 
-from fastapi import APIRouter, Depends, FastAPI, Query, Request, Response
+from fastapi import APIRouter, Depends, FastAPI, Path, Query, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
@@ -281,12 +281,12 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     hook = APIRouter(prefix="/api/hook", tags=[apidocs.TAG], dependencies=[Depends(hook_user)],
                      responses={401: apidocs.R401, 429: apidocs.R429})
 
-    @hook.get("/ping")
+    @hook.get("/ping", **apidocs.PING)
     def hook_ping(user: str = Depends(hook_user)):
         api_log.debug("hook ping: usuario=%s", user)
         return {"ok": True, "user": user}
 
-    @hook.get("/watches")
+    @hook.get("/watches", **apidocs.WATCHES)
     def hook_watches():
         """Vigilancias de cierre activas (en memoria): [{game, device, state: waiting|running|settling, since}]."""
         w = watcher.list()
@@ -719,8 +719,11 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         watcher.arm(game, dev)
         return {"watching": True}
 
-    @hook.post("/{game}/opened")
-    async def hook_opened(game: str, device: Optional[str] = Query(None)):
+    @hook.post("/{game}/opened", **apidocs.OPENED)
+    async def hook_opened(game: str = Path(description="Id o nombre del juego.", examples=["Mi Juego"]),
+                          device: Optional[str] = Query(None, description="Id o nombre del dispositivo donde se "
+                                                        "vigila el proceso del juego. Obligatorio si el juego está en "
+                                                        "más de un dispositivo.", examples=["PC uno"])):
         """Aviso «se va a abrir el juego»: sync previo bloqueante con política de conflictos siempre `skip` (ignora la del juego y la del scheduler).
         Tras el aviso (salvo 400/401/404/409) arma la vigilancia de cierre si el juego tiene `process` (`watching`). Un fallo de la sync no es un 5xx: 200 con `outcome` descriptivo."""
         cfg = _cfg()

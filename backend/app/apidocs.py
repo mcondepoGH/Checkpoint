@@ -4,7 +4,7 @@ Alcance: únicamente las rutas del tag `TAG`. Todo lo demás de `/api/*` (login,
 la web, queda fuera del esquema (`include_in_schema=False`, ver `install`) y no aparece en la documentación.
 Acceso: `/api/openapi.json` y `/api/docs` exigen sesión web (misma dependencia que las rutas internas); la API key sola
 no los abre. Los textos están en español; los códigos `err.*` van sin traducir (son el contrato)."""
-from typing import Callable
+from typing import Callable, Optional
 
 from fastapi import Depends, FastAPI
 from fastapi.openapi.docs import get_swagger_ui_html
@@ -49,6 +49,42 @@ class ErrorDetail(BaseModel):
 class ErrorBody(BaseModel):
     """Solo para el esquema de documentación: las respuestas reales las construye `apierror`."""
     detail: ErrorDetail
+
+
+class Ping(BaseModel):
+    ok: bool = Field(description="Siempre `true` si la key es válida.")
+    user: str = Field(description="Usuario dueño de la API key.")
+
+
+class WatchItem(BaseModel):
+    game: str = Field(description="Id interno del juego.")
+    device: str = Field(description="Id interno del dispositivo donde se vigila el proceso.")
+    state: str = Field(description="`waiting`: aún no se vio el proceso; `running`: visto abierto; `settling`: cerrado, "
+                                   "esperando unos segundos antes del checkpoint.", examples=["running"])
+    since: str = Field(description="Inicio del estado actual (UTC, ISO 8601).")
+    last_poll: str = Field(description="Último sondeo completado (latido, UTC ISO 8601).")
+    poll: float = Field(description="Intervalo de sondeo, en segundos (15 por defecto).")
+
+
+class OpenedResult(BaseModel):
+    ok: bool = Field(description="`true` solo si `outcome` es `ok`.")
+    outcome: str = Field(description="`ok`, `conflict`, `aborted` (dispositivo sin conexión, proceso del juego "
+                                     "abierto...), `partial`, `error` o `timeout`.", examples=["ok"])
+    game: str = Field(description="Id interno del juego.")
+    device: str = Field(description="Id interno del dispositivo.")
+    run_id: str = Field(description="Id de la ejecución (la misma que verás en el historial).")
+    code: Optional[str] = Field(None, description="Qué pasó, como código `err.sync.*` (o `err.hook.timeout`). "
+                                                  "Sin traducir. Puede faltar.")
+    params: Optional[dict] = Field(None, description="Parámetros de `code`.")
+    watching: bool = Field(description="`true` si se armó la vigilancia de cierre (el juego tiene `process`).")
+    watch_reason: Optional[str] = Field(None, description="Si `watching` es `false`: `no_process` (el juego no tiene "
+                                                          "`process` configurado).")
+
+
+def _ok(model, description: str, *examples: tuple) -> dict:
+    """Respuesta 200 solo para el esquema (no valida ni filtra la respuesta real). examples = (clave, resumen, valor)."""
+    ex = {k: {"summary": s, "value": v} for k, s, v in examples}
+    return {"model": model, "description": description, "content": {"application/json": {"examples": ex}}}
 
 
 def _err(code: str, params: dict = None) -> dict:
@@ -149,3 +185,63 @@ def install(app: FastAPI, require: Callable) -> None:
         if path is None or not path.is_file():
             raise ApiError(404, "err.main.not_found")
         return FileResponse(path, headers={"Cache-Control": "no-cache"})
+
+
+# ---- documentación de cada operación (se pasa tal cual al decorador: solo summary/description/responses) ----
+PING = dict(
+    summary="Comprobar la API key",
+    description="Devuelve `200` si la API key es válida. Úsalo para probar la key y la conexión con el hub: no cambia "
+                "nada ni toca ningún juego.",
+    responses={200: _ok(Ping, "La key es válida.", ("ok", "Key válida", {"ok": True, "user": "admin"}))})
+
+WATCHES = dict(
+    summary="Listar las vigilancias de cierre activas",
+    description="Vigilancias activas ahora mismo: tras un aviso `opened`, el hub vigila el proceso del juego en ese "
+                "dispositivo y, al cerrarse, hace el checkpoint solo. Son en memoria (se pierden si el hub se "
+                "reinicia). Lista vacía si no hay ninguna. Solo lectura, sin datos sensibles.",
+    responses={200: _ok(list[WatchItem], "Lista de vigilancias (puede estar vacía).",
+                        ("running", "Un juego en marcha", [{"game": "g1", "device": "dev-1", "state": "running",
+                                                          "since": "2026-01-15T18:30:12Z",
+                                                          "last_poll": "2026-01-15T18:45:12Z", "poll": 15.0}]),
+                        ("empty", "Sin vigilancias", []))})
+
+_OPENED_OK = {"ok": True, "outcome": "ok", "game": "g1", "device": "dev-1", "run_id": "3f9c1a7b2d4e",
+              "code": "err.sync.done", "params": {}, "watching": True}
+OPENED = dict(
+    summary="Avisar de que se va a abrir un juego",
+    description=(
+        "> **Atención: Try it out ejecuta de verdad.** Esta operación hace una **sincronización previa real** del "
+        "juego (puede copiar ficheros de save al dispositivo) y **arma el vigilante de cierre** del juego. No es una "
+        "simulación: úsala solo con un juego y dispositivo reales y ten en cuenta que, al cerrarse el juego, el hub "
+        "hará un checkpoint.\n\n"
+        "Se llama justo antes de arrancar el juego. El hub sincroniza ese juego **antes de que arranque**: si tiene un "
+        "save más nuevo, lo copia al dispositivo; si no, termina sin copiar. Usa **siempre** la política de conflictos "
+        "`skip`: ante un conflicto no toca nada, lo indica en la respuesta y lo deja en el historial (disparador "
+        "«Aviso del juego»).\n\n"
+        "**Bloqueante.** La petición espera a que acabe la sincronización, hasta 55 s. Si se supera, responde `200` "
+        "con `outcome: timeout` y la sincronización sigue en segundo plano. Usa en el cliente un tiempo máximo mayor "
+        "(p. ej. `curl -m 60`).\n\n"
+        "**Un fallo de la sincronización no es un 5xx.** Responde `200` con `ok: false`, `outcome` (`conflict`, "
+        "`aborted`, `partial`, `error`, `timeout`) y `code`/`params` con el detalle. No se reintenta; el cron de la "
+        "sincronización automática sigue como red de seguridad. Solo `ok: true` es éxito.\n\n"
+        "**Vigilancia de cierre.** Con cualquier `200` (también `conflict`, `aborted` o `timeout`) se arma la "
+        "vigilancia si el juego tiene `process` (`watching: true`); si no, `watching: false` con "
+        "`watch_reason: no_process`. Nunca se arma con `400`, `401`, `404` ni `409`. La respuesta no incluye la "
+        "duración: la sincronización dura hasta 55 s.\n\n"
+        "**Juego y dispositivo.** `game` es el id o el nombre del juego. `device` (id o nombre) debe pertenecer al "
+        "juego; es obligatorio si el juego está en más de un dispositivo, y se deduce si está en uno solo."),
+    responses={
+        200: _ok(OpenedResult, "La sincronización terminó (con éxito o no) o superó el tiempo máximo. Mira `outcome`.",
+                 ("ok", "Éxito: se copió el save más nuevo", _OPENED_OK),
+                 ("already_synced", "Éxito: no había nada que copiar",
+                  {**_OPENED_OK, "code": "err.sync.already_synced"}),
+                 ("conflict", "Conflicto: no se tocó nada",
+                  {**_OPENED_OK, "ok": False, "outcome": "conflict", "code": "err.sync.conflict"}),
+                 ("aborted", "Abortado (p. ej. dispositivo sin conexión)",
+                  {**_OPENED_OK, "ok": False, "outcome": "aborted", "code": "err.sync.all_offline"}),
+                 ("no_process", "Éxito, pero el juego no tiene `process`: sin vigilancia",
+                  {**_OPENED_OK, "watching": False, "watch_reason": "no_process"}),
+                 ("timeout", "Superó los 55 s: sigue en segundo plano",
+                  {"ok": False, "outcome": "timeout", "game": "g1", "device": "dev-1", "run_id": "3f9c1a7b2d4e",
+                   "code": "err.hook.timeout", "params": {"seconds": 55}, "watching": True})),
+        400: R400, 404: R404, 409: R409})
