@@ -349,6 +349,21 @@
       "hook": "Game opened",
       "hook_closed": "Game closed"
     },
+    "games": "{n} games",
+    "count": {
+      "ok_one": "{n} succeeded",
+      "ok_other": "{n} succeeded",
+      "error_one": "{n} failed",
+      "error_other": "{n} failed",
+      "aborted_one": "{n} aborted",
+      "aborted_other": "{n} aborted",
+      "skipped_one": "{n} skipped",
+      "skipped_other": "{n} skipped",
+      "conflict_one": "{n} conflict",
+      "conflict_other": "{n} conflicts",
+      "partial_one": "{n} partial",
+      "partial_other": "{n} partial"
+    },
     "noDetail": "No per-game detail."
   },
   "pwa": {

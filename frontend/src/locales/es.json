@@ -349,6 +349,21 @@
       "hook": "Aviso del juego",
       "hook_closed": "Cierre del juego"
     },
+    "games": "{n} juegos",
+    "count": {
+      "ok_one": "{n} correcto",
+      "ok_other": "{n} correctos",
+      "error_one": "{n} error",
+      "error_other": "{n} errores",
+      "aborted_one": "{n} abortado",
+      "aborted_other": "{n} abortados",
+      "skipped_one": "{n} omitido",
+      "skipped_other": "{n} omitidos",
+      "conflict_one": "{n} con conflicto",
+      "conflict_other": "{n} con conflictos",
+      "partial_one": "{n} parcial",
+      "partial_other": "{n} parciales"
+    },
     "noDetail": "Sin detalle por juego."
   },
   "pwa": {

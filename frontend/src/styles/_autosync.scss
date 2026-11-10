@@ -19,7 +19,8 @@
   .runlog { list-style: none; margin: 0; padding: 0; max-height: 22rem; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--bg);
     > li + li { border-top: 1px solid var(--border); } }
   .run { padding: .5rem .75rem .6rem; display: grid; gap: .3rem; }
-  .run-head { display: grid; grid-template-columns: 10.5rem minmax(0, 1fr) 4.5rem 6.5rem; gap: .6rem; align-items: center; font-size: v.$fs-body;
+  .run-head { display: grid; grid-template-columns: minmax(11.5rem, max-content) minmax(0, 1fr) minmax(4rem, max-content) minmax(7rem, max-content); gap: .6rem; align-items: center; font-size: v.$fs-body;
+    .when { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
     .trig { color: var(--muted); overflow-wrap: anywhere; }
     .dur { color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
     .badge { justify-self: start; } }
@@ -32,8 +33,14 @@
   .msg { margin: 0; font-size: v.$fs-body; overflow-wrap: anywhere; &.is-error { color: var(--danger); }
     &.has-icon { display: flex; align-items: flex-start; gap: .4rem; .ico { flex: none; width: 1.1em; height: 1.1em; margin-top: .15em; } } }
   .games .msg { padding-left: .75rem; }
+  // Botón-resumen de las entradas con más de 3 juegos (los correctos van plegados); el chevron gira al abrir.
+  .fold { display: inline-flex; align-items: center; gap: .4rem; justify-self: start; max-width: 100%; padding: .15rem .4rem .15rem 0; border: 0; background: none; color: var(--muted);
+    font: inherit; font-size: v.$fs-hint; text-align: left; cursor: pointer; overflow-wrap: anywhere;
+    .ico { flex: none; width: 1.1em; height: 1.1em; }
+    &[aria-expanded='true'] .ico { transform: rotate(180deg); } }
   .muted { font-size: v.$fs-hint; }
   @media (max-width: v.$bp-sm) {
+    .fold { min-height: v.$touch; }
     .run-head { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'when trig' 'dur badge'; row-gap: .25rem;
       .when { grid-area: when; } .trig { grid-area: trig; text-align: right; font-size: v.$fs-hint; }
       .dur { grid-area: dur; text-align: left; font-size: v.$fs-hint; } .badge { grid-area: badge; justify-self: end; } }

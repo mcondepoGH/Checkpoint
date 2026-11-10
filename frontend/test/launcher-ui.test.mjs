@@ -268,6 +268,119 @@ test('Registro: varios juegos con el mismo resultado que la cabecera no llevan e
   assert.equal(count(h, 'El checkpoint de cierre falló (X)'), 1, h);
 });
 
+const gm = (n, result = 'ok', extra = {}) => Object.fromEntries(Array.from({ length: n }, (_, i) => [`g${i}`, { name: `Juego ${i}`, result, message: '', ...extra }]));
+const OFFLINE = { code: 'err.sync.all_offline', params: { devices: 'Deck' } };
+const abortedScheduled = (trigger = 'scheduled') => runEntry({ trigger, result: 'aborted', duration: 1.2, code: 'err.scheduler.summary',
+  params: { causes: [{ path: 'Juego 0', ...OFFLINE }] }, games: { g0: { name: 'Juego 0', result: 'aborted', ...OFFLINE, message: '' } } });
+
+test('Registro: programada correcta de un juego (es/en): una etiqueta, juego una vez, sin mensaje ni icono', { skip }, () => {
+  const e = runEntry({ trigger: 'scheduled', result: 'ok', duration: 3.4, games: gm(1) });
+  for (const [lang, txt, ok] of [['es', 'Programada', 'correcta'], ['en', 'Scheduled', 'ok']]) {
+    const h = R('RunEntry', { entry: e }, lang);
+    assert.equal(count(h, 'class="badge '), 1, h);
+    assert.equal(count(h, 'Juego 0'), 1, h);
+    assert.ok(has(h, txt) && has(h, ok) && !has(h, '<svg') && !has(h, 'class="msg'), h);
+  }
+});
+
+test('Registro: programada con varios juegos mezclados (<=3): todas las filas con etiqueta, sin plegar', { skip }, () => {
+  const e = runEntry({ trigger: 'scheduled', result: 'partial', games: { a: { name: 'A', result: 'ok' }, b: { name: 'B', result: 'skipped', code: 'err.scheduler.busy', params: {} },
+    c: { name: 'C', result: 'error', code: 'err.sync.unexpected', params: { type: 'X', detail: 'boom' } } } });
+  for (const lang of ['es', 'en']) {
+    const h = R('RunEntry', { entry: e }, lang);
+    assert.equal(count(h, 'class="badge '), 4, h); // cabecera + 3 filas
+    assert.equal(count(h, 'X: boom'), 1, h);
+    assert.ok(!has(h, 'class="fold"') && !has(h, 'aria-expanded'), h);
+  }
+});
+
+test('Registro: programada con >3 juegos: plegada, resumen accesible y juegos no correctos visibles (es/en)', { skip }, () => {
+  const games = { ...gm(12), x: { name: 'Roto', result: 'error', code: 'err.sync.unexpected', params: { type: 'E', detail: 'fallo' }, message: '' } };
+  const e = runEntry({ trigger: 'scheduled', result: 'error', games });
+  for (const [lang, sum] of [['es', '13 juegos: 12 correctos, 1 error'], ['en', '13 games: 12 succeeded, 1 failed']]) {
+    const h = R('RunEntry', { entry: e }, lang);
+    assert.ok(has(h, sum), h);
+    assert.ok(has(h, 'aria-expanded="false"') && has(h, 'aria-controls='), h);
+    assert.ok(has(h, 'Roto') && has(h, 'E: fallo'), h);
+    assert.ok(!has(h, 'Juego 0') && !has(h, 'Juego 11'), h); // los correctos, plegados
+    assert.equal(count(h, 'class="badge '), 2, h); // cabecera + el juego con error (hay mezcla)
+    assert.equal(count(h, 'E: fallo'), 1, h);
+  }
+  // todos correctos: solo el resumen
+  const h = R('RunEntry', { entry: runEntry({ trigger: 'scheduled', result: 'ok', games: gm(5) }) });
+  assert.ok(has(h, '5 juegos: 5 correctos') && !has(h, 'Juego 0') && !has(h, '<ul'), h);
+  // exactamente 3: sin plegar
+  assert.ok(!has(R('RunEntry', { entry: runEntry({ result: 'ok', games: gm(3) }) }), 'class="fold"'));
+});
+
+test('Registro: arranque correcto (es/en)', { skip }, () => {
+  const e = runEntry({ trigger: 'startup', result: 'ok', duration: 12, games: gm(2) });
+  assert.ok(has(R('RunEntry', { entry: e }), 'Arranque') && has(R('RunEntry', { entry: e }, 'en'), 'Startup'));
+  assert.equal(count(R('RunEntry', { entry: e }), 'class="badge '), 1);
+});
+
+test('Registro: hook y hook_closed ok / omitida / error con dispositivo: una etiqueta, mensaje una vez (es/en)', { skip }, () => {
+  const cases = [['ok', null], ['skipped', 'err.hook.busy'], ['error', 'err.hook.checkpoint_failed']];
+  for (const trigger of ['hook', 'hook_closed']) for (const [result, code] of cases) {
+    const g = { name: 'Dragon Quest VII', result, message: '', ...(code ? { code, params: { error: 'RuntimeError' } } : {}) };
+    const e = runEntry({ trigger, result, device: 'mi-pc', ...(code ? { code, params: { error: 'RuntimeError' } } : {}), games: { dq7: g } });
+    for (const lang of ['es', 'en']) {
+      const h = R('RunEntry', { entry: e }, lang);
+      assert.equal(count(h, 'class="badge '), 1, h);
+      assert.equal(count(h, 'Dragon Quest VII'), 1, h);
+      assert.equal(count(h, 'mi-pc'), 1, h);
+      assert.equal(count(h, '<svg'), code ? 1 : 0, h);
+      assert.equal(count(h, 'class="msg'), code ? 1 : 0, h);
+    }
+  }
+});
+
+test('Registro: abortada sin juegos con err.sync.all_offline: motivo traducido UNA vez con icono (es/en)', { skip }, () => {
+  const e = runEntry({ trigger: 'scheduled', result: 'aborted', ...OFFLINE, games: {} });
+  for (const [lang, txt] of [['es', 'Deck no responden; no se toca nada'], ['en', null]]) {
+    const h = R('RunEntry', { entry: e }, lang);
+    assert.equal(count(h, 'class="badge '), 1, h);
+    assert.equal(count(h, '<svg'), 1, h);
+    assert.equal(count(h, 'class="msg'), 1, h);
+    assert.ok(!has(h, 'all_offline') && !has(h, 'err.sync') && !has(h, 'autolog.noDetail') && !has(h, 'class="games"'), h);
+    if (txt) assert.equal(count(h, txt), 1, h);
+  }
+});
+
+test('Registro: abortada con un juego y resumen «Juego: motivo»: el motivo sale una vez, no dos', { skip }, () => {
+  for (const trigger of ['scheduled', 'hook']) for (const lang of ['es', 'en']) {
+    const h = R('RunEntry', { entry: abortedScheduled(trigger) }, lang);
+    assert.equal(count(h, 'class="msg'), 1, h);
+    assert.equal(count(h, '<svg'), 1, h);
+    assert.equal(count(h, 'class="badge '), 1, h);
+    assert.ok(!has(h, 'Juego 0: '), h);
+  }
+});
+
+test('Registro: ciclo sin juegos y sin mensaje: «Sin detalle por juego.» una vez; duración 0 o vacía = «—»', { skip }, () => {
+  const e = runEntry({ trigger: 'scheduled', result: 'ok', duration: 0, games: {} });
+  const h = R('RunEntry', { entry: e });
+  assert.equal(count(h, 'Sin detalle por juego.'), 1, h);
+  assert.ok(has(h, '<span class="dur">—</span>'), h);
+  assert.ok(has(R('RunEntry', { entry: { ...e, duration: undefined } }), '<span class="dur">—</span>'));
+  assert.ok(has(R('RunEntry', { entry: { ...e, duration: 2.5 } }), '2,5 s'));
+  assert.ok(has(R('RunEntry', { entry: e }, 'en'), 'No per-game detail.'));
+});
+
+test('Registro: entrada antigua (solo message, sin device ni code) y tipo desconocido se muestran tal cual', { skip }, () => {
+  const old = { id: 'o1', started: '2026-01-02T03:04:05Z', duration: 4, trigger: 'manual', result: 'weird', message: 'Texto viejo',
+    games: { g: { name: 'Viejo', result: 'weird', message: 'Texto viejo' } } };
+  for (const lang of ['es', 'en']) {
+    const h = R('RunEntry', { entry: old }, lang);
+    assert.ok(has(h, '>manual<') && has(h, '>weird<'), h);
+    assert.equal(count(h, 'Texto viejo'), 1, h);
+    assert.equal(count(h, 'class="badge'), 1, h);
+    assert.ok(!has(h, 'class="dev"'), h);
+  }
+  const noTrig = R('RunEntry', { entry: { ...old, trigger: undefined } });
+  assert.ok(has(noTrig, '<span class="trig">—</span>'), noTrig);
+});
+
 test('Registro: SCSS del registro sin font-size suelto y con rejilla colapsable en móvil', { skip }, async () => {
   const fs = await import('node:fs');
   const scss = fs.readFileSync(new URL('../src/styles/_autosync.scss', import.meta.url), 'utf8');
