@@ -2,6 +2,8 @@
 
 ## Sin publicar
 
+## 1.7.0 (2026-11-10)
+
 ### Cambios
 
 - Ayuda de la clave pública SSH (botón ?): cada comando va en su propia card con su botón «Copiar» (antes cada paso era un bloque de varias líneas copiado entero). Las alternativas del firewall (ufw / firewalld en Arch) ya no se mezclan en un bloque: cada una lleva su etiqueta («Si usas ufw» / «Si usas firewalld») y el paso indica que se elige solo una; los pasos con varios comandos indican que se ejecutan en orden. Las sentencias de PowerShell unidas con `;` se separan; las cadenas con `&&` dependientes siguen siendo un solo comando. Pasos en `frontend/src/keyhelpSteps.js` (con tests).
