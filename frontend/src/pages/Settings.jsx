@@ -52,7 +52,7 @@ export default function Settings({ loaded, stale, configError, runtime, platform
   const local = useMemo(() => localErrors(draft, runtime), [draft, runtime]);
   // Juegos para el panel de lanzadores: dispositivos con nombre e id (los que el lanzador puede indicar en ?device=).
   const launcherGames = useMemo(() => draft.games.map((g) => ({
-    sel: g.id || g.key, id: g.id, name: g.name, process: g.process,
+    sel: g.id || g.key, id: g.id, name: g.name, process: g.process, enabled: g.enabled !== false,
     devices: [g.a, g.b].map((k) => ({ id: deviceId(draft, k), name: nameOf(draft, k) })).filter((d) => d.id && d.name),
   })), [draft]);
   const showLaunchers = (g) => {

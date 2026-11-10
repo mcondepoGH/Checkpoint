@@ -63,6 +63,14 @@
     "newest": "Newest wins"
   },
   "sync": {
+    "allOff": {
+      "title": "All games are disabled",
+      "text": "None is synced. Enable them in Settings."
+    },
+    "disabled": {
+      "label": "Disabled",
+      "help": "Game disabled: it is not synced. Enable it in Settings."
+    },
     "watch": {
       "bar": {"waiting": "Waiting for it to start · {device}", "running": "Playing on {device}", "settling": "Closing · saving checkpoint…", "stale": "No heartbeat"},
       "since": "since {time}",
@@ -129,6 +137,8 @@
     "apply": "Apply"
   },
   "versions": {
+    "disabledSuffix": "(disabled)",
+    "disabledNote": "Game disabled: restoring only copies to the hub and is not propagated to the devices while it stays disabled.",
     "title": "Versions",
     "gameAria": "Game",
     "limit": {
@@ -218,6 +228,7 @@
     "launchersAria": "View launcher commands for {title}"
   },
   "launcher": {
+    "disabledNote": "Disabled: the notice will be skipped.",
     "title": "Launchers",
     "show": "Show",
     "hide": "Hide",

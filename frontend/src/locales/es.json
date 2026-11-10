@@ -63,6 +63,14 @@
     "newest": "Gana el más reciente"
   },
   "sync": {
+    "allOff": {
+      "title": "Todos los juegos están desactivados",
+      "text": "No se sincroniza ninguno. Actívalos en Configuración."
+    },
+    "disabled": {
+      "label": "Desactivado",
+      "help": "Juego desactivado: no se sincroniza. Actívalo en Configuración."
+    },
     "watch": {
       "bar": {"waiting": "Esperando a que arranque · {device}", "running": "Jugando en {device}", "settling": "Cerrando · guardando checkpoint…", "stale": "Sin latido"},
       "since": "desde {time}",
@@ -129,6 +137,8 @@
     "apply": "Aplicar"
   },
   "versions": {
+    "disabledSuffix": "(desactivado)",
+    "disabledNote": "Juego desactivado: restaurar solo copia al hub y no se propaga a los dispositivos mientras esté desactivado.",
     "title": "Versiones",
     "gameAria": "Juego",
     "limit": {
@@ -218,6 +228,7 @@
     "launchersAria": "Ver comandos de lanzador de {title}"
   },
   "launcher": {
+    "disabledNote": "Desactivado: el aviso se omitirá.",
     "title": "Lanzadores",
     "show": "Mostrar",
     "hide": "Ocultar",

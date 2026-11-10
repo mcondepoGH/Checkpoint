@@ -14,7 +14,7 @@ export default function WatchSummary({ watch, config, open: initialOpen = false 
   const btn = useRef(null);
   const listId = useId();
   const byGame = groupByGame(watch.watches);
-  const watched = Object.keys(config.games).filter((g) => byGame[g]);
+  const watched = Object.keys(config.games).filter((g) => byGame[g] && config.games[g].enabled !== false);
 
   useEffect(() => {
     if (!open) return undefined;

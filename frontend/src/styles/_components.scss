@@ -95,3 +95,9 @@ label { font-size: v.$fs-body; color: var(--muted); }
   .versions-head { select { flex: 1 1 100%; max-width: 100%; } }
   .version-src { flex-wrap: wrap; .version-info { flex: 1 1 100%; } .btn { flex: 1 1 100%; } }
 }
+
+// Juego desactivado en Sync: tarjeta atenuada, sin elevación al pasar el ratón; solo «Ir a Configuración» a plena opacidad.
+.grid > .card.game-disabled { border-style: dashed;
+  > :not(.game-off-actions) { opacity: .65; }
+  &:hover { transform: none; box-shadow: none; border-color: var(--border); } }
+.game-off-note { margin: 0; font-size: v.$fs-hint; }
