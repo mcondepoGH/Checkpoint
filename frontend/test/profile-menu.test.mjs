@@ -40,15 +40,15 @@ const UPD = { actual: '1.0.0', ultima: '1.1.0', hay_actualizacion: true, habilit
 const menu = (o = {}, lang = 'es') => {
   m.i18n.setLocale(lang);
   return m.renderToStaticMarkup(m.React.createElement(m.ProfileMenu, {
-    profile: { name: 'admin', photo: null }, version: '1.0.0', theme: 'auto', effectiveTheme: 'dark', onCycleTheme() {}, onLogout() {}, onPhoto() {}, open: true, ...o,
+    profile: { name: 'admin', photo: null }, theme: 'auto', effectiveTheme: 'dark', onCycleTheme() {}, onLogout() {}, onPhoto() {}, open: true, ...o,
   }));
 };
 const at = (h, s) => { const i = h.indexOf(s); assert.ok(i >= 0, `falta ${s}`); return i; };
 const read = (...p) => fs.readFileSync(path.join(SRC, ...p), 'utf8');
 
-test('orden: identidad, actualización, Preferencias, Integración, Cuenta (salir y luego versión)', { skip }, () => {
+test('orden: identidad, actualización, Preferencias, Integración, Cuenta (salir)', { skip }, () => {
   const h = menu({ updates: UPD });
-  const order = ['profile-head', 'Cambiar foto', 'profile-update', 'Preferencias', 'Idioma', 'Tema', 'Integración', 'class="apikey"', 'Cuenta', 'Salir', 'Versión 1.0.0'];
+  const order = ['profile-head', 'Cambiar foto', 'profile-update', 'Preferencias', 'Idioma', 'Tema', 'Integración', 'class="apikey"', 'Cuenta', 'Salir'];
   const pos = order.map((s) => at(h, s));
   assert.deepEqual(pos, [...pos].sort((a, b) => a - b), order.join(' < '));
 });

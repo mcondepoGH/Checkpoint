@@ -677,7 +677,6 @@
     "title": "Perfil",
     "themeLabel": "Tema",
     "group": { "prefs": "Preferencias", "integration": "Integración", "account": "Cuenta" },
-    "version": "Versión {version}",
     "photo": {
       "change": "Cambiar foto",
       "remove": "Quitar foto",

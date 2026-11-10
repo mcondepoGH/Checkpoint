@@ -166,7 +166,7 @@ test('en inglés no queda nada en español', { skip }, () => {
 test('el menú del perfil abierto incluye la sección', { skip }, () => {
   m.i18n.setLocale('es');
   const h = m.renderToStaticMarkup(m.React.createElement(m.ProfileMenu, {
-    profile: { name: 'admin', photo: null }, version: '1', theme: 'auto', effectiveTheme: 'dark',
+    profile: { name: 'admin', photo: null }, theme: 'auto', effectiveTheme: 'dark',
     onCycleTheme() {}, onLogout() {}, onPhoto() {}, open: true,
   }));
   assert.ok(has(h, 'class="apikey"') && has(h, 'profile-pop'));

@@ -11,10 +11,10 @@ import LanguageSelect from './LanguageSelect.jsx';
 import { Alert, Button } from './ui/index.js';
 
 // Perfil en la cabecera: botón circular con la foto (o la silueta) y un popover anclado debajo, por grupos con separador y rótulo:
-// identidad (foto), actualización (solo móvil), Preferencias (idioma, tema), Integración (API key plegable) y Cuenta (salir y versión). Con una actualización disponible, en móvil (<480 px, por CSS) el aviso sale de la cabecera: el avatar lleva un punto
+// identidad (foto), actualización (solo móvil), Preferencias (idioma, tema), Integración (API key plegable) y Cuenta (salir). Con una actualización disponible, en móvil (<480 px, por CSS) el aviso sale de la cabecera: el avatar lleva un punto
 // (con texto accesible) y el menú una entrada «Actualizar a vX.Y.Z» que abre el mismo diálogo (`onUpdate`). No modal: Esc cierra y devuelve el foco al botón; pulsar fuera o sacar el foco del popover (Tab) lo cierra.
 // `open` inicial solo se usa para renderizar el popup en pruebas.
-export default function ProfileMenu({ profile, version, theme, effectiveTheme, onCycleTheme, onLogout, onPhoto, updates = null, onUpdate, open: initialOpen = false }) {
+export default function ProfileMenu({ profile, theme, effectiveTheme, onCycleTheme, onLogout, onPhoto, updates = null, onUpdate, open: initialOpen = false }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(initialOpen);
   const [error, setError] = useState(null); // error de la foto (se traduce al pintar)
@@ -102,7 +102,6 @@ export default function ProfileMenu({ profile, version, theme, effectiveTheme, o
             <Button variant="ghost" className="profile-row" onClick={onLogout}>
               <Icon name="logout" /><span className="profile-row-label">{t('app.logout')}</span>
             </Button>
-            {version && <small className="profile-version muted">{t('profile.version', { version })}</small>}
           </div>
         </div>
       )}

@@ -59,7 +59,7 @@ const NEW = { actual: '0.4.2', ultima: '0.5.0', hay_actualizacion: true, habilit
 // Palabras españolas que no deben aparecer en modo inglés (los datos de prueba están en inglés/neutros).
 const SPANISH = /\b(Sincronizar|Configuración|Versiones|Eliminar|Cancelar|Cerrar|Guardar|Nombre|Dispositivo|Puerto|Usuario|Contraseña|Entrar|Salir|Conflicto|Restaurar|Aplicar|Atrás|fichero|ficheros|Juego|Cargando|Probar|Comprobar|Sin |Ruta|Proceso|Simulación|Novedades|Instalada|Ganador|Destinos|Actualizados|Resolver)\b/;
 
-const PROFILE = { profile: { name: 'admin', photo: null }, version: '1.4.0', theme: 'auto', effectiveTheme: 'dark', onCycleTheme() {}, onLogout() {}, onPhoto() {} };
+const PROFILE = { profile: { name: 'admin', photo: null }, theme: 'auto', effectiveTheme: 'dark', onCycleTheme() {}, onLogout() {}, onPhoto() {} };
 
 const screens = () => [
   ['Login', h(m.Login, { onDone() {} })],
@@ -178,20 +178,20 @@ test('ProfileMenu: botón cerrado con aria correctos y silueta sin foto', { skip
   assert.match(html, /class="ico"/);
 });
 
-test('ProfileMenu: popup abierto con nombre, idioma, tema, salir y versión; sin foto no hay «Quitar foto»', { skip }, () => {
+test('ProfileMenu: popup abierto con nombre, idioma, tema, salir; sin foto no hay «Quitar foto»', { skip }, () => {
   m.i18n.setLocale('es');
   const html = h(m.ProfileMenu, { ...PROFILE, open: true });
   assert.match(html, /aria-expanded="true"/);
   assert.match(html, /role="dialog"[^>]*aria-label="Perfil"/);
-  for (const txt of ['admin', 'Cambiar foto', 'Idioma', 'Tema', 'Automático', 'Preferencias', 'Integración', 'Cuenta', 'Salir', 'Versión 1.4.0']) assert.ok(html.includes(txt), txt);
+  for (const txt of ['admin', 'Cambiar foto', 'Idioma', 'Tema', 'Automático', 'Preferencias', 'Integración', 'Cuenta', 'Salir']) assert.ok(html.includes(txt), txt);
   assert.ok(!html.includes('Quitar foto'));
   assert.match(html, /<select/);
   assert.match(html, /type="file"[^>]*accept="image\/jpeg,image\/png,image\/webp"|accept="image\/jpeg,image\/png,image\/webp"[^>]*type="file"/);
 });
 
-test('ProfileMenu: con foto se pinta la imagen versionada y aparece «Quitar foto»; sin versión no hay pie', { skip }, () => {
+test('ProfileMenu: con foto se pinta la imagen versionada y aparece «Quitar foto»; el menú no muestra la versión', { skip }, () => {
   m.i18n.setLocale('es');
-  const html = h(m.ProfileMenu, { ...PROFILE, open: true, version: '', profile: { name: '', photo: { version: 'abc' } } });
+  const html = h(m.ProfileMenu, { ...PROFILE, open: true, profile: { name: '', photo: { version: 'abc' } } });
   assert.ok(html.includes('src="/api/profile/photo?v=abc"'));
   assert.ok(html.includes('Quitar foto'));
   assert.ok(html.includes('<strong class="profile-name">Checkpoint</strong>')); // el servidor no dio nombre: marca
