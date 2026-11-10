@@ -119,6 +119,7 @@ test('paridad es/en: claves nuevas presentes y en inglés sin español', { skip 
 test('estilos: filas de 44 px, anchos y chip compacto sin tamaños sueltos', () => {
   const prof = read('styles', '_profile.scss');
   assert.match(prof, /\$touch-profile: 44px/);
+  assert.match(prof, /\.profile-group \{[^}]*margin-top: 10px; margin-bottom: 10px;/);
   assert.match(prof, /\.apikey-body \{[^}]*&\[hidden\] \{ display: none; \}/);
   assert.doesNotMatch(prof, /font-size: \d/);
   assert.match(read('styles', '_variables.scss'), /\$bp-xs-tabs: 400px/);

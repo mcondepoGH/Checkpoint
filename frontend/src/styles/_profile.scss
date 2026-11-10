@@ -29,7 +29,7 @@
 .profile-name { font-size: v.$fs-subtitle; max-width: 100%; overflow-wrap: anywhere; }
 .profile-photo-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem; }
 // Grupos del menú (Preferencias, Integración, Cuenta): separador fino arriba y rótulo discreto (h3 con role=group + aria-labelledby).
-.profile-group { display: flex; flex-direction: column; gap: .25rem; min-width: 0; padding-top: .5rem; margin-top: 10px; border-top: 1px solid var(--border); }
+.profile-group { display: flex; flex-direction: column; gap: .25rem; min-width: 0; padding-top: .5rem; margin-top: 10px; margin-bottom: 10px; border-top: 1px solid var(--border); }
 .profile-group-title { margin: 0; padding-inline: .25rem; font-size: v.$fs-label; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
 // Fila del menú (idioma, tema, actualizar, API key, salir): mismo patrón icono + etiqueta + valor a la derecha, misma altura (44 px, valor local; no cambia $touch).
 $touch-profile: 44px;
