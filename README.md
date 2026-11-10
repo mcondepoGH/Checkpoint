@@ -325,7 +325,7 @@ El cliente debe esperar (hasta 60 s) y arrancar el juego **aunque falle el aviso
 
 - **Heroic** (ajustes del juego → Avanzado → script antes de lanzar): el mismo `curl` que Lutris.
 
-- **Windows / Playnite** (**sin verificar**; script previo del juego, PowerShell 5.1):
+- **Windows / Playnite** (script previo del juego, PowerShell 5.1):
 
   ```
   Invoke-WebRequest -Method Post -Uri "http://<HUB>:8088/api/hook/<JUEGO>/opened?device=<DISPOSITIVO>" -Headers @{Authorization='Bearer <API_KEY>'} -TimeoutSec 60 -UseBasicParsing
@@ -364,7 +364,7 @@ Tiempos configurables con variables de entorno (en segundos):
 Limitaciones:
 
 - La vigilancia **vive en memoria**: si el hub se reinicia se pierde y solo la cubre el cron.
-- `process` debe coincidir con el proceso real del juego (en Proton/Wine, el `.exe` bajo Wine; **sin verificar**). Con `pgrep -f` basta un fragmento del nombre o de la línea de comandos.
+- `process` debe coincidir con el proceso real del juego (en Proton/Wine, el `.exe` bajo Wine). Con `pgrep -f` basta un fragmento del nombre o de la línea de comandos.
 
 #### `GET /api/games/{juego}/hook-status`
 

@@ -1,5 +1,5 @@
 // Heroic ya no se marca como «sin verificar»: pestaña y nota (es y en), fuente de los lanzadores y README.
-// Windows (Playnite) sí sigue marcado en el README: el test lo fija para no relajar los dos a la vez por error.
+// Playnite y Proton/Wine tampoco: ningún lanzador del README ni de la interfaz lleva la marca.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -32,13 +32,19 @@ test('la fuente de los lanzadores no marca Heroic como no verificado', () => {
   for (const f of ['../src/launchers.js', '../src/components/LauncherBlock.jsx']) assert.ok(!UNVERIFIED.test(read(f)), f);
 });
 
-test('README: la entrada de Heroic no dice «sin verificar»; la de Windows sí (sigue marcada)', () => {
+test('README: ni Heroic ni Windows/Playnite ni la nota de Proton/Wine dicen «sin verificar»', () => {
   const readme = read('../../README.md');
   const line = (re) => readme.split('\n').find((x) => re.test(x));
   const heroic = line(/^- \*\*Heroic\*\*/);
   assert.ok(heroic, 'falta la entrada de Heroic en el README');
   assert.ok(!UNVERIFIED.test(heroic), heroic);
-  assert.ok(UNVERIFIED.test(line(/^- \*\*Windows \/ Playnite\*\*/)));
-  // y ninguna línea que hable de Heroic (salvo la de Windows, que no lo nombra) lo da por no verificado
+  const win = line(/^- \*\*Windows \/ Playnite\*\*/);
+  assert.ok(win && !UNVERIFIED.test(win), win);
+  const proton = line(/Proton\/Wine/);
+  assert.ok(proton && !UNVERIFIED.test(proton), proton);
+  // la sección de lanzadores (Hooks) entera, salvo el motor de macOS/Windows nativo, que no es un lanzador
+  const hooks = readme.slice(readme.indexOf('Steam / Steam Deck'));
+  for (const x of hooks.split('\n')) assert.ok(!UNVERIFIED.test(x), x.slice(0, 120));
+  // y ninguna línea que hable de Heroic lo da por no verificado
   for (const x of readme.split('\n').filter((y) => /heroic/i.test(y))) assert.ok(!UNVERIFIED.test(x), x.slice(0, 120));
 });
