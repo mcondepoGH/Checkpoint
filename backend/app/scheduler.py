@@ -26,7 +26,10 @@ if not _root.handlers and not logging.getLogger().handlers:  # uvicorn no config
     _h = logging.StreamHandler()
     _h.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
     _root.addHandler(_h)
-    _root.setLevel(logging.INFO)
+    _lvl, _warn = settings.resolve_log_level()
+    _root.setLevel(_lvl)
+    if _warn:
+        _root.warning(_warn)
 
 
 def utcnow() -> datetime:

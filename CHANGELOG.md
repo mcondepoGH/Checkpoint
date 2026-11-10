@@ -13,6 +13,7 @@
 
 ### Cambios
 
+- Logs de nivel DEBUG en los endpoints de la API (logger `checkpoint.api`): una línea por petición `/api/*` (método, ruta, nombres de los parámetros de la query, estado, duración, IP) y detalle por endpoint (entrada con parámetros, resultado, errores y duración en `opened`, sync, dispositivos, config, versiones, API key y auth de hooks). Nunca se registran cabeceras, cookies, cuerpos, contraseñas, API keys ni tokens. Nuevo `CHECKPOINT_LOG_LEVEL` (`INFO` por defecto; `DEBUG` para verlos): con el nivel por defecto la salida no cambia.
 - `CopyBox` acepta `what` y el botón de copiar pasa a «Copiar comando de Steam» / «Copiar clave API» (antes «Copiar» a secas).
 - La key del perfil usa el nuevo `CopyBox` (misma apariencia y comportamiento; clases `copybox-*` en lugar de `apikey-field` / `apikey-copy`).
 - Sección «API key» del perfil rediseñada: bloque con fondo y encabezado con icono, key completa ajustada en varias líneas (antes se cortaba), copiar como botón de icono (copia → check), Regenerar y Revocar (variante `danger`, con borde en el color de error) del mismo tamaño en una fila, texto de ayuda de una frase y aviso de HTTP como `Alert` compacto. Nuevos iconos `key`, `copy` y `check`; `Alert` admite `compact`.
