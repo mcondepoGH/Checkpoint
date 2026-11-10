@@ -637,8 +637,8 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
                 dur, code = time.monotonic() - t0, summary.get("code")
                 hook_log.info("hook %s juego=%s resultado=%s code=%s duración=%.1f s", trigger, g.name, res,
                               code or "-", dur)
-                hook_log.debug("hook %s run=%s: fin duración=%.1f s code=%s historial_guardado=%s", trigger, run.id,
-                               dur, code, saved)
+                hook_log.debug("hook %s run=%s: fin duración=%.1f s juego=%s dispositivo=%s resultado=%s code=%s "
+                               "historial_guardado=%s", trigger, run.id, dur, g.name, device, res, code, saved)
             finally:
                 run.done = True
                 finished.set()
@@ -656,15 +656,19 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         """Deja en el historial (trigger `hook_closed`) por qué NO hubo checkpoint de cierre: `skipped` (vigilancia
         descartada u omitido sin reintento) o `error` (el checkpoint falló). Solo código estable y parámetros no
         sensibles; solo registra, no cambia el comportamiento. El registro nunca rompe el vigilante."""
+        saved = False
         try:
             d = {"result": result, "message": "", "code": code, "params": params or {}}
             if name:
                 d["name"] = name
             history.append(history.make_entry(scheduler.clock(), 0.0, "hook_closed", result, {game: d}, "", code,
                                               params or {}, device=device), now=scheduler.clock())
+            saved = True
         except Exception as e:
             hook_log.warning("hook hook_closed juego=%s dispositivo=%s: no se pudo guardar en el historial (%s)", game,
                              device, type(e).__name__)
+        hook_log.debug("hook hook_closed juego=%s dispositivo=%s: entrada de historial resultado=%s code=%s "
+                       "historial_guardado=%s", name or game, device, result, code, saved)
 
     def watch_note(kind: str, game: str, device: str, detail: str = ""):
         """Nota del vigilante: además del log, los descartes y el error del checkpoint van al historial."""

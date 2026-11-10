@@ -92,3 +92,36 @@ def test_transport_run_logs_duration_not_args(caplog, monkeypatch):
     caplog.set_level(logging.INFO, logger="checkpoint.transport")
     transport._run(["ssh", "u@h", "true"])
     assert caplog.records == []
+
+
+def hook_msgs(caplog, level=logging.DEBUG):
+    return [r.getMessage() for r in caplog.records if r.name == "checkpoint.hook" and r.levelno == level]
+
+
+def test_debug_history_entry_for_skipped_never_seen(cl, caplog):
+    caplog.set_level(logging.DEBUG, logger="checkpoint.hook")
+    hopen(cl)
+    assert wait_for(lambda: hist("hook_closed"))
+    m = [x for x in hook_msgs(caplog) if "entrada de historial" in x]
+    assert len(m) == 1, m
+    for frag in ("hook hook_closed", "juego=", "dispositivo=dev-1", "resultado=skipped", "code=err.hook.never_seen",
+                 "historial_guardado=True"):
+        assert frag in m[0], (frag, m[0])
+
+
+def test_debug_history_entry_not_saved_and_error_without_message(cl, caplog, monkeypatch):
+    caplog.set_level(logging.DEBUG, logger="checkpoint.hook")
+    monkeypatch.setattr(history, "append", lambda *a, **k: (_ for _ in ()).throw(OSError("disco lleno /secreto")))
+    hopen(cl)
+    assert wait_for(lambda: any("entrada de historial" in x for x in hook_msgs(caplog)))
+    m = [x for x in hook_msgs(caplog) if "entrada de historial" in x][0]
+    assert "historial_guardado=False" in m and "resultado=skipped" in m
+    assert not any("secreto" in r.getMessage() for r in caplog.records)
+
+
+def test_debug_history_entry_absent_with_info(cl, caplog):
+    caplog.set_level(logging.INFO, logger="checkpoint")
+    hopen(cl)
+    assert wait_for(lambda: hist("hook_closed"))
+    assert not any("entrada de historial" in r.getMessage() for r in caplog.records)
+    assert all(r.levelno >= logging.INFO for r in flow_records(caplog))
