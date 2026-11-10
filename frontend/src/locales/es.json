@@ -659,7 +659,8 @@
     "updateDot": "Hay una actualización disponible",
     "update": "Actualizar a v{version}",
     "title": "Perfil",
-    "theme": "Tema: {theme}",
+    "themeLabel": "Tema",
+    "group": { "prefs": "Preferencias", "integration": "Integración", "account": "Cuenta" },
     "version": "Versión {version}",
     "photo": {
       "change": "Cambiar foto",

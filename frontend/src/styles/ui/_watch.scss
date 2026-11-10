@@ -71,6 +71,9 @@ $touch-watch: 44px; // objetivo táctil del chip y las filas de la lista (local:
     position: static; // la lista se ancla a la cabecera (sticky = posicionada), no al chip
     .watch-toggle { padding: 0 .5rem; gap: .4rem; .watch-lbl, .watch-caret { display: none; } .watch-num { display: inline; } }
     .watch-list { left: 8px; right: 8px; width: auto; max-height: 50vh; top: calc(100% + .35rem); } } }
+// Mínimo (<=340 px, 320 reales): chip compacto (padding .3rem, gap .2rem; sigue en 44 px de alto y de ancho mínimo) para que quepa con las pestañas.
+@media (max-width: v.$bp-xxs) {
+  .watch-summary .watch-toggle { padding: 0 .3rem; gap: .2rem; } }
 @media (prefers-reduced-motion: reduce) {
   .watch-bar .watch-ico, .watch .watch-dot, .watch-summary .watch-chip-dot { animation: none !important; }
   .watch-summary .watch-toggle, .watch-summary .watch-caret { transition: none; } }

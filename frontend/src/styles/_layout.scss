@@ -50,6 +50,10 @@
 @media (max-width: v.$bp-upd - .02px) {
   .update-badge { display: none; }
 }
+// Hasta 400 px (390 px reales): solo el relleno compacto de las pestañas; el resto de ajustes de <= 380 px no cambia.
+@media (max-width: v.$bp-xs-tabs) {
+  .tab { padding: 0 .3rem; }
+}
 // Pantallas muy estrechas (<= 380 px): el icono de la app se queda, pero con menos aire para que quepan las pestañas.
 @media (max-width: v.$bp-xs) {
   .brand-logo { width: 24px; height: 24px; }

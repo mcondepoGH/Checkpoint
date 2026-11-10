@@ -1,14 +1,16 @@
-import React, { useEffect, useId, useReducer, useRef } from 'react';
+import React, { useEffect, useId, useReducer, useRef, useState } from 'react';
 import { api as realApi } from '../api.js';
 import { initialState, isInsecure, reduce, run } from '../apikey.js';
 import { errText, useI18n } from '../useI18n.js';
 import Icon from './Icon.jsx';
 import { Alert, Button, CopyBox } from './ui/index.js';
 
-// Sección «API key» del menú del perfil: generar, ver siempre (completa, ajustada en varias líneas), copiar, regenerar y revocar.
+// Sección «API key» del menú del perfil, plegable y cerrada por defecto (`defaultOpen`); el contenido sigue montado (solo `hidden`), así que el estado y la carga no se pierden al plegar. Generar, ver siempre (completa, ajustada en varias líneas), copiar, regenerar y revocar.
 // Una sola key por usuario; sirve solo para /api/hook/*. `initial`, `api` e `insecure` permiten pintar cada estado en pruebas sin red.
-export default function ApiKeySection({ initial = null, api = realApi, insecure }) {
+export default function ApiKeySection({ initial = null, api = realApi, insecure, defaultOpen = false }) {
   const { t } = useI18n();
+  const [open, setOpen] = useState(defaultOpen);
+  const bodyId = useId();
   const [s, dispatch] = useReducer(reduce, initial ? { ...initialState, ...initial } : initialState);
   const confirmBtn = useRef(null);
   const hintId = useId();
@@ -22,7 +24,12 @@ export default function ApiKeySection({ initial = null, api = realApi, insecure 
 
   return (
     <section className="apikey" aria-labelledby={`${hintId}-t`}>
-      <h3 id={`${hintId}-t`} className="apikey-title"><Icon name="key" />{t('profile.apikey.title')}</h3>
+      <h3 id={`${hintId}-t`} className="apikey-title">
+        <Button variant="ghost" className="profile-row apikey-toggle" aria-expanded={open} aria-controls={bodyId} onClick={() => setOpen((o) => !o)}>
+          <Icon name="key" /><span className="profile-row-label">{t('profile.apikey.title')}</span><Icon name="chevron" />
+        </Button>
+      </h3>
+      <div id={bodyId} className="apikey-body" hidden={!open}>
       <small className="muted" id={hintId}>{t('profile.apikey.hint')}</small>
       {s.error && <Alert variant="error" compact role="alert">{errText(s.error)}</Alert>}
       {!s.loaded && !s.error && <small className="muted" role="status">{t('common.loading')}</small>}
@@ -52,6 +59,7 @@ export default function ApiKeySection({ initial = null, api = realApi, insecure 
           )}
         </>
       )}
+      </div>
     </section>
   );
 }

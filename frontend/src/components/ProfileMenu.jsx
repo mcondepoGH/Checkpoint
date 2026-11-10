@@ -10,8 +10,8 @@ import Icon from './Icon.jsx';
 import LanguageSelect from './LanguageSelect.jsx';
 import { Alert, Button } from './ui/index.js';
 
-// Perfil en la cabecera: botón circular con la foto (o la silueta) y un popover anclado debajo con foto, idioma, tema,
-// salir y la versión. Con una actualización disponible, en móvil (<480 px, por CSS) el aviso sale de la cabecera: el avatar lleva un punto
+// Perfil en la cabecera: botón circular con la foto (o la silueta) y un popover anclado debajo, por grupos con separador y rótulo:
+// identidad (foto), actualización (solo móvil), Preferencias (idioma, tema), Integración (API key plegable) y Cuenta (salir y versión). Con una actualización disponible, en móvil (<480 px, por CSS) el aviso sale de la cabecera: el avatar lleva un punto
 // (con texto accesible) y el menú una entrada «Actualizar a vX.Y.Z» que abre el mismo diálogo (`onUpdate`). No modal: Esc cierra y devuelve el foco al botón; pulsar fuera o sacar el foco del popover (Tab) lo cierra.
 // `open` inicial solo se usa para renderizar el popup en pruebas.
 export default function ProfileMenu({ profile, version, theme, effectiveTheme, onCycleTheme, onLogout, onPhoto, updates = null, onUpdate, open: initialOpen = false }) {
@@ -79,20 +79,31 @@ export default function ProfileMenu({ profile, version, theme, effectiveTheme, o
             <input ref={file} type="file" accept={PHOTO_ACCEPT} className="sr-only" tabIndex={-1} aria-hidden="true" onChange={pick} />
           </div>
           {error && <Alert variant="error" role="alert">{errText(error)}</Alert>}
-          <LanguageSelect />
-          <ApiKeySection />
           {hasUpdate && (
             <Button variant="ghost" className="profile-row profile-update" onClick={() => { close(); onUpdate?.(); }}>
-              <Icon name="download" />{t('profile.update', { version: updates.ultima })}
+              <Icon name="download" /><span className="profile-row-label">{t('profile.update', { version: updates.ultima })}</span>
             </Button>
           )}
-          <Button variant="ghost" className="profile-row" onClick={onCycleTheme}>
-            <Icon name={effectiveTheme === 'dark' ? 'moon' : 'sun'} />{t('profile.theme', { theme: t(`app.theme.${theme}`) })}
-          </Button>
-          <Button variant="ghost" className="profile-row" onClick={onLogout}>
-            <Icon name="logout" />{t('app.logout')}
-          </Button>
-          {version && <small className="profile-version muted">{t('profile.version', { version })}</small>}
+          <div className="profile-group" role="group" aria-labelledby={`${popId}-prefs`}>
+            <h3 id={`${popId}-prefs`} className="profile-group-title">{t('profile.group.prefs')}</h3>
+            <LanguageSelect row />
+            <Button variant="ghost" className="profile-row profile-pref" onClick={onCycleTheme}>
+              <Icon name={effectiveTheme === 'dark' ? 'moon' : 'sun'} />
+              <span className="profile-row-label">{t('profile.themeLabel')}</span>
+              <span className="profile-row-value">{t(`app.theme.${theme}`)}</span>
+            </Button>
+          </div>
+          <div className="profile-group" role="group" aria-labelledby={`${popId}-integ`}>
+            <h3 id={`${popId}-integ`} className="profile-group-title">{t('profile.group.integration')}</h3>
+            <ApiKeySection />
+          </div>
+          <div className="profile-group" role="group" aria-labelledby={`${popId}-acct`}>
+            <h3 id={`${popId}-acct`} className="profile-group-title">{t('profile.group.account')}</h3>
+            <Button variant="ghost" className="profile-row" onClick={onLogout}>
+              <Icon name="logout" /><span className="profile-row-label">{t('app.logout')}</span>
+            </Button>
+            {version && <small className="profile-version muted">{t('profile.version', { version })}</small>}
+          </div>
         </div>
       )}
     </div>
