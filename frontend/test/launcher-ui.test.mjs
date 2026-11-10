@@ -227,11 +227,55 @@ test('Registro: varios juegos conservan su etiqueta y su mensaje; sin entrada de
   assert.equal(count(h, 'RuntimeError'), 1, h);
 });
 
-test('Registro: entrada correcta sin cambios (mensaje + fila con su etiqueta, sin icono de nota)', { skip }, () => {
+test('Registro: entrada correcta con mensaje de entrada y de juego distintos: una etiqueta, cada mensaje una vez', { skip }, () => {
   const e = runEntry({ result: 'ok', trigger: 'scheduled', message: 'Todo bien', games: { g: { name: 'Juego', result: 'ok', message: 'Listo' } } });
   const h = R('RunEntry', { entry: e });
-  assert.ok(has(h, 'Todo bien') && has(h, 'Listo') && !has(h, 'hook-note') && !has(h, '<svg'), h);
-  assert.equal(count(h, 'class="badge ok"'), 2, h);
+  assert.equal(count(h, 'Todo bien'), 1, h);
+  assert.equal(count(h, 'Listo'), 1, h);
+  assert.ok(!has(h, 'hook-note') && !has(h, '<svg'), h);
+  assert.equal(count(h, 'class="badge '), 1, h);
+});
+
+test('Registro: correcta de un juego = cabecera + línea de juego, UNA etiqueta, sin tercera línea (es/en)', { skip }, () => {
+  for (const [trigger, es, en] of [['hook', 'Aviso del juego', 'Game opened'], ['hook_closed', 'Cierre del juego', 'Game closed']]) {
+    const e = runEntry({ trigger, result: 'ok', device: 'mi-pc', games: { dq7: { name: 'Dragon Quest VII', result: 'ok', message: '' } } });
+    for (const [lang, txt] of [['es', es], ['en', en]]) {
+      const h = R('RunEntry', { entry: e }, lang);
+      assert.equal(count(h, 'class="badge '), 1, h);
+      assert.equal(count(h, 'Dragon Quest VII'), 1, h);
+      assert.equal(count(h, 'mi-pc'), 1, h);
+      assert.ok(has(h, txt) && !has(h, 'class="msg') && !has(h, '<svg'), h);
+      assert.ok(has(h, '<li class="run"') && has(h, 'class="run-head"') && !has(h, '<details'), h);
+    }
+  }
+});
+
+test('Registro: error de un juego sin dispositivo: una etiqueta, mensaje una vez con icono', { skip }, () => {
+  const e = oneGame('error', 'err.hook.checkpoint_failed', { error: 'RuntimeError' });
+  const h = R('RunEntry', { entry: e });
+  assert.equal(count(h, 'class="badge '), 1, h);
+  assert.equal(count(h, 'RuntimeError'), 1, h);
+  assert.equal(count(h, '<svg'), 1, h);
+  assert.ok(!has(h, 'class="dev"'), h);
+});
+
+test('Registro: varios juegos con el mismo resultado que la cabecera no llevan etiqueta; con mezcla, todos', { skip }, () => {
+  const same = runEntry({ result: 'ok', games: { a: { name: 'A', result: 'ok' }, b: { name: 'B', result: 'ok' } } });
+  assert.equal(count(R('RunEntry', { entry: same }), 'class="badge '), 1);
+  const mixed = runEntry({ result: 'partial', games: { a: { name: 'A', result: 'ok' }, b: { name: 'B', result: 'error', code: 'err.hook.checkpoint_failed', params: { error: 'X' } } } });
+  const h = R('RunEntry', { entry: mixed });
+  assert.equal(count(h, 'class="badge '), 3, h); // cabecera + dos filas
+  assert.equal(count(h, 'El checkpoint de cierre falló (X)'), 1, h);
+});
+
+test('Registro: SCSS del registro sin font-size suelto y con rejilla colapsable en móvil', { skip }, async () => {
+  const fs = await import('node:fs');
+  const scss = fs.readFileSync(new URL('../src/styles/_autosync.scss', import.meta.url), 'utf8');
+  const log = scss.slice(scss.indexOf('.autosync-log'));
+  assert.doesNotMatch(log, /font-size: *[\d.]/);
+  assert.match(log, /font-size: v\.\$fs-/);
+  assert.match(log, /@media \(max-width: v\.\$bp-sm\)[\s\S]*grid-template-areas/);
+  assert.doesNotMatch(log, /animation|transition/);
 });
 
 test('Último aviso: el motivo del descarte se añade al resultado', { skip }, () => {
