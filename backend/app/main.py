@@ -8,11 +8,12 @@ import uuid
 from contextlib import asynccontextmanager
 from typing import Dict, List, Optional
 
-from fastapi import APIRouter, Depends, FastAPI, Query, Request, Response
+from fastapi import APIRouter, Depends, FastAPI, Path, Query, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
+from . import apidocs
 from . import apikey
 from . import avatar
 from . import settings
@@ -91,7 +92,10 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             task.cancel()
             await holder["watcher"].cancel_all()
 
-    app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
+    # La documentación (/api/docs, /api/openapi.json) la monta `apidocs.install` con la dependencia de sesión.
+    app = FastAPI(title=apidocs.TITLE, version=updates.installed_version(), description=apidocs.DESCRIPTION,
+                  openapi_tags=[{"name": apidocs.TAG, "description": apidocs.TAG_DESCRIPTION}],
+                  docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     app.add_middleware(RequestDebugLog, logger=api_log)
     if auth is None:
         auth = Auth.from_env()
@@ -274,14 +278,15 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         raise ApiError(401, "err.apikey.invalid", headers={"WWW-Authenticate": "Bearer"})
 
     # Todo lo de /api/hook/* cuelga de este router y de su dependencia (aquí irá `POST /api/hook/{game}/opened`).
-    hook = APIRouter(prefix="/api/hook", dependencies=[Depends(hook_user)])
+    hook = APIRouter(prefix="/api/hook", tags=[apidocs.TAG], dependencies=[Depends(hook_user)],
+                     responses={401: apidocs.R401, 429: apidocs.R429})
 
-    @hook.get("/ping")
+    @hook.get("/ping", **apidocs.PING)
     def hook_ping(user: str = Depends(hook_user)):
         api_log.debug("hook ping: usuario=%s", user)
         return {"ok": True, "user": user}
 
-    @hook.get("/watches")
+    @hook.get("/watches", **apidocs.WATCHES)
     def hook_watches():
         """Vigilancias de cierre activas (en memoria): [{game, device, state: waiting|running|settling, since}]."""
         w = watcher.list()
@@ -714,8 +719,11 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         watcher.arm(game, dev)
         return {"watching": True}
 
-    @hook.post("/{game}/opened")
-    async def hook_opened(game: str, device: Optional[str] = Query(None)):
+    @hook.post("/{game}/opened", **apidocs.OPENED)
+    async def hook_opened(game: str = Path(description="Id o nombre del juego.", examples=["Mi Juego"]),
+                          device: Optional[str] = Query(None, description="Id o nombre del dispositivo donde se "
+                                                        "vigila el proceso del juego. Obligatorio si el juego está en "
+                                                        "más de un dispositivo.", examples=["PC uno"])):
         """Aviso «se va a abrir el juego»: sync previo bloqueante con política de conflictos siempre `skip` (ignora la del juego y la del scheduler).
         Tras el aviso (salvo 400/401/404/409) arma la vigilancia de cierre si el juego tiene `process` (`watching`). Un fallo de la sync no es un 5xx: 200 con `outcome` descriptivo."""
         cfg = _cfg()
@@ -877,9 +885,12 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
                       body.get("source"))
         return {"ok": True, "message": describe_code(res["code"], res["params"]), **res}
 
+    # ---- documentación OpenAPI (solo la API de la API key; con sesión). Antes del catch-all SPA. ----
+    apidocs.install(app, require)
+
     # ---- web (SPA) ----
     # Los estáticos no contienen secretos; solo así se puede pintar la pantalla de login.
-    @app.get("/{path:path}")
+    @app.get("/{path:path}", include_in_schema=False)
     def spa(path: str):
         if path.startswith("api/"):
             raise ApiError(404, "err.main.not_found")

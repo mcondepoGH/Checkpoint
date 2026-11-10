@@ -40,17 +40,30 @@ const UPD = { actual: '1.0.0', ultima: '1.1.0', hay_actualizacion: true, habilit
 const menu = (o = {}, lang = 'es') => {
   m.i18n.setLocale(lang);
   return m.renderToStaticMarkup(m.React.createElement(m.ProfileMenu, {
-    profile: { name: 'admin', photo: null }, version: '1.0.0', theme: 'auto', effectiveTheme: 'dark', onCycleTheme() {}, onLogout() {}, onPhoto() {}, open: true, ...o,
+    profile: { name: 'admin', photo: null }, theme: 'auto', effectiveTheme: 'dark', onCycleTheme() {}, onLogout() {}, onPhoto() {}, open: true, ...o,
   }));
 };
 const at = (h, s) => { const i = h.indexOf(s); assert.ok(i >= 0, `falta ${s}`); return i; };
 const read = (...p) => fs.readFileSync(path.join(SRC, ...p), 'utf8');
 
-test('orden: identidad, actualización, Preferencias, Integración, Cuenta (salir y luego versión)', { skip }, () => {
+test('orden: identidad, actualización, Preferencias, Integración, Cuenta (salir)', { skip }, () => {
   const h = menu({ updates: UPD });
-  const order = ['profile-head', 'Cambiar foto', 'profile-update', 'Preferencias', 'Idioma', 'Tema', 'Integración', 'class="apikey"', 'Cuenta', 'Salir', 'Versión 1.0.0'];
+  const order = ['profile-head', 'Cambiar foto', 'profile-update', 'Preferencias', 'Idioma', 'Tema', 'Integración', 'class="apikey"', 'Cuenta', 'Salir'];
   const pos = order.map((s) => at(h, s));
   assert.deepEqual(pos, [...pos].sort((a, b) => a - b), order.join(' < '));
+});
+
+test('enlace «Documentación de la API»: tras la API key, antes de Cuenta, a /api/docs en pestaña nueva (es y en)', { skip }, () => {
+  for (const [lang, txt, acct] of [['es', 'Documentación de la API', 'Cuenta'], ['en', 'API documentation', 'Account']]) {
+    const h = menu({}, lang);
+    const a = h.match(/<a [^>]*href="\/api\/docs"[^>]*>/);
+    assert.ok(a, `falta el enlace (${lang})`);
+    assert.match(a[0], /target="_blank"/); assert.match(a[0], /rel="noopener"/); assert.match(a[0], /class="[^"]*profile-row/);
+    const i = at(h, a[0]);
+    assert.ok(i > at(h, 'class="apikey"') && i < at(h, `>${acct}<`), lang);
+    assert.ok(h.slice(i).startsWith(a[0]) && h.slice(i, i + 800).includes(txt), lang);
+    assert.ok(h.slice(i, i + 300).includes('class="ico"'), 'lleva icono');
+  }
 });
 
 test('sin actualización no hay entrada; con ella va justo bajo la identidad y antes de Preferencias', { skip }, () => {
@@ -106,6 +119,7 @@ test('paridad es/en: claves nuevas presentes y en inglés sin español', { skip 
 test('estilos: filas de 44 px, anchos y chip compacto sin tamaños sueltos', () => {
   const prof = read('styles', '_profile.scss');
   assert.match(prof, /\$touch-profile: 44px/);
+  assert.match(prof, /\.profile-group \{[^}]*margin-top: 10px; margin-bottom: 10px;/);
   assert.match(prof, /\.apikey-body \{[^}]*&\[hidden\] \{ display: none; \}/);
   assert.doesNotMatch(prof, /font-size: \d/);
   assert.match(read('styles', '_variables.scss'), /\$bp-xs-tabs: 400px/);

@@ -279,6 +279,18 @@ API (con sesión de cookie, como el resto del perfil; las escrituras comprueban 
 curl -H "Authorization: Bearer ck_..." http://HOST:PORT/api/hook/ping
 ```
 
+### Documentación de la API (OpenAPI)
+
+La API que usa la API key (`GET /api/hook/ping`, `GET /api/hook/watches` y `POST /api/hook/{juego}/opened`) se documenta con OpenAPI y se puede probar desde el navegador con Swagger UI:
+
+- **Abrir:** enlace «Documentación de la API» en el menú del perfil, bajo «API key» (`/api/docs`, pestaña nueva). El esquema está en `/api/openapi.json`.
+- **Solo con sesión:** `/api/docs`, `/api/openapi.json` y los ficheros de Swagger UI exigen la sesión de la web; sin ella responden `401` como el resto de rutas protegidas. La API key sola no abre la documentación.
+- **Alcance:** solo esas tres rutas. El resto de `/api/*` (login, perfil, configuración, sincronización, versiones...) es interno de la web, no está en el esquema y puede cambiar sin aviso.
+- **Probar:** pulsa «Authorize», pega tu API key (sin el prefijo `Bearer`) y usa «Try it out». Ojo: `POST .../opened` **ejecuta de verdad** una sincronización previa y arma el vigilante de cierre del juego.
+- **Sin internet:** Swagger UI va empaquetada en la imagen (`swagger-ui-dist`, versión fijada en `frontend/package.json`; el build de Vite la copia a `docs-assets/` y el backend la sirve en `/api/docs-assets/`). No se carga nada de CDNs ni de terceros.
+- **Idioma:** los textos de la documentación están en español; los códigos `err.*` van sin traducir.
+- **Mantenimiento:** toda ruta `/api/*` nueva queda fuera del esquema por defecto; para publicarla hay que ponerle el tag público de `backend/app/apidocs.py`. `backend/tests/test_apidocs.py` falla si el esquema deja de tener exactamente las rutas de la API key.
+
 ## Hooks
 
 Rutas `/api/hook/*` para que un lanzador avise al hub con la API key (ver «API key de usuario»). Hoy: el aviso de apertura (que además arma el **cierre automático**) y la consulta de vigilancias.
@@ -456,7 +468,7 @@ La consulta de `/api/watches` (cada 5 s, solo con la pestaña visible) vive en u
 
 Aviso de actualización: en pantallas anchas (>=480 px) es el botón de la barra; por debajo sale de la barra y pasa al menú del perfil como entrada «Actualizar a vX.Y.Z» (abre el mismo diálogo), y el avatar muestra un punto con texto accesible mientras haya actualización aplicable.
 
-Menú del perfil (`ProfileMenu`), de arriba abajo, con separador fino y rótulo discreto por grupo (`role="group"` + `aria-labelledby`): identidad (foto, nombre, Cambiar/Quitar foto), entrada «Actualizar a vX.Y.Z» (solo <480 px y con actualización), **Preferencias** (Idioma y Tema con el mismo patrón de fila `.profile-row`: icono + etiqueta + valor actual a la derecha, 44 px; el idioma es el `Select` nativo como valor, `LanguageSelect row`), **Integración** (API key plegable, cerrada por defecto, `aria-expanded`/`aria-controls`; el contenido sigue montado y solo `hidden`) y **Cuenta** (Salir y, debajo, la versión). Esc y clic fuera cierran; no es modal.
+Menú del perfil (`ProfileMenu`), de arriba abajo, con separador fino y rótulo discreto por grupo (`role="group"` + `aria-labelledby`): identidad (foto, nombre, Cambiar/Quitar foto), entrada «Actualizar a vX.Y.Z» (solo <480 px y con actualización), **Preferencias** (Idioma y Tema con el mismo patrón de fila `.profile-row`: icono + etiqueta + valor actual a la derecha, 44 px; el idioma es el `Select` nativo como valor, `LanguageSelect row`), **Integración** (API key plegable, cerrada por defecto, `aria-expanded`/`aria-controls`; el contenido sigue montado y solo `hidden`) con, justo debajo, el enlace «Documentación de la API» (`/api/docs`, pestaña nueva con `rel="noopener"`; fila `.profile-row`) y **Cuenta** (Salir; la versión instalada solo se muestra en el pie de la app). Esc y clic fuera cierran; no es modal.
 
 El perfil usa estos componentes: la sección «API key» es un bloque con fondo `--surface-2` (encabezado con icono `key`), la key completa en un cuadro monoespaciado que ajusta en varias líneas, `CopyBox` para la key y para los comandos de la sección Lanzadores (copia con icono `copy` → `check` 2 s), `Button` y `Button variant="danger"` (Regenerar / Revocar, mismo ancho) y `Alert compact` para el aviso de HTTP.
 

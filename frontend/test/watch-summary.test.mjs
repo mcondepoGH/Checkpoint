@@ -49,7 +49,7 @@ const UPD = { actual: '1.0.0', ultima: '1.1.0', hay_actualizacion: true, habilit
 const menu = (o = {}, lang = 'es') => {
   m.i18n.setLocale(lang);
   return m.renderToStaticMarkup(m.React.createElement(m.ProfileMenu, {
-    profile: { name: 'admin', photo: null }, version: '1.0.0', theme: 'auto', effectiveTheme: 'dark', onCycleTheme() {}, onLogout() {}, onPhoto() {}, ...o,
+    profile: { name: 'admin', photo: null }, theme: 'auto', effectiveTheme: 'dark', onCycleTheme() {}, onLogout() {}, onPhoto() {}, ...o,
   }));
 };
 

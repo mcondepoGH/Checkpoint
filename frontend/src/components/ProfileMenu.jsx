@@ -11,10 +11,10 @@ import LanguageSelect from './LanguageSelect.jsx';
 import { Alert, Button } from './ui/index.js';
 
 // Perfil en la cabecera: botón circular con la foto (o la silueta) y un popover anclado debajo, por grupos con separador y rótulo:
-// identidad (foto), actualización (solo móvil), Preferencias (idioma, tema), Integración (API key plegable) y Cuenta (salir y versión). Con una actualización disponible, en móvil (<480 px, por CSS) el aviso sale de la cabecera: el avatar lleva un punto
+// identidad (foto), actualización (solo móvil), Preferencias (idioma, tema), Integración (API key plegable y enlace a la documentación de la API) y Cuenta (salir). Con una actualización disponible, en móvil (<480 px, por CSS) el aviso sale de la cabecera: el avatar lleva un punto
 // (con texto accesible) y el menú una entrada «Actualizar a vX.Y.Z» que abre el mismo diálogo (`onUpdate`). No modal: Esc cierra y devuelve el foco al botón; pulsar fuera o sacar el foco del popover (Tab) lo cierra.
 // `open` inicial solo se usa para renderizar el popup en pruebas.
-export default function ProfileMenu({ profile, version, theme, effectiveTheme, onCycleTheme, onLogout, onPhoto, updates = null, onUpdate, open: initialOpen = false }) {
+export default function ProfileMenu({ profile, theme, effectiveTheme, onCycleTheme, onLogout, onPhoto, updates = null, onUpdate, open: initialOpen = false }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(initialOpen);
   const [error, setError] = useState(null); // error de la foto (se traduce al pintar)
@@ -96,13 +96,16 @@ export default function ProfileMenu({ profile, version, theme, effectiveTheme, o
           <div className="profile-group" role="group" aria-labelledby={`${popId}-integ`}>
             <h3 id={`${popId}-integ`} className="profile-group-title">{t('profile.group.integration')}</h3>
             <ApiKeySection />
+            {/* Documentación OpenAPI de la API de la API key: solo se abre con sesión; pestaña nueva para no perder la web. */}
+            <a className="btn ghost profile-row" href="/api/docs" target="_blank" rel="noopener">
+              <Icon name="book" /><span className="profile-row-label">{t('profile.apidocs')}</span>
+            </a>
           </div>
           <div className="profile-group" role="group" aria-labelledby={`${popId}-acct`}>
             <h3 id={`${popId}-acct`} className="profile-group-title">{t('profile.group.account')}</h3>
             <Button variant="ghost" className="profile-row" onClick={onLogout}>
               <Icon name="logout" /><span className="profile-row-label">{t('app.logout')}</span>
             </Button>
-            {version && <small className="profile-version muted">{t('profile.version', { version })}</small>}
           </div>
         </div>
       )}

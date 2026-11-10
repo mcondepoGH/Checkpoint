@@ -131,7 +131,7 @@ export default function App() {
         <div className="spacer" />
         <WatchSummary watch={watch} config={config} />
         <UpdateBadge info={updates} onOpen={() => setShowUpdate(true)} />
-        <ProfileMenu profile={profile} version={installedVersion(updates)} theme={theme} effectiveTheme={effectiveTheme}
+        <ProfileMenu profile={profile} theme={theme} effectiveTheme={effectiveTheme}
           updates={updates} onUpdate={() => setShowUpdate(true)} onCycleTheme={cycleTheme} onLogout={logout} onPhoto={(photo) => setProfile((p) => ({ ...p, photo }))} />
       </header>
       <main className="content">

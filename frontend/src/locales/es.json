@@ -676,8 +676,8 @@
     "update": "Actualizar a v{version}",
     "title": "Perfil",
     "themeLabel": "Tema",
+    "apidocs": "Documentación de la API",
     "group": { "prefs": "Preferencias", "integration": "Integración", "account": "Cuenta" },
-    "version": "Versión {version}",
     "photo": {
       "change": "Cambiar foto",
       "remove": "Quitar foto",
