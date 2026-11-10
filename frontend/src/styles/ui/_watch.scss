@@ -1,0 +1,19 @@
+@use '../variables' as v;
+
+// Indicador de vigilancia (componente WatchStatus): punto de color + texto. running pulsa; stale (ámbar) = sin latido.
+.watch { display: inline-flex; align-items: center; gap: .45rem; font-size: v.$fs-hint; font-weight: 600; color: var(--text); overflow-wrap: anywhere;
+  .watch-dot { flex: none; width: .6rem; height: .6rem; border-radius: 50%; background: var(--muted); }
+  &.waiting .watch-dot { background: var(--accent); }
+  &.running .watch-dot { background: var(--ok); animation: watch-pulse 1.6s ease-out infinite; }
+  &.settling .watch-dot { background: var(--accent-2); animation: blink 1s infinite; }
+  &.stale { color: var(--warn); .watch-dot { background: var(--warn); } } }
+@keyframes watch-pulse { 0% { box-shadow: 0 0 0 0 var(--ok); } 70%, 100% { box-shadow: 0 0 0 .5rem transparent; } }
+
+// Resumen en la cabecera del hub: botón-contador que despliega la lista.
+.watch-summary { margin: .25rem 0 0; display: flex; flex-direction: column; gap: .5rem;
+  .watch-toggle { align-self: flex-start; display: inline-flex; align-items: center; gap: .5rem; min-height: v.$touch; padding: 0 .9rem; border-radius: 99px;
+    border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font: inherit; font-size: v.$fs-body; font-weight: 700; cursor: pointer;
+    &:hover { border-color: var(--ok); } }
+  .watch-list { list-style: none; margin: 0; padding: .5rem .75rem; display: flex; flex-direction: column; gap: .4rem; border: 1px solid var(--border);
+    border-radius: v.$radius; background: var(--surface-2); } }
+@media (prefers-reduced-motion: reduce) { .watch .watch-dot { animation: none !important; } }

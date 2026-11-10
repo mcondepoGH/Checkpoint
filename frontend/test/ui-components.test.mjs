@@ -106,3 +106,7 @@ test('Input: texto sin autocompletar ni corrector; number y password sin añadid
   assert.doesNotMatch(r('Input', { type: 'password', value: '', onChange() {} }), /spellcheck/);
 });
 test('Alert compact', { skip }, () => { assert.equal(r('Alert', { variant: 'warn', compact: true }, 'x'), '<div class="alert warn compact">x</div>'); });
+test('WatchStatus: punto decorativo + texto', { skip }, () => {
+  assert.equal(r('WatchStatus', { state: 'running' }, 'Jugando'), '<span class="watch running"><i class="watch-dot" aria-hidden="true"></i>Jugando</span>');
+  assert.match(r('WatchStatus', { state: 'stale' }, 'x'), /^<span class="watch stale">/);
+});

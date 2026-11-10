@@ -25,6 +25,12 @@
   "app": {
     "tab": {
       "sync": {
+    "watch": {
+      "line": "Watching · {device} · since {time}",
+      "state": { "waiting": "waiting for the game to start", "running": "playing", "settling": "closing", "stale": "watcher has no heartbeat" },
+      "count": { "one": "{count} game being watched", "other": "{count} games being watched" },
+      "listAria": "Games being watched"
+    },
         "full": "Sync",
         "short": "Sync"
       },

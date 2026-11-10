@@ -5,7 +5,11 @@ import { labelOf } from '../names.js';
 import { parseRun } from '../format.js';
 import ConflictDialog from '../components/ConflictDialog.jsx';
 import { errText, useI18n } from '../useI18n.js';
-import { Alert, Badge, Button, Checkbox, Pill } from '../components/ui/index.js';
+import Icon from '../components/Icon.jsx';
+import { clock, groupByGame, watchHealth } from '../watch.js';
+import { Alert, Badge, Button, Checkbox, Pill, WatchStatus } from '../components/ui/index.js';
+
+const WATCH_POLL_MS = 5000; // el backend no emite eventos de vigilancia: se consulta /api/watches (los SSE existentes son de config y de ejecuciones)
 
 // Estados con texto propio en el distintivo: clave `sync.state.<resultado>`; otro resultado se muestra tal cual.
 const RES_KEYS = ['conflict', 'partial', 'dry-run'];
@@ -51,7 +55,7 @@ function LastRun({ s, devName }) {
 }
 
 export default function Sync({ config, onGoSettings }) {
-  const { t } = useI18n(); // re-renderiza al cambiar de idioma
+  const { t, locale } = useI18n(); // re-renderiza al cambiar de idioma
   // Las claves de config.games/status son ids internos; en pantalla siempre el nombre.
   const games = Object.keys(config.games);
   const devName = (id) => labelOf(config.devices, id);
@@ -62,11 +66,23 @@ export default function Sync({ config, onGoSettings }) {
   const [error, setError] = useState(null); // error de la API (se traduce al pintar)
   const [conflict, setConflict] = useState(null); // {game, conflict}
   const [resolving, setResolving] = useState(false);
+  const [watch, setWatch] = useState({ now: null, watches: [] });
+  const [watchOpen, setWatchOpen] = useState(false);
   const esRef = useRef(null);
   const logRef = useRef(null);
 
   const loadStatus = () => api('/api/status').then(setStatus).catch(() => {});
   useEffect(() => { loadStatus(); return () => esRef.current?.close(); }, []);
+  useEffect(() => {
+    let alive = true;
+    const load = () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      api('/api/watches').then((r) => alive && setWatch({ now: r.now, watches: r.watches || [] })).catch(() => {});
+    };
+    load();
+    const timer = setInterval(load, WATCH_POLL_MS);
+    return () => { alive = false; clearInterval(timer); };
+  }, []);
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [active?.lines.length]);
 
   // resolution/expect: solo al resolver un conflicto desde el popup.
@@ -93,6 +109,17 @@ export default function Sync({ config, onGoSettings }) {
     } catch (e) { setError(e); }
   };
 
+  const byGame = groupByGame(watch.watches);
+  const watched = games.filter((g) => byGame[g]);
+  // Una línea de vigilancia: punto + «Vigilando · dispositivo · desde HH:MM» + estado (texto, no solo color).
+  const watchLine = (w) => {
+    const h = watchHealth(w, watch.now);
+    return (
+      <WatchStatus key={`${w.game}|${w.device}`} state={h}>
+        <span>{t('sync.watch.line', { device: devName(w.device), time: clock(w.since, locale) })} · {t(`sync.watch.state.${h}`)}</span>
+      </WatchStatus>
+    );
+  };
   const badge = (s) => s && <Badge status={s.result}>{RES_KEYS.includes(s.result) ? t(`sync.state.${s.result}`) : s.result}</Badge>;
   const openConflict = (g) => {
     const c = status[g]?.conflict;
@@ -109,6 +136,18 @@ export default function Sync({ config, onGoSettings }) {
     <section className={games.length === 0 ? 'fill' : undefined}>
       <h2>{t('sync.title')}</h2>
       {error && <Alert variant="error">{errText(error)}</Alert>}
+      {watched.length > 0 && (
+        <div className="watch-summary">
+          <button type="button" className="watch-toggle" aria-expanded={watchOpen} aria-controls="watch-list" onClick={() => setWatchOpen((o) => !o)}>
+            <Icon name="eye" />{t('sync.watch.count', { count: watched.length })}
+          </button>
+          {watchOpen && (
+            <ul id="watch-list" className="watch-list" aria-label={t('sync.watch.listAria')}>
+              {watched.map((g) => byGame[g].map((w) => <li key={`${g}|${w.device}`}><b>{gameName(g)}</b> {watchLine(w)}</li>))}
+            </ul>
+          )}
+        </div>
+      )}
       {games.length === 0 && (
         <EmptyState variant="page" icon="🎮" title={t('sync.noGames.title')}
           text={t('sync.noGames.text')}
@@ -122,6 +161,7 @@ export default function Sync({ config, onGoSettings }) {
             <div className="card" key={g}>
               <h3 title={t('sync.idTitle', { id: g })}>{gameName(g)} {running ? <Badge status="running">{t('sync.state.running')}</Badge> : badge(s)}</h3>
               <p className="muted">{config.games[g].devices.map(devName).join(' ⇄ ')}</p>
+              {byGame[g]?.map(watchLine)}
               <div className={`meter ${running ? 'running' : (s?.result || '')}`} role="progressbar" aria-label={t('sync.meterAria', { game: gameName(g) })}><i /></div>
               <LastRun s={s} devName={devName} />
               <Checkbox checked={!!dry[g]} onChange={(e) => setDry({ ...dry, [g]: e.target.checked })} label={t('common.dryRun')} />
