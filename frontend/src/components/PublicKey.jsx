@@ -61,12 +61,13 @@ function Step({ n, title, hint, children }) {
 const SYSTEMS = ['Windows', 'Linux'];
 const DISTROS = ['Debian / Ubuntu', 'Arch Linux'];
 
-function KeyHelp({ pubKey, children }) {
+// `open`, `sys` y `distro` iniciales solo se usan para renderizar el panel abierto y en cada sistema en pruebas.
+export function KeyHelp({ pubKey, children, open: initialOpen = false, sys: initialSys = 'Linux', distro: initialDistro = DISTROS[0] }) {
   const { t, rich } = useI18n();
   const PH = t('keyhelp.placeholder'); // marcador dentro de los comandos, hasta que haya clave
-  const [open, setOpen] = useState(false);
-  const [sys, setSys] = useState('Linux');
-  const [distro, setDistro] = useState(DISTROS[0]);
+  const [open, setOpen] = useState(initialOpen);
+  const [sys, setSys] = useState(initialSys);
+  const [distro, setDistro] = useState(initialDistro);
   const k = pubKey || PH;
   const steps = osSteps(sys, distro, k);
   return (

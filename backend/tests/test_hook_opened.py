@@ -170,6 +170,9 @@ def test_run_in_progress_with_manual_run(client):
     finally:
         gate.set()
         m.run_sync = real
+        # Esperar a que acabe el hilo del run manual: si sigue vivo al desmontar las fixtures, llega a escribir en el
+        # DATA_DIR real (/data) y pytest avisa de una excepción en un hilo.
+        client.get(f"/api/runs/{r1.json()['run_id']}/stream")
 
 
 def test_unknown_game_and_device_404(client):

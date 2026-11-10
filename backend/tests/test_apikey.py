@@ -362,3 +362,78 @@ def test_rate_limit_old_failures_are_forgotten():
     a.hook_fail("3.3.3.3")
     clock[0] += 1
     assert a.hook_wait("3.3.3.3") > 0
+
+
+# ---- flujo HTTP completo del límite de frecuencia (reloj simulado, sin esperas reales) ----
+def _ping(anon, key, **h):
+    return anon.get("/api/hook/ping", headers={**bearer(key), **h})
+
+
+def test_rate_limit_http_flow_escalation_block_and_reset(tmp_path, monkeypatch):
+    """Falsa: 401, 401, 401 (el 3.º ya bloquea 5 s) y luego 429 con Retry-After 5. Bloqueado, ni la key válida pasa y esos
+    intentos no escalan. Pasado el tiempo, la falsa vuelve a dar 401 y la espera sube a 10 s; la válida da 200 y reinicia."""
+    anon, auth, clock, key = _limited(tmp_path, monkeypatch)
+    bad = apikey.new_key()
+    assert [_ping(anon, bad).status_code for _ in range(3)] == [401, 401, 401]
+    r = _ping(anon, bad)
+    assert r.status_code == 429 and r.headers["retry-after"] == "5" and r.json()["detail"]["params"] == {"seconds": 5}
+    assert r.json()["detail"]["code"] == "err.main.too_many_attempts"
+    for _ in range(4):  # bloqueada: falsa y válida reciben 429 y no suman fallos ni alargan el bloqueo
+        assert _ping(anon, bad).status_code == 429
+        assert _ping(anon, key).status_code == 429
+    assert auth.hook_fails["testclient"] == (3, 1005.0)
+    clock[0] += 2
+    assert _ping(anon, key).headers["retry-after"] == "3"  # la cuenta atrás avanza con el reloj, sin reiniciarse
+    clock[0] += 3  # fin del bloqueo de 5 s
+    assert _ping(anon, bad).status_code == 401  # 4.º fallo: escala a 10 s
+    r = _ping(anon, bad)
+    assert r.status_code == 429 and r.headers["retry-after"] == "10"
+    clock[0] += 10
+    ok = _ping(anon, key)
+    assert ok.status_code == 200 and ok.json()["ok"] is True
+    assert auth.hook_fails == {}  # el acierto reinicia el contador
+    assert [_ping(anon, bad).status_code for _ in range(3)] == [401, 401, 401]  # vuelve a empezar en 5 s
+    assert _ping(anon, bad).headers["retry-after"] == "5"
+
+
+def test_rate_limit_http_other_ip_is_not_blocked_without_proxy(tmp_path, monkeypatch):
+    """Sin proxy cuenta la IP del socket: otro cliente (otra IP) no se ve afectado por el bloqueo del primero."""
+    anon, auth, clock, key = _limited(tmp_path, monkeypatch, trust=False)
+    other = TestClient(anon.app, client=("203.0.113.9", 50000))
+    for _ in range(3):
+        _ping(anon, apikey.new_key())
+    assert _ping(anon, key).status_code == 429
+    assert _ping(other, key).status_code == 200
+    assert set(auth.hook_fails) == {"testclient"}
+
+
+def test_rate_limit_http_forget_inactive_ips_after_one_hour(tmp_path, monkeypatch):
+    """Los fallos de una IP sin actividad desde 1 h tras acabar su bloqueo se olvidan (FAIL_FORGET) al registrar otro fallo."""
+    from app import auth as auth_mod
+    anon, auth, clock, key = _limited(tmp_path, monkeypatch, trust=True)
+    for _ in range(3):
+        _ping(anon, apikey.new_key(), **xff("10.0.0.5"))
+    assert _ping(anon, key, **xff("10.0.0.5")).status_code == 429
+    clock[0] += 5 + auth_mod.FAIL_FORGET - 1  # aún dentro de la hora: no se olvida
+    assert _ping(anon, apikey.new_key(), **xff("10.0.0.6")).status_code == 401
+    assert set(auth.hook_fails) == {"10.0.0.5", "10.0.0.6"}
+    clock[0] += 2  # pasada la hora desde el fin del bloqueo
+    assert _ping(anon, apikey.new_key(), **xff("10.0.0.6")).status_code == 401
+    assert set(auth.hook_fails) == {"10.0.0.6"}  # 10.0.0.5 olvidada
+    assert [_ping(anon, apikey.new_key(), **xff("10.0.0.5")).status_code for _ in range(2)] == [401, 401]
+    assert _ping(anon, key, **xff("10.0.0.5")).status_code == 200  # vuelve a empezar de cero, sin bloqueo
+
+
+def test_rate_limit_login_and_hook_counters_are_separate(tmp_path, monkeypatch):
+    anon, auth, clock, key = _limited(tmp_path, monkeypatch)
+    for _ in range(3):  # login bloqueado por fallos de login...
+        assert anon.post("/api/login", json={"user": "admin", "password": "mala"}).status_code == 401
+    assert anon.post("/api/login", json={"user": "admin", "password": PW}).status_code == 429
+    assert _ping(anon, key).status_code == 200  # ...no bloquea los hooks
+    assert auth.fails["testclient"][0] == 3 and auth.hook_fails == {}
+    for _ in range(3):  # y al revés: hooks bloqueados, el contador de login no se mueve
+        _ping(anon, apikey.new_key())
+    assert _ping(anon, key).status_code == 429
+    assert auth.hook_fails["testclient"][0] == 3 and auth.fails["testclient"][0] == 3
+    clock[0] += 5
+    assert anon.post("/api/login", json={"user": "admin", "password": PW}).status_code == 200  # login libre; tras 5 s
