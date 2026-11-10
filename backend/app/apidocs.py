@@ -7,13 +7,24 @@ no los abre. Los textos están en español; los códigos `err.*` van sin traduci
 from typing import Callable
 
 from fastapi import Depends, FastAPI
-from fastapi.responses import JSONResponse
+from fastapi.openapi.docs import get_swagger_ui_html
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.routing import APIRoute
 from pydantic import BaseModel, Field
+
+from . import settings
+from .apierror import ApiError
 
 TAG = "Avisos del lanzador (API key)"
 SECURITY = "bearerAuth"
 API_PREFIX = "/api/hook/"
+DOCS_URL = "/api/docs"
+OPENAPI_URL = "/api/openapi.json"
+ASSETS_URL = "/api/docs-assets"
+ASSETS_DIR = "docs-assets"  # dentro de STATIC_DIR; lo deja allí el build del frontend (vite.config.js, swagger-ui-dist fijado)
+# Lista cerrada de ficheros servibles (sin rutas arbitrarias del disco).
+ASSETS = {"swagger-ui-bundle.js": "swagger-ui-bundle.js", "swagger-ui.css": "swagger-ui.css",
+          "favicon-32x32.png": "favicon-32x32.png"}
 
 TITLE = "API de Checkpoint (avisos del lanzador)"
 DESCRIPTION = (
@@ -105,7 +116,8 @@ def patch_schema(schema: dict) -> None:
 def install(app: FastAPI, require: Callable) -> None:
     """Llamar DESPUÉS de registrar todas las rutas de la API y ANTES del catch-all SPA.
     1. Oculta del esquema toda ruta que no sea del tag público (por defecto, una ruta nueva queda oculta).
-    2. Sirve `/api/openapi.json` solo con sesión."""
+    2. Sirve `/api/openapi.json`, `/api/docs` y los assets de Swagger UI (empaquetada: sin CDN, sin internet) solo con
+    sesión. Sin sesión, el 401 de `require`, como el resto de rutas protegidas."""
     for r in app.routes:
         if isinstance(r, APIRoute) and TAG not in (r.tags or []):
             r.include_in_schema = False
@@ -117,6 +129,23 @@ def install(app: FastAPI, require: Callable) -> None:
 
     app.openapi = openapi
 
-    @app.get("/api/openapi.json", include_in_schema=False, dependencies=[Depends(require)])
+    @app.get(OPENAPI_URL, include_in_schema=False, dependencies=[Depends(require)])
     def openapi_json():
         return JSONResponse(app.openapi())
+
+    @app.get(DOCS_URL, include_in_schema=False, dependencies=[Depends(require)])
+    def docs():
+        # La página lleva un script de inicio en línea (lo genera FastAPI): no añadas una CSP que lo bloquee.
+        return get_swagger_ui_html(
+            openapi_url=OPENAPI_URL, title=TITLE, swagger_js_url=f"{ASSETS_URL}/swagger-ui-bundle.js",
+            swagger_css_url=f"{ASSETS_URL}/swagger-ui.css", swagger_favicon_url=f"{ASSETS_URL}/favicon-32x32.png",
+            swagger_ui_parameters={"supportedSubmitMethods": ["get", "post"],
+                                   "docExpansion": "list", "defaultModelsExpandDepth": -1})
+
+    @app.get(ASSETS_URL + "/{name}", include_in_schema=False, dependencies=[Depends(require)])
+    def docs_asset(name: str):
+        f = ASSETS.get(name)
+        path = settings.STATIC_DIR / ASSETS_DIR / f if f else None
+        if path is None or not path.is_file():
+            raise ApiError(404, "err.main.not_found")
+        return FileResponse(path, headers={"Cache-Control": "no-cache"})
