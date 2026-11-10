@@ -13,6 +13,7 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
+from . import apidocs
 from . import apikey
 from . import avatar
 from . import settings
@@ -91,7 +92,10 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             task.cancel()
             await holder["watcher"].cancel_all()
 
-    app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
+    # La documentación (/api/docs, /api/openapi.json) la monta `apidocs.install` con la dependencia de sesión.
+    app = FastAPI(title=apidocs.TITLE, version=updates.installed_version(), description=apidocs.DESCRIPTION,
+                  openapi_tags=[{"name": apidocs.TAG, "description": apidocs.TAG_DESCRIPTION}],
+                  docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     app.add_middleware(RequestDebugLog, logger=api_log)
     if auth is None:
         auth = Auth.from_env()
@@ -274,7 +278,8 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         raise ApiError(401, "err.apikey.invalid", headers={"WWW-Authenticate": "Bearer"})
 
     # Todo lo de /api/hook/* cuelga de este router y de su dependencia (aquí irá `POST /api/hook/{game}/opened`).
-    hook = APIRouter(prefix="/api/hook", dependencies=[Depends(hook_user)])
+    hook = APIRouter(prefix="/api/hook", tags=[apidocs.TAG], dependencies=[Depends(hook_user)],
+                     responses={401: apidocs.R401, 429: apidocs.R429})
 
     @hook.get("/ping")
     def hook_ping(user: str = Depends(hook_user)):
@@ -877,9 +882,12 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
                       body.get("source"))
         return {"ok": True, "message": describe_code(res["code"], res["params"]), **res}
 
+    # ---- documentación OpenAPI (solo la API de la API key; con sesión). Antes del catch-all SPA. ----
+    apidocs.install(app, require)
+
     # ---- web (SPA) ----
     # Los estáticos no contienen secretos; solo así se puede pintar la pantalla de login.
-    @app.get("/{path:path}")
+    @app.get("/{path:path}", include_in_schema=False)
     def spa(path: str):
         if path.startswith("api/"):
             raise ApiError(404, "err.main.not_found")
