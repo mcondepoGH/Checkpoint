@@ -21,8 +21,10 @@ def _log_note(kind: str, game: str, device: str, detail: str = ""):
 
 
 class Watch:
-    def __init__(self, game: str, device: str):
+    def __init__(self, game: str, device: str, poll: float = 0.0):
+        # `since`: inicio del estado actual; `last_poll`: último sondeo completado (latido); `poll`: intervalo en segundos.
         self.game, self.device, self.state, self.since = game, device, WAITING, utcnow()
+        self.last_poll, self.poll = self.since, poll
 
     def set(self, state: str):
         self.state, self.since = state, utcnow()
@@ -48,7 +50,7 @@ class Watcher:
         poll, settle, first = (v if v is not None else d for v, d in zip(
             self._times, (settings.HOOK_POLL, settings.HOOK_SETTLE, settings.HOOK_FIRST_SEEN)))
         log.debug("armar: juego=%s dispositivo=%s poll=%gs settle=%gs first_seen=%gs", game, device, poll, settle, first)
-        w = Watch(game, device)
+        w = Watch(game, device, poll)
         self.watches[game] = w
         self.tasks[game] = asyncio.create_task(self._run(w, poll, settle, first))
 
@@ -60,7 +62,8 @@ class Watcher:
             t.cancel()
 
     def list(self) -> List[dict]:
-        return [{"game": w.game, "device": w.device, "state": w.state, "since": iso(w.since)}
+        return [{"game": w.game, "device": w.device, "state": w.state, "since": iso(w.since),
+                 "last_poll": iso(w.last_poll), "poll": w.poll}
                 for w in self.watches.values()]
 
     async def cancel_all(self):
@@ -85,6 +88,7 @@ class Watcher:
             start, seen = self.clock(), False
             while True:
                 r = await self._seen(w)
+                w.last_poll = utcnow()
                 log.debug("sondeo: juego=%s dispositivo=%s resultado=%s estado=%s", w.game, w.device, r, w.state)
                 if r:
                     seen = True

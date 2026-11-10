@@ -26,7 +26,7 @@ from .auth import Auth
 from .config import Config, ConfigError, Device, pyd_body, describe, normalize_path, resolve_ref, validate_config
 from .configstore import Conflict, ConfigStore, InvalidConfig, parse_text, config_events_gen, diff_configs, render_yaml
 from .redact import redact
-from .scheduler import Scheduler
+from .scheduler import Scheduler, iso, utcnow
 from .watcher import Watcher
 from .sync import SyncAbort, count_versions, list_versions, restore_version, run_sync, valid_resolution
 from .transport import TransportError, get_transport, local_folder_status
@@ -731,6 +731,15 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         return out
 
     app.include_router(hook)
+
+    @app.get("/api/watches", dependencies=[Depends(require)])
+    def watches_view():
+        """Vigilancias de cierre activas para la UI (sesión): {now, watches: [{game, device, state, since, last_poll, poll}]}.
+        `now` es la hora del servidor (UTC) para que el cliente mida el latido sin depender de su reloj. Sin datos sensibles."""
+        cfg = _cfg()
+        w = [x for x in watcher.list() if x["game"] in cfg.games]
+        api_log.debug("watches: %d vigilancias activas", len(w))
+        return {"now": iso(utcnow()), "watches": w}
 
     @app.get("/api/games/{game}/hook-status", dependencies=[Depends(require)])
     def hook_status(game: str):

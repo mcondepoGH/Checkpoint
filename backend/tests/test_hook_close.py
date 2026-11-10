@@ -110,7 +110,7 @@ def test_opened_arms_watch_and_reports_watching(cl):
     assert r.status_code == 200 and j["watching"] is True and "watch_reason" not in j and j["outcome"] == "ok"
     w = watches(cl).json()
     assert len(w) == 1 and w[0]["game"] == "g1" and w[0]["device"] == "dev-1" and w[0]["state"] == "waiting" and w[0]["since"]
-    assert set(w[0]) == {"game", "device", "state", "since"}
+    assert set(w[0]) == {"game", "device", "state", "since", "last_poll", "poll"}
 
 
 def test_no_process_configured_does_not_watch(cl):

@@ -76,3 +76,18 @@ def test_make_entry_device_field():
     e = history.make_entry(datetime.now(timezone.utc), 1, "hook", "ok", {}, device="dev-1")
     assert e["device"] == "dev-1"
     assert "device" not in history.make_entry(datetime.now(timezone.utc), 1, "scheduled", "ok", {})
+
+
+def test_watches_view_requires_session_and_exposes_heartbeat(cl):
+    assert cl.get("/api/watches").status_code == 401
+    assert cl.get("/api/watches", headers=cl.hdr).status_code == 401  # la key no vale
+    session(cl)
+    j = cl.get("/api/watches").json()
+    assert j["watches"] == [] and j["now"]
+    hopen(cl)
+    j = cl.get("/api/watches").json()
+    assert len(j["watches"]) == 1
+    w = j["watches"][0]
+    assert w["game"] == "g1" and w["device"] == "dev-1" and w["state"] == "waiting"
+    assert w["since"] and w["last_poll"] and w["poll"] > 0
+    assert "key" not in str(j).lower()

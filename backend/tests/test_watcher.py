@@ -193,3 +193,37 @@ def test_cancel_all_on_shutdown():
 
     run(go())
     assert f.checkpoints == []
+
+
+def test_list_exposes_heartbeat_fields():
+    f = Fake({0: False, 30: True})
+    w = f.make()
+
+    async def go():
+        w.arm("g1", "dev-1")
+        first = w.list()[0]
+        assert first["poll"] == POLL and first["last_poll"] and first["since"]
+        assert set(first) == {"game", "device", "state", "since", "last_poll", "poll"}
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+        return first
+
+    first = run(go())
+    assert first["last_poll"] >= first["since"]
+
+
+def test_last_poll_advances_each_probe_even_on_transport_error():
+    f = Fake({0: RuntimeError("ssh")})
+    w = f.make()
+    seen = []
+
+    async def go():
+        w.arm("g1", "dev-1")
+        for _ in range(6):
+            await asyncio.sleep(0)
+            if w.list():
+                seen.append(w.list()[0]["last_poll"])
+        await settle_all(w)
+
+    run(go())
+    assert len(seen) >= 2 and seen == sorted(seen) and seen[-1] >= seen[0]
