@@ -25,13 +25,6 @@
   "app": {
     "tab": {
       "sync": {
-    "watch": {
-      "bar": {"waiting": "Esperando a que arranque · {device}", "running": "Jugando en {device}", "settling": "Cerrando · guardando checkpoint…", "stale": "Sin latido"},
-      "since": "desde {time}",
-      "short": {"waiting": "Esperando", "running": "Jugando", "settling": "Cerrando", "stale": "Sin latido"},
-      "count": { "one": "{count} juego en vigilancia", "other": "{count} juegos en vigilancia" },
-      "listAria": "Juegos en vigilancia"
-    },
         "full": "Sincronizar",
         "short": "Sync"
       },
@@ -70,6 +63,13 @@
     "newest": "Gana el más reciente"
   },
   "sync": {
+    "watch": {
+      "bar": {"waiting": "Esperando a que arranque · {device}", "running": "Jugando en {device}", "settling": "Cerrando · guardando checkpoint…", "stale": "Sin latido"},
+      "since": "desde {time}",
+      "short": {"waiting": "Esperando", "running": "Jugando", "settling": "Cerrando", "stale": "Sin latido"},
+      "count": { "one": "{count} juego en vigilancia", "other": "{count} juegos en vigilancia" },
+      "listAria": "Juegos en vigilancia"
+    },
     "title": "Sincronizar",
     "state": {
       "conflict": "Conflicto",
@@ -655,6 +655,9 @@
   },
   "profile": {
     "open": "Perfil y opciones",
+    "openUpdate": "Perfil y opciones (hay una actualización disponible)",
+    "updateDot": "Hay una actualización disponible",
+    "update": "Actualizar a v{version}",
     "title": "Perfil",
     "theme": "Tema: {theme}",
     "version": "Versión {version}",

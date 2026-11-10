@@ -6,9 +6,18 @@
   &.avatar-lg { width: 6rem; height: 6rem; border: 2px solid var(--border); background: var(--bg);
     svg { width: 3.25rem; height: 3.25rem; } } }
 // Botón de la cabecera: 40 px (v.$touch, de Button iconOnly), redondo; la foto lo llena.
-.profile-btn.btn { border-radius: 50%; overflow: hidden; margin-left: .25rem;
+.profile-btn.btn { position: relative; border-radius: 50%; margin-left: .25rem; // sin overflow: el punto de aviso sobresale; el avatar ya recorta la foto
   .avatar { width: 100%; height: 100%; }
   &[aria-expanded='true'] { border-color: var(--accent); box-shadow: 0 0 12px -3px var(--accent); } }
+
+// Punto de aviso de actualización (solo <480 px, donde el aviso sale de la cabecera); el texto accesible va en su aria-label.
+.upd-dot { display: none; position: absolute; top: 0; right: 0; width: .7rem; height: .7rem; border-radius: 50%; background: var(--accent-2); border: 2px solid var(--surface); box-sizing: border-box; }
+// Entrada «Actualizar a vX.Y.Z» del menú: solo <480 px (en pantallas anchas el aviso sigue en la cabecera).
+.profile-update.btn { display: none; color: var(--accent-2); }
+@media (max-width: v.$bp-upd - .02px) {
+  .upd-dot { display: block; }
+  .profile-update.btn { display: flex; }
+}
 
 .profile { position: relative; flex: none; }
 .profile-pop { position: absolute; z-index: 6; top: calc(100% + .5rem); right: 0; width: min(20rem, calc(100vw - 2rem)); max-height: calc(100dvh - 5rem); overflow-y: auto;

@@ -2,6 +2,7 @@ import React, { useEffect, useId, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { ui } from '../errors.js';
 import { PHOTO_ACCEPT, photoUrl, prepareAvatar, validatePhotoFile } from '../photo.js';
+import { showBadge } from '../updates.js';
 import { errText, useI18n } from '../useI18n.js';
 import ApiKeySection from './ApiKeySection.jsx';
 import Avatar from './Avatar.jsx';
@@ -10,9 +11,10 @@ import LanguageSelect from './LanguageSelect.jsx';
 import { Alert, Button } from './ui/index.js';
 
 // Perfil en la cabecera: botón circular con la foto (o la silueta) y un popover anclado debajo con foto, idioma, tema,
-// salir y la versión. No modal: Esc cierra y devuelve el foco al botón; pulsar fuera o sacar el foco del popover (Tab) lo cierra.
+// salir y la versión. Con una actualización disponible, en móvil (<480 px, por CSS) el aviso sale de la cabecera: el avatar lleva un punto
+// (con texto accesible) y el menú una entrada «Actualizar a vX.Y.Z» que abre el mismo diálogo (`onUpdate`). No modal: Esc cierra y devuelve el foco al botón; pulsar fuera o sacar el foco del popover (Tab) lo cierra.
 // `open` inicial solo se usa para renderizar el popup en pruebas.
-export default function ProfileMenu({ profile, version, theme, effectiveTheme, onCycleTheme, onLogout, onPhoto, open: initialOpen = false }) {
+export default function ProfileMenu({ profile, version, theme, effectiveTheme, onCycleTheme, onLogout, onPhoto, updates = null, onUpdate, open: initialOpen = false }) {
   const { t } = useI18n();
   const [open, setOpen] = useState(initialOpen);
   const [error, setError] = useState(null); // error de la foto (se traduce al pintar)
@@ -23,6 +25,7 @@ export default function ProfileMenu({ profile, version, theme, effectiveTheme, o
   const file = useRef(null);
   const popId = useId();
   const src = photoUrl(profile.photo);
+  const hasUpdate = showBadge(updates);
 
   useEffect(() => { if (open && !initialOpen) pop.current?.focus(); }, [open, initialOpen]);
   useEffect(() => {
@@ -59,9 +62,10 @@ export default function ProfileMenu({ profile, version, theme, effectiveTheme, o
 
   return (
     <div className="profile" ref={wrap} onKeyDown={onKeyDown} onBlur={onBlur}>
-      <Button ref={btn} variant="ghost" iconOnly className="profile-btn" title={t('profile.open')} aria-label={t('profile.open')}
+      <Button ref={btn} variant="ghost" iconOnly className="profile-btn" title={t('profile.open')} aria-label={t(hasUpdate ? 'profile.openUpdate' : 'profile.open')}
         aria-haspopup="dialog" aria-expanded={open} aria-controls={open ? popId : undefined} onClick={() => (open ? close() : setOpen(true))}>
         <Avatar src={src} />
+        {hasUpdate && <i className="upd-dot" role="img" aria-label={t('profile.updateDot')} />}
       </Button>
       {open && (
         <div id={popId} className="profile-pop" role="dialog" aria-label={t('profile.title')} tabIndex={-1} ref={pop}>
@@ -77,6 +81,11 @@ export default function ProfileMenu({ profile, version, theme, effectiveTheme, o
           {error && <Alert variant="error" role="alert">{errText(error)}</Alert>}
           <LanguageSelect />
           <ApiKeySection />
+          {hasUpdate && (
+            <Button variant="ghost" className="profile-row profile-update" onClick={() => { close(); onUpdate?.(); }}>
+              <Icon name="download" />{t('profile.update', { version: updates.ultima })}
+            </Button>
+          )}
           <Button variant="ghost" className="profile-row" onClick={onCycleTheme}>
             <Icon name={effectiveTheme === 'dark' ? 'moon' : 'sun'} />{t('profile.theme', { theme: t(`app.theme.${theme}`) })}
           </Button>

@@ -46,6 +46,10 @@
   .tool { flex: none; width: v.$touch; min-width: v.$touch; height: v.$touch; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
   .content { padding-top: .75rem; padding-bottom: .75rem; }
 }
+// Móvil ancho (< 480 px): el aviso de actualización sale de la cabecera (cabe en el menú de perfil, el avatar lleva un punto).
+@media (max-width: v.$bp-upd - .02px) {
+  .update-badge { display: none; }
+}
 // Pantallas muy estrechas (<= 380 px): el icono de la app se queda, pero con menos aire para que quepan las pestañas.
 @media (max-width: v.$bp-xs) {
   .brand-logo { width: 24px; height: 24px; }
@@ -53,7 +57,7 @@
   .tab { padding: 0 .3rem; font-size: v.$fs-tab-narrow; letter-spacing: .02em; }
   .profile-btn.btn { margin-left: 0; }
 }
-// Mínimo (<= 340 px, 320 px reales) con el aviso de actualización visible. Cálculo (px, rem = 16 px):
+// Mínimo (<= 340 px, 320 px reales). Cálculo histórico con el aviso en la barra (ya no sale en <480 px; ahora ocupa su sitio el chip de vigilancia, si lo hay). Cálculo (px, rem = 16 px):
 //   disponible = 320 - 2 x 8 (padding topbar .5rem) = 304; fijo = icono 24 + margen .25rem (4) + aviso 40 + perfil 40 + 3 gaps x 4 = 124
 //   => pestañas disponibles = 180; necesarias a .3rem de padding ~ 194 (3 x (2 x 4.8 + 2 borde) + 2 x 1.6 gap + texto ~157): faltan ~14.
 //   Ahorro: padding de pestaña .3rem -> .15rem (6 x 2.4 = 14.4) + gap de barra .25rem -> .2rem (3 x 0.8 = 2.4) + gap de pestañas .1rem -> .05rem (2 x 0.8 = 1.6) = 18.4 px (holgura ~4 px).

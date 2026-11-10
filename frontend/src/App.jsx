@@ -4,6 +4,8 @@ import AppIcon from './components/AppIcon.jsx';
 import PwaInstall from './components/PwaInstall.jsx';
 import UpdateBadge from './components/UpdateBadge.jsx';
 import ProfileMenu from './components/ProfileMenu.jsx';
+import WatchSummary from './components/WatchSummary.jsx';
+import { useWatches } from './useWatches.js';
 import UpdateDialog from './components/UpdateDialog.jsx';
 import { installedVersion, updatesApplicable } from './updates.js';
 import Login from './pages/Login.jsx';
@@ -53,6 +55,7 @@ export default function App() {
   const [profile, setProfile] = useState({ name: '', photo: null }); // nombre y foto (versión) del perfil; un fallo aquí nunca molesta
   const [theme, cycleTheme, effectiveTheme] = useTheme();
   const config = loaded.config;
+  const watch = useWatches(authed === true); // una sola consulta de vigilancia: cabecera y tarjetas de Sincronizar
 
   const loadConfig = useCallback(async (first = false) => {
     try {
@@ -127,9 +130,10 @@ export default function App() {
           ))}
         </nav>
         <div className="spacer" />
+        <WatchSummary watch={watch} config={config} />
         <UpdateBadge info={updates} onOpen={() => setShowUpdate(true)} />
         <ProfileMenu profile={profile} version={installedVersion(updates)} theme={theme} effectiveTheme={effectiveTheme}
-          onCycleTheme={cycleTheme} onLogout={logout} onPhoto={(photo) => setProfile((p) => ({ ...p, photo }))} />
+          updates={updates} onUpdate={() => setShowUpdate(true)} onCycleTheme={cycleTheme} onLogout={logout} onPhoto={(photo) => setProfile((p) => ({ ...p, photo }))} />
       </header>
       <main className="content">
         <PwaInstall />
@@ -139,7 +143,7 @@ export default function App() {
             onApplied={(r) => { setLoaded((l) => ({ ...l, version: r.version, config: r.config, error: null })); setLatest(r.version); }}
             onReload={() => loadConfig()} onDirty={setDirty} updates={updates} onUpdates={setUpdates} />
         </div>
-        {tab === 'sync' && <Sync config={config} onGoSettings={() => setTab('settings')} />}
+        {tab === 'sync' && <Sync config={config} watch={watch} onGoSettings={() => setTab('settings')} />}
         {tab === 'versions' && <Versions config={config} onGoSettings={() => setTab('settings')} />}
       </main>
       {installedVersion(updates) && <footer className="app-footer muted">Checkpoint {installedVersion(updates)}</footer>}

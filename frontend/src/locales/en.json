@@ -25,13 +25,6 @@
   "app": {
     "tab": {
       "sync": {
-    "watch": {
-      "bar": {"waiting": "Waiting for it to start · {device}", "running": "Playing on {device}", "settling": "Closing · saving checkpoint…", "stale": "No heartbeat"},
-      "since": "since {time}",
-      "short": {"waiting": "Waiting", "running": "Playing", "settling": "Closing", "stale": "No heartbeat"},
-      "count": { "one": "{count} game being watched", "other": "{count} games being watched" },
-      "listAria": "Games being watched"
-    },
         "full": "Sync",
         "short": "Sync"
       },
@@ -70,6 +63,13 @@
     "newest": "Newest wins"
   },
   "sync": {
+    "watch": {
+      "bar": {"waiting": "Waiting for it to start · {device}", "running": "Playing on {device}", "settling": "Closing · saving checkpoint…", "stale": "No heartbeat"},
+      "since": "since {time}",
+      "short": {"waiting": "Waiting", "running": "Playing", "settling": "Closing", "stale": "No heartbeat"},
+      "count": { "one": "{count} game being watched", "other": "{count} games being watched" },
+      "listAria": "Games being watched"
+    },
     "title": "Sync",
     "state": {
       "conflict": "Conflict",
@@ -655,6 +655,9 @@
   },
   "profile": {
     "open": "Profile and options",
+    "openUpdate": "Profile and options (an update is available)",
+    "updateDot": "An update is available",
+    "update": "Update to v{version}",
     "title": "Profile",
     "theme": "Theme: {theme}",
     "version": "Version {version}",
