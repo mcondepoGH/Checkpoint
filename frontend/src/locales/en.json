@@ -420,6 +420,9 @@
       "text": "On the device card, press <b>{test}</b>. It should answer <code>{ok}</code>. The first time, it saves the device's fingerprint."
     },
     "warn": "Paste only the public key (one line starting with <code>ssh-ed25519</code>). NEVER a private key.",
+    "inOrder": "Run them in order, one at a time.",
+    "pickOne": "Pick only one of the options, depending on the firewall you use.",
+    "alt": { "ufw": "If you use ufw", "firewalld": "If you use firewalld" },
     "copied": "Copied",
     "step": {
       "winServer": {

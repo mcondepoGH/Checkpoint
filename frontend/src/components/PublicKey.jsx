@@ -3,6 +3,7 @@ import { api } from '../api.js';
 import { copyText } from '../clipboard.js';
 import { errText, useI18n } from '../useI18n.js';
 import { Alert, Button } from './ui/index.js';
+import { osSteps } from '../keyhelpSteps.js';
 
 function CodeBlock({ text }) {
   const { t } = useI18n();
@@ -18,31 +19,6 @@ function CodeBlock({ text }) {
       <Button onClick={copy}>{ok ? t('common.copied') : t('common.copy')}</Button>
     </div>
   );
-}
-
-const LINUX_KEY = (k) => `mkdir -p ~/.ssh && chmod 700 ~/.ssh\necho "${k}" >> ~/.ssh/authorized_keys\nchmod 600 ~/.ssh/authorized_keys`;
-
-// Cada paso: [id del paso (claves `keyhelp.step.<id>.title|hint`), comando]. Los comandos no se traducen.
-function osSteps(os, distro, k) {
-  if (os === 'Windows') {
-    return [
-      ['winServer', 'Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0\nStart-Service sshd; Set-Service sshd -StartupType Automatic'],
-      ['winUser', `New-Item -ItemType Directory -Force "$env:USERPROFILE\\.ssh" | Out-Null\nAdd-Content -Path "$env:USERPROFILE\\.ssh\\authorized_keys" -Value '${k}'`],
-      ['winAdmin', `Add-Content -Path "C:\\ProgramData\\ssh\\administrators_authorized_keys" -Value '${k}'\nicacls "C:\\ProgramData\\ssh\\administrators_authorized_keys" /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F"`],
-    ];
-  }
-  if (distro === 'Arch Linux') {
-    return [
-      ['archInstall', 'sudo pacman -S --needed openssh\nsudo systemctl enable --now sshd'],
-      ['archFirewall', '# ufw\nsudo ufw allow 22/tcp\n# firewalld\nsudo firewall-cmd --permanent --add-service=ssh && sudo firewall-cmd --reload'],
-      ['linuxKey', LINUX_KEY(k)],
-    ];
-  }
-  return [
-    ['debInstall', 'sudo apt update && sudo apt install -y openssh-server\nsudo systemctl enable --now ssh'],
-    ['debFirewall', 'sudo ufw allow 22/tcp'],
-    ['linuxKey', LINUX_KEY(k)],
-  ];
 }
 
 // Pestañas accesibles: flechas, Inicio y Fin; tabindex itinerante.
@@ -112,11 +88,18 @@ function KeyHelp({ pubKey, children }) {
               <div role="tabpanel" id={sys === 'Linux' ? 'ks-distro-panel' : 'ks-sys-panel'} aria-labelledby={sys === 'Linux' ? `ks-distro-tab-${distro}` : 'ks-sys-tab-Windows'} className="keypanel">
                 {!pubKey && <p className="muted">{rich('keyhelp.noKey', { placeholder: PH })}</p>}
                 <ol className="keysubsteps">
-                  {steps.map(([id, cmd], i) => (
+                  {steps.map(({ id, cmds, alt }, i) => (
                     <li key={id} className="keysub">
                       <h5><span className="keysub-n" aria-hidden="true">{String.fromCharCode(97 + i)}</span>{t(`keyhelp.step.${id}.title`)}</h5>
-                      <p className="muted">{t(`keyhelp.step.${id}.hint`)}</p>
-                      <CodeBlock text={cmd} />
+                      <p className="muted">{t(`keyhelp.step.${id}.hint`)}{alt ? ` ${t('keyhelp.pickOne')}` : cmds.length > 1 ? ` ${t('keyhelp.inOrder')}` : ''}</p>
+                      <div className="keycmds">
+                        {cmds.map((c) => (
+                          <div key={c.text} className="keycmd">
+                            {c.label && <p className="keycmd-label">{t(c.label)}</p>}
+                            <CodeBlock text={c.text} />
+                          </div>
+                        ))}
+                      </div>
                     </li>
                   ))}
                 </ol>

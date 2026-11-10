@@ -420,6 +420,9 @@
       "text": "En la tarjeta del dispositivo, pulsa <b>{test}</b>. Debe responder <code>{ok}</code>. La primera vez guarda la huella del dispositivo."
     },
     "warn": "Pega solo la clave pública (una línea que empieza por <code>ssh-ed25519</code>). NUNCA una clave privada.",
+    "inOrder": "Ejecútalos en orden, uno por uno.",
+    "pickOne": "Elige solo una de las opciones, según el firewall que uses.",
+    "alt": { "ufw": "Si usas ufw", "firewalld": "Si usas firewalld" },
     "copied": "Copiada",
     "step": {
       "winServer": {
