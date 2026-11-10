@@ -44,7 +44,7 @@ const R = (C, props, lang = 'es') => { m.i18n.setLocale(lang); return m.renderTo
 const DEVS = [{ id: 'mi-pc', name: 'Mi PC' }, { id: 'deck', name: 'Deck' }];
 const game = (o = {}) => ({ sel: 'juego-1a2b3c4d', id: 'juego-1a2b3c4d', name: 'Juego', process: 'juego.exe', devices: DEVS, ...o });
 const OTHER = { sel: 'otro-9f8e7d6c', id: 'otro-9f8e7d6c', name: 'Otro juego', process: 'otro.exe', devices: [{ id: 'mi-pc', name: 'Mi PC' }] };
-const block = (initial, o = {}, lang = 'es') => R('LauncherBlock', { games: [game(o.game), OTHER], selected: 'juego-1a2b3c4d', onSelect() {}, active: true, defaultHub: 'http://192.168.1.98:8088', initial, now: new Date('2026-11-09T12:00:00Z'), ...o, game: undefined }, lang);
+const block = (initial, o = {}, lang = 'es') => R('LauncherBlock', { games: [game(o.game), OTHER], selected: 'juego-1a2b3c4d', onSelect() {}, active: true, defaultHub: 'http://hub.example.lan:8088', initial, now: new Date('2026-11-09T12:00:00Z'), ...o, game: undefined }, lang);
 const WITH = { loaded: true, key: KEY };
 
 test('Tabs: roles, aria-selected/controls y roving tabindex', { skip }, () => {
@@ -78,7 +78,7 @@ test('Lanzador con key: pestañas, selector de dispositivo, URL y comando Steam 
   for (const l of ['Steam / Steam Deck', 'Lutris', 'Heroic (sin verificar)', 'Windows (Playnite)']) assert.ok(has(h, `>${l}</button>`), l);
   assert.ok(has(h, 'Opciones de lanzamiento') && has(h, 'El cierre lo vigila el hub solo'));
   assert.ok(has(h, 'Mi PC') && has(h, 'Deck') && has(h, 'Dispositivo del lanzador') && has(h, 'URL del hub'));
-  assert.ok(has(h, `Bearer ${KEY}`) && has(h, 'http://192.168.1.98:8088/api/hook/juego-1a2b3c4d/opened?device=mi-pc') && has(h, '; %command%'));
+  assert.ok(has(h, `Bearer ${KEY}`) && has(h, 'http://hub.example.lan:8088/api/hook/juego-1a2b3c4d/opened?device=mi-pc') && has(h, '; %command%'));
   assert.equal(h.split(KEY).length - 1, 1);
   assert.ok(has(h, 'aria-label="Copiar comando de Steam / Steam Deck"'), h);
   assert.ok(has(R('LauncherBlock', { games: [game({ devices: DEVS })], selected: 'juego-1a2b3c4d', onSelect() {}, active: true, initial: WITH, defaultHub: 'http://x:1' }, 'en'), 'aria-label="Copy Steam / Steam Deck command"'));

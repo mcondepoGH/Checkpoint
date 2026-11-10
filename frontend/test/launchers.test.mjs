@@ -5,9 +5,9 @@ import { LAUNCHERS, commandsFor, hookUrl, normalizeHubUrl, ago, loadHubUrl, save
 import { nextTabIndex } from '../src/tabs.js';
 
 const KEY = 'ck_AbC123xyz';
-const base = { url: 'http://192.168.1.98:8088', key: KEY, game: 'juego-1a2b3c4d', device: 'mi-pc' };
+const base = { url: 'http://hub.example.lan:8088', key: KEY, game: 'juego-1a2b3c4d', device: 'mi-pc' };
 const main = (l, o = {}) => commandsFor(l, { ...base, ...o })[0].text;
-const CURL = `curl -fsS -m 60 --retry 3 -X POST -H "Authorization: Bearer ${KEY}" "http://192.168.1.98:8088/api/hook/juego-1a2b3c4d/opened?device=mi-pc"`;
+const CURL = `curl -fsS -m 60 --retry 3 -X POST -H "Authorization: Bearer ${KEY}" "http://hub.example.lan:8088/api/hook/juego-1a2b3c4d/opened?device=mi-pc"`;
 
 test('lanzadores en orden', () => assert.deepEqual(LAUNCHERS, ['steam', 'lutris', 'heroic', 'windows']));
 
@@ -28,7 +28,7 @@ test('%command% solo en Steam', () => {
 test('Windows: PowerShell 5.1 y alternativa curl.exe', () => {
   const [ps, cx] = commandsFor('windows', base);
   assert.equal(ps.id, 'powershell');
-  assert.equal(ps.text, `Invoke-WebRequest -Method Post -Uri "http://192.168.1.98:8088/api/hook/juego-1a2b3c4d/opened?device=mi-pc" -Headers @{Authorization='Bearer ${KEY}'} -TimeoutSec 60 -UseBasicParsing`);
+  assert.equal(ps.text, `Invoke-WebRequest -Method Post -Uri "http://hub.example.lan:8088/api/hook/juego-1a2b3c4d/opened?device=mi-pc" -Headers @{Authorization='Bearer ${KEY}'} -TimeoutSec 60 -UseBasicParsing`);
   assert.equal(cx.id, 'curl');
   assert.equal(cx.text, `curl.exe${CURL.slice('curl'.length)}`);
 });
@@ -40,7 +40,7 @@ test('la key aparece exactamente una vez en cada comando', () => {
 test('id y dispositivo con espacios, &, comillas y unicode van codificados', () => {
   const o = { game: 'Mi Juego & "Co" ñ', device: 'PC "sala" & más?=#' };
   const u = hookUrl({ ...base, ...o });
-  assert.equal(u, 'http://192.168.1.98:8088/api/hook/Mi%20Juego%20%26%20%22Co%22%20%C3%B1/opened?device=PC%20%22sala%22%20%26%20m%C3%A1s%3F%3D%23');
+  assert.equal(u, 'http://hub.example.lan:8088/api/hook/Mi%20Juego%20%26%20%22Co%22%20%C3%B1/opened?device=PC%20%22sala%22%20%26%20m%C3%A1s%3F%3D%23');
   for (const l of LAUNCHERS) for (const c of commandsFor(l, { ...base, ...o })) {
     assert.ok(c.text.includes(u), `${l}/${c.id}`);
     assert.ok(!/[ñá]/.test(c.text));
