@@ -67,6 +67,7 @@
       "bar": {"waiting": "Waiting for it to start · {device}", "running": "Playing on {device}", "settling": "Closing · saving checkpoint…", "stale": "No heartbeat"},
       "since": "since {time}",
       "short": {"waiting": "Waiting", "running": "Playing", "settling": "Closing", "stale": "No heartbeat"},
+      "chip": "Watching · {count}",
       "count": { "one": "{count} game being watched", "other": "{count} games being watched" },
       "listAria": "Games being watched"
     },

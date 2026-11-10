@@ -11,7 +11,7 @@
   &[aria-expanded='true'] { border-color: var(--accent); box-shadow: 0 0 12px -3px var(--accent); } }
 
 // Punto de aviso de actualización (solo <480 px, donde el aviso sale de la cabecera); el texto accesible va en su aria-label.
-.upd-dot { display: none; position: absolute; top: 0; right: 0; width: .7rem; height: .7rem; border-radius: 50%; background: var(--accent-2); border: 2px solid var(--surface); box-sizing: border-box; }
+.upd-dot { display: none; position: absolute; top: 0; right: 0; width: .7rem; height: .7rem; aspect-ratio: 1; border-radius: 50%; background: var(--accent-2); border: 2px solid var(--surface); box-sizing: border-box; }
 // Entrada «Actualizar a vX.Y.Z» del menú: solo <480 px (en pantallas anchas el aviso sigue en la cabecera).
 .profile-update.btn { display: none; color: var(--accent-2); border-color: color-mix(in srgb, var(--accent-2) 55%, var(--border)); background: color-mix(in srgb, var(--accent-2) 12%, var(--surface-2)); font-weight: 700; }
 @media (max-width: v.$bp-upd - .02px) {

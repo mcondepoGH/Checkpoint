@@ -63,6 +63,8 @@ test('chip en la cabecera: punto, número, texto completo en aria-label y desple
   assert.ok(has(h, 'class="watch-summary"') && has(h, 'class="watch-toggle"'));
   assert.ok(has(h, 'aria-label="2 juegos en vigilancia"') && has(h, 'aria-expanded="false"'));
   assert.ok(has(h, 'watch-chip-dot') && has(h, '<b class="watch-num" aria-hidden="true">2</b>'));
+  assert.ok(has(h, '<span class="watch-lbl" aria-hidden="true">Vigilando · 2</span>') && has(summary([W()], {}, 'en'), 'Watching · 1</span>'));
+  assert.ok(has(summary([W()]), 'Vigilando · 1</span>') && !has(summary([W()]), 'juego en vigilancia</span>'));
   assert.ok(!has(h, 'watch-list'));
   assert.ok(has(summary([W()]), 'aria-label="1 juego en vigilancia"'));
   assert.ok(has(summary([W()], {}, 'en'), 'aria-label="1 game being watched"'));
@@ -72,7 +74,7 @@ test('contador cuenta juegos, no vigilancias, y 99+ por encima de 99', { skip },
   const games = {};
   for (let i = 0; i < 100; i++) games[`g${i}`] = { name: `G${i}` };
   const h = summary(Object.keys(games).map((g) => W({ game: g })), { config: { devices: CONFIG.devices, games } });
-  assert.ok(has(h, '>99+</b>') && has(h, 'aria-label="100 juegos en vigilancia"'));
+  assert.ok(has(h, '>99+</b>') && has(h, 'Vigilando · 99+</span>') && has(h, 'aria-label="100 juegos en vigilancia"'));
   assert.ok(has(summary([W({ device: 'x' }), W()]), 'aria-label="1 juego en vigilancia"'));
 });
 
@@ -127,7 +129,24 @@ test('App: el chip va en la barra superior y hay una sola consulta de vigilancia
 test('cadenas de vigilancia y de actualización del perfil resueltas en es y en (no quedan claves a la vista)', () => {
   for (const lang of ['es', 'en']) {
     const j = JSON.parse(fs.readFileSync(path.join(SRC, 'locales', `${lang}.json`), 'utf8'));
-    assert.ok(j.sync.watch.count.one && j.sync.watch.count.other && j.sync.watch.listAria && j.sync.watch.bar.stale && j.sync.watch.short.running && j.sync.watch.since, lang);
+    assert.ok(j.sync.watch.chip.includes('{count}') && j.sync.watch.count.one && j.sync.watch.count.other && j.sync.watch.listAria && j.sync.watch.bar.stale && j.sync.watch.short.running && j.sync.watch.since, lang);
     assert.ok(j.profile.openUpdate && j.profile.updateDot && j.profile.update.includes('{version}'), lang);
   }
+});
+
+test('SCSS: puntos y anillo del pulso son cuadrados explícitos (círculo, no óvalo) y el pulso respeta reduced-motion', () => {
+  const css = (f) => fs.readFileSync(path.join(SRC, 'styles', f), 'utf8');
+  const watch = css('ui/_watch.scss');
+  const rule = (sel) => new RegExp(`${sel.replace(/[.]/g, '\\.')} \\{([^}]*)\\}`).exec(watch)?.[1] || '';
+  for (const sel of ['.watch-ico', '.watch-dot', '.watch-chip-dot']) {
+    const r = rule(sel);
+    assert.ok(/aspect-ratio: 1/.test(r) && /border-radius: 50%/.test(r) && /flex: 0 0 auto/.test(r) && /align-self: center/.test(r), sel);
+    const [w, h] = [/width: ([^;]+);/.exec(r)?.[1], /height: ([^;]+);/.exec(r)?.[1]];
+    assert.ok(w && w === h, `${sel} ${w} x ${h}`);
+    assert.ok(!/overflow/.test(r), sel);
+  }
+  assert.ok(/aspect-ratio: 1; border-radius: 50%/.test(css('_profile.scss').split('\n').find((l) => l.startsWith('.upd-dot'))));
+  const pulse = /@keyframes watch-pulse \{([^@]*)\}\s*@keyframes/.exec(watch)?.[1] || '';
+  assert.ok(pulse.includes('box-shadow') && !/transform|width|height|scale/.test(pulse));
+  assert.ok(/prefers-reduced-motion: reduce\) \{[^}]*\.watch-ico[^}]*\.watch-chip-dot[^}]*animation: none/.test(watch));
 });

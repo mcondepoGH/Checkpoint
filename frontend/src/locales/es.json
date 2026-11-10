@@ -67,6 +67,7 @@
       "bar": {"waiting": "Esperando a que arranque · {device}", "running": "Jugando en {device}", "settling": "Cerrando · guardando checkpoint…", "stale": "Sin latido"},
       "since": "desde {time}",
       "short": {"waiting": "Esperando", "running": "Jugando", "settling": "Cerrando", "stale": "Sin latido"},
+      "chip": "Vigilando · {count}",
       "count": { "one": "{count} juego en vigilancia", "other": "{count} juegos en vigilancia" },
       "listAria": "Juegos en vigilancia"
     },

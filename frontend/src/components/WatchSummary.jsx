@@ -4,7 +4,7 @@ import { useI18n } from '../useI18n.js';
 import { chipCount, groupByGame, watchHealth } from '../watch.js';
 import { WatchStatus } from './ui/index.js';
 
-// Contador de vigilancia en la cabecera del hub: chip «● N en vigilancia ▾» + lista desplegable (juego, dispositivo, estado).
+// Contador de vigilancia en la cabecera del hub: chip «● Vigilando · N ▾» + lista desplegable (juego, dispositivo, estado).
 // Sin vigilancia no pinta nada. Popover no modal como ProfileMenu: Esc cierra y devuelve el foco al chip; pulsar fuera o sacar el foco lo cierra.
 // `watch` es el estado compartido de useWatches ({now, watches}); `open` inicial solo se usa para renderizar la lista en pruebas.
 export default function WatchSummary({ watch, config, open: initialOpen = false }) {
@@ -44,7 +44,7 @@ export default function WatchSummary({ watch, config, open: initialOpen = false 
       <button ref={btn} type="button" className="watch-toggle" aria-label={count} aria-expanded={open} aria-controls={open ? listId : undefined} onClick={() => setOpen((o) => !o)}>
         <i className="watch-chip-dot" aria-hidden="true" />
         <b className="watch-num" aria-hidden="true">{chipCount(watched.length)}</b>
-        <span className="watch-lbl" aria-hidden="true">{count}</span>
+        <span className="watch-lbl" aria-hidden="true">{t('sync.watch.chip', { count: chipCount(watched.length) })}</span>
         <i className="watch-caret" aria-hidden="true">▾</i>
       </button>
       {open && (
