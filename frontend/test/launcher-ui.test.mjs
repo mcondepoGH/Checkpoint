@@ -76,7 +76,7 @@ test('CopyBox: caja de solo lectura + botón de icono con aria-label; copiado = 
 
 test('Lanzador con key: pestañas, selector de dispositivo, URL y comando Steam con %command%', { skip }, () => {
   const h = block(WITH, {}, 'es');
-  for (const l of ['Steam / Steam Deck', 'Lutris', 'Heroic (sin verificar)', 'Windows (Playnite)']) assert.ok(has(h, `>${l}</button>`), l);
+  for (const l of ['Steam / Steam Deck', 'Lutris', 'Heroic', 'Windows (Playnite)']) assert.ok(has(h, `>${l}</button>`), l);
   assert.ok(has(h, 'Opciones de lanzamiento') && has(h, 'El cierre lo vigila el hub solo'));
   assert.ok(has(h, 'Mi PC') && has(h, 'Deck') && has(h, 'Dispositivo del lanzador') && has(h, 'URL del hub'));
   assert.ok(has(h, `Bearer ${KEY}`) && has(h, 'http://hub.example.lan:8088/api/hook/juego-1a2b3c4d/opened?device=mi-pc') && has(h, '; %command%'));

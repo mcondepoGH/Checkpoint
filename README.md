@@ -323,7 +323,7 @@ El cliente debe esperar (hasta 60 s) y arrancar el juego **aunque falle el aviso
 
   Si el script sale con error, Lutris arranca igualmente el juego; sin la opción de espera, el juego arrancaría a la vez que la sincronización.
 
-- **Heroic** (**sin verificar**; ajustes del juego → Avanzado → script antes de lanzar): el mismo `curl` que Lutris.
+- **Heroic** (ajustes del juego → Avanzado → script antes de lanzar): el mismo `curl` que Lutris.
 
 - **Windows / Playnite** (**sin verificar**; script previo del juego, PowerShell 5.1):
 

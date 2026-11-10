@@ -228,11 +228,11 @@
     "hubUrlHint": "Dirección con la que el lanzador llega al hub. Por defecto, la de esta página; se recuerda en este navegador.",
     "invalidUrl": "URL no válida: usa http:// o https://, sin espacios ni comillas.",
     "tabsAria": "Lanzador",
-    "tab": { "steam": "Steam / Steam Deck", "lutris": "Lutris", "heroic": "Heroic (sin verificar)", "windows": "Windows (Playnite)" },
+    "tab": { "steam": "Steam / Steam Deck", "lutris": "Lutris", "heroic": "Heroic", "windows": "Windows (Playnite)" },
     "where": {
       "steam": "Pégalo en Propiedades del juego → Opciones de lanzamiento (una sola línea).",
       "lutris": "Pégalo en Configurar → Opciones del sistema → Pre-launch script. Activa “Wait for pre-launch completion”.",
-      "heroic": "Pégalo en los ajustes del juego → Avanzado → script antes de lanzar. Sin verificar.",
+      "heroic": "Pégalo en los ajustes del juego → Avanzado → script antes de lanzar.",
       "windows": "Pégalo en Playnite → Editar juego → Scripts → script previo (PowerShell 5.1)."
     },
     "closeNote": "El cierre lo vigila el hub solo.",
