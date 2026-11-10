@@ -121,3 +121,27 @@ def test_ciclo_del_scheduler_con_un_dispositivo(tmp_path, monkeypatch):
                   runner=lambda c, g, dry, log, **kw: run_sync(c, g, dry, data, log, **kw))
     res, m, c, st = s.run_game(cfg, "g1")
     assert res == "ok" and e.read(e.hub) == "new" and len(list_versions(data, "g1")) == 1
+
+
+def test_opened_omite_si_la_ruta_local_no_existe(cl):
+    import shutil
+    e = cl.env
+    shutil.rmtree(e.d1)
+    r = cl.post("/api/hook/g1/opened", headers=cl.hdr)
+    j = r.json()
+    assert r.status_code == 200 and j["outcome"] == "skipped" and j["ok"] is False
+    assert j["code"] == "err.sync.local_missing_manual_required"
+    assert not e.d1.exists() and e.read(e.hub) == "base"
+    h = [x for x in history.read() if x["trigger"] == "hook"]
+    assert len(h) == 1 and h[0]["result"] == "skipped" and h[0]["games"]["g1"]["code"] == "err.sync.local_missing_manual_required"
+
+
+def test_sync_manual_api_restaura_la_ruta_local(cl):
+    import shutil
+    e = cl.env
+    shutil.rmtree(e.d1)
+    cl.cookies.clear()
+    assert cl.post("/api/login", json={"user": "admin", "password": PW}).status_code == 200
+    assert cl.post("/api/sync/g1", json={}).status_code == 200
+    assert wait_for(lambda: (e.d1 / "s.sav").exists())
+    assert e.read(e.d1) == "base"

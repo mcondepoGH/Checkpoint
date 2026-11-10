@@ -159,7 +159,8 @@ class Scheduler:
         crudo de run_sync o None si falló). Nunca lanza: lo comparten el ciclo y el aviso `opened` del hook."""
         m, c, st = "", None, None
         try:
-            st = self.runner(cfg, game, False, log=log, conflict_policy=policy or self.policy_for(cfg, game))
+            st = self.runner(cfg, game, False, log=log, conflict_policy=policy or self.policy_for(cfg, game),
+                             automatic=True)
             res = st["result"]
             sc = {"code": st["code"], "params": st.get("params") or {}} if st.get("code") else None
             if st["result"] == "conflict":

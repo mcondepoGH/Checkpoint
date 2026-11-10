@@ -125,3 +125,85 @@ def test_decide_un_dispositivo():
     assert decide({"pc": a, "hub": b}, {"pc": "A", "hub": "A"})["winner"] == "hub"  # hub restaurado
     assert decide({"pc": a, "hub": b}, {})["reason"] == "no-baseline"
     assert decide({"pc": vacio, "hub": b}, {"pc": "B", "hub": "B"})["winner"] == "hub"  # carpeta vacía
+
+
+# ---------- protección: partida local ausente (ruta inexistente) con hub con datos ----------
+import shutil
+
+from app.sync import run_sync as _rs
+
+
+def _auto(env, **kw):
+    return _rs(CFG, "g", kw.pop("dry", False), env.data, env.logs.append, {"pc": LocalTransport(env.root)},
+               conflict_policy="skip", automatic=True)
+
+
+def _borrar_local(env):
+    shutil.rmtree(env.pc_dir)
+    assert not env.pc_dir.exists()
+
+
+def test_automatico_omite_si_la_ruta_local_no_existe(env):
+    env.seed("x")
+    _borrar_local(env)
+    before = load_baseline(env.data, "g")
+    st = _auto(env)
+    assert st["result"] == "skipped" and st["code"] == "err.sync.local_missing_manual_required"
+    assert not env.pc_dir.exists()  # no recrea la carpeta
+    assert read(env.hub, "s.sav") == "x" and load_baseline(env.data, "g") == before
+    assert list_versions(env.data, "g") == []
+
+
+def test_manual_restaura_desde_el_hub(env):
+    env.seed("x")
+    _borrar_local(env)
+    st = env.sync()
+    assert st["result"] == "ok" and st["winner"] == "hub"
+    assert read(env.pc_dir, "s.sav") == "x"
+
+
+def test_automatico_con_carpeta_existente_pero_vacia_se_trata_como_antes(env):
+    env.seed("x")
+    for f in env.pc_dir.iterdir():
+        f.unlink()
+    assert env.pc_dir.is_dir()
+    st = _auto(env)
+    assert st["result"] == "ok" and st["winner"] == "hub" and read(env.pc_dir, "s.sav") == "x"
+
+
+def test_automatico_primera_vez_con_hub_vacio_no_se_omite(env):
+    st = _auto(env)  # ruta inexistente pero el hub tampoco tiene datos: nada que proteger
+    assert st["code"] == "err.sync.nothing_to_sync"
+
+
+def test_automatico_dry_run_no_crea_nada(env):
+    env.seed("x")
+    _borrar_local(env)
+    st = _auto(env, dry=True)
+    assert st["result"] == "skipped" and not env.pc_dir.exists()
+
+
+def test_dos_dispositivos_sin_cambios_automatico_repone_la_ruta_ausente(tmp_path):
+    import test_sync as ts
+    e = ts.Env(tmp_path)
+    e.seed("x")
+    shutil.rmtree(e.pc_dir)
+    st = run_sync(ts.CFG, "g", False, e.data, e.logs.append, e.tr(), conflict_policy="skip", automatic=True)
+    assert st["result"] == "ok" and (e.pc_dir / "s.sav").read_text() == "x"
+
+
+def test_scheduler_ciclo_omite_y_queda_en_el_resumen(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from app import settings
+    from app.scheduler import Scheduler
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path / "data")
+    e = Env(tmp_path)
+    e.seed("x")
+    _borrar_local(e)
+    s = Scheduler(lambda: CFG, lambda g: False,
+                  runner=lambda c, g, dry, log, **kw: _rs(c, g, dry, e.data, log, {"pc": LocalTransport(e.root)}, **kw))
+    res, m, c, st = s.run_game(CFG, "g")
+    assert res == "skipped" and c["code"] == "err.sync.local_missing_manual_required"
+    item, det = s.game_detail("g", res, m, c)
+    assert det == {"result": "skipped", "name": "g", "code": "err.sync.local_missing_manual_required", "params": {}}
+    assert not e.pc_dir.exists()
