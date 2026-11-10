@@ -277,3 +277,88 @@ def test_garbage_files_give_no_key(logged):
     for junk in (b"", b"gAAAA", b"\x00" * 200, b"CK1" + b"\x01" * 100):
         enc_file(logged).write_bytes(junk)
         assert logged.get("/api/profile/apikey").json() == {"exists": False, "key": None}
+
+
+def _limited(tmp_path, monkeypatch, trust=False):
+    monkeypatch.setattr(settings, "CONFIG_PATH", tmp_path / "config" / "config.yaml")
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path / "data")
+    monkeypatch.setattr(settings, "STATIC_DIR", tmp_path / "static")
+    monkeypatch.setattr(settings, "TRUST_PROXY", trust)
+    clock = [1000.0]
+    auth = Auth("admin", PW, 1, clock=lambda: clock[0], rounds=4)
+    c = TestClient(create_app(auth))
+    assert c.post("/api/login", json={"user": "admin", "password": PW}).status_code == 200
+    key = c.post("/api/profile/apikey").json()["key"]
+    return TestClient(c.app), auth, clock, key
+
+
+def xff(ip, **h):
+    return {"X-Forwarded-For": ip, **h}
+
+
+def test_rate_limit_schedule_and_no_escalation_while_blocked():
+    """3 fallos gratis; el 3.º bloquea 5 s, el 4.º 10 s, el 5.º 20 s... (máx. 900 s). Bloqueado no suma fallos."""
+    clock = [0.0]
+    a = Auth("admin", PW, 1, clock=lambda: clock[0], rounds=4)
+    waits = []
+    for _ in range(6):
+        a.hook_fail("1.2.3.4")
+        waits.append(a.hook_wait("1.2.3.4"))
+        clock[0] += waits[-1]
+    assert waits == [0, 0, 5, 10, 20, 40]
+    for _ in range(20):
+        a.hook_fail("1.2.3.4")
+        top = a.hook_wait("1.2.3.4")
+        clock[0] += top
+    assert top == 900  # tope de 15 min
+
+
+def test_rate_limit_blocked_requests_do_not_escalate(tmp_path, monkeypatch):
+    anon, auth, clock, key = _limited(tmp_path, monkeypatch)
+    for _ in range(3):
+        assert anon.get("/api/hook/ping", headers=bearer(apikey.new_key())).status_code == 401
+    n = auth.hook_fails["testclient"][0]
+    for _ in range(5):  # mientras dura el bloqueo, 429 sin sumar fallos (ni con key mala ni con la buena)
+        assert anon.get("/api/hook/ping", headers=bearer(apikey.new_key())).status_code == 429
+        assert anon.get("/api/hook/ping", headers=bearer(key)).status_code == 429
+    assert auth.hook_fails["testclient"][0] == n
+
+
+def test_rate_limit_is_per_ip_and_ignores_xff_without_proxy(tmp_path, monkeypatch):
+    anon, auth, clock, key = _limited(tmp_path, monkeypatch, trust=False)
+    for _ in range(3):  # sin TRUST_PROXY el X-Forwarded-For se ignora: no se puede evadir ni acusar a otra IP
+        anon.get("/api/hook/ping", headers=xff(f"9.9.9.{_}", **bearer(apikey.new_key())))
+    assert list(auth.hook_fails) == ["testclient"]
+    assert anon.get("/api/hook/ping", headers=xff("8.8.8.8", **bearer(key))).status_code == 429
+
+
+def test_rate_limit_with_trust_proxy_uses_last_xff_entry(tmp_path, monkeypatch):
+    """Tras un proxy de confianza cuenta la IP que añadió el proxy (última entrada): lo que ponga el cliente delante no sirve."""
+    anon, auth, clock, key = _limited(tmp_path, monkeypatch, trust=True)
+    for i in range(3):
+        anon.get("/api/hook/ping", headers=xff(f"6.6.6.{i}, 10.0.0.5", **bearer(apikey.new_key())))
+    assert list(auth.hook_fails) == ["10.0.0.5"]
+    assert anon.get("/api/hook/ping", headers=xff("1.1.1.1, 10.0.0.5", **bearer(key))).status_code == 429
+    assert anon.get("/api/hook/ping", headers=xff("1.1.1.1, 10.0.0.6", **bearer(key))).status_code == 200  # otro cliente tras el proxy
+
+
+def test_rate_limit_shared_ip_behind_proxy_without_trust(tmp_path, monkeypatch):
+    """Sin TRUST_PROXY tras un proxy, todos los clientes comparten IP: uno que falla bloquea a los demás (se documenta)."""
+    anon, auth, clock, key = _limited(tmp_path, monkeypatch, trust=False)
+    for _ in range(3):
+        anon.get("/api/hook/ping", headers=xff("10.0.0.7", **bearer(apikey.new_key())))
+    assert anon.get("/api/hook/ping", headers=xff("10.0.0.8", **bearer(key))).status_code == 429
+
+
+def test_rate_limit_old_failures_are_forgotten():
+    clock = [0.0]
+    a = Auth("admin", PW, 1, clock=lambda: clock[0], rounds=4)
+    a.hook_fail("1.1.1.1")
+    a.hook_fail("2.2.2.2")
+    clock[0] += 4000
+    a.hook_fail("3.3.3.3")
+    assert list(a.hook_fails) == ["3.3.3.3"]  # el mapa no crece sin fin
+    a.hook_fail("3.3.3.3")
+    a.hook_fail("3.3.3.3")
+    clock[0] += 1
+    assert a.hook_wait("3.3.3.3") > 0
