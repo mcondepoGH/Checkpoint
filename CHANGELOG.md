@@ -2,6 +2,8 @@
 
 ## Sin publicar
 
+## 1.9.0 (2026-11-10)
+
 ### Cambios
 
 - Checkpoint con un solo dispositivo («solo checkpoint»): un juego puede tener uno o dos dispositivos (antes, exactamente dos). Con uno, el hub guarda la partida y sus versiones, sin copia entre equipos; las versiones, el límite (`max_versions` / `keep_versions`) y la restauración (restaurar al hub y sincronizar) funcionan como con dos. El dispositivo 2 es opcional en el formulario de Configuración, con texto de ayuda, y la tarjeta del juego en Sincronizar lleva la etiqueta «Solo checkpoint». En `config.yaml`, `devices` admite uno o dos ids. El código de error `err.config.devices_pair` pasa a `err.config.devices_count` («elige uno o dos dispositivos»). El aviso de apertura acepta omitir `?device=` con un solo dispositivo (ya ocurría). El registro y la CLI (`checkpoint list`) muestran «en X (checkpoint)».
