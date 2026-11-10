@@ -338,9 +338,20 @@ El cliente debe esperar (hasta 60 s) y arrancar el juego **aunque falle el aviso
 Tras `opened`, el hub **vigila el proceso del juego en ese dispositivo** (el `process` del juego; mismo sondeo que usa la sincronización: `pgrep -f` por SSH en Linux, `tasklist` en Windows, `/proc` en «Este equipo») y, cuando se cierra, hace el checkpoint solo. El lanzador no necesita ningún hook de cierre: basta la línea de `opened` de Steam o Lutris.
 
 1. `opened` sincroniza y arma la vigilancia (una por juego; un nuevo `opened` del mismo juego **reemplaza** la anterior).
-2. Sondeo cada **15 s**. No se da el juego por cerrado hasta haberlo visto abierto al menos una vez. Si en **2 min** no se ve nunca, se descarta la vigilancia (suele ser un `process` mal puesto) y queda anotado en el log del hub (`vigilante never_seen`), no en el historial.
+2. Sondeo cada **15 s**. No se da el juego por cerrado hasta haberlo visto abierto al menos una vez. Si en **2 min** no se ve nunca, se descarta la vigilancia (suele ser un `process` mal puesto) y queda en el historial como omitido (`err.hook.never_seen`) y en el log del hub (`vigilante never_seen`).
 3. Al dejar de verse el proceso, o si el dispositivo deja de responder (SSH caído, suspensión), espera **10 s** (para que se liberen los ficheros) y lanza el checkpoint.
 4. El checkpoint usa la política de conflictos `skip` (nunca resuelve solo), el mismo lock y la misma lógica que `opened`, y aparece en el historial con el disparador «Cierre del juego» (`trigger: "hook_closed"`). Si aborta o el lock está tomado **no se reintenta**; el cron de la sincronización automática sigue como red de seguridad.
+
+**Por qué no hubo checkpoint (historial).** Cuando la vigilancia termina sin checkpoint, queda una entrada con el disparador «Cierre del juego», el dispositivo y el juego, con icono y texto en el registro y el motivo en «Último aviso» (`GET /api/games/{juego}/hook-status` añade `code` y `params` a `last` si los hay). Solo se registra, no cambia lo que se sincroniza:
+
+| Código | Resultado | Cuándo |
+|---|---|---|
+| `err.hook.never_seen` | omitido | El proceso no se vio abierto en el tiempo previsto (`CHECKPOINT_HOOK_FIRST_SEEN`); vigilancia descartada. |
+| `err.hook.busy` | omitido | Al cerrarse, ya había una ejecución de ese juego en curso o el lock estaba tomado. Sin reintento. |
+| `err.hook.game_removed` | omitido | El juego ya no está en la configuración al cerrarse. |
+| `err.hook.checkpoint_failed` | error | El checkpoint lanzó una excepción antes de sincronizar; solo se guarda el tipo de excepción. |
+
+Un sondeo fallido aislado no se registra (se trata como dispositivo sin respuesta, ver arriba). Una vigilancia reemplazada por un nuevo `opened`, o cancelada al apagar el hub, tampoco deja entrada. Las vigilancias no se persisten: si el hub se reinicia se pierden y lo cubre el cron.
 
 Tiempos configurables con variables de entorno (en segundos):
 
@@ -385,6 +396,7 @@ Checkpoint se puede instalar en el móvil y abrirse a pantalla completa. En móv
 
 - Cambia el usuario y la contraseña del `.env` y restringe sus permisos (`chmod 600 .env`).
 - No expongas el servicio a Internet sin un proxy inverso con TLS (activa `CHECKPOINT_COOKIE_SECURE=1` y `CHECKPOINT_TRUST_PROXY=1`).
+- **Límite de frecuencia del login y de `/api/hook/*`:** se cuenta por IP de origen, con contadores separados (login y API key). Los 2 primeros fallos seguidos no esperan; el 3.º bloquea 5 s y cada fallo posterior duplica la espera (10, 20, 40 s...) hasta 15 min. Mientras dura el bloqueo se responde `429` con `Retry-After` (también con una key válida) y esos intentos no alargan la espera. Un acierto reinicia el contador, y una IP sin fallos durante 1 h se olvida. Es en memoria: se reinicia con el hub. **Detrás de un proxy inverso** pon `CHECKPOINT_TRUST_PROXY=1` para que cuente la IP real del cliente: se toma la **última** entrada de `X-Forwarded-For` (la que añade tu proxy; lo que el cliente ponga delante no cuenta), así que el proxy debe añadir esa cabecera y el hub no debe ser accesible sin pasar por él. Sin esa variable, todos los clientes comparten la IP del proxy y los fallos de uno bloquean a los demás; con ella activada sin proxy delante, un cliente podría falsear su IP y evadir el límite.
 - La clave privada vive en `keys/` y no debe compartirse ni subirse a ningún repositorio.
 - La API key de usuario (ver «API key de usuario») se guarda cifrada en `data/`; su secreto, `hub.secret`, vive junto a `config.yaml`, fuera de `data/`. No subas ninguno de los dos a un repositorio y trata la key como una contraseña: regenérala si se filtra.
 - Si cambia la huella de un dispositivo, la conexión falla; revisa la entrada de `keys/known_hosts` antes de borrarla.

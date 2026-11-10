@@ -128,7 +128,11 @@ def test_errors_do_not_arm(cl):
 def test_never_seen_is_discarded(cl):
     hopen(cl)
     assert wait_for(lambda: watches(cl).json() == [])
-    assert hist("hook_closed") == []
+    h = hist("hook_closed")  # el descarte queda en el historial como omitido, con código estable
+    assert len(h) == 1 and h[0]["result"] == "skipped" and h[0]["code"] == "err.hook.never_seen"
+    assert h[0]["params"] == {"seconds": settings.HOOK_FIRST_SEEN} and h[0]["device"] == "dev-1"
+    g = h[0]["games"]["g1"]
+    assert g["result"] == "skipped" and g["code"] == "err.hook.never_seen" and g["name"]
 
 
 def test_seen_then_closed_makes_one_hook_closed_checkpoint_with_skip(cl):
@@ -201,7 +205,8 @@ def test_locked_checkpoint_not_retried_and_logged(cl, caplog):
     finally:
         h.release()
     time.sleep(0.4)
-    assert hist("hook_closed") == []  # sin entrada y sin reintento
+    h = hist("hook_closed")  # una sola entrada «omitido: ocupado», sin reintento y sin checkpoint
+    assert len(h) == 1 and h[0]["result"] == "skipped" and h[0]["code"] == "err.hook.busy" and h[0]["device"] == "dev-1"
     assert any("sync_in_progress" in r.getMessage() or "ocupado" in r.getMessage() for r in caplog.records)
 
 
@@ -233,3 +238,53 @@ def test_shutdown_cancels_watches(mk):
         tasks = list(watcher.tasks.values())
         assert tasks
     assert all(t.done() for t in tasks) and watcher.tasks == {}
+
+
+def _seen_running(cl):
+    hopen(cl)
+    cl.proc.running = True
+    assert wait_for(lambda: watches(cl).json() and watches(cl).json()[0]["state"] == "running")
+
+
+def test_skipped_close_shows_reason_in_hook_status(cl):
+    _seen_running(cl)
+    h = locking.acquire(settings.DATA_DIR / "locks" / "g1.lock")  # lock ajeno: el checkpoint no corre
+    try:
+        cl.proc.running = False
+        assert wait_for(lambda: hist("hook_closed"))
+    finally:
+        h.release()
+    e = hist("hook_closed")
+    assert len(e) == 1 and e[0]["result"] == "skipped" and e[0]["code"] == "err.hook.busy"
+    assert cl.post("/api/login", json={"user": "admin", "password": PW}).status_code == 200
+    st = cl.get("/api/games/g1/hook-status").json()["devices"][0]["last"]
+    assert st["outcome"] == "skipped" and st["code"] == "err.hook.busy"
+
+
+def test_game_removed_before_close_is_logged(cl):
+    _seen_running(cl)
+    cfg = yaml.safe_load(settings.CONFIG_PATH.read_text())
+    del cfg["games"]["g1"]
+    settings.CONFIG_PATH.write_text(yaml.safe_dump(cfg, allow_unicode=True))
+    cl.proc.running = False
+    assert wait_for(lambda: hist("hook_closed"))
+    e = hist("hook_closed")[0]
+    assert e["result"] == "skipped" and e["code"] == "err.hook.game_removed" and "g1" in e["games"]
+
+
+def test_checkpoint_error_is_logged_without_message(cl):
+    _seen_running(cl)
+    settings.CONFIG_PATH.write_text("games: [no es un mapa\n  secreto-xyz")  # config ilegible: el checkpoint lanza
+    cl.proc.running = False
+    assert wait_for(lambda: hist("hook_closed"))
+    e = hist("hook_closed")[0]
+    assert e["result"] == "error" and e["code"] == "err.hook.checkpoint_failed"
+    assert set(e["params"]) == {"error"} and "secreto-xyz" not in str(e)
+
+
+def test_history_failure_never_breaks_watcher(cl, monkeypatch):
+    def boom(*a, **k):
+        raise OSError("disco lleno")
+    monkeypatch.setattr(history, "append", boom)
+    hopen(cl)
+    assert wait_for(lambda: watches(cl).json() == [])  # el descarte ocurre aunque el historial falle

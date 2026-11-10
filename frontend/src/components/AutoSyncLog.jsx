@@ -5,9 +5,27 @@ import { fmtDateTime, fmtDuration, RESULT_CLASS, resultText } from '../format.js
 import { errText, useI18n } from '../useI18n.js';
 import { recordText } from '../errors.js';
 import { Alert, Badge, Button } from './ui/index.js';
+import Icon from './Icon.jsx';
 
 // Disparadores conocidos (ids del backend): clave `autolog.trigger.<id>`; otro se muestra tal cual.
 const TRIGGERS = ['scheduled', 'startup', 'hook', 'hook_closed'];
+
+// Entrada que explica por qué NO hubo checkpoint de cierre (códigos err.hook.*): omitida (`skipped`) o con error. Lleva icono además del texto.
+export const isHookNote = (e) => typeof e?.code === 'string' && e.code.startsWith('err.hook.') && (e.result === 'skipped' || e.result === 'error');
+
+// Mensaje de una entrada (traducido). Las de «no hubo checkpoint» (isHookNote) llevan icono además del texto.
+export function EntryMessage({ entry: e }) {
+  const { t } = useI18n();
+  const text = recordText(e, t);
+  if (!text) return null;
+  const note = isHookNote(e);
+  return (
+    <p className={`msg ${e.result === 'error' ? 'is-error' : ''}${note ? ' hook-note' : ''}`}>
+      {note && <Icon name={e.result === 'error' ? 'alert' : 'skip'} />}
+      <span>{text}</span>
+    </p>
+  );
+}
 
 // Registro de ejecuciones automáticas (endpoint /api/scheduler/history). Refresca cada 30 s.
 export default function AutoSyncLog() {
@@ -56,7 +74,7 @@ export default function AutoSyncLog() {
                   <Badge status={RESULT_CLASS[e.result]}>{resultText(e.result, t)}</Badge>
                 </summary>
                 <div className="detail">
-                  {recordText(e, t) && <p className={`msg ${e.result === 'error' ? 'is-error' : ''}`}>{recordText(e, t)}</p>}
+                  <EntryMessage entry={e} />
                   {Object.keys(e.games || {}).length === 0 ? <p className="muted">{t('autolog.noDetail')}</p> : (
                     <ul className="games">
                       {Object.entries(e.games).map(([g, d]) => (

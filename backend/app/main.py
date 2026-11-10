@@ -27,7 +27,7 @@ from .config import Config, ConfigError, Device, pyd_body, describe, normalize_p
 from .configstore import Conflict, ConfigStore, InvalidConfig, parse_text, config_events_gen, diff_configs, render_yaml
 from .redact import redact
 from .scheduler import Scheduler, iso, utcnow
-from .watcher import Watcher
+from .watcher import Watcher, _log_note
 from .sync import SyncAbort, count_versions, list_versions, restore_version, run_sync, valid_resolution
 from .transport import TransportError, get_transport, local_folder_status
 
@@ -620,6 +620,8 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
                     hook_log.info("hook %s juego=%s omitido: lock ocupado (sync_in_progress), sin reintento", trigger, g.name)
                     hook_log.debug("hook %s run=%s: omitido por lock ocupado tras %.1f s", trigger, run.id,
                                    time.monotonic() - t0)
+                    if trigger == "hook_closed":  # en `opened` el lanzador ya recibe el 409
+                        record_hook_event(game, device or "", "skipped", "err.hook.busy", name=g.name)
                     return
                 item, det = scheduler.game_detail(g.name, res, m, c)
                 summary = scheduler.summarize({game: res}, [item] if item else [], {game: det})
@@ -649,6 +651,34 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     def game_busy(game: str) -> bool:
         return scheduler.current == game or any(r.game == game and not r.done for r in runs.values())
 
+    def record_hook_event(game: str, device: str, result: str, code: str, params: Optional[dict] = None,
+                          name: Optional[str] = None):
+        """Deja en el historial (trigger `hook_closed`) por qué NO hubo checkpoint de cierre: `skipped` (vigilancia
+        descartada u omitido sin reintento) o `error` (el checkpoint falló). Solo código estable y parámetros no
+        sensibles; solo registra, no cambia el comportamiento. El registro nunca rompe el vigilante."""
+        try:
+            d = {"result": result, "message": "", "code": code, "params": params or {}}
+            if name:
+                d["name"] = name
+            history.append(history.make_entry(scheduler.clock(), 0.0, "hook_closed", result, {game: d}, "", code,
+                                              params or {}, device=device), now=scheduler.clock())
+        except Exception as e:
+            hook_log.warning("hook hook_closed juego=%s dispositivo=%s: no se pudo guardar en el historial (%s)", game,
+                             device, type(e).__name__)
+
+    def watch_note(kind: str, game: str, device: str, detail: str = ""):
+        """Nota del vigilante: además del log, los descartes y el error del checkpoint van al historial."""
+        _log_note(kind, game, device, detail)
+        try:
+            name = _auto_cfg().games[game].name
+        except Exception:  # config ilegible o juego borrado: se registra sin nombre
+            name = None
+        if kind == "never_seen":
+            record_hook_event(game, device, "skipped", "err.hook.never_seen", {"seconds": settings.HOOK_FIRST_SEEN}, name)
+        elif kind == "checkpoint_error":
+            record_hook_event(game, device, "error", "err.hook.checkpoint_failed",
+                              {"error": detail.split(":", 1)[0]}, name)  # solo el tipo de excepción, nunca su mensaje
+
     def watch_probe(game: str, device: str) -> bool:
         cfg = _auto_cfg()
         return sync_mod.get_transport(cfg.devices[device]).process_running(cfg.games[game].process)
@@ -660,15 +690,17 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         if game not in cfg.games:
             hook_log.debug("hook hook_closed juego=%s dispositivo=%s: juego ya no está en la configuración, se omite",
                            game, device)
+            record_hook_event(game, device, "skipped", "err.hook.game_removed")
             return
         if game_busy(game):
             hook_log.info("hook hook_closed juego=%s omitido: ejecución en curso, sin reintento", cfg.games[game].name)
             hook_log.debug("hook hook_closed juego=%s dispositivo=%s: game_busy, sin reintento", game, device)
+            record_hook_event(game, device, "skipped", "err.hook.busy", name=cfg.games[game].name)
             return
         start_hook_run(cfg, game, "hook_closed", device)
 
     hook_log = logging.getLogger("checkpoint.hook")
-    watcher = Watcher(watch_probe, close_checkpoint)
+    watcher = Watcher(watch_probe, close_checkpoint, note=watch_note)
     holder["watcher"] = watcher
     app.state.watcher = watcher
 
@@ -754,7 +786,9 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             e = next((x for x in entries if x.get("device") == dev and game in x["games"]), None)
             w = watching.get(dev)
             out.append({"device": dev,
-                        "last": {"trigger": e["trigger"], "at": e["started"], "outcome": e["games"][game].get("result")} if e else None,
+                        "last": ({"trigger": e["trigger"], "at": e["started"], "outcome": e["games"][game].get("result"),
+                                 **({"code": e["games"][game]["code"], "params": e["games"][game].get("params") or {}}
+                                    if e["games"][game].get("code") else {})} if e else None),
                         "watching": {"state": w["state"], "since": w["since"]} if w else None})
         api_log.debug("hook-status: juego=%s dispositivos=%d vigilando=%d", game, len(out), len(watching))
         return {"devices": out}

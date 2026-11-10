@@ -497,7 +497,11 @@
       "device_required": "indica el dispositivo con ?device=<nombre o id>; el juego está en: {devices}",
       "device_unknown": "el dispositivo no pertenece a este juego",
       "device_ambiguous": "{cause}",
-      "timeout": "la sincronización sigue en curso tras {seconds} s"
+      "timeout": "la sincronización sigue en curso tras {seconds} s",
+      "never_seen": "No se vio el proceso del juego abierto en {seconds} s: vigilancia descartada, sin checkpoint de cierre",
+      "busy": "Checkpoint de cierre omitido: ya había una sincronización de este juego en curso (no se reintenta)",
+      "checkpoint_failed": "El checkpoint de cierre falló ({error}); no se reintenta",
+      "game_removed": "Checkpoint de cierre omitido: el juego ya no está en la configuración"
     },
     "apikey": {
       "invalid": "API key ausente o no válida"

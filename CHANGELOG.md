@@ -2,6 +2,11 @@
 
 ## Sin publicar
 
+### Cambios
+
+- Historial del cierre automático: cuando no hay checkpoint de cierre queda una entrada (disparador «Cierre del juego», con dispositivo y juego, icono y texto en es y en) con un código estable: `err.hook.never_seen` (proceso no visto a tiempo, vigilancia descartada), `err.hook.busy` (ejecución en curso o lock ocupado, sin reintento), `err.hook.game_removed` (el juego ya no está en la configuración) y `err.hook.checkpoint_failed` (error del checkpoint, solo el tipo de excepción). «Omitido» y «error» se distinguen por el resultado. `GET /api/games/{juego}/hook-status` añade `code` y `params` a `last`, y el panel «Último aviso» muestra el motivo. Solo se registra: la sincronización no cambia.
+- Límite de frecuencia del login y de `/api/hook/*`: sin cambio de umbrales; ahora hay tests que fijan su comportamiento (escala de esperas, sin escalada mientras está bloqueado, por IP, `X-Forwarded-For` con y sin `CHECKPOINT_TRUST_PROXY`) y está documentado en «Seguridad». Los fallos de una IP sin actividad durante 1 h se olvidan, para que el mapa en memoria no crezca sin límite.
+
 ## 1.6.0 (2026-11-10)
 
 ### Novedades

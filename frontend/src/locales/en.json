@@ -497,7 +497,11 @@
       "device_required": "pass the device with ?device=<name or id>; the game is on: {devices}",
       "device_unknown": "the device does not belong to this game",
       "device_ambiguous": "{cause}",
-      "timeout": "the sync is still running after {seconds} s"
+      "timeout": "the sync is still running after {seconds} s",
+      "never_seen": "The game process was not seen running within {seconds} s: watch dropped, no closing checkpoint",
+      "busy": "Closing checkpoint skipped: a sync of this game was already running (not retried)",
+      "checkpoint_failed": "The closing checkpoint failed ({error}); not retried",
+      "game_removed": "Closing checkpoint skipped: the game is no longer in the configuration"
     },
     "apikey": {
       "invalid": "API key missing or invalid"

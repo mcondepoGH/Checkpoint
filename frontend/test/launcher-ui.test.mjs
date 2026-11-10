@@ -20,7 +20,8 @@ try {
         import LaunchersPanel from './components/LaunchersPanel.jsx';
         import GameCard from './components/GameCard.jsx';
         import { Tabs, CopyBox } from './components/ui/index.js';
-        export { React, renderToStaticMarkup, i18n, LauncherBlock, LaunchersPanel, GameCard, Tabs, CopyBox };`,
+        import { EntryMessage } from './components/AutoSyncLog.jsx';
+        export { React, renderToStaticMarkup, i18n, LauncherBlock, LaunchersPanel, GameCard, Tabs, CopyBox, EntryMessage };`,
       resolveDir: SRC, loader: 'jsx',
     },
     bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'transform',
@@ -167,4 +168,39 @@ test('GameCard: sin bloque Lanzador; enlace «Ver comandos de lanzador» solo co
   const l = render({ onShowLaunchers() {} });
   assert.ok(has(l, '>Ver comandos de lanzador</button>') && has(l, 'aria-label="Ver comandos de lanzador de Juego"'), l);
   assert.ok(!has(render({ onShowLaunchers() {} }, { ...g, id: '' }), 'Ver comandos'));
+});
+
+const NOTES = [
+  [{ result: 'skipped', code: 'err.hook.never_seen', params: { seconds: 120 } },
+    'No se vio el proceso del juego abierto en 120 s: vigilancia descartada, sin checkpoint de cierre',
+    'The game process was not seen running within 120 s: watch dropped, no closing checkpoint'],
+  [{ result: 'skipped', code: 'err.hook.busy', params: {} },
+    'Checkpoint de cierre omitido: ya había una sincronización de este juego en curso (no se reintenta)',
+    'Closing checkpoint skipped: a sync of this game was already running (not retried)'],
+  [{ result: 'skipped', code: 'err.hook.game_removed', params: {} },
+    'Checkpoint de cierre omitido: el juego ya no está en la configuración',
+    'Closing checkpoint skipped: the game is no longer in the configuration'],
+  [{ result: 'error', code: 'err.hook.checkpoint_failed', params: { error: 'RuntimeError' } },
+    'El checkpoint de cierre falló (RuntimeError); no se reintenta',
+    'The closing checkpoint failed (RuntimeError); not retried'],
+];
+
+test('Historial: descartes y omitidos del cierre con texto traducido (es/en) e icono, no solo color', { skip }, () => {
+  for (const [entry, es, en] of NOTES) {
+    const h = R('EntryMessage', { entry: { ...entry, message: '' } });
+    assert.ok(has(h, es) && has(h, 'hook-note') && has(h, '<svg'), h);
+    assert.ok(has(h, entry.result === 'error' ? 'is-error' : 'hook-note'), h);
+    const e = R('EntryMessage', { entry: { ...entry, message: '' } }, 'en');
+    assert.ok(has(e, en) && !has(e, 'vigilancia'), e);
+  }
+  // una entrada normal (sin código err.hook.*) no lleva icono
+  assert.ok(!has(R('EntryMessage', { entry: { result: 'ok', code: 'err.scheduler.busy', params: {}, message: '' } }), 'hook-note'));
+});
+
+test('Último aviso: el motivo del descarte se añade al resultado', { skip }, () => {
+  const status = { devices: [{ device: 'mi-pc', last: { trigger: 'hook_closed', at: '2026-11-09T11:57:00Z', outcome: 'skipped', code: 'err.hook.busy', params: {} }, watching: null }] };
+  const h = block({ ...WITH, status });
+  assert.ok(has(h, 'Mi PC: Cierre del juego, hace 3 minutos, omitida · Checkpoint de cierre omitido'), h);
+  const e = block({ ...WITH, status }, {}, 'en');
+  assert.ok(has(e, 'Closing checkpoint skipped'), e);
 });
