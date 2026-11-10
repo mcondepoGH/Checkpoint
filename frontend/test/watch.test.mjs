@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { clock, groupByGame, watchHealth } from '../src/watch.js';
+import { chipCount, clock, groupByGame, watchCardClass, watchHealth, worstHealth } from '../src/watch.js';
 
 const NOW = '2026-01-01T12:00:00Z';
 const w = (o = {}) => ({ game: 'g', device: 'd', state: 'running', since: '2026-01-01T11:00:00Z', last_poll: '2026-01-01T11:59:55Z', poll: 15, ...o });
@@ -26,4 +26,23 @@ test('groupByGame agrupa y ordena por dispositivo', () => {
 test('clock devuelve HH:MM o —', () => {
   assert.match(clock('2026-01-01T12:34:00Z', 'en-GB'), /^\d{2}:\d{2}$/);
   assert.equal(clock('nope', 'es'), '—');
+});
+
+test('worstHealth: la peor vigilancia manda; sin vigilancias, null', () => {
+  const NOW = '2026-01-01T12:00:00Z';
+  const w = (state, last_poll = NOW) => ({ state, last_poll, poll: 15 });
+  assert.equal(worstHealth([w('waiting'), w('running')], NOW), 'running');
+  assert.equal(worstHealth([w('running'), w('settling')], NOW), 'settling');
+  assert.equal(worstHealth([w('settling'), w('running', '2026-01-01T11:00:00Z')], NOW), 'stale');
+  assert.equal(worstHealth([], NOW), null);
+  assert.equal(worstHealth(undefined, NOW), null);
+});
+test('watchCardClass: borde solo con vigilancia', () => {
+  assert.equal(watchCardClass(null), 'card');
+  assert.equal(watchCardClass('stale'), 'card watched watch-stale');
+});
+test('chipCount: 99+ por encima de 99', () => {
+  assert.equal(chipCount(1), '1');
+  assert.equal(chipCount(99), '99');
+  assert.equal(chipCount(100), '99+');
 });

@@ -1,19 +1,67 @@
 @use '../variables' as v;
 
-// Indicador de vigilancia (componente WatchStatus): punto de color + texto. running pulsa; stale (ámbar) = sin latido.
-.watch { display: inline-flex; align-items: center; gap: .45rem; font-size: v.$fs-hint; font-weight: 600; color: var(--text); overflow-wrap: anywhere;
-  .watch-dot { flex: none; width: .6rem; height: .6rem; border-radius: 50%; background: var(--muted); }
-  &.waiting .watch-dot { background: var(--accent); }
-  &.running .watch-dot { background: var(--ok); animation: watch-pulse 1.6s ease-out infinite; }
-  &.settling .watch-dot { background: var(--accent-2); animation: blink 1s infinite; }
-  &.stale { color: var(--warn); .watch-dot { background: var(--warn); } } }
-@keyframes watch-pulse { 0% { box-shadow: 0 0 0 0 var(--ok); } 70%, 100% { box-shadow: 0 0 0 .5rem transparent; } }
+// Vigilancia de cierre. Cuatro piezas, una sola fuente de estilo:
+//  - tarjeta de juego vigilado (.card.watched.watch-<estado>, ver watchCardClass): borde de color; sin latido, discontinuo.
+//  - franja inferior (WatchBar): icono + texto + «desde HH:MM»; salta de línea en móvil, nunca recorta texto.
+//  - indicador en línea (WatchStatus): punto + texto, para las filas de la lista de la cabecera.
+//  - contador de la cabecera (.watch-summary): chip + lista desplegable.
+// Color por estado: waiting accent, running ok, settling primary, stale warn. Siempre con texto e icono.
+$touch-watch: 44px; // objetivo táctil del chip y las filas de la lista (local: no cambia $touch)
 
-// Resumen en la cabecera del hub: botón-contador que despliega la lista.
+.watch-bar, .watch, .card.watched { --wst: var(--muted); }
+.watch-bar.waiting, .watch.waiting, .card.watched.watch-waiting { --wst: var(--accent); }
+.watch-bar.running, .watch.running, .card.watched.watch-running { --wst: var(--ok); }
+.watch-bar.settling, .watch.settling, .card.watched.watch-settling { --wst: var(--primary); }
+.watch-bar.stale, .watch.stale, .card.watched.watch-stale { --wst: var(--warn); }
+
+// Tarjeta con borde (más específico que el hover de .grid > .card)
+.grid > .card.watched { border-color: var(--wst); padding-bottom: 0; overflow: hidden;
+  &.watch-running { box-shadow: 0 0 0 1px var(--wst), 0 6px 24px -8px var(--wst); }
+  &.watch-stale { border-style: dashed; }
+  &:hover { border-color: var(--wst); } }
+
+// Franja inferior: ocupa todo el ancho de la tarjeta (compensa el relleno)
+.watch-bar { margin: auto (-1 * v.$gap) 0; padding: .5rem v.$gap; display: grid; grid-template-columns: 1.1em minmax(0, 1fr) auto; align-items: start; column-gap: .45rem;
+  font-size: v.$fs-hint; font-weight: 700; color: var(--wst); overflow-wrap: anywhere; border-top: 1px solid var(--wst);
+  background: color-mix(in srgb, var(--wst) 14%, var(--surface));
+  .watch-ico { font-style: normal; text-align: center; }
+  .watch-text { min-width: 0; }
+  .watch-since { font-weight: 600; white-space: nowrap; }
+  &.running .watch-ico { animation: watch-pulse 1.6s ease-out infinite; border-radius: 50%; }
+  &.waiting .watch-ico { animation: blink 1.4s ease-in-out infinite; }
+  &.settling .watch-ico { animation: watch-spin 1.2s linear infinite; } }
+.grid > .card.watched .watch-bar { margin-bottom: 0; border-radius: 0 0 calc(v.$radius - 1px) calc(v.$radius - 1px); }
+.grid > .card.watched > .watch-bar { margin-top: .5rem; }
+@keyframes watch-pulse { 0% { box-shadow: 0 0 0 0 var(--wst); } 70%, 100% { box-shadow: 0 0 0 .5rem transparent; } }
+@keyframes watch-spin { to { transform: rotate(360deg); } }
+
+// Indicador en línea: punto de color + texto
+.watch { display: inline-flex; align-items: center; gap: .45rem; font-size: v.$fs-hint; font-weight: 600; color: var(--text); overflow-wrap: anywhere;
+  .watch-dot { flex: none; width: .6rem; height: .6rem; border-radius: 50%; background: var(--wst); }
+  &.running .watch-dot { animation: watch-pulse 1.6s ease-out infinite; }
+  &.settling .watch-dot { animation: blink 1s infinite; }
+  &.stale { color: var(--warn); } }
+
+// Nombre del juego en la tarjeta: en móvil, máx. 2 líneas con ellipsis (el nombre completo va en el title del h3)
+@media (max-width: v.$bp-sm) {
+  .grid > .card .game-name { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; min-width: 0; flex: 1 1 0; }
+  .watch-bar .watch-since { grid-column: 2; } }
+
+// Contador de la cabecera del hub: chip + lista desplegable.
 .watch-summary { margin: .25rem 0 0; display: flex; flex-direction: column; gap: .5rem;
-  .watch-toggle { align-self: flex-start; display: inline-flex; align-items: center; gap: .5rem; min-height: v.$touch; padding: 0 .9rem; border-radius: 99px;
-    border: 1px solid var(--border); background: var(--surface-2); color: var(--text); font: inherit; font-size: v.$fs-body; font-weight: 700; cursor: pointer;
-    &:hover { border-color: var(--ok); } }
-  .watch-list { list-style: none; margin: 0; padding: .5rem .75rem; display: flex; flex-direction: column; gap: .4rem; border: 1px solid var(--border);
-    border-radius: v.$radius; background: var(--surface-2); } }
-@media (prefers-reduced-motion: reduce) { .watch .watch-dot { animation: none !important; } }
+  .watch-toggle { align-self: flex-start; display: inline-flex; align-items: center; gap: .5rem; min-height: $touch-watch; padding: 0 .9rem; border-radius: 99px;
+    border: 1px solid var(--ok); background: var(--surface-2); color: var(--text); font: inherit; font-size: v.$fs-body; font-weight: 700; cursor: pointer;
+    &:hover { background: color-mix(in srgb, var(--ok) 14%, var(--surface-2)); }
+    .watch-num { display: none; } }
+  .watch-list { list-style: none; margin: 0; padding: .35rem; display: flex; flex-direction: column; gap: .2rem; border: 1px solid var(--ok);
+    border-radius: v.$radius; background: var(--surface-2); max-height: 60vh; overflow-y: auto; overscroll-behavior: contain;
+    li { display: flex; align-items: center; gap: .5rem; min-height: $touch-watch; padding: .35rem .5rem; border-radius: 8px; min-width: 0; }
+    .watch-row-name { flex: 1 1 0; min-width: 0; font-weight: 700; overflow-wrap: anywhere; }
+    .watch-row-dev { flex: 0 1 40%; min-width: 0; color: var(--muted); font-size: v.$fs-hint; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .watch { flex: none; } } }
+// Móvil (<=640 px): chip reducido a icono + número; lista a ancho completo (8 px de margen) con scroll propio
+@media (max-width: v.$bp-sm) {
+  .watch-summary {
+    .watch-toggle { min-width: $touch-watch; justify-content: center; padding: 0 .7rem; gap: .35rem; .watch-lbl { display: none; } .watch-num { display: inline; } }
+    .watch-list { max-height: 50vh; margin-inline: calc(8px - var(--pad-l)) calc(8px - var(--pad-r)); } } }
+@media (prefers-reduced-motion: reduce) { .watch-bar .watch-ico, .watch .watch-dot { animation: none !important; } }

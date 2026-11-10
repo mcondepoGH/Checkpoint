@@ -26,8 +26,9 @@
     "tab": {
       "sync": {
     "watch": {
-      "line": "Vigilando · {device} · desde {time}",
-      "state": { "waiting": "esperando a que arranque el juego", "running": "jugando", "settling": "cerrando", "stale": "vigilante sin latido" },
+      "bar": {"waiting": "Esperando a que arranque · {device}", "running": "Jugando en {device}", "settling": "Cerrando · guardando checkpoint…", "stale": "Sin latido"},
+      "since": "desde {time}",
+      "short": {"waiting": "Esperando", "running": "Jugando", "settling": "Cerrando", "stale": "Sin latido"},
       "count": { "one": "{count} juego en vigilancia", "other": "{count} juegos en vigilancia" },
       "listAria": "Juegos en vigilancia"
     },

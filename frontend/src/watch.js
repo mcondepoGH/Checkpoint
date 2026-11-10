@@ -26,3 +26,17 @@ export function clock(iso, locale) {
   const n = ms(iso);
   return n === null ? '—' : new Date(n).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 }
+
+// Estado de la tarjeta de un juego con varias vigilancias: la peor manda (sin latido > cerrando > jugando > esperando).
+const RANK = { stale: 3, settling: 2, running: 1, waiting: 0 };
+export function worstHealth(list, now) {
+  let best = null;
+  for (const w of list || []) { const h = watchHealth(w, now); if (best === null || RANK[h] > RANK[best]) best = h; }
+  return best;
+}
+
+// Clases de la tarjeta de un juego (borde de color según estado); sin vigilancia, solo `card`.
+export const watchCardClass = (state) => (state ? `card watched watch-${state}` : 'card');
+
+// Número del chip de la cabecera en móvil: «99+» por encima de 99.
+export const chipCount = (n) => (n > 99 ? '99+' : String(n));

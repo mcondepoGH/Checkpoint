@@ -369,7 +369,7 @@ curl -fsS -H "Authorization: Bearer ck_..." "http://HOST:8088/api/hook/watches"
 
 #### `GET /api/watches`
 
-Con **sesión de cookie** (la usa la web). Mismas vigilancias que `/api/hook/watches`, solo de juegos existentes, más la hora del servidor para medir el latido: `{"now": "<UTC ISO 8601>", "watches": [{"game", "device", "state", "since", "last_poll", "poll"}]}`. La pestaña Sincronizar la consulta cada 5 s (solo con la pestaña visible) y muestra en cada juego vigilado un punto + texto «Vigilando · dispositivo · desde HH:MM» (esperando / jugando / cerrando), y en la cabecera un contador «N juegos en vigilancia» que despliega la lista. Si `last_poll` tiene más de 3 × `poll` de antigüedad, el indicador pasa a ámbar con el texto «vigilante sin latido».
+Con **sesión de cookie** (la usa la web). Mismas vigilancias que `/api/hook/watches`, solo de juegos existentes, más la hora del servidor para medir el latido: `{"now": "<UTC ISO 8601>", "watches": [{"game", "device", "state", "since", "last_poll", "poll"}]}`. La pestaña Sincronizar la consulta cada 5 s (solo con la pestaña visible) y marca cada juego vigilado con un borde del color de su estado y una franja inferior con icono + texto (esperando a que arranque / jugando desde HH:MM / cerrando / sin latido); en la cabecera, un contador «N juegos en vigilancia» que despliega la lista. Si `last_poll` tiene más de 3 × `poll` de antigüedad, pasa a ámbar (borde discontinuo) con el texto «Sin latido».
 
 ## Instalar como app (PWA)
 
@@ -433,7 +433,8 @@ Los elementos que se repiten viven en `frontend/src/components/ui/` (importa des
 | `Switch` | `label` + props del input | `_switch.scss` |
 | `Tabs` | `tabs` (`[{ id, label }]`), `value`, `onChange`, `label`; los hijos son el panel activo. Roles `tablist`/`tab`/`tabpanel`, flechas, Inicio y Fin | `_tabs.scss` |
 | `CopyBox` | `value`, `label`, `what` (qué se copia: el botón dice «Copiar {what}», p. ej. «Copiar comando de Steam» o «Copiar clave API»), `describedBy`; caja de código monoespaciada que ajusta líneas + botón copiar (`copy` → `check` 2 s, `clipboard.js` con fallback) | `_copybox.scss` |
-| `WatchStatus` | `state` (`waiting`, `running`, `settling`, `stale`), hijos = texto; punto decorativo + texto, `running` pulsa | `_watch.scss` |
+| `WatchBar` | `state` (`waiting`, `running`, `settling`, `stale`), `since` (opcional), hijos = texto; franja inferior de la tarjeta con icono decorativo + texto, color por estado; la tarjeta lleva el borde con `watchCardClass(estado)` de `src/watch.js` | `_watch.scss` |
+| `WatchStatus` | `state` (igual), hijos = texto; punto decorativo + texto en línea (filas de la lista de la cabecera), `running` pulsa | `_watch.scss` |
 | `Input` | props del input (texto sin autocompletar ni corrector por defecto); acepta `ref` | `_control.scss` |
 
 El perfil usa estos componentes: la sección «API key» es un bloque con fondo `--surface-2` (encabezado con icono `key`), la key completa en un cuadro monoespaciado que ajusta en varias líneas, `CopyBox` para la key y para los comandos de la sección Lanzadores (copia con icono `copy` → `check` 2 s), `Button` y `Button variant="danger"` (Regenerar / Revocar, mismo ancho) y `Alert compact` para el aviso de HTTP.

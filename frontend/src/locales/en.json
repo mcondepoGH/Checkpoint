@@ -26,8 +26,9 @@
     "tab": {
       "sync": {
     "watch": {
-      "line": "Watching · {device} · since {time}",
-      "state": { "waiting": "waiting for the game to start", "running": "playing", "settling": "closing", "stale": "watcher has no heartbeat" },
+      "bar": {"waiting": "Waiting for it to start · {device}", "running": "Playing on {device}", "settling": "Closing · saving checkpoint…", "stale": "No heartbeat"},
+      "since": "since {time}",
+      "short": {"waiting": "Waiting", "running": "Playing", "settling": "Closing", "stale": "No heartbeat"},
       "count": { "one": "{count} game being watched", "other": "{count} games being watched" },
       "listAria": "Games being watched"
     },
