@@ -2,6 +2,8 @@
 
 ## Sin publicar
 
+## 1.8.0 (2026-11-10)
+
 ### Cambios
 
 - Documentación de la API externa (la de la API key) con OpenAPI y Swagger UI en `/api/docs` (esquema en `/api/openapi.json`), con enlace «Documentación de la API» en el menú del perfil, bajo «API key». Documenta `GET /api/hook/ping`, `GET /api/hook/watches` y `POST /api/hook/{juego}/opened` (descripción, parámetros, respuestas, códigos de error y ejemplos; «Try it out» activado, con el aviso de que `opened` ejecuta una sincronización real y arma el vigilante). El resto de `/api/*` queda fuera del esquema. Solo con sesión web: sin ella `401`; la API key sola no la abre. Swagger UI va empaquetada (`swagger-ui-dist` 5.34.0, copiada a la imagen en el build; sin CDN, funciona sin internet). Sin cambios en validación, lógica ni códigos de error.
