@@ -72,10 +72,12 @@
       "listAria": "Games being watched"
     },
     "title": "Sync",
+    "solo": { "label": "Checkpoint only", "help": "Single device: the hub keeps versions; there is no copy between machines." },
     "state": {
       "conflict": "Conflict",
       "partial": "Partial",
       "dry-run": "Dry run (simulation)",
+      "skipped": "Skipped",
       "running": "running"
     },
     "none": {
@@ -162,11 +164,11 @@
     "addDevice": "Add device",
     "noDevices": {
       "title": "No devices",
-      "text": "Add at least two devices to sync saved games between them."
+      "text": "Add at least one device to checkpoint your saves (with two, they also sync between them)."
     },
     "games": "Games",
     "addGame": "Add game",
-    "needTwo": "Define (and name) at least two devices to add games.",
+    "needOne": "Define (and name) at least one device to add games.",
     "delDevice": "The device {device} is used by: {games}.\nThose games will lose this device and you will need to choose another. Delete it?",
     "bar": {
       "aria": "Settings actions",
@@ -194,6 +196,8 @@
     "namePh": "e.g. My Game: Edition",
     "dev1": "Device 1",
     "dev2": "Device 2",
+    "none": "— none (checkpoint only) —",
+    "soloHint": "With a single device, the hub keeps versions; there is no copy between machines.",
     "choose": "— choose —",
     "pathOn": "Save path on {device}",
     "process": "Process (optional)",

@@ -141,8 +141,9 @@ export function toConfig(draft) {
     const paths = {};
     if (ia) paths[ia] = g.pathA;
     if (ib) paths[ib] = g.pathB;
+    // El dispositivo 2 es opcional: sin él, el juego es «solo checkpoint» (un dispositivo; el hub guarda versiones).
     games[idOf(g, 'juego')] = {
-      name: cleanName(g.name), devices: [ia, ib], paths,
+      name: cleanName(g.name), devices: g.b ? [ia, ib] : [ia], paths,
       ...(g.process.trim() ? { process: g.process.trim() } : {}),
       ...(String(g.keep).trim() !== '' ? { keep_versions: num(g.keep) } : {}),
       ...(g.onConflict ? { on_conflict: g.onConflict } : {}),
@@ -156,6 +157,9 @@ export const baseKeyOf = (config) => JSON.stringify(toConfig(fromConfig(config))
 // ¿Hay cambios pendientes? Solo si el borrador difiere de la config cargada o hay errores locales.
 export const hasChanges = (payloadKey, baseKey, local) => payloadKey !== baseKey || Object.keys(local).length > 0;
 export const isDirty = (draft, config, runtime) => hasChanges(JSON.stringify(toConfig(draft)), baseKeyOf(config), localErrors(draft, runtime));
+
+// ¿El juego tiene un solo dispositivo? (config guardada: `devices.length === 1`)
+export const isSoloCheckpoint = (game) => (game?.devices?.length ?? 0) === 1;
 
 export const gamesUsing = (draft, devKey) =>
   draft.games.filter((g) => g.a === devKey || g.b === devKey).map((g) => g.name);  // '' si no tiene nombre (la pantalla pone «(sin nombre)»)

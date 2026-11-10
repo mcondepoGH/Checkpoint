@@ -75,3 +75,19 @@ test('con error en un campo extra: expandido; error en campos visibles no expand
   const h = render({ errors: { name: 'mal', 'devices.0': 'mal' }, localError: 'mal' });
   assert.ok(more(h)[2]);
 });
+
+test('dispositivo 2 opcional: con b vacío sale la ayuda de solo checkpoint y no la ruta B; con b no', { skip }, () => {
+  const solo = render({ game: game({ b: '', pathB: '' }) });
+  assert.ok(has(solo, 'Con un solo dispositivo, el hub guarda versiones') && has(solo, 'ninguno (solo checkpoint)'));
+  assert.ok(has(solo, 'Ruta del save en PC') && !has(solo, 'Ruta del save en Deck'));
+  const dos = render({});
+  assert.ok(!has(dos, 'Con un solo dispositivo') && has(dos, 'Ruta del save en Deck'));
+});
+
+test('etiqueta Solo checkpoint (Pill info): icono + texto y title de ayuda', { skip }, () => {
+  const src = fs.readFileSync(path.join(SRC, 'components/ui/Pill.jsx'), 'utf8');
+  assert.match(src, /tone/);
+  const css = fs.readFileSync(path.join(SRC, 'styles/ui/_pill.scss'), 'utf8');
+  assert.match(css, /&\.info/);
+  assert.ok(!/font-size:\s*[\d.]+(px|rem)/.test(css.split('&.info')[1].split('\n')[0]), 'sin font-size suelto');
+});

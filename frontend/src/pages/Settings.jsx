@@ -209,12 +209,12 @@ export default function Settings({ loaded, stale, configError, runtime, platform
 
       <div className="row between section-head">
         <h3>{t('settings.games')}</h3>
-        <Button disabled={draft.devices.filter((d) => d.name).length < 2}
+        <Button disabled={draft.devices.filter((d) => d.name).length < 1}
           onClick={() => setDraft((d) => ({ ...d, games: [...d.games, blankGame()] }))}>
           {t('settings.addGame')}
         </Button>
       </div>
-      {draft.devices.filter((d) => d.name).length < 2 && <p className="muted">{t('settings.needTwo')}</p>}
+      {draft.devices.filter((d) => d.name).length < 1 && <p className="muted">{t('settings.needOne')}</p>}
       <div className="grid">
         {draft.games.map((g) => (
           <GameCard key={g.key} game={g} devices={draft.devices} errors={gameErrs(g)} localError={local[g.key]} keepError={local[`keep-${g.key}`]} globalMax={draft.maxVersions}

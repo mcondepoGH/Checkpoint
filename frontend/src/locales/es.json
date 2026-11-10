@@ -72,10 +72,12 @@
       "listAria": "Juegos en vigilancia"
     },
     "title": "Sincronizar",
+    "solo": { "label": "Solo checkpoint", "help": "Un solo dispositivo: el hub guarda versiones; no hay copia entre equipos." },
     "state": {
       "conflict": "Conflicto",
       "partial": "Parcial",
       "dry-run": "Simulación (dry-run)",
+      "skipped": "Omitido",
       "running": "en curso"
     },
     "none": {
@@ -162,11 +164,11 @@
     "addDevice": "Añadir dispositivo",
     "noDevices": {
       "title": "Sin dispositivos",
-      "text": "Añade al menos dos dispositivos para poder sincronizar partidas entre ellos."
+      "text": "Añade al menos un dispositivo para poder hacer checkpoint de tus partidas (con dos, también se sincronizan entre ellos)."
     },
     "games": "Juegos",
     "addGame": "Añadir juego",
-    "needTwo": "Define (y nombra) al menos dos dispositivos para añadir juegos.",
+    "needOne": "Define (y nombra) al menos un dispositivo para añadir juegos.",
     "delDevice": "El dispositivo {device} lo usan: {games}.\nEsos juegos perderán este dispositivo y deberás elegir otro. ¿Eliminarlo?",
     "bar": {
       "aria": "Acciones de configuración",
@@ -194,6 +196,8 @@
     "namePh": "p. ej. Mi Juego: Edición",
     "dev1": "Dispositivo 1",
     "dev2": "Dispositivo 2",
+    "none": "— ninguno (solo checkpoint) —",
+    "soloHint": "Con un solo dispositivo, el hub guarda versiones; no hay copia entre equipos.",
     "choose": "— elige —",
     "pathOn": "Ruta del save en {device}",
     "process": "Proceso (opcional)",
