@@ -2,6 +2,8 @@
 
 ## Sin publicar
 
+## 1.10.0 (2026-11-10)
+
 ### Cambios
 
 - Desactivar un juego: nuevo campo opcional `enabled` por juego (`enabled: false` en `config.yaml`; sin el campo, activo) y interruptor «Juego activo» en el formulario de Configuración (visible sin «Mostrar más»). Un juego desactivado no se sincroniza por ninguna vía: la sincronización automática (y la del arranque) lo omite en silencio; `POST /api/sync/{juego}` responde `409` con `err.sync.game_disabled` (también con `dry_run`); la CLI aborta; el aviso de apertura responde `200` con `outcome: skipped`, `code: err.sync.game_disabled`, `watching: false` y `watch_reason: disabled`, sin sincronizar ni vigilar y con entrada en el historial; si ya había una vigilancia armada, al cerrarse se omite (entrada `skipped`) y desaparece de `/api/watches` y `/api/hook/watches`. En Sincronizar la tarjeta sale atenuada con la etiqueta «Desactivado», sin «Sincronizar» ni «Simulación» y con acceso a Configuración (y un aviso si todos están desactivados); en Versiones sale con el sufijo «(desactivado)» y sus versiones siguen siendo restaurables (solo copia al hub: no se propaga mientras esté desactivado); en Lanzadores sigue en el selector con una nota; `checkpoint list` lo marca «(desactivado)». Al guardar solo se escribe `enabled: false`.
