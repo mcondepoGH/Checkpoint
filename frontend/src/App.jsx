@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { api, ApiError } from './api.js';
 import AppIcon from './components/AppIcon.jsx';
-import PwaInstall from './components/PwaInstall.jsx';
 import UpdateBadge from './components/UpdateBadge.jsx';
 import ProfileMenu from './components/ProfileMenu.jsx';
 import WatchSummary from './components/WatchSummary.jsx';
@@ -136,7 +135,6 @@ export default function App() {
           updates={updates} onUpdate={() => setShowUpdate(true)} onCycleTheme={cycleTheme} onLogout={logout} onPhoto={(photo) => setProfile((p) => ({ ...p, photo }))} />
       </header>
       <main className="content">
-        <PwaInstall />
         {error && <Alert variant="error" role="alert">{errText(error)}</Alert>}
         <div hidden={tab !== 'settings'}>
           <Settings loaded={loaded} stale={stale && dirty} configError={loaded.error} runtime={loaded.runtime} platform={loaded.platform}

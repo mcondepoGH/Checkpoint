@@ -366,13 +366,6 @@
     },
     "noDetail": "Sin detalle por juego."
   },
-  "pwa": {
-    "title": "Instala Checkpoint como app",
-    "install": "Instalar",
-    "dismiss": "Ahora no",
-    "android": "Se abrirá a pantalla completa, desde un icono en tu pantalla de inicio.",
-    "ios": "En Safari, pulsa Compartir y después «Añadir a pantalla de inicio»."
-  },
   "updates": {
     "badge": "Nueva versión disponible: {version}",
     "badgePre": "Nueva versión preliminar disponible: {version}",

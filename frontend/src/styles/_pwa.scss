@@ -1,8 +1,0 @@
-@use 'variables' as v;
-
-// Aviso de instalación como app (componente PwaInstall, sobre Alert).
-.pwa-install { margin: .5rem 0 1rem;
-  .alert { font-size: v.$fs-body; }
-  strong { font-size: v.$fs-subtitle; }
-  p { margin: .25rem 0 .6rem; color: var(--muted); }
-  .pwa-actions { display: flex; gap: .5rem; flex-wrap: wrap; } }
