@@ -1,0 +1,79 @@
+@use '../variables' as v;
+
+// Vigilancia de cierre. Cuatro piezas, una sola fuente de estilo:
+//  - tarjeta de juego vigilado (.card.watched.watch-<estado>, ver watchCardClass): borde de color; sin latido, discontinuo.
+//  - franja inferior (WatchBar): icono + texto + «desde HH:MM»; salta de línea en móvil, nunca recorta texto.
+//  - indicador en línea (WatchStatus): punto + texto, para las filas de la lista de la cabecera.
+//  - contador de la cabecera (.watch-summary, en la barra superior): chip + lista desplegable.
+// Color por estado: waiting accent, running ok, settling primary, stale warn. Siempre con texto e icono.
+$touch-watch: 44px; // objetivo táctil del chip y las filas de la lista (local: no cambia $touch)
+
+.watch-bar, .watch, .card.watched { --wst: var(--muted); }
+.watch-bar.waiting, .watch.waiting, .card.watched.watch-waiting { --wst: var(--accent); }
+.watch-bar.running, .watch.running, .card.watched.watch-running { --wst: var(--ok); }
+.watch-bar.settling, .watch.settling, .card.watched.watch-settling { --wst: var(--primary); }
+.watch-bar.stale, .watch.stale, .card.watched.watch-stale { --wst: var(--warn); }
+
+// Tarjeta con borde (más específico que el hover de .grid > .card)
+.grid > .card.watched { border-color: var(--wst); padding-bottom: 0; overflow: hidden;
+  &.watch-running { box-shadow: 0 0 0 1px var(--wst), 0 6px 24px -8px var(--wst); }
+  &.watch-stale { border-style: dashed; }
+  &:hover { border-color: var(--wst); } }
+
+// Franja inferior: ocupa todo el ancho de la tarjeta (compensa el relleno)
+.watch-bar { margin: auto (-1 * v.$gap) 0; padding: .5rem v.$gap; display: grid; grid-template-columns: 1.1em minmax(0, 1fr) auto; align-items: start; column-gap: .45rem;
+  font-size: v.$fs-hint; font-weight: 700; color: var(--wst); overflow-wrap: anywhere; border-top: 1px solid var(--wst);
+  background: color-mix(in srgb, var(--wst) 14%, var(--surface));
+  .watch-ico { font-style: normal; text-align: center; }
+  .watch-text { min-width: 0; }
+  .watch-since { font-weight: 600; white-space: nowrap; }
+  &.running .watch-ico { animation: watch-pulse 1.6s ease-out infinite; border-radius: 50%; }
+  &.waiting .watch-ico { animation: blink 1.4s ease-in-out infinite; }
+  &.settling .watch-ico { animation: watch-spin 1.2s linear infinite; } }
+.grid > .card.watched .watch-bar { margin-bottom: 0; border-radius: 0 0 calc(v.$radius - 1px) calc(v.$radius - 1px); }
+.grid > .card.watched > .watch-bar { margin-top: .5rem; }
+@keyframes watch-pulse { 0% { box-shadow: 0 0 0 0 var(--wst); } 70%, 100% { box-shadow: 0 0 0 .5rem transparent; } }
+@keyframes watch-spin { to { transform: rotate(360deg); } }
+
+// Indicador en línea: punto de color + texto
+.watch { display: inline-flex; align-items: center; gap: .45rem; font-size: v.$fs-hint; font-weight: 600; color: var(--text); overflow-wrap: anywhere;
+  .watch-dot { flex: none; width: .6rem; height: .6rem; border-radius: 50%; background: var(--wst); }
+  &.running .watch-dot { animation: watch-pulse 1.6s ease-out infinite; }
+  &.settling .watch-dot { animation: blink 1s infinite; }
+  &.stale { color: var(--warn); } }
+
+// Nombre del juego en la tarjeta: en móvil, máx. 2 líneas con ellipsis (el nombre completo va en el title del h3)
+@media (max-width: v.$bp-sm) {
+  .grid > .card .game-name { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; overflow-wrap: anywhere; min-width: 0; flex: 1 1 0; }
+  .watch-bar .watch-since { grid-column: 2; } }
+
+// Contador de la cabecera del hub (WatchSummary, dentro de .topbar): chip «● N en vigilancia ▾» + lista desplegable anclada debajo.
+.watch-summary { position: relative; flex: none;
+  .watch-toggle { display: inline-flex; align-items: center; justify-content: center; gap: .5rem; min-height: $touch-watch; min-width: $touch-watch; padding: 0 .85rem; border-radius: 99px;
+    border: 1px solid var(--ok); background: var(--surface-2); color: var(--ok); font: inherit; font-size: v.$fs-hint; font-weight: 700; letter-spacing: .04em; white-space: nowrap; cursor: pointer;
+    transition: box-shadow .2s, background .2s;
+    &:hover { background: color-mix(in srgb, var(--ok) 14%, var(--surface-2)); }
+    &[aria-expanded='true'] { box-shadow: 0 0 14px -3px var(--ok); .watch-caret { transform: rotate(180deg); } }
+    .watch-lbl { color: var(--text); }
+    .watch-num { display: none; font-variant-numeric: tabular-nums; color: var(--text); }
+    .watch-caret { font-style: normal; font-size: .7rem; transition: transform .2s; } }
+  .watch-chip-dot { flex: none; width: .55rem; height: .55rem; border-radius: 50%; background: var(--ok); animation: watch-pulse 1.8s ease-out infinite; }
+  .watch-list { position: absolute; z-index: 6; right: 0; top: calc(100% + .4rem); width: min(24rem, calc(100vw - 2rem)); max-height: min(70vh, 32rem); list-style: none; margin: 0; padding: .35rem;
+    display: flex; flex-direction: column; gap: .2rem; border: 1px solid var(--ok); border-radius: v.$radius; overflow-y: auto; overscroll-behavior: contain;
+    background: linear-gradient(160deg, var(--surface-2), var(--surface) 55%); box-shadow: 0 12px 36px -8px var(--glow);
+    li { display: flex; align-items: center; gap: .5rem; min-height: $touch-watch; padding: .35rem .5rem; border-radius: 8px; min-width: 0; }
+    .watch-row-name { flex: 1 1 0; min-width: 0; font-weight: 700; overflow-wrap: anywhere; }
+    .watch-row-dev { flex: 0 1 40%; min-width: 0; color: var(--muted); font-size: v.$fs-hint; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .watch { flex: none; } } }
+// Móvil (<=640 px): chip reducido a punto + número; lista a ancho completo de la cabecera (8 px de margen) con scroll propio
+@media (max-width: v.$bp-sm) {
+  .watch-summary {
+    position: static; // la lista se ancla a la cabecera (sticky = posicionada), no al chip
+    .watch-toggle { padding: 0 .5rem; gap: .4rem; .watch-lbl, .watch-caret { display: none; } .watch-num { display: inline; } }
+    .watch-list { left: 8px; right: 8px; width: auto; max-height: 50vh; top: calc(100% + .35rem); } } }
+// Mínimo (<=340 px, 320 reales): chip compacto (padding .3rem, gap .2rem; sigue en 44 px de alto y de ancho mínimo) para que quepa con las pestañas.
+@media (max-width: v.$bp-xxs) {
+  .watch-summary .watch-toggle { padding: 0 .3rem; gap: .2rem; } }
+@media (prefers-reduced-motion: reduce) {
+  .watch-bar .watch-ico, .watch .watch-dot, .watch-summary .watch-chip-dot { animation: none !important; }
+  .watch-summary .watch-toggle, .watch-summary .watch-caret { transition: none; } }

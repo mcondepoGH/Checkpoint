@@ -1,10 +1,12 @@
 """Lógica de sincronización de un juego entre dos dispositivos y el hub."""
 import hashlib
 import json
+import logging
 import os
 import re
 import shutil
 import tempfile
+import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
@@ -16,6 +18,8 @@ from .apierror import describe_code, error_body
 from .config import ON_CONFLICT, Config, ConfigError, resolve_ref
 from .redact import redact
 from .transport import Transport, TransportError, get_transport
+
+slog = logging.getLogger("checkpoint.sync")  # DEBUG: trazas de run_sync (rutas y nº de ficheros, nunca contenidos ni secretos)
 
 VERSION_RE = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{6}(-\d+)?$")
 
@@ -339,7 +343,8 @@ def run_sync(cfg: Config, game: str, dry_run: bool = False, data_dir: Optional[P
     if conflict_policy is not None and conflict_policy not in ON_CONFLICT:
         raise SyncAbort("err.sync.policy_invalid", value=conflict_policy)
     g = cfg.games[game]
-    started = datetime.now()
+    started, t_run = datetime.now(), time.monotonic()
+    slog.debug("run_sync inicio: juego=%s dry_run=%s resolution=%s política=%s", game, dry_run, resolution, conflict_policy)
     gs = game  # el id interno es la única clave de rutas de disco; el nombre es solo la etiqueta
     logdir = data_dir / "logs" / gs
     logdir.mkdir(parents=True, exist_ok=True)
@@ -357,6 +362,7 @@ def run_sync(cfg: Config, game: str, dry_run: bool = False, data_dir: Optional[P
     try:
         handle = locking.acquire(data_dir / "locks" / f"{gs}.lock")
     except locking.LockBusy:
+        slog.debug("run_sync: juego=%s lock ocupado tras %.0f ms", game, (time.monotonic() - t_run) * 1000)
         raise SyncAbort("err.sync.sync_in_progress")
     try:
         try:
@@ -373,6 +379,8 @@ def run_sync(cfg: Config, game: str, dry_run: bool = False, data_dir: Optional[P
     finally:
         handle.release()
     status["finished"] = datetime.now().isoformat(timespec="seconds")
+    slog.debug("run_sync fin: juego=%s resultado=%s code=%s duración=%.2f s", game, status.get("result"),
+              status.get("code"), time.monotonic() - t_run)
     sd = data_dir / "status"
     sd.mkdir(parents=True, exist_ok=True)
     keep_conflict = False
@@ -421,13 +429,16 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
     # 1. Conectividad: un dispositivo offline se compara solo con el hub; si no responde ninguno, no se toca nada.
     online, offline = [], []
     for n in labels:
+        t_c = time.monotonic()
         try:
             tr[n].check()
+            slog.debug("juego=%s %s: conexión OK en %.0f ms", game, dn(n), (time.monotonic() - t_c) * 1000)
             if getattr(tr[n], "first_use", False):
                 L(f"{dn(n)}: host key guardada (primer uso)")
             L(f"{dn(n)}: conexión OK")
             online.append(n)
         except TransportError as e:
+            slog.debug("juego=%s %s: sin conexión (%s) tras %.0f ms", game, dn(n), e.code, (time.monotonic() - t_c) * 1000)
             L(f"{dn(n)}: no responde ({e})")
             offline.append(n)
     status["offline"] = offline
@@ -448,7 +459,9 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
             d.mkdir()
             if tr[n].exists(g.paths[n]):
                 L(f"{dn(n)}: descargando {g.paths[n]}")
+                t_p = time.monotonic()
                 tr[n].pull(g.paths[n], d)
+                slog.debug("juego=%s %s: pull de %s en %.2f s", game, dn(n), g.paths[n], time.monotonic() - t_p)
             else:
                 L(f"{dn(n)}: la ruta no existe todavía (se trata como vacía)")
             dirs[n] = d
@@ -457,6 +470,7 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
 
         fps = {k: fingerprint(v) for k, v in dirs.items()}
         for k, fp in fps.items():
+            slog.debug("juego=%s %s: huella ficheros=%d bytes=%d hash=%s", game, dn(k), fp.files, fp.size, (fp.hash or "-")[:12])
             L(f"{dn(k)}: {fp.files} ficheros, hash {(fp.hash or '-')[:12]}, mtime máx {_fmt(fp.mtime)}")
 
         raw = load_baseline(data_dir, game)
@@ -468,6 +482,7 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
                 save_baseline(data_dir, game, {k: h for k in fps})
 
         d = decide(fps, base)
+        slog.debug("juego=%s decisión: %s%s", game, d["kind"], f" ganador={dn(d['winner'])}" if d.get("winner") else "")
         if d["kind"] == "same":
             if all(fp.empty for fp in fps.values()):
                 _set(status, "ok", "err.sync.nothing_to_sync")
@@ -555,8 +570,11 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
                 continue
             extras = relfiles(dirs[k]) - relfiles(src)
             L(f"{dn(k)}: enviando")
+            t_s = time.monotonic()
             try:
                 tr[k].push(src, g.paths[k], extras)
+                slog.debug("juego=%s %s: push a %s en %.2f s (%d ficheros a borrar)", game, dn(k), g.paths[k],
+                          time.monotonic() - t_s, len(extras))
             except TransportError as e:
                 failed[k] = e.body()
                 L(f"ERROR enviando a {dn(k)}: {e}")

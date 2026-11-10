@@ -6,7 +6,7 @@ import { ON_CONFLICT_OPTIONS } from '../format.js';
 import { useI18n } from '../useI18n.js';
 import { Alert, Button, Input, Select } from './ui/index.js';
 
-export default function GameCard({ game, devices, errors, localError, keepError, globalMax, nameA, nameB, idA, idB, idText, renamed, onChange, onRemove }) {
+export default function GameCard({ game, devices, errors, localError, keepError, globalMax, nameA, nameB, idA, idB, idText, renamed, onChange, onRemove, onShowLaunchers }) {
   const { t } = useI18n();
   // Campos secundarios (proceso, versiones, conflicto, id) tras «Mostrar más»: la tarjeta arranca siempre plegada, tengan o no valor propio.
   // Solo se despliega sola si aparece un error de validación en esos campos (si no, quedaría invisible). Después puede plegarlos.
@@ -63,6 +63,7 @@ export default function GameCard({ game, devices, errors, localError, keepError,
       </div>
       <div className="row between">
         <Button variant="ghost" onClick={() => setMore((m) => !m)} aria-expanded={more} aria-controls={extraId}>{t(more ? 'game.showLess' : 'game.showMore')}</Button>
+        {onShowLaunchers && game.id && <Button variant="ghost" onClick={onShowLaunchers} aria-label={t('game.launchersAria', { title })}>{t('game.launchers')}</Button>}
         <Button variant="danger" onClick={onRemove} aria-label={t('game.deleteAria', { title })}>{t('common.delete')}</Button>
       </div>
     </fieldset>

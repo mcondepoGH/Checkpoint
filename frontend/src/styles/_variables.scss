@@ -1,7 +1,9 @@
 $radius: 14px;
 $gap: 1rem;
 $bp-sm: 640px;
+$bp-upd: 480px; // por debajo, el aviso de actualización sale de la cabecera y pasa al menú de perfil
 $bp-xs: 380px; // móviles estrechos (320-380 px)
+$bp-xs-tabs: 400px; // hasta aquí las pestañas usan el relleno compacto (390 px iba con 1-5 px de margen)
 $bp-xxs: 340px; // móviles mínimos (320 px): cabecera con aviso de actualización
 $icon-btn: 1.25rem; // 20 px: icono dentro de Button iconOnly (único sitio que lo controla)
 $touch: 40px; // objetivo táctil mínimo

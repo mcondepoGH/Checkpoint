@@ -100,3 +100,14 @@ button.ab-chip { cursor: pointer; display: inline-flex; align-items: center; gap
   .keyhelp .codeblock { flex-direction: column; align-items: stretch; }
   .section-head { margin-top: 1.25rem; .btn { flex: none; } }
 }
+
+// Sección «Lanzadores»: tarjeta propia y plegable; dentro, un solo panel con comandos listos para copiar y último aviso por dispositivo.
+.launchers-panel { margin-top: v.$gap; min-width: 0; scroll-margin-top: 1rem; }
+.launchers-body { display: flex; flex-direction: column; min-width: 0; &[hidden] { display: none; } }
+.launcher { display: flex; flex-direction: column; gap: .625rem; min-width: 0; }
+.launcher-title { display: flex; align-items: center; gap: .5rem; margin: 0; font-size: v.$fs-body; .ico { flex: none; color: var(--accent); } }
+.launcher .field { margin: 0; }
+.launcher-note { margin: 0; overflow-wrap: anywhere; }
+.launcher-cmd { display: flex; flex-direction: column; gap: .25rem; min-width: 0; }
+.launcher-cmd-title { font-size: v.$fs-label; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+.launcher-last { display: flex; flex-direction: column; gap: .25rem; margin: 0; padding: 0; list-style: none; font-size: v.$fs-hint; min-width: 0; li { overflow-wrap: anywhere; } }

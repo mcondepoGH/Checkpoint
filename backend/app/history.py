@@ -18,7 +18,7 @@ MAX_ENTRIES = 50
 MAX_DAYS = 30
 MSG_LEN = 300
 RESULTS = {"ok", "error", "aborted", "skipped", "conflict", "partial"}
-TRIGGERS = {"scheduled", "startup", "hook"}
+TRIGGERS = {"scheduled", "startup", "hook", "hook_closed"}
 
 _lock = threading.Lock()
 
@@ -51,9 +51,10 @@ def _coded(d: dict, out: dict) -> dict:
 
 
 def make_entry(started: datetime, duration: float, trigger: str, result: str, games: dict, message: str = "",
-               code: Optional[str] = None, params: Optional[dict] = None) -> dict:
+               code: Optional[str] = None, params: Optional[dict] = None, device: Optional[str] = None) -> dict:
     """`games`: {id del juego: {"result": ..., "message": ..., "name": ..., "code"?, "params"?}}. Registros nuevos
     llevan `code`+`params` (sin `message`); los antiguos solo `message` y se leen tal cual. Valores desconocidos se normalizan.
+    `device` (solo hook / hook_closed): id del dispositivo del aviso; las entradas antiguas no lo tienen.
     Se guarda el id (clave estable) y el nombre que tenía entonces (legible aunque el juego se renombre o borre)."""
     gs = {}
     for g, d in games.items():
@@ -70,6 +71,8 @@ def make_entry(started: datetime, duration: float, trigger: str, result: str, ga
             "trigger": trigger if trigger in TRIGGERS else "scheduled",
             "result": result if result in RESULTS else "error",
             "games": gs, "message": short(message)}
+    if isinstance(device, str) and device:
+        entry["device"] = short(device, 64)
     return _coded({"code": code, "params": params}, entry)
 
 

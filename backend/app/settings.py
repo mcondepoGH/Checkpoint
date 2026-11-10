@@ -1,5 +1,5 @@
 """Ajustes desde variables de entorno (CHECKPOINT_*): USER, PASSWORD, PORT, HOST, HOME_DIR, SESSION_HOURS,
-COOKIE_SECURE, TRUST_PROXY, RUNTIME y LANG. El resto de rutas y valores se derivan de ellas o son constantes."""
+COOKIE_SECURE, TRUST_PROXY, RUNTIME, LANG, LOG_LEVEL y HOOK_POLL/HOOK_SETTLE/HOOK_FIRST_SEEN (vigilante de cierre). El resto de rutas y valores se derivan de ellas o son constantes."""
 import os
 from pathlib import Path
 
@@ -92,3 +92,36 @@ def resolve_lang(environ=None):
 
 def default_lang(environ=None) -> str:
     return resolve_lang(environ)[0]
+
+
+LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
+
+
+def resolve_log_level(environ=None):
+    """(nivel, aviso): aviso es None salvo que CHECKPOINT_LOG_LEVEL tenga un valor no válido (entonces INFO)."""
+    raw = str(env("LOG_LEVEL", "INFO", environ)).strip()
+    v = raw.upper()
+    if v in LOG_LEVELS:
+        return v, None
+    return "INFO", f"CHECKPOINT_LOG_LEVEL={raw!r} no es válido ({', '.join(LOG_LEVELS)}); se usa 'INFO'"
+
+
+def log_level(environ=None) -> str:
+    """Nivel de log de la app (CHECKPOINT_LOG_LEVEL: DEBUG, INFO, WARNING o ERROR). Vacío o no válido = INFO."""
+    return resolve_log_level(environ)[0]
+
+
+def _secs(suffix, default, environ=None):
+    """Segundos desde CHECKPOINT_<suffix>; vacío, no numérico o <= 0 = valor por defecto."""
+    try:
+        v = float(env(suffix, default, environ))
+    except (TypeError, ValueError):
+        return float(default)
+    return v if v > 0 and v == v and v != float("inf") else float(default)
+
+
+# Vigilante de cierre (tras `opened`): cada cuánto se sondea el proceso del juego, cuánto se espera tras dejar de
+# verlo (para que se liberen los ficheros) y cuánto se espera a verlo abierto la primera vez antes de descartar.
+HOOK_POLL = _secs("HOOK_POLL", 15)
+HOOK_SETTLE = _secs("HOOK_SETTLE", 10)
+HOOK_FIRST_SEEN = _secs("HOOK_FIRST_SEEN", 120)

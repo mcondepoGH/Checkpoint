@@ -11,6 +11,7 @@
     "delete": "Eliminar",
     "copy": "Copiar",
     "copied": "Copiado",
+    "copyWhat": "Copiar {what}",
     "on": "Activada",
     "off": "Desactivada",
     "unnamed": "(sin nombre)",
@@ -62,6 +63,13 @@
     "newest": "Gana el más reciente"
   },
   "sync": {
+    "watch": {
+      "bar": {"waiting": "Esperando a que arranque · {device}", "running": "Jugando en {device}", "settling": "Cerrando · guardando checkpoint…", "stale": "Sin latido"},
+      "since": "desde {time}",
+      "short": {"waiting": "Esperando", "running": "Jugando", "settling": "Cerrando", "stale": "Sin latido"},
+      "count": { "one": "{count} juego en vigilancia", "other": "{count} juegos en vigilancia" },
+      "listAria": "Juegos en vigilancia"
+    },
     "title": "Sincronizar",
     "state": {
       "conflict": "Conflicto",
@@ -197,7 +205,42 @@
     "useGlobal": "Usar el ajuste global",
     "deleteAria": "Eliminar juego {title}",
     "showMore": "Mostrar más",
-    "showLess": "Mostrar menos"
+    "showLess": "Mostrar menos",
+    "launchers": "Ver comandos de lanzador",
+    "launchersAria": "Ver comandos de lanzador de {title}"
+  },
+  "launcher": {
+    "title": "Lanzadores",
+    "show": "Mostrar",
+    "hide": "Ocultar",
+    "game": "Juego",
+    "noGames": "Añade un juego para obtener sus comandos.",
+    "copyWhat": "comando de {launcher}",
+    "copyWhatCmd": "comando de {launcher} ({cmd})",
+    "hint": "Comandos para que el lanzador avise al hub antes de abrir el juego. El cierre lo vigila el hub solo: no hace falta hook de cierre.",
+    "saveFirst": "Guarda el juego para obtener sus comandos.",
+    "noDevices": "Elige los dispositivos del juego para obtener sus comandos.",
+    "noKey": "Genera primero la API key en tu perfil.",
+    "noProcess": "Sin <code>process</code>: el hub no podrá vigilar el cierre (el aviso de apertura seguirá funcionando).",
+    "device": "Dispositivo del lanzador",
+    "hubUrl": "URL del hub",
+    "hubUrlHint": "Dirección con la que el lanzador llega al hub. Por defecto, la de esta página; se recuerda en este navegador.",
+    "invalidUrl": "URL no válida: usa http:// o https://, sin espacios ni comillas.",
+    "tabsAria": "Lanzador",
+    "tab": { "steam": "Steam / Steam Deck", "lutris": "Lutris", "heroic": "Heroic (sin verificar)", "windows": "Windows (Playnite)" },
+    "where": {
+      "steam": "Pégalo en Propiedades del juego → Opciones de lanzamiento (una sola línea).",
+      "lutris": "Pégalo en Configurar → Opciones del sistema → Pre-launch script. Activa “Wait for pre-launch completion”.",
+      "heroic": "Pégalo en los ajustes del juego → Avanzado → script antes de lanzar. Sin verificar.",
+      "windows": "Pégalo en Playnite → Editar juego → Scripts → script previo (PowerShell 5.1)."
+    },
+    "closeNote": "El cierre lo vigila el hub solo.",
+    "cmd": { "main": "Comando", "powershell": "PowerShell", "curl": "Alternativa con curl.exe" },
+    "cmdAria": "Comando para {launcher}",
+    "lastTitle": "Último aviso",
+    "lastNone": "{device}: sin avisos todavía",
+    "last": "{device}: {trigger}, {ago}, {outcome}",
+    "watch": { "waiting": "vigilando: esperando al juego", "running": "vigilando: juego abierto", "settling": "vigilando: cerrado, a punto de sincronizar" }
   },
   "device": {
     "new": "Dispositivo nuevo",
@@ -302,7 +345,8 @@
     "trigger": {
       "scheduled": "Programada",
       "startup": "Arranque",
-      "hook": "Aviso del juego"
+      "hook": "Aviso del juego",
+      "hook_closed": "Cierre del juego"
     },
     "noDetail": "Sin detalle por juego."
   },
@@ -611,8 +655,12 @@
   },
   "profile": {
     "open": "Perfil y opciones",
+    "openUpdate": "Perfil y opciones (hay una actualización disponible)",
+    "updateDot": "Hay una actualización disponible",
+    "update": "Actualizar a v{version}",
     "title": "Perfil",
-    "theme": "Tema: {theme}",
+    "themeLabel": "Tema",
+    "group": { "prefs": "Preferencias", "integration": "Integración", "account": "Cuenta" },
     "version": "Versión {version}",
     "photo": {
       "change": "Cambiar foto",
@@ -630,6 +678,7 @@
       "regenerate": "Regenerar",
       "revoke": "Revocar",
       "field": "API key (solo lectura)",
+      "copyWhat": "clave API",
       "insecure": "Por HTTP la key viaja en claro: usa HTTPS o VPN fuera de tu LAN.",
       "confirm": {
         "regenerate": { "title": "Regenerar la API key", "text": "La key actual dejará de valer: los comandos y plugins ya vinculados dejarán de funcionar hasta que pongas la nueva.", "yes": "Sí, regenerar" },

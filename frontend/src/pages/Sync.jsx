@@ -5,7 +5,10 @@ import { labelOf } from '../names.js';
 import { parseRun } from '../format.js';
 import ConflictDialog from '../components/ConflictDialog.jsx';
 import { errText, useI18n } from '../useI18n.js';
-import { Alert, Badge, Button, Checkbox, Pill } from '../components/ui/index.js';
+import { NO_WATCHES } from '../useWatches.js';
+import { clock, groupByGame, watchCardClass, watchHealth, worstHealth } from '../watch.js';
+import { Alert, Badge, Button, Checkbox, Pill, WatchBar } from '../components/ui/index.js';
+
 
 // Estados con texto propio en el distintivo: clave `sync.state.<resultado>`; otro resultado se muestra tal cual.
 const RES_KEYS = ['conflict', 'partial', 'dry-run'];
@@ -50,8 +53,9 @@ function LastRun({ s, devName }) {
   );
 }
 
-export default function Sync({ config, onGoSettings }) {
-  const { t } = useI18n(); // re-renderiza al cambiar de idioma
+// `watch` ({now, watches}) llega de App (useWatches): la misma consulta alimenta el contador de la cabecera.
+export default function Sync({ config, watch = NO_WATCHES, onGoSettings }) {
+  const { t, locale } = useI18n(); // re-renderiza al cambiar de idioma
   // Las claves de config.games/status son ids internos; en pantalla siempre el nombre.
   const games = Object.keys(config.games);
   const devName = (id) => labelOf(config.devices, id);
@@ -93,6 +97,14 @@ export default function Sync({ config, onGoSettings }) {
     } catch (e) { setError(e); }
   };
 
+  const byGame = groupByGame(watch.watches);
+  const watched = games.filter((g) => byGame[g]);
+  // Franja inferior de la tarjeta: estado en texto + icono (nunca solo color); la hora solo cuando aporta (jugando, sin latido).
+  const watchBar = (w) => {
+    const h = watchHealth(w, watch.now);
+    const since = h === 'running' || h === 'stale' ? t('sync.watch.since', { time: clock(w.since, locale) }) : null;
+    return <WatchBar key={`${w.game}|${w.device}`} state={h} since={since}>{t(`sync.watch.bar.${h}`, { device: devName(w.device) })}</WatchBar>;
+  };
   const badge = (s) => s && <Badge status={s.result}>{RES_KEYS.includes(s.result) ? t(`sync.state.${s.result}`) : s.result}</Badge>;
   const openConflict = (g) => {
     const c = status[g]?.conflict;
@@ -119,8 +131,8 @@ export default function Sync({ config, onGoSettings }) {
           const s = status[g];
           const running = active && active.game === g && !active.done;
           return (
-            <div className="card" key={g}>
-              <h3 title={t('sync.idTitle', { id: g })}>{gameName(g)} {running ? <Badge status="running">{t('sync.state.running')}</Badge> : badge(s)}</h3>
+            <div className={watchCardClass(worstHealth(byGame[g], watch.now))} key={g}>
+              <h3 title={t('sync.idTitle', { id: g })}><span className="game-name">{gameName(g)}</span> {running ? <Badge status="running">{t('sync.state.running')}</Badge> : badge(s)}</h3>
               <p className="muted">{config.games[g].devices.map(devName).join(' ⇄ ')}</p>
               <div className={`meter ${running ? 'running' : (s?.result || '')}`} role="progressbar" aria-label={t('sync.meterAria', { game: gameName(g) })}><i /></div>
               <LastRun s={s} devName={devName} />
@@ -132,6 +144,7 @@ export default function Sync({ config, onGoSettings }) {
                 </div>
               )}
               <Button variant="primary" disabled={running} onClick={() => run(g)}>{running ? t('sync.running') : t('sync.run')}</Button>
+              {byGame[g]?.map(watchBar)}
             </div>
           );
         })}

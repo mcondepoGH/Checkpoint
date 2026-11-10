@@ -61,6 +61,7 @@ Variables (todas con prefijo `CHECKPOINT_`, salvo `TZ`). El `docker-compose.yml`
 | `CHECKPOINT_COOKIE_SECURE` / `CHECKPOINT_TRUST_PROXY` | `0` | Pon `1` tras un proxy inverso con HTTPS |
 | `CHECKPOINT_RUNTIME` | automático | `docker` o `native`: fuerza el modo (la imagen lo fija a `docker`) |
 | `CHECKPOINT_LANG` | `es` | Idioma por defecto de la interfaz: `es` o `en` (también `en-US`, `EN`…). Opcional; sin marcar es español. Un valor no soportado se ignora (español) y se avisa en el log de arranque. Ver [Idioma](#idioma) |
+| `CHECKPOINT_LOG_LEVEL` | `info` | Nivel de log de la app: `info` o `debug` (también `warning`, `error`). Con `debug` salen las trazas detalladas por petición. Un valor no válido se ignora (`info`) y se avisa en el log de arranque. Se aplica al reiniciar |
 | `TZ` | `UTC` | Zona horaria de los registros y la sincronización automática (p. ej. `Europe/London`); solo Docker, se añade a `environment:` |
 
 Si la contraseña lleva `$`, ponla entre comillas simples.
@@ -280,7 +281,7 @@ curl -H "Authorization: Bearer ck_..." http://HOST:PORT/api/hook/ping
 
 ## Hooks
 
-Rutas `/api/hook/*` para que un lanzador avise al hub con la API key (ver «API key de usuario»). Hoy: el aviso de apertura.
+Rutas `/api/hook/*` para que un lanzador avise al hub con la API key (ver «API key de usuario»). Hoy: el aviso de apertura (que además arma el **cierre automático**) y la consulta de vigilancias.
 
 ### `POST /api/hook/{juego}/opened?device=<dispositivo>`
 
@@ -288,10 +289,11 @@ Se llama justo antes de arrancar el juego. El hub hace una **sincronización pre
 
 - **Autenticación:** `Authorization: Bearer ck_...` (nada de cookie).
 - **Juego:** id o nombre, como `POST /api/sync/{juego}`.
-- **Dispositivo (`?device=`):** id o nombre. Se valida que pertenezca al juego; hoy solo se registra (lo usará el cierre automático). Es obligatorio si el juego está en más de un dispositivo (todos los juegos actuales tienen dos); si el juego estuviera en uno solo, se deduce.
+- **Dispositivo (`?device=`):** id o nombre. Se valida que pertenezca al juego; es el dispositivo donde se vigila el proceso del juego (ver «Cierre automático»). Es obligatorio si el juego está en más de un dispositivo (todos los juegos actuales tienen dos); si el juego estuviera en uno solo, se deduce.
 - **Respuesta `200`:** `{"ok": bool, "outcome": "...", "game": "<id>", "device": "<id>", "run_id": "...", "code": "err.sync....", "params": {...}}`. `outcome` es `ok`, `conflict`, `aborted` (dispositivo sin conexión, proceso del juego abierto...), `partial`, `error` o `timeout`. `ok` es `true` solo con `outcome: ok`. `code`/`params` detallan qué pasó (p. ej. `err.sync.done`, `err.sync.already_synced`, `err.sync.conflict`). Un fallo de la sincronización **no** es un 5xx y no se reintenta: el cron de la sincronización automática sigue como red de seguridad. `timeout`: la sincronización superó los 55 s del servidor; sigue ejecutándose en segundo plano y deja su entrada en el historial al acabar.
 - **Errores:** `401` `err.apikey.invalid` (sin key, inválida, revocada o cookie de sesión; se comprueba antes que nada, así que no revela si el juego existe), `404` `err.main.game_unknown` o `err.hook.device_unknown`, `400` `err.hook.device_required` (falta `?device=` y es ambiguo) o `err.hook.device_ambiguous`, `409` `err.main.run_in_progress` (ya hay una ejecución de ese juego: cron, manual u otro aviso), `429` tras varios fallos de key seguidos desde una IP.
 - **Historial:** la ejecución aparece en el registro de la sincronización automática con el disparador «Aviso del juego» (`trigger: "hook"`).
+- **`watching`:** la respuesta añade `watching: true` si se armó la vigilancia de cierre, o `watching: false` con `watch_reason: "no_process"` si el juego no tiene `process`. Se arma con cualquier `200` (también `conflict`, `aborted` o `timeout`), nunca con `400`/`401`/`404`/`409`.
 
 ```bash
 curl -fsS -m 60 -X POST -H "Authorization: Bearer ck_..." "http://HOST:8088/api/hook/MiJuego/opened?device=MiPC"
@@ -300,6 +302,10 @@ curl -fsS -m 60 -X POST -H "Authorization: Bearer ck_..." "http://HOST:8088/api/
 Pon la URL **entre comillas**: el `?` lo interpretaría el shell como comodín.
 
 ### Lanzadores
+
+**Copiar los comandos de la web:** Configuración → sección **Lanzadores** (tarjeta propia tras la lista de juegos, plegada por defecto: botón Mostrar/Ocultar; también se abre con «Ver comandos de lanzador» en la tarjeta de cada juego guardado, que lo elige y baja hasta ella). Un único panel para todos los juegos: eliges el **juego** (se recuerda en el navegador) y su **dispositivo**, y en cada pestaña (Steam / Steam Deck, Lutris, Heroic, Windows con Playnite) tienes el comando completo con tu API key, el id del juego y el dispositivo ya codificados, listo para copiar (con una nota de dónde se pega). Necesita la API key del perfil (sin ella el panel pide generarla). La URL del hub se rellena con la de la página, se puede editar y se recuerda en el navegador; por HTTP fuera de localhost avisa de que la key viaja en claro. Si el juego no tiene `process`, avisa de que el hub no podrá vigilar el cierre; un juego sin guardar pide guardarlo antes. Debajo, **Último aviso** por dispositivo del juego elegido: último `opened` / cierre recibido, hace cuánto, su resultado y, si hay vigilancia activa, su estado (la key y el estado solo se piden con el panel desplegado; el estado se refresca cada 15 s).
+
+Los comandos de abajo son los mismos que genera la web.
 
 El cliente debe esperar (hasta 60 s) y arrancar el juego **aunque falle el aviso** (hub caído, conflicto...), por eso se encadena con `;` y no con `&&`.
 
@@ -317,7 +323,53 @@ El cliente debe esperar (hasta 60 s) y arrancar el juego **aunque falle el aviso
 
   Si el script sale con error, Lutris arranca igualmente el juego; sin la opción de espera, el juego arrancaría a la vez que la sincronización.
 
-Aviso: **el cierre automático** (sincronizar al cerrar el juego) **aún no existe**; llegará en una fase posterior. Por ahora el `opened` solo trae a este equipo el save más reciente; para subir lo jugado, el cron o una sincronización manual.
+- **Heroic** (**sin verificar**; ajustes del juego → Avanzado → script antes de lanzar): el mismo `curl` que Lutris.
+
+- **Windows / Playnite** (**sin verificar**; script previo del juego, PowerShell 5.1):
+
+  ```
+  Invoke-WebRequest -Method Post -Uri "http://<HUB>:8088/api/hook/<JUEGO>/opened?device=<DISPOSITIVO>" -Headers @{Authorization='Bearer <API_KEY>'} -TimeoutSec 60 -UseBasicParsing
+  ```
+
+  Alternativa con `curl.exe` (incluido en Windows 10/11): el mismo comando que en Lutris con `curl.exe` en lugar de `curl`.
+
+### Cierre automático
+
+Tras `opened`, el hub **vigila el proceso del juego en ese dispositivo** (el `process` del juego; mismo sondeo que usa la sincronización: `pgrep -f` por SSH en Linux, `tasklist` en Windows, `/proc` en «Este equipo») y, cuando se cierra, hace el checkpoint solo. El lanzador no necesita ningún hook de cierre: basta la línea de `opened` de Steam o Lutris.
+
+1. `opened` sincroniza y arma la vigilancia (una por juego; un nuevo `opened` del mismo juego **reemplaza** la anterior).
+2. Sondeo cada **15 s**. No se da el juego por cerrado hasta haberlo visto abierto al menos una vez. Si en **2 min** no se ve nunca, se descarta la vigilancia (suele ser un `process` mal puesto) y queda anotado en el log del hub (`vigilante never_seen`), no en el historial.
+3. Al dejar de verse el proceso, o si el dispositivo deja de responder (SSH caído, suspensión), espera **10 s** (para que se liberen los ficheros) y lanza el checkpoint.
+4. El checkpoint usa la política de conflictos `skip` (nunca resuelve solo), el mismo lock y la misma lógica que `opened`, y aparece en el historial con el disparador «Cierre del juego» (`trigger: "hook_closed"`). Si aborta o el lock está tomado **no se reintenta**; el cron de la sincronización automática sigue como red de seguridad.
+
+Tiempos configurables con variables de entorno (en segundos):
+
+| Variable | Por defecto | Qué es |
+|---|---|---|
+| `CHECKPOINT_HOOK_POLL` | `15` | Cada cuánto se sondea el proceso |
+| `CHECKPOINT_HOOK_SETTLE` | `10` | Espera tras dejar de verlo, antes del checkpoint |
+| `CHECKPOINT_HOOK_FIRST_SEEN` | `120` | Tiempo máximo para verlo abierto por primera vez |
+
+Limitaciones:
+
+- La vigilancia **vive en memoria**: si el hub se reinicia se pierde y solo la cubre el cron.
+- `process` debe coincidir con el proceso real del juego (en Proton/Wine, el `.exe` bajo Wine; **sin verificar**). Con `pgrep -f` basta un fragmento del nombre o de la línea de comandos.
+
+#### `GET /api/games/{juego}/hook-status`
+
+Con **sesión de cookie** (la usa la web; la API key no vale aquí). Por cada dispositivo del juego: el último evento de hook y la vigilancia activa, sin datos sensibles: `{"devices": [{"device": "<id>", "last": {"trigger": "hook|hook_closed", "at": "<UTC ISO 8601>", "outcome": "ok|conflict|..."} | null, "watching": {"state": "waiting|running|settling", "since": "..."} | null}]}`. `404` si el juego no existe. Las entradas de historial de `hook` y `hook_closed` guardan ahora el dispositivo (campo `device`); las anteriores no lo tienen y no cuentan como «último aviso».
+
+#### `GET /api/hook/watches`
+
+Con `Authorization: Bearer ck_...` (sin cookie; `401` sin key). Lista las vigilancias activas, sin datos sensibles: `[{"game": "<id>", "device": "<id>", "state": "waiting|running|settling", "since": "<UTC ISO 8601>", "last_poll": "<UTC ISO 8601>", "poll": <segundos>}]`. `since` es el inicio del estado actual; `last_poll`, el último sondeo completado (latido); `poll`, el intervalo de sondeo. `waiting`: aún no se ha visto el proceso; `running`: visto abierto; `settling`: cerrado, esperando antes del checkpoint.
+
+```bash
+curl -fsS -H "Authorization: Bearer ck_..." "http://HOST:8088/api/hook/watches"
+```
+
+#### `GET /api/watches`
+
+Con **sesión de cookie** (la usa la web). Mismas vigilancias que `/api/hook/watches`, solo de juegos existentes, más la hora del servidor para medir el latido: `{"now": "<UTC ISO 8601>", "watches": [{"game", "device", "state", "since", "last_poll", "poll"}]}`. La pestaña Sincronizar la consulta cada 5 s (solo con la pestaña visible) y marca cada juego vigilado con un borde del color de su estado y una franja inferior con icono + texto (esperando a que arranque / jugando desde HH:MM / cerrando / sin latido); en la cabecera, un contador «N juegos en vigilancia» que despliega la lista. Si `last_poll` tiene más de 3 × `poll` de antigüedad, pasa a ámbar (borde discontinuo) con el texto «Sin latido».
 
 ## Instalar como app (PWA)
 
@@ -379,9 +431,20 @@ Los elementos que se repiten viven en `frontend/src/components/ui/` (importa des
 | `Select` | `options` (`[{ value, label }]`), `placeholder` | `_control.scss` |
 | `Checkbox` | `label` + props del input | `_control.scss` |
 | `Switch` | `label` + props del input | `_switch.scss` |
+| `Tabs` | `tabs` (`[{ id, label }]`), `value`, `onChange`, `label`; los hijos son el panel activo. Roles `tablist`/`tab`/`tabpanel`, flechas, Inicio y Fin | `_tabs.scss` |
+| `CopyBox` | `value`, `label`, `what` (qué se copia: el botón dice «Copiar {what}», p. ej. «Copiar comando de Steam» o «Copiar clave API»), `describedBy`; caja de código monoespaciada que ajusta líneas + botón copiar (`copy` → `check` 2 s, `clipboard.js` con fallback) | `_copybox.scss` |
+| `WatchBar` | `state` (`waiting`, `running`, `settling`, `stale`), `since` (opcional), hijos = texto; franja inferior de la tarjeta con icono decorativo + texto, color por estado; la tarjeta lleva el borde con `watchCardClass(estado)` de `src/watch.js` | `_watch.scss` |
+| `WatchStatus` | `state` (igual), hijos = texto; punto decorativo + texto en línea (filas de la lista de la cabecera), `running` pulsa | `_watch.scss` |
+| `WatchSummary` (componente de la app, no genérico) | `watch` (`{now, watches}` de `useWatches`), `config`; chip «● N en vigilancia ▾» en la barra superior con lista desplegable (juego, dispositivo, estado con `WatchStatus`); oculto sin vigilancia; Esc, clic fuera y salir del foco lo cierran. En móvil (<=640 px) es punto + número («99+»; el texto completo va en `aria-label`) y la lista ocupa el ancho de la barra con 8 px de margen y scroll propio; chip y filas de 44 px (`$touch-watch`, local) | `_watch.scss` |
 | `Input` | props del input (texto sin autocompletar ni corrector por defecto); acepta `ref` | `_control.scss` |
 
-El perfil usa estos componentes: la sección «API key» es un bloque con fondo `--surface-2` (encabezado con icono `key`), la key completa en un cuadro monoespaciado que ajusta en varias líneas, `Button iconOnly` para copiar (`copy` → `check` 2 s), `Button` y `Button variant="danger"` (Regenerar / Revocar, mismo ancho) y `Alert compact` para el aviso de HTTP.
+La consulta de `/api/watches` (cada 5 s, solo con la pestaña visible) vive en un único hook, `useWatches` (`src/useWatches.js`), llamado desde `App`: el contador de la barra y las tarjetas de Sincronizar reciben los mismos datos, sin peticiones duplicadas.
+
+Aviso de actualización: en pantallas anchas (>=480 px) es el botón de la barra; por debajo sale de la barra y pasa al menú del perfil como entrada «Actualizar a vX.Y.Z» (abre el mismo diálogo), y el avatar muestra un punto con texto accesible mientras haya actualización aplicable.
+
+Menú del perfil (`ProfileMenu`), de arriba abajo, con separador fino y rótulo discreto por grupo (`role="group"` + `aria-labelledby`): identidad (foto, nombre, Cambiar/Quitar foto), entrada «Actualizar a vX.Y.Z» (solo <480 px y con actualización), **Preferencias** (Idioma y Tema con el mismo patrón de fila `.profile-row`: icono + etiqueta + valor actual a la derecha, 44 px; el idioma es el `Select` nativo como valor, `LanguageSelect row`), **Integración** (API key plegable, cerrada por defecto, `aria-expanded`/`aria-controls`; el contenido sigue montado y solo `hidden`) y **Cuenta** (Salir y, debajo, la versión). Esc y clic fuera cierran; no es modal.
+
+El perfil usa estos componentes: la sección «API key» es un bloque con fondo `--surface-2` (encabezado con icono `key`), la key completa en un cuadro monoespaciado que ajusta en varias líneas, `CopyBox` para la key y para los comandos de la sección Lanzadores (copia con icono `copy` → `check` 2 s), `Button` y `Button variant="danger"` (Regenerar / Revocar, mismo ancho) y `Alert compact` para el aviso de HTTP.
 
 Los tests `test/ui-components.test.mjs` fijan las clases y atributos que producen.
 

@@ -6,3 +6,7 @@ export { default as Input } from './Input.jsx';
 export { default as Pill } from './Pill.jsx';
 export { default as Select } from './Select.jsx';
 export { default as Switch } from './Switch.jsx';
+export { default as CopyBox } from './CopyBox.jsx';
+export { default as Tabs } from './Tabs.jsx';
+export { default as WatchBar } from './WatchBar.jsx';
+export { default as WatchStatus } from './WatchStatus.jsx';

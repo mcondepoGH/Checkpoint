@@ -183,7 +183,7 @@ test('ProfileMenu: popup abierto con nombre, idioma, tema, salir y versión; sin
   const html = h(m.ProfileMenu, { ...PROFILE, open: true });
   assert.match(html, /aria-expanded="true"/);
   assert.match(html, /role="dialog"[^>]*aria-label="Perfil"/);
-  for (const txt of ['admin', 'Cambiar foto', 'Idioma', 'Tema: automático', 'Salir', 'Versión 1.4.0']) assert.ok(html.includes(txt), txt);
+  for (const txt of ['admin', 'Cambiar foto', 'Idioma', 'Tema', 'Automático', 'Preferencias', 'Integración', 'Cuenta', 'Salir', 'Versión 1.4.0']) assert.ok(html.includes(txt), txt);
   assert.ok(!html.includes('Quitar foto'));
   assert.match(html, /<select/);
   assert.match(html, /type="file"[^>]*accept="image\/jpeg,image\/png,image\/webp"|accept="image\/jpeg,image\/png,image\/webp"[^>]*type="file"/);

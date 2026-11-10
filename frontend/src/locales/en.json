@@ -11,6 +11,7 @@
     "delete": "Delete",
     "copy": "Copy",
     "copied": "Copied",
+    "copyWhat": "Copy {what}",
     "on": "Enabled",
     "off": "Disabled",
     "unnamed": "(unnamed)",
@@ -62,6 +63,13 @@
     "newest": "Newest wins"
   },
   "sync": {
+    "watch": {
+      "bar": {"waiting": "Waiting for it to start · {device}", "running": "Playing on {device}", "settling": "Closing · saving checkpoint…", "stale": "No heartbeat"},
+      "since": "since {time}",
+      "short": {"waiting": "Waiting", "running": "Playing", "settling": "Closing", "stale": "No heartbeat"},
+      "count": { "one": "{count} game being watched", "other": "{count} games being watched" },
+      "listAria": "Games being watched"
+    },
     "title": "Sync",
     "state": {
       "conflict": "Conflict",
@@ -197,7 +205,42 @@
     "useGlobal": "Use the global setting",
     "deleteAria": "Delete game {title}",
     "showMore": "Show more",
-    "showLess": "Show less"
+    "showLess": "Show less",
+    "launchers": "View launcher commands",
+    "launchersAria": "View launcher commands for {title}"
+  },
+  "launcher": {
+    "title": "Launchers",
+    "show": "Show",
+    "hide": "Hide",
+    "game": "Game",
+    "noGames": "Add a game to get its commands.",
+    "copyWhat": "{launcher} command",
+    "copyWhatCmd": "{launcher} command ({cmd})",
+    "hint": "Commands for the launcher to notify the hub before the game starts. The hub watches for the close on its own: no close hook needed.",
+    "saveFirst": "Save the game to get its commands.",
+    "noDevices": "Choose the game's devices to get its commands.",
+    "noKey": "Generate the API key in your profile first.",
+    "noProcess": "No <code>process</code>: the hub will not be able to watch for the close (the open notice will still work).",
+    "device": "Launcher device",
+    "hubUrl": "Hub URL",
+    "hubUrlHint": "Address the launcher uses to reach the hub. Defaults to this page's; remembered in this browser.",
+    "invalidUrl": "Invalid URL: use http:// or https://, with no spaces or quotes.",
+    "tabsAria": "Launcher",
+    "tab": { "steam": "Steam / Steam Deck", "lutris": "Lutris", "heroic": "Heroic (unverified)", "windows": "Windows (Playnite)" },
+    "where": {
+      "steam": "Paste it in the game's Properties → Launch Options (a single line).",
+      "lutris": "Paste it in Configure → System options → Pre-launch script. Turn on “Wait for pre-launch completion”.",
+      "heroic": "Paste it in the game's settings → Advanced → script to run before launch. Unverified.",
+      "windows": "Paste it in Playnite → Edit game → Scripts → pre-start script (PowerShell 5.1)."
+    },
+    "closeNote": "The hub watches for the close on its own.",
+    "cmd": { "main": "Command", "powershell": "PowerShell", "curl": "Alternative with curl.exe" },
+    "cmdAria": "Command for {launcher}",
+    "lastTitle": "Last notice",
+    "lastNone": "{device}: no notices yet",
+    "last": "{device}: {trigger}, {ago}, {outcome}",
+    "watch": { "waiting": "watching: waiting for the game", "running": "watching: game open", "settling": "watching: closed, about to sync" }
   },
   "device": {
     "new": "New device",
@@ -302,7 +345,8 @@
     "trigger": {
       "scheduled": "Scheduled",
       "startup": "Startup",
-      "hook": "Game opened"
+      "hook": "Game opened",
+      "hook_closed": "Game closed"
     },
     "noDetail": "No per-game detail."
   },
@@ -611,8 +655,12 @@
   },
   "profile": {
     "open": "Profile and options",
+    "openUpdate": "Profile and options (an update is available)",
+    "updateDot": "An update is available",
+    "update": "Update to v{version}",
     "title": "Profile",
-    "theme": "Theme: {theme}",
+    "themeLabel": "Theme",
+    "group": { "prefs": "Preferences", "integration": "Integration", "account": "Account" },
     "version": "Version {version}",
     "photo": {
       "change": "Change photo",
@@ -630,6 +678,7 @@
       "regenerate": "Regenerate",
       "revoke": "Revoke",
       "field": "API key (read-only)",
+      "copyWhat": "API key",
       "insecure": "Over HTTP the key travels in clear text: use HTTPS or a VPN outside your LAN.",
       "confirm": {
         "regenerate": { "title": "Regenerate the API key", "text": "The current key will stop working: commands and plugins already linked will fail until you use the new one.", "yes": "Yes, regenerate" },
