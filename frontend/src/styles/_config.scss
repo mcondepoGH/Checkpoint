@@ -89,6 +89,10 @@ button.ab-chip { cursor: pointer; display: inline-flex; align-items: center; gap
 
 // Móvil: guía SSH y bloques de código sin desbordes; chip de ayuda y resumen con objetivo táctil de 40 px.
 .keyhelp .codeblock pre { min-width: 0; }
+// Un comando por card (cada una con su «Copiar»); la etiqueta de alternativa va encima de la card.
+.keyhelp .keycmds { display: flex; flex-direction: column; gap: .5rem; }
+.keyhelp .keycmd { min-width: 0; }
+.keyhelp .keycmd-label { margin: 0 0 .25rem; font-size: v.$fs-label; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 @media (max-width: v.$bp-sm) {
   .pubkey summary { min-height: v.$touch; display: flex; align-items: center; }
   .keyhelp .chip { width: v.$touch; height: v.$touch; }
@@ -97,7 +101,7 @@ button.ab-chip { cursor: pointer; display: inline-flex; align-items: center; gap
   .keyhelp .keysub { padding: .6rem; }
   .keyhelp .keytabs.sub { padding-left: .5rem; }
   .keyhelp .keytabs .tab { min-height: v.$touch; }
-  .keyhelp .codeblock { flex-direction: column; align-items: stretch; }
+  .keyhelp .codeblock { flex-direction: column; align-items: stretch; .btn { min-height: v.$touch; } }
   .section-head { margin-top: 1.25rem; .btn { flex: none; } }
 }
 

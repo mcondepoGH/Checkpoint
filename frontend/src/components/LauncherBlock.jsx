@@ -65,7 +65,8 @@ export default function LauncherBlock({ games, selected, onSelect, active, initi
     if (!s.last) return <li key={d.id}>{t('launcher.lastNone', { device: d.name })}{w}</li>;
     const trigger = t(`autolog.trigger.${s.last.trigger}`);
     const outcome = RESULT_TEXT[s.last.outcome] ? resultText(s.last.outcome, t) : String(s.last.outcome ?? '—');
-    return <li key={d.id}>{t('launcher.last', { device: d.name, trigger, ago: ago(s.last.at, when, locale), outcome })}{w}</li>;
+    const why = s.last.code ? errText(s.last) : '';  // motivo si el último aviso fue un descarte u omisión (err.hook.*)
+    return <li key={d.id}>{t('launcher.last', { device: d.name, trigger, ago: ago(s.last.at, when, locale), outcome })}{why ? ` · ${why}` : ''}{w}</li>;
   }).filter(Boolean);
 
   let body;

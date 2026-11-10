@@ -11,6 +11,9 @@ import bcrypt
 from . import settings
 
 
+FAIL_FORGET = 3600  # s sin fallos (tras el fin del bloqueo) para olvidar los de una IP
+
+
 class Auth:
     """Usuario y contraseña en claro (del entorno). La contraseña se hashea con bcrypt en
     memoria al construir; el claro no se guarda ni se escribe a disco ni se loguea."""
@@ -45,6 +48,10 @@ class Auth:
 
     def _register_fail(self, bucket: Dict[str, Tuple[int, float]], ip: str):
         with self.lock:
+            # Poda: una IP sin fallos ni bloqueo en la última hora vuelve a empezar de cero (el mapa no crece sin fin).
+            now = self.clock()
+            for k in [k for k, (_n, until) in bucket.items() if until + FAIL_FORGET < now]:
+                del bucket[k]
             n = bucket.get(ip, (0, 0.0))[0] + 1
             delay = 0 if n < 3 else min(2 ** (n - 3) * 5, 900)  # 5s,10s,20s... máx 15 min
             bucket[ip] = (n, self.clock() + delay)

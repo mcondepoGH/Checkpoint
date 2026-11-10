@@ -2,6 +2,7 @@
 import os
 import subprocess
 import sys
+import time
 
 import pytest
 
@@ -478,6 +479,10 @@ def test_proc_scan_real():
     marcador = "checkpoint-test-marker-" + os.urandom(4).hex()
     p = subprocess.Popen([sys.executable, "-c", "import time;time.sleep(30)", marcador])
     try:
+        # /proc/<pid>/cmdline puede tardar un instante en reflejar el exec en algunos kernels: se reintenta, sin dormir fijo.
+        end = time.monotonic() + 5
+        while not LocalDeviceTransport._proc_scan(marcador) and time.monotonic() < end:
+            time.sleep(0.02)
         assert LocalDeviceTransport._proc_scan(marcador) is True
         assert LocalDeviceTransport._proc_scan("no-existe-" + os.urandom(6).hex()) is False
     finally:

@@ -20,7 +20,8 @@ try {
         import LaunchersPanel from './components/LaunchersPanel.jsx';
         import GameCard from './components/GameCard.jsx';
         import { Tabs, CopyBox } from './components/ui/index.js';
-        export { React, renderToStaticMarkup, i18n, LauncherBlock, LaunchersPanel, GameCard, Tabs, CopyBox };`,
+        import { EntryMessage, EntryDetail, RunEntry } from './components/AutoSyncLog.jsx';
+        export { React, renderToStaticMarkup, i18n, LauncherBlock, LaunchersPanel, GameCard, Tabs, CopyBox, EntryMessage, EntryDetail, RunEntry };`,
       resolveDir: SRC, loader: 'jsx',
     },
     bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'transform',
@@ -75,7 +76,7 @@ test('CopyBox: caja de solo lectura + botón de icono con aria-label; copiado = 
 
 test('Lanzador con key: pestañas, selector de dispositivo, URL y comando Steam con %command%', { skip }, () => {
   const h = block(WITH, {}, 'es');
-  for (const l of ['Steam / Steam Deck', 'Lutris', 'Heroic (sin verificar)', 'Windows (Playnite)']) assert.ok(has(h, `>${l}</button>`), l);
+  for (const l of ['Steam / Steam Deck', 'Lutris', 'Heroic', 'Windows (Playnite)']) assert.ok(has(h, `>${l}</button>`), l);
   assert.ok(has(h, 'Opciones de lanzamiento') && has(h, 'El cierre lo vigila el hub solo'));
   assert.ok(has(h, 'Mi PC') && has(h, 'Deck') && has(h, 'Dispositivo del lanzador') && has(h, 'URL del hub'));
   assert.ok(has(h, `Bearer ${KEY}`) && has(h, 'http://hub.example.lan:8088/api/hook/juego-1a2b3c4d/opened?device=mi-pc') && has(h, '; %command%'));
@@ -167,4 +168,233 @@ test('GameCard: sin bloque Lanzador; enlace «Ver comandos de lanzador» solo co
   const l = render({ onShowLaunchers() {} });
   assert.ok(has(l, '>Ver comandos de lanzador</button>') && has(l, 'aria-label="Ver comandos de lanzador de Juego"'), l);
   assert.ok(!has(render({ onShowLaunchers() {} }, { ...g, id: '' }), 'Ver comandos'));
+});
+
+const NOTES = [
+  [{ result: 'skipped', code: 'err.hook.never_seen', params: { seconds: 120 } },
+    'No se vio el proceso del juego abierto en 120 s: vigilancia descartada, sin checkpoint de cierre',
+    'The game process was not seen running within 120 s: watch dropped, no closing checkpoint'],
+  [{ result: 'skipped', code: 'err.hook.busy', params: {} },
+    'Checkpoint de cierre omitido: ya había una sincronización de este juego en curso (no se reintenta)',
+    'Closing checkpoint skipped: a sync of this game was already running (not retried)'],
+  [{ result: 'skipped', code: 'err.hook.game_removed', params: {} },
+    'Checkpoint de cierre omitido: el juego ya no está en la configuración',
+    'Closing checkpoint skipped: the game is no longer in the configuration'],
+  [{ result: 'error', code: 'err.hook.checkpoint_failed', params: { error: 'RuntimeError' } },
+    'El checkpoint de cierre falló (RuntimeError); no se reintenta',
+    'The closing checkpoint failed (RuntimeError); not retried'],
+];
+
+test('Historial: descartes y omitidos del cierre con texto traducido (es/en) e icono, no solo color', { skip }, () => {
+  for (const [entry, es, en] of NOTES) {
+    const h = R('EntryMessage', { entry: { ...entry, message: '' } });
+    assert.ok(has(h, es) && has(h, 'hook-note') && has(h, '<svg'), h);
+    assert.ok(has(h, entry.result === 'error' ? 'is-error' : 'hook-note'), h);
+    const e = R('EntryMessage', { entry: { ...entry, message: '' } }, 'en');
+    assert.ok(has(e, en) && !has(e, 'vigilancia'), e);
+  }
+  // una entrada normal (sin código err.hook.*) no lleva icono
+  assert.ok(!has(R('EntryMessage', { entry: { result: 'ok', code: 'err.scheduler.busy', params: {}, message: '' } }), 'hook-note'));
+});
+
+const count = (h, s) => h.split(s).length - 1;
+const runEntry = (o) => ({ id: 'x1', started: '2026-11-09T11:00:00Z', duration: 0, trigger: 'hook_closed', message: '', params: {}, ...o });
+const oneGame = (result, code, params = {}, name = 'Juego 0') => runEntry({ result, code, params, games: { juego0: { name, result, code, params, message: '' } } });
+
+test('Registro: una entrada omitida de un solo juego lleva UNA etiqueta de estado y UN mensaje (es/en)', { skip }, () => {
+  for (const [entry, es, en] of NOTES) {
+    const e = oneGame(entry.result, entry.code, entry.params);
+    for (const [lang, text] of [['es', es], ['en', en]]) {
+      const h = R('RunEntry', { entry: e }, lang);
+      assert.equal(count(h, text), 1, h);
+      assert.equal(count(h, '<svg'), 1, h);
+      assert.equal(count(h, 'class="badge '), 1, h); // solo la de la cabecera
+      assert.ok(has(h, 'Juego 0') && has(h, 'hook-note'), h);
+      assert.equal(has(h, 'is-error'), entry.result === 'error', h);
+    }
+  }
+});
+
+test('Registro: varios juegos conservan su etiqueta y su mensaje; sin entrada de nota no cambia', { skip }, () => {
+  const e = runEntry({ result: 'skipped', code: 'err.hook.busy', games: {
+    a: { name: 'Juego A', result: 'skipped', code: 'err.hook.busy', params: {}, message: '' },
+    b: { name: 'Juego B', result: 'error', code: 'err.hook.checkpoint_failed', params: { error: 'RuntimeError' }, message: '' } } });
+  const h = R('EntryDetail', { entry: e });
+  assert.ok(has(h, 'Juego A') && has(h, 'Juego B'), h);
+  assert.equal(count(h, 'class="badge aborted"'), 1, h);
+  assert.equal(count(h, 'class="badge error"'), 1, h);
+  assert.equal(count(h, 'ya había una sincronización'), 1, h); // el texto de la entrada no se repite en la fila A
+  assert.equal(count(h, 'RuntimeError'), 1, h);
+});
+
+test('Registro: entrada correcta con mensaje de entrada y de juego distintos: una etiqueta, cada mensaje una vez', { skip }, () => {
+  const e = runEntry({ result: 'ok', trigger: 'scheduled', message: 'Todo bien', games: { g: { name: 'Juego', result: 'ok', message: 'Listo' } } });
+  const h = R('RunEntry', { entry: e });
+  assert.equal(count(h, 'Todo bien'), 1, h);
+  assert.equal(count(h, 'Listo'), 1, h);
+  assert.ok(!has(h, 'hook-note') && !has(h, '<svg'), h);
+  assert.equal(count(h, 'class="badge '), 1, h);
+});
+
+test('Registro: correcta de un juego = cabecera + línea de juego, UNA etiqueta, sin tercera línea (es/en)', { skip }, () => {
+  for (const [trigger, es, en] of [['hook', 'Aviso del juego', 'Game opened'], ['hook_closed', 'Cierre del juego', 'Game closed']]) {
+    const e = runEntry({ trigger, result: 'ok', device: 'mi-pc', games: { juego0: { name: 'Juego 0', result: 'ok', message: '' } } });
+    for (const [lang, txt] of [['es', es], ['en', en]]) {
+      const h = R('RunEntry', { entry: e }, lang);
+      assert.equal(count(h, 'class="badge '), 1, h);
+      assert.equal(count(h, 'Juego 0'), 1, h);
+      assert.equal(count(h, 'mi-pc'), 1, h);
+      assert.ok(has(h, txt) && !has(h, 'class="msg') && !has(h, '<svg'), h);
+      assert.ok(has(h, '<li class="run"') && has(h, 'class="run-head"') && !has(h, '<details'), h);
+    }
+  }
+});
+
+test('Registro: error de un juego sin dispositivo: una etiqueta, mensaje una vez con icono', { skip }, () => {
+  const e = oneGame('error', 'err.hook.checkpoint_failed', { error: 'RuntimeError' });
+  const h = R('RunEntry', { entry: e });
+  assert.equal(count(h, 'class="badge '), 1, h);
+  assert.equal(count(h, 'RuntimeError'), 1, h);
+  assert.equal(count(h, '<svg'), 1, h);
+  assert.ok(!has(h, 'class="dev"'), h);
+});
+
+test('Registro: varios juegos con el mismo resultado que la cabecera no llevan etiqueta; con mezcla, todos', { skip }, () => {
+  const same = runEntry({ result: 'ok', games: { a: { name: 'A', result: 'ok' }, b: { name: 'B', result: 'ok' } } });
+  assert.equal(count(R('RunEntry', { entry: same }), 'class="badge '), 1);
+  const mixed = runEntry({ result: 'partial', games: { a: { name: 'A', result: 'ok' }, b: { name: 'B', result: 'error', code: 'err.hook.checkpoint_failed', params: { error: 'X' } } } });
+  const h = R('RunEntry', { entry: mixed });
+  assert.equal(count(h, 'class="badge '), 3, h); // cabecera + dos filas
+  assert.equal(count(h, 'El checkpoint de cierre falló (X)'), 1, h);
+});
+
+const gm = (n, result = 'ok', extra = {}) => Object.fromEntries(Array.from({ length: n }, (_, i) => [`g${i}`, { name: `Juego ${i}`, result, message: '', ...extra }]));
+const OFFLINE = { code: 'err.sync.all_offline', params: { devices: 'Deck' } };
+const abortedScheduled = (trigger = 'scheduled') => runEntry({ trigger, result: 'aborted', duration: 1.2, code: 'err.scheduler.summary',
+  params: { causes: [{ path: 'Juego 0', ...OFFLINE }] }, games: { g0: { name: 'Juego 0', result: 'aborted', ...OFFLINE, message: '' } } });
+
+test('Registro: programada correcta de un juego (es/en): una etiqueta, juego una vez, sin mensaje ni icono', { skip }, () => {
+  const e = runEntry({ trigger: 'scheduled', result: 'ok', duration: 3.4, games: gm(1) });
+  for (const [lang, txt, ok] of [['es', 'Programada', 'correcta'], ['en', 'Scheduled', 'ok']]) {
+    const h = R('RunEntry', { entry: e }, lang);
+    assert.equal(count(h, 'class="badge '), 1, h);
+    assert.equal(count(h, 'Juego 0'), 1, h);
+    assert.ok(has(h, txt) && has(h, ok) && !has(h, '<svg') && !has(h, 'class="msg'), h);
+  }
+});
+
+test('Registro: programada con varios juegos mezclados (<=3): todas las filas con etiqueta, sin plegar', { skip }, () => {
+  const e = runEntry({ trigger: 'scheduled', result: 'partial', games: { a: { name: 'A', result: 'ok' }, b: { name: 'B', result: 'skipped', code: 'err.scheduler.busy', params: {} },
+    c: { name: 'C', result: 'error', code: 'err.sync.unexpected', params: { type: 'X', detail: 'boom' } } } });
+  for (const lang of ['es', 'en']) {
+    const h = R('RunEntry', { entry: e }, lang);
+    assert.equal(count(h, 'class="badge '), 4, h); // cabecera + 3 filas
+    assert.equal(count(h, 'X: boom'), 1, h);
+    assert.ok(!has(h, 'class="fold"') && !has(h, 'aria-expanded'), h);
+  }
+});
+
+test('Registro: programada con >3 juegos: plegada, resumen accesible y juegos no correctos visibles (es/en)', { skip }, () => {
+  const games = { ...gm(12), x: { name: 'Roto', result: 'error', code: 'err.sync.unexpected', params: { type: 'E', detail: 'fallo' }, message: '' } };
+  const e = runEntry({ trigger: 'scheduled', result: 'error', games });
+  for (const [lang, sum] of [['es', '13 juegos: 12 correctos, 1 error'], ['en', '13 games: 12 succeeded, 1 failed']]) {
+    const h = R('RunEntry', { entry: e }, lang);
+    assert.ok(has(h, sum), h);
+    assert.ok(has(h, 'aria-expanded="false"') && has(h, 'aria-controls='), h);
+    assert.ok(has(h, 'Roto') && has(h, 'E: fallo'), h);
+    assert.ok(!has(h, 'Juego 0') && !has(h, 'Juego 11'), h); // los correctos, plegados
+    assert.equal(count(h, 'class="badge '), 2, h); // cabecera + el juego con error (hay mezcla)
+    assert.equal(count(h, 'E: fallo'), 1, h);
+  }
+  // todos correctos: solo el resumen
+  const h = R('RunEntry', { entry: runEntry({ trigger: 'scheduled', result: 'ok', games: gm(5) }) });
+  assert.ok(has(h, '5 juegos: 5 correctos') && !has(h, 'Juego 0') && !has(h, '<ul'), h);
+  // exactamente 3: sin plegar
+  assert.ok(!has(R('RunEntry', { entry: runEntry({ result: 'ok', games: gm(3) }) }), 'class="fold"'));
+});
+
+test('Registro: arranque correcto (es/en)', { skip }, () => {
+  const e = runEntry({ trigger: 'startup', result: 'ok', duration: 12, games: gm(2) });
+  assert.ok(has(R('RunEntry', { entry: e }), 'Arranque') && has(R('RunEntry', { entry: e }, 'en'), 'Startup'));
+  assert.equal(count(R('RunEntry', { entry: e }), 'class="badge '), 1);
+});
+
+test('Registro: hook y hook_closed ok / omitida / error con dispositivo: una etiqueta, mensaje una vez (es/en)', { skip }, () => {
+  const cases = [['ok', null], ['skipped', 'err.hook.busy'], ['error', 'err.hook.checkpoint_failed']];
+  for (const trigger of ['hook', 'hook_closed']) for (const [result, code] of cases) {
+    const g = { name: 'Juego 0', result, message: '', ...(code ? { code, params: { error: 'RuntimeError' } } : {}) };
+    const e = runEntry({ trigger, result, device: 'mi-pc', ...(code ? { code, params: { error: 'RuntimeError' } } : {}), games: { juego0: g } });
+    for (const lang of ['es', 'en']) {
+      const h = R('RunEntry', { entry: e }, lang);
+      assert.equal(count(h, 'class="badge '), 1, h);
+      assert.equal(count(h, 'Juego 0'), 1, h);
+      assert.equal(count(h, 'mi-pc'), 1, h);
+      assert.equal(count(h, '<svg'), code ? 1 : 0, h);
+      assert.equal(count(h, 'class="msg'), code ? 1 : 0, h);
+    }
+  }
+});
+
+test('Registro: abortada sin juegos con err.sync.all_offline: motivo traducido UNA vez con icono (es/en)', { skip }, () => {
+  const e = runEntry({ trigger: 'scheduled', result: 'aborted', ...OFFLINE, games: {} });
+  for (const [lang, txt] of [['es', 'Deck no responden; no se toca nada'], ['en', null]]) {
+    const h = R('RunEntry', { entry: e }, lang);
+    assert.equal(count(h, 'class="badge '), 1, h);
+    assert.equal(count(h, '<svg'), 1, h);
+    assert.equal(count(h, 'class="msg'), 1, h);
+    assert.ok(!has(h, 'all_offline') && !has(h, 'err.sync') && !has(h, 'autolog.noDetail') && !has(h, 'class="games"'), h);
+    if (txt) assert.equal(count(h, txt), 1, h);
+  }
+});
+
+test('Registro: abortada con un juego y resumen «Juego: motivo»: el motivo sale una vez, no dos', { skip }, () => {
+  for (const trigger of ['scheduled', 'hook']) for (const lang of ['es', 'en']) {
+    const h = R('RunEntry', { entry: abortedScheduled(trigger) }, lang);
+    assert.equal(count(h, 'class="msg'), 1, h);
+    assert.equal(count(h, '<svg'), 1, h);
+    assert.equal(count(h, 'class="badge '), 1, h);
+    assert.ok(!has(h, 'Juego 0: '), h);
+  }
+});
+
+test('Registro: ciclo sin juegos y sin mensaje: «Sin detalle por juego.» una vez; duración 0 o vacía = «—»', { skip }, () => {
+  const e = runEntry({ trigger: 'scheduled', result: 'ok', duration: 0, games: {} });
+  const h = R('RunEntry', { entry: e });
+  assert.equal(count(h, 'Sin detalle por juego.'), 1, h);
+  assert.ok(has(h, '<span class="dur">—</span>'), h);
+  assert.ok(has(R('RunEntry', { entry: { ...e, duration: undefined } }), '<span class="dur">—</span>'));
+  assert.ok(has(R('RunEntry', { entry: { ...e, duration: 2.5 } }), '2,5 s'));
+  assert.ok(has(R('RunEntry', { entry: e }, 'en'), 'No per-game detail.'));
+});
+
+test('Registro: entrada antigua (solo message, sin device ni code) y tipo desconocido se muestran tal cual', { skip }, () => {
+  const old = { id: 'o1', started: '2026-01-02T03:04:05Z', duration: 4, trigger: 'manual', result: 'weird', message: 'Texto viejo',
+    games: { g: { name: 'Viejo', result: 'weird', message: 'Texto viejo' } } };
+  for (const lang of ['es', 'en']) {
+    const h = R('RunEntry', { entry: old }, lang);
+    assert.ok(has(h, '>manual<') && has(h, '>weird<'), h);
+    assert.equal(count(h, 'Texto viejo'), 1, h);
+    assert.equal(count(h, 'class="badge'), 1, h);
+    assert.ok(!has(h, 'class="dev"'), h);
+  }
+  const noTrig = R('RunEntry', { entry: { ...old, trigger: undefined } });
+  assert.ok(has(noTrig, '<span class="trig">—</span>'), noTrig);
+});
+
+test('Registro: SCSS del registro sin font-size suelto y con rejilla colapsable en móvil', { skip }, async () => {
+  const fs = await import('node:fs');
+  const scss = fs.readFileSync(new URL('../src/styles/_autosync.scss', import.meta.url), 'utf8');
+  const log = scss.slice(scss.indexOf('.autosync-log'));
+  assert.doesNotMatch(log, /font-size: *[\d.]/);
+  assert.match(log, /font-size: v\.\$fs-/);
+  assert.match(log, /@media \(max-width: v\.\$bp-sm\)[\s\S]*grid-template-areas/);
+  assert.doesNotMatch(log, /animation|transition/);
+});
+
+test('Último aviso: el motivo del descarte se añade al resultado', { skip }, () => {
+  const status = { devices: [{ device: 'mi-pc', last: { trigger: 'hook_closed', at: '2026-11-09T11:57:00Z', outcome: 'skipped', code: 'err.hook.busy', params: {} }, watching: null }] };
+  const h = block({ ...WITH, status });
+  assert.ok(has(h, 'Mi PC: Cierre del juego, hace 3 minutos, omitida · Checkpoint de cierre omitido'), h);
+  const e = block({ ...WITH, status }, {}, 'en');
+  assert.ok(has(e, 'Closing checkpoint skipped'), e);
 });
