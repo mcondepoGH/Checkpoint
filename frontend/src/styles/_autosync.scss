@@ -30,6 +30,9 @@
       &.hook-note { display: flex; align-items: flex-start; gap: .4rem; .ico { flex: none; width: 1.1em; height: 1.1em; margin-top: .15em; } } } }
   .games { list-style: none; margin: 0; padding: 0; display: grid; gap: .3rem;
     li { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; font-size: v.$fs-body; }
-    small { word-break: break-word; } }
+    small { word-break: break-word; }
+    // Fila de un descarte/error del cierre: icono + juego + motivo (una sola vez, sin repetir la etiqueta de la cabecera).
+    li.hook-note { align-items: flex-start; gap: .4rem; .ico { flex: none; width: 1.1em; height: 1.1em; margin-top: .15em; }
+      small { flex: 1 1 12rem; font-size: v.$fs-body; color: inherit; } &.is-error { color: var(--danger); } } }
   @media (max-width: v.$bp-sm) { details summary { grid-template-columns: 1fr auto; min-height: 44px; .trig, .dur { font-size: v.$fs-hint; } } }
 }

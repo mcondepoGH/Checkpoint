@@ -20,8 +20,8 @@ try {
         import LaunchersPanel from './components/LaunchersPanel.jsx';
         import GameCard from './components/GameCard.jsx';
         import { Tabs, CopyBox } from './components/ui/index.js';
-        import { EntryMessage } from './components/AutoSyncLog.jsx';
-        export { React, renderToStaticMarkup, i18n, LauncherBlock, LaunchersPanel, GameCard, Tabs, CopyBox, EntryMessage };`,
+        import { EntryMessage, EntryDetail, RunEntry } from './components/AutoSyncLog.jsx';
+        export { React, renderToStaticMarkup, i18n, LauncherBlock, LaunchersPanel, GameCard, Tabs, CopyBox, EntryMessage, EntryDetail, RunEntry };`,
       resolveDir: SRC, loader: 'jsx',
     },
     bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'transform',
@@ -195,6 +195,43 @@ test('Historial: descartes y omitidos del cierre con texto traducido (es/en) e i
   }
   // una entrada normal (sin código err.hook.*) no lleva icono
   assert.ok(!has(R('EntryMessage', { entry: { result: 'ok', code: 'err.scheduler.busy', params: {}, message: '' } }), 'hook-note'));
+});
+
+const count = (h, s) => h.split(s).length - 1;
+const runEntry = (o) => ({ id: 'x1', started: '2026-11-09T11:00:00Z', duration: 0, trigger: 'hook_closed', message: '', params: {}, ...o });
+const oneGame = (result, code, params = {}, name = 'Dragon Quest VII') => runEntry({ result, code, params, games: { dq7: { name, result, code, params, message: '' } } });
+
+test('Registro: una entrada omitida de un solo juego lleva UNA etiqueta de estado y UN mensaje (es/en)', { skip }, () => {
+  for (const [entry, es, en] of NOTES) {
+    const e = oneGame(entry.result, entry.code, entry.params);
+    for (const [lang, text] of [['es', es], ['en', en]]) {
+      const h = R('RunEntry', { entry: e }, lang);
+      assert.equal(count(h, text), 1, h);
+      assert.equal(count(h, '<svg'), 1, h);
+      assert.equal(count(h, 'class="badge '), 1, h); // solo la de la cabecera
+      assert.ok(has(h, 'Dragon Quest VII') && has(h, 'hook-note'), h);
+      assert.equal(has(h, 'is-error'), entry.result === 'error', h);
+    }
+  }
+});
+
+test('Registro: varios juegos conservan su etiqueta y su mensaje; sin entrada de nota no cambia', { skip }, () => {
+  const e = runEntry({ result: 'skipped', code: 'err.hook.busy', games: {
+    a: { name: 'Juego A', result: 'skipped', code: 'err.hook.busy', params: {}, message: '' },
+    b: { name: 'Juego B', result: 'error', code: 'err.hook.checkpoint_failed', params: { error: 'RuntimeError' }, message: '' } } });
+  const h = R('EntryDetail', { entry: e });
+  assert.ok(has(h, 'Juego A') && has(h, 'Juego B'), h);
+  assert.equal(count(h, 'class="badge aborted"'), 1, h);
+  assert.equal(count(h, 'class="badge error"'), 1, h);
+  assert.equal(count(h, 'ya había una sincronización'), 1, h); // el texto de la entrada no se repite en la fila A
+  assert.equal(count(h, 'RuntimeError'), 1, h);
+});
+
+test('Registro: entrada correcta sin cambios (mensaje + fila con su etiqueta, sin icono de nota)', { skip }, () => {
+  const e = runEntry({ result: 'ok', trigger: 'scheduled', message: 'Todo bien', games: { g: { name: 'Juego', result: 'ok', message: 'Listo' } } });
+  const h = R('RunEntry', { entry: e });
+  assert.ok(has(h, 'Todo bien') && has(h, 'Listo') && !has(h, 'hook-note') && !has(h, '<svg'), h);
+  assert.equal(count(h, 'class="badge ok"'), 2, h);
 });
 
 test('Último aviso: el motivo del descarte se añade al resultado', { skip }, () => {
