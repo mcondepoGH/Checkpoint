@@ -294,8 +294,8 @@ def semantic_errors(devices, games) -> List[Tuple[str, dict]]:
             continue
         devs = g.get("devices")
         paths = g.get("paths")
-        if not isinstance(devs, list) or len(devs) != 2:
-            errs.append((f"{gp}.devices", error_body("err.config.devices_pair")))
+        if not isinstance(devs, list) or len(devs) not in (1, 2):
+            errs.append((f"{gp}.devices", error_body("err.config.devices_count")))
             continue
         ok_devs = []
         for i, d in enumerate(devs):
@@ -305,7 +305,7 @@ def semantic_errors(devices, games) -> List[Tuple[str, dict]]:
                 errs.append((f"{gp}.devices.{i}", error_body("err.config.device_unknown", id=d)))
             else:
                 ok_devs.append(d)
-        if devs[0] and devs[0] == devs[1]:
+        if len(devs) == 2 and devs[0] and devs[0] == devs[1]:
             errs.append((f"{gp}.devices.1", error_body("err.config.device_same")))
         if not isinstance(paths, dict):
             if paths is not None:

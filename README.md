@@ -6,9 +6,10 @@
 
 ![Licencia MIT](https://img.shields.io/badge/licencia-MIT-green)
 
-Checkpoint mantiene sincronizadas las partidas guardadas de un juego entre dos dispositivos, por SSH, desde una interfaz web. Corre en Docker o directamente en un equipo (modo nativo); no se instala nada en los dispositivos.
+Checkpoint mantiene sincronizadas las partidas guardadas de un juego entre dos dispositivos (o, con uno solo, guarda versiones en el hub), por SSH, desde una interfaz web. Corre en Docker o directamente en un equipo (modo nativo); no se instala nada en los dispositivos.
 
 - Sincroniza los guardados de un juego entre dos dispositivos y elige la copia más reciente.
+- Con un solo dispositivo, «solo checkpoint»: el hub guarda versiones de la partida, sin copia entre equipos.
 - Interfaz web con tema gaming.
 - Sincronización automática cada X horas, con registro de ejecuciones.
 - Versiones y copias de seguridad de cada guardado, con restauración desde la UI.
@@ -23,7 +24,7 @@ Checkpoint mantiene sincronizadas las partidas guardadas de un juego entre dos d
 ```
 
 - **Dispositivos**: equipos con servidor SSH (Windows o Linux) o, en modo nativo, el propio equipo donde corre Checkpoint («Este equipo»). Checkpoint entra por SSH con una clave que genera él mismo.
-- **Juegos**: cada juego enlaza dos dispositivos y la carpeta de guardado en cada uno. Los nombres de dispositivos y juegos son libres (hasta 64 caracteres, con espacios, acentos y emojis; sin `/` ni `\`).
+- **Juegos**: cada juego enlaza uno o dos dispositivos y la carpeta de guardado en cada uno (con uno solo es «solo checkpoint»; ver «Un solo dispositivo»). Los nombres de dispositivos y juegos son libres (hasta 64 caracteres, con espacios, acentos y emojis; sin `/` ni `\`).
 - **Sincronizar**: Checkpoint descarga los guardados, recuerda cuál era el estado tras la última sincronización y propaga el lado que ha cambiado. Si solo un dispositivo está conectado, lo compara con la copia del hub. Antes de sobrescribir guarda la copia perdedora como versión.
 - **Versiones**: se conservan las últimas N de cada juego (`max_versions` global, 20 por defecto, 0 = sin límite; `keep_versions` lo sustituye en un juego) y se pueden restaurar desde la UI.
 
@@ -140,7 +141,7 @@ devices:
 1. En **Configuración**, copia la **clave pública SSH** (botón Copiar). Solo hace falta si vas a usar dispositivos remotos.
 2. Añádela a `authorized_keys` de cada dispositivo. El botón **?** junto a la clave muestra los comandos para Linux y Windows, incluida la activación del servidor SSH. Cada comando va en su propia card con su botón **Copiar**; si hay alternativas (p. ej. ufw o firewalld) se elige solo una, y si hay varios comandos en un paso se ejecutan en orden.
 3. Añade los **dispositivos** (nombre, host, puerto, usuario, sistema) y pulsa **Probar conexión**. La primera vez se guarda la huella del host. Sin Docker puedes marcar uno como **Este equipo** (sin SSH).
-4. Añade los **juegos**: elige dos dispositivos y la carpeta de guardado en cada uno (ruta absoluta, por ejemplo `/home/usuario/.local/share/Juego/Saves` o `C:\Users\Usuario\AppData\Local\Juego\Saves`).
+4. Añade los **juegos**: elige uno o dos dispositivos (el segundo es opcional) y la carpeta de guardado en cada uno (ruta absoluta, por ejemplo `/home/usuario/.local/share/Juego/Saves` o `C:\Users\Usuario\AppData\Local\Juego\Saves`).
 5. Ve a **Sincronizar**. Prueba primero con **Simulación (dry-run)** y después sin él.
 
 ## Sincronización automática
@@ -188,6 +189,16 @@ services:
 ```
 
 Tras la primera publicación, el paquete de GHCR es privado por defecto: cámbialo a público en la página del paquete (Package settings > Danger Zone > Change visibility) si quieres bajarlo sin autenticarte.
+
+## Un solo dispositivo
+
+Un juego puede tener un único dispositivo (el dispositivo 2 es opcional en el formulario; en `config.yaml`, `devices` con un solo id). Es el modo «solo checkpoint»: no hay copia entre equipos, el hub guarda la partida y sus versiones. La tarjeta del juego en Sincronizar lleva la etiqueta «Solo checkpoint».
+
+- **Guardar:** al sincronizar (a mano, cada X horas, con el aviso de apertura o al cerrarse el juego) la partida del dispositivo pasa al hub. Antes de sustituir la copia anterior del hub se guarda como versión, como con dos dispositivos. La última partida está en el hub y no aparece en la lista de versiones; las versiones son las copias anteriores. El límite es `max_versions` o `keep_versions` del juego, igual que siempre.
+- **Restaurar:** como siempre. En Versiones, restaura la versión al hub y sincroniza después; el hub (ahora distinto del dispositivo) gana y se copia al dispositivo.
+- **Conflictos:** si el hub y el dispositivo difieren sin estado guardado (primera sincronización con datos en ambos), se trata como conflicto, igual que con dos dispositivos.
+- **Partida local ausente:** si la ruta de guardado del dispositivo **no existe** (juego desinstalado o carpeta borrada) y el hub tiene datos, la sincronización automática (cada X horas, al arrancar) y el aviso de apertura del lanzador **no** recrean la carpeta ni restauran nada: se omiten con `err.sync.local_missing_manual_required` y quedan en el historial como omitidas. Solo una sincronización **manual** (botón Sincronizar o `checkpoint sync`) restaura la copia del hub en el dispositivo. Una carpeta que existe pero está vacía se trata como siempre. Con dos dispositivos nada cambia.
+- **Aviso de apertura:** `?device=` es opcional (se deduce el único dispositivo).
 
 ## Conflictos
 
@@ -301,8 +312,8 @@ Se llama justo antes de arrancar el juego. El hub hace una **sincronización pre
 
 - **Autenticación:** `Authorization: Bearer ck_...` (nada de cookie).
 - **Juego:** id o nombre, como `POST /api/sync/{juego}`.
-- **Dispositivo (`?device=`):** id o nombre. Se valida que pertenezca al juego; es el dispositivo donde se vigila el proceso del juego (ver «Cierre automático»). Es obligatorio si el juego está en más de un dispositivo (todos los juegos actuales tienen dos); si el juego estuviera en uno solo, se deduce.
-- **Respuesta `200`:** `{"ok": bool, "outcome": "...", "game": "<id>", "device": "<id>", "run_id": "...", "code": "err.sync....", "params": {...}}`. `outcome` es `ok`, `conflict`, `aborted` (dispositivo sin conexión, proceso del juego abierto...), `partial`, `error` o `timeout`. `ok` es `true` solo con `outcome: ok`. `code`/`params` detallan qué pasó (p. ej. `err.sync.done`, `err.sync.already_synced`, `err.sync.conflict`). Un fallo de la sincronización **no** es un 5xx y no se reintenta: el cron de la sincronización automática sigue como red de seguridad. `timeout`: la sincronización superó los 55 s del servidor; sigue ejecutándose en segundo plano y deja su entrada en el historial al acabar.
+- **Dispositivo (`?device=`):** id o nombre. Se valida que pertenezca al juego; es el dispositivo donde se vigila el proceso del juego (ver «Cierre automático»). Es obligatorio si el juego está en más de un dispositivo; si el juego tiene uno solo, se deduce y puede omitirse.
+- **Respuesta `200`:** `{"ok": bool, "outcome": "...", "game": "<id>", "device": "<id>", "run_id": "...", "code": "err.sync....", "params": {...}}`. `outcome` es `ok`, `conflict`, `aborted` (dispositivo sin conexión, proceso del juego abierto...), `skipped` (juego de un dispositivo con la partida local ausente: `err.sync.local_missing_manual_required`), `partial`, `error` o `timeout`. `ok` es `true` solo con `outcome: ok`. `code`/`params` detallan qué pasó (p. ej. `err.sync.done`, `err.sync.already_synced`, `err.sync.conflict`). Un fallo de la sincronización **no** es un 5xx y no se reintenta: el cron de la sincronización automática sigue como red de seguridad. `timeout`: la sincronización superó los 55 s del servidor; sigue ejecutándose en segundo plano y deja su entrada en el historial al acabar.
 - **Errores:** `401` `err.apikey.invalid` (sin key, inválida, revocada o cookie de sesión; se comprueba antes que nada, así que no revela si el juego existe), `404` `err.main.game_unknown` o `err.hook.device_unknown`, `400` `err.hook.device_required` (falta `?device=` y es ambiguo) o `err.hook.device_ambiguous`, `409` `err.main.run_in_progress` (ya hay una ejecución de ese juego: cron, manual u otro aviso), `429` tras varios fallos de key seguidos desde una IP.
 - **Historial:** la ejecución aparece en el registro de la sincronización automática con el disparador «Aviso del juego» (`trigger: "hook"`).
 - **`watching`:** la respuesta añade `watching: true` si se armó la vigilancia de cierre, o `watching: false` con `watch_reason: "no_process"` si el juego no tiene `process`. Se arma con cualquier `200` (también `conflict`, `aborted` o `timeout`), nunca con `400`/`401`/`404`/`409`.

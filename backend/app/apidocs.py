@@ -69,7 +69,7 @@ class WatchItem(BaseModel):
 class OpenedResult(BaseModel):
     ok: bool = Field(description="`true` solo si `outcome` es `ok`.")
     outcome: str = Field(description="`ok`, `conflict`, `aborted` (dispositivo sin conexión, proceso del juego "
-                                     "abierto...), `partial`, `error` o `timeout`.", examples=["ok"])
+                                     "abierto...), `skipped` (juego de un dispositivo con la partida local ausente), `partial`, `error` o `timeout`.", examples=["ok"])
     game: str = Field(description="Id interno del juego.")
     device: str = Field(description="Id interno del dispositivo.")
     run_id: str = Field(description="Id de la ejecución (la misma que verás en el historial).")
@@ -238,7 +238,7 @@ OPENED = dict(
         "`watch_reason: no_process`. Nunca se arma con `400`, `401`, `404` ni `409`. La respuesta no incluye la "
         "duración: la sincronización dura hasta 55 s.\n\n"
         "**Juego y dispositivo.** `game` es el id o el nombre del juego. `device` (id o nombre) debe pertenecer al "
-        "juego; es obligatorio si el juego está en más de un dispositivo, y se deduce si está en uno solo."),
+        "juego; es obligatorio si el juego está en más de un dispositivo; si tiene uno solo se deduce y puede omitirse."),
     responses={
         200: _ok(OpenedResult, "La sincronización terminó (con éxito o no) o superó el tiempo máximo. Mira `outcome`.",
                  ("ok", "Éxito: se copió el save más nuevo", _OPENED_OK),

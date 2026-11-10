@@ -19,7 +19,7 @@ devices:
 games:
   g:
     name: Juego de prueba
-    devices: [a, b]        # exactamente dos
+    devices: [a, b]        # uno o dos
     paths:
       a: "/home/u/saves"
       b: "C:/Users/u/Saves"
@@ -97,7 +97,7 @@ def test_save_preserves_comments_and_backs_up(env):
     res = store.save(snap.version, validate_config(d)[0])
     assert res["changed"] and res["backup"] == "config.yaml.bak-2026-01-01_120000"
     text = settings.CONFIG_PATH.read_text()
-    assert "# mis dispositivos" in text and "# servidor" in text and "# exactamente dos" in text
+    assert "# mis dispositivos" in text and "# servidor" in text and "# uno o dos" in text
     assert "host: 10.0.0.9" in text and "c:" in text and '"/home/u/saves"' in text  # comillas conservadas
     assert (settings.DATA_DIR / "config-backups" / res["backup"]).read_text() == SEED
     assert parse_config(__import__("yaml").safe_load(text)).devices["c"].host == "10.0.0.3"

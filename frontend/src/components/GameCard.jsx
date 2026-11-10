@@ -18,8 +18,8 @@ export default function GameCard({ game, devices, errors, localError, keepError,
   const title = game.name || t('game.new');
   // Solo dispositivos con nombre; el elegido en el otro selector no se ofrece.
   const options = (other) => devices.filter((d) => d.name && d.key !== other);
-  const sel = (key, other) => (p) => (
-    <Select {...p} value={game[key]} onChange={set(key)} placeholder={t('game.choose')}
+  const sel = (key, other, placeholder) => (p) => (
+    <Select {...p} value={game[key]} onChange={set(key)} placeholder={placeholder}
       options={options(other).map((d) => ({ value: d.key, label: d.name }))} />
   );
   const pathErr = (id) => (id ? errors[`paths.${id}`] : undefined);
@@ -31,9 +31,10 @@ export default function GameCard({ game, devices, errors, localError, keepError,
       </Field>
       {errors.devices && <Alert variant="error" role="alert">{errors.devices}</Alert>}
       <div className="two">
-        <Field label={t('game.dev1')} error={errors['devices.0']}>{sel('a', game.b)}</Field>
-        <Field label={t('game.dev2')} error={errors['devices.1']}>{sel('b', game.a)}</Field>
+        <Field label={t('game.dev1')} error={errors['devices.0']}>{sel('a', game.b, t('game.choose'))}</Field>
+        <Field label={t('game.dev2')} error={errors['devices.1']}>{sel('b', game.a, t('game.none'))}</Field>
       </div>
+      {!game.b && <small className="muted game-solo-hint">{t('game.soloHint')}</small>}
       {game.a && (
         <Field label={t('game.pathOn', { device: nameA })} error={pathErr(idA)}>
           {(p) => <Input {...p} value={game.pathA} onChange={set('pathA')} />}

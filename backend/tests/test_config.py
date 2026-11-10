@@ -34,7 +34,8 @@ def test_valid_and_normalizes():
 
 @pytest.mark.parametrize("bad", [
     mod(games__g__devices=["pc", "pc"]),
-    mod(games__g__devices=["pc"]),
+    mod(games__g__devices=["pc", "laptop", "pc"]),
+    mod(games__g__devices=[]),
     mod(games__g__devices=["pc", "nope"]),
     mod(games__g__paths={"pc": "C:/a", "other": "/x"}),
     mod(games__g__paths={"pc": "C:/a/../b", "laptop": "/x/y"}),
@@ -179,3 +180,19 @@ def test_yaml_roundtrip_special_names(tmp_path):
     p = tmp_path / "c.yaml"
     save_config(p, parse_config(d))
     assert {g.name for g in load_config(p).games.values()} == {"Mi Juego: Edición", "123"}
+
+
+def test_un_dispositivo_es_valido_y_se_normaliza():
+    c = parse_config(mod(games__g__devices=["pc"], games__g__paths={"pc": "C:\\Users\\u\\Saves"}))
+    assert c.games["g"].devices == ["pc"] and c.games["g"].paths == {"pc": "C:/Users/u/Saves"}
+
+
+@pytest.mark.parametrize("devs", [[], ["pc", "laptop", "pc"]])
+def test_numero_de_dispositivos_fuera_de_1_o_2(devs):
+    _, errs = validate_config(mod(games__g__devices=devs))
+    assert errs["games.g.devices"]["code"] == "err.config.devices_count"
+
+
+def test_un_dispositivo_sin_ruta_falla():
+    _, errs = validate_config(mod(games__g__devices=["pc"], games__g__paths={}))
+    assert errs["games.g.paths.pc"]["code"] == "err.config.path_missing"

@@ -54,7 +54,8 @@ def main(argv=None) -> int:
         return 1
     if a.cmd == "list":
         for g in cfg.games.values():
-            print(f"{g.name}: {cfg.devices[g.devices[0]].name} <-> {cfg.devices[g.devices[1]].name}")
+            names_ = " <-> ".join(cfg.devices[d].name for d in g.devices)
+            print(f"{g.name}: {names_}" + (" (checkpoint)" if len(g.devices) == 1 else ""))
         return 0
     try:
         gid = resolve_game(cfg, a.game)

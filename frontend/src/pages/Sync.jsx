@@ -3,6 +3,8 @@ import { api } from '../api.js';
 import EmptyState from '../components/EmptyState.jsx';
 import { labelOf } from '../names.js';
 import { parseRun } from '../format.js';
+import Icon from '../components/Icon.jsx';
+import { isSoloCheckpoint } from '../draft.js';
 import ConflictDialog from '../components/ConflictDialog.jsx';
 import { errText, useI18n } from '../useI18n.js';
 import { NO_WATCHES } from '../useWatches.js';
@@ -11,7 +13,7 @@ import { Alert, Badge, Button, Checkbox, Pill, WatchBar } from '../components/ui
 
 
 // Estados con texto propio en el distintivo: clave `sync.state.<resultado>`; otro resultado se muestra tal cual.
-const RES_KEYS = ['conflict', 'partial', 'dry-run'];
+const RES_KEYS = ['conflict', 'partial', 'dry-run', 'skipped'];
 
 // Fecha ISO -> {time, date}; null si no se puede interpretar.
 function splitWhen(iso, locale) {
@@ -134,6 +136,9 @@ export default function Sync({ config, watch = NO_WATCHES, onGoSettings }) {
             <div className={watchCardClass(worstHealth(byGame[g], watch.now))} key={g}>
               <h3 title={t('sync.idTitle', { id: g })}><span className="game-name">{gameName(g)}</span> {running ? <Badge status="running">{t('sync.state.running')}</Badge> : badge(s)}</h3>
               <p className="muted">{config.games[g].devices.map(devName).join(' ⇄ ')}</p>
+              {isSoloCheckpoint(config.games[g]) && (
+                <p><Pill tone="info" title={t('sync.solo.help')}><Icon name="history" />{t('sync.solo.label')}</Pill></p>
+              )}
               <div className={`meter ${running ? 'running' : (s?.result || '')}`} role="progressbar" aria-label={t('sync.meterAria', { game: gameName(g) })}><i /></div>
               <LastRun s={s} devName={devName} />
               <Checkbox checked={!!dry[g]} onChange={(e) => setDry({ ...dry, [g]: e.target.checked })} label={t('common.dryRun')} />

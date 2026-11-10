@@ -119,3 +119,58 @@ test('errorsFor traduce {code,params} con el traductor y deja pasar texto antigu
   assert.deepEqual(errorsFor(errs, 'games.g', tr), { '': 'T(a)', 'paths.pc': 'T(b)', name: 'viejo' });
   assert.deepEqual(errorsFor({ 'x.y': 'z' }, 'x'), { y: 'z' });
 });
+
+// ---- juegos de un solo dispositivo («solo checkpoint») ----
+import { isSoloCheckpoint, removeDevice } from '../src/draft.js';
+
+const SOLO = {
+  max_versions: 20,
+  devices: { 'pc-1a2b3c4d': { name: 'Mi PC', host: '10.0.0.1', user: 'u', os: 'windows', port: 22 } },
+  games: { 'zelda-0a1b2c3d': { name: 'Zelda', devices: ['pc-1a2b3c4d'], paths: { 'pc-1a2b3c4d': 'C:/z' } } },
+};
+
+test('un juego de un dispositivo: sin cambios y toConfig envía un solo dispositivo y su ruta', () => {
+  const d = fromConfig(SOLO);
+  assert.equal(d.games[0].b, '');
+  assert.equal(isDirty(d, SOLO), false);
+  assert.deepEqual(toConfig(d).games['zelda-0a1b2c3d'].devices, ['pc-1a2b3c4d']);
+  assert.deepEqual(toConfig(d).games['zelda-0a1b2c3d'].paths, { 'pc-1a2b3c4d': 'C:/z' });
+});
+
+test('añadir y quitar el dispositivo 2 cambia entre uno y dos dispositivos', () => {
+  const two = { ...SOLO, devices: { ...SOLO.devices, 'laptop-5e6f7a8b': { name: 'Portátil', host: '10.0.0.2', user: 'u', os: 'linux', port: 22 } } };
+  const d = fromConfig(two);
+  const g = d.games[0];
+  const con2 = { ...d, games: [{ ...g, b: 'laptop-5e6f7a8b', pathB: '/home/usuario/z' }] };
+  const out = toConfig(con2).games['zelda-0a1b2c3d'];
+  assert.deepEqual(out.devices, ['pc-1a2b3c4d', 'laptop-5e6f7a8b']);
+  assert.deepEqual(out.paths, { 'pc-1a2b3c4d': 'C:/z', 'laptop-5e6f7a8b': '/home/usuario/z' });
+  const sin2 = { ...con2, games: [{ ...con2.games[0], b: '' }] };  // pathB residual no se envía
+  const o1 = toConfig(sin2).games['zelda-0a1b2c3d'];
+  assert.deepEqual(o1.devices, ['pc-1a2b3c4d']);
+  assert.deepEqual(o1.paths, { 'pc-1a2b3c4d': 'C:/z' });
+});
+
+test('sin dispositivo 1 se envía [""] (el backend marca devices.0) y quitar el dispositivo 2 deja el juego solo', () => {
+  const d = fromConfig(SOLO);
+  assert.deepEqual(toConfig({ ...d, games: [{ ...d.games[0], a: '' }] }).games['zelda-0a1b2c3d'].devices, ['']);
+  const two = fromConfig({ ...SOLO, devices: { ...SOLO.devices, 'l-1': { name: 'L', host: 'h', user: 'u', os: 'linux', port: 22 } },
+    games: { 'z-1': { name: 'Z', devices: ['pc-1a2b3c4d', 'l-1'], paths: { 'pc-1a2b3c4d': 'C:/z', 'l-1': '/z' } } } });
+  const r = removeDevice(two, 'l-1');
+  assert.deepEqual(toConfig(r).games['z-1'].devices, ['pc-1a2b3c4d']);
+});
+
+test('isSoloCheckpoint: solo con un dispositivo en la config guardada', () => {
+  assert.equal(isSoloCheckpoint(SOLO.games['zelda-0a1b2c3d']), true);
+  assert.equal(isSoloCheckpoint(NEW.games['zelda-0a1b2c3d']), false);
+  assert.equal(isSoloCheckpoint(undefined), false);
+});
+
+test('Settings pide al menos un dispositivo y Sync pinta la etiqueta Solo checkpoint', () => {
+  const src = (f) => fs.readFileSync(new URL(`../src/${f}`, import.meta.url), 'utf8');
+  const st = src('pages/Settings.jsx');
+  assert.match(st, /needOne/);
+  assert.doesNotMatch(st, /needTwo/);
+  assert.equal((st.match(/\.filter\(\(d\) => d\.name\)\.length < 1/g) || []).length, 2);
+  assert.match(src('pages/Sync.jsx'), /isSoloCheckpoint\(config\.games\[g\]\)[\s\S]*sync\.solo\.label/);
+});

@@ -325,7 +325,7 @@ def run_sync(cfg: Config, game: str, dry_run: bool = False, data_dir: Optional[P
              log: Callable[[str], None] = print,
              transports: Optional[Dict[str, Transport]] = None,
              resolution: Optional[str] = None, expect: Optional[Dict[str, str]] = None,
-             conflict_policy: Optional[str] = None) -> dict:
+             conflict_policy: Optional[str] = None, automatic: bool = False) -> dict:
     """Devuelve dict de estado. Lanza SyncAbort si no se pudo ejecutar.
 
     game: id del juego o su nombre (se resuelve a id; todo lo interno usa el id).
@@ -366,7 +366,7 @@ def run_sync(cfg: Config, game: str, dry_run: bool = False, data_dir: Optional[P
         raise SyncAbort("err.sync.sync_in_progress")
     try:
         try:
-            _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution, expect, conflict_policy)
+            _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution, expect, conflict_policy, automatic)
         except SyncAbort as e:
             _set(status, "aborted", e.code, **e.params)
             L(f"ABORTADO: {e}")
@@ -411,7 +411,7 @@ def _check_process(g, tr, online, L=None, dn=lambda k: k):
 
 
 def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=None, expect=None,
-             conflict_policy=None):
+             conflict_policy=None, automatic=False):
     def resolution_text(r):  # 'device:<id>' -> 'device:<nombre>' para los logs
         return "device:" + dn(r[7:]) if isinstance(r, str) and r.startswith("device:") else r
 
@@ -424,7 +424,8 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
         return ", ".join(dn(k) for k in ks)
 
     tr = {n: (transports or {}).get(n) or get_transport(cfg.devices[n]) for n in labels}
-    L(f"sync {g.name} {'(simulación (dry-run)) ' if dry_run else ''}entre {dn(labels[0])} y {dn(labels[1])}")
+    where = f"entre {dn(labels[0])} y {dn(labels[1])}" if len(labels) > 1 else f"en {dn(labels[0])} (checkpoint)"
+    L(f"sync {g.name} {'(simulación (dry-run)) ' if dry_run else ''}{where}")
 
     # 1. Conectividad: un dispositivo offline se compara solo con el hub; si no responde ninguno, no se toca nada.
     online, offline = [], []
@@ -453,6 +454,7 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
     with tempfile.TemporaryDirectory(prefix="checkpoint-") as td:
         tmp = Path(td)
         dirs: Dict[str, Path] = {}
+        missing = []  # dispositivos cuya ruta de guardado no existe (distinto de existir vacía)
         # 3. Descarga a temporal.
         for n in online:
             d = tmp / n
@@ -464,6 +466,7 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
                 slog.debug("juego=%s %s: pull de %s en %.2f s", game, dn(n), g.paths[n], time.monotonic() - t_p)
             else:
                 L(f"{dn(n)}: la ruta no existe todavía (se trata como vacía)")
+                missing.append(n)
             dirs[n] = d
         hub = data_dir / "hub" / game
         dirs["hub"] = hub
@@ -472,6 +475,14 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
         for k, fp in fps.items():
             slog.debug("juego=%s %s: huella ficheros=%d bytes=%d hash=%s", game, dn(k), fp.files, fp.size, (fp.hash or "-")[:12])
             L(f"{dn(k)}: {fp.files} ficheros, hash {(fp.hash or '-')[:12]}, mtime máx {_fmt(fp.mtime)}")
+
+        # Juego de un dispositivo: si la partida local no existe (juego desinstalado, carpeta borrada) y el hub
+        # tiene datos, solo un sync manual restaura; el automático no recrea la carpeta ni toca nada.
+        if automatic and len(g.devices) == 1 and missing and not fps["hub"].empty:
+            _set(status, "skipped", "err.sync.local_missing_manual_required")
+            L("la partida local no existe y el hub tiene datos: el sync automático no restaura; "
+              "haz un sync manual para recuperarla")
+            return
 
         raw = load_baseline(data_dir, game)
         base = {k: raw[k] for k in fps if k in raw}

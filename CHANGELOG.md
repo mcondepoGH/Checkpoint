@@ -2,6 +2,12 @@
 
 ## Sin publicar
 
+### Cambios
+
+- Checkpoint con un solo dispositivo («solo checkpoint»): un juego puede tener uno o dos dispositivos (antes, exactamente dos). Con uno, el hub guarda la partida y sus versiones, sin copia entre equipos; las versiones, el límite (`max_versions` / `keep_versions`) y la restauración (restaurar al hub y sincronizar) funcionan como con dos. El dispositivo 2 es opcional en el formulario de Configuración, con texto de ayuda, y la tarjeta del juego en Sincronizar lleva la etiqueta «Solo checkpoint». En `config.yaml`, `devices` admite uno o dos ids. El código de error `err.config.devices_pair` pasa a `err.config.devices_count` («elige uno o dos dispositivos»). El aviso de apertura acepta omitir `?device=` con un solo dispositivo (ya ocurría). El registro y la CLI (`checkpoint list`) muestran «en X (checkpoint)».
+- Protección de un dispositivo ante una partida local ausente: si la ruta de guardado no existe (juego desinstalado o carpeta borrada) y el hub tiene datos, la sincronización automática y el aviso de apertura no recrean la carpeta ni restauran: se omiten con `err.sync.local_missing_manual_required` («La partida local no existe; el sync automático no restaura desde el hub. Haz un sync manual para recuperarla»), sin reintento, y quedan en el historial como omitidas (`outcome: skipped` en el aviso de apertura). Solo la sincronización manual restaura. Una carpeta existente pero vacía y los juegos de dos dispositivos se comportan como antes. Nuevo resultado «Omitido» en la tarjeta del juego.
+- Tests: validación de uno o dos dispositivos, `decide`/`run_sync`/hook/cierre/scheduler con un dispositivo, la protección (automático omite, manual restaura, vacía como antes, dry-run), `toConfig` y formulario del dispositivo opcional.
+
 ## 1.8.0 (2026-11-10)
 
 ### Cambios
