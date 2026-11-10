@@ -42,9 +42,12 @@ class Watcher:
 
     def arm(self, game: str, device: str):
         """Arma (o reemplaza) la vigilancia del juego. Debe llamarse con el event loop en marcha."""
+        if game in self.tasks:
+            log.debug("armar: juego=%s dispositivo=%s reemplaza una vigilancia previa", game, device)
         self._drop(game)
         poll, settle, first = (v if v is not None else d for v, d in zip(
             self._times, (settings.HOOK_POLL, settings.HOOK_SETTLE, settings.HOOK_FIRST_SEEN)))
+        log.debug("armar: juego=%s dispositivo=%s poll=%gs settle=%gs first_seen=%gs", game, device, poll, settle, first)
         w = Watch(game, device)
         self.watches[game] = w
         self.tasks[game] = asyncio.create_task(self._run(w, poll, settle, first))
@@ -53,6 +56,7 @@ class Watcher:
         t = self.tasks.pop(game, None)
         self.watches.pop(game, None)
         if t:
+            log.debug("cancelar: juego=%s vigilancia descartada", game)
             t.cancel()
 
     def list(self) -> List[dict]:
@@ -81,13 +85,18 @@ class Watcher:
             start, seen = self.clock(), False
             while True:
                 r = await self._seen(w)
+                log.debug("sondeo: juego=%s dispositivo=%s resultado=%s estado=%s", w.game, w.device, r, w.state)
                 if r:
                     seen = True
                     if w.state != RUNNING:
                         w.set(RUNNING)
+                        log.debug("juego=%s dispositivo=%s: waiting -> running, visto a las %s (UTC)", w.game, w.device,
+                                  iso(w.since))
                 elif seen:  # visto y ya no (o el dispositivo no responde: suspensión, SSH caído): cierre
                     w.set(SETTLING)
+                    log.debug("juego=%s dispositivo=%s: running -> settling (espera %gs)", w.game, w.device, settle)
                     await self.sleep(settle)
+                    log.debug("juego=%s dispositivo=%s: iniciando checkpoint", w.game, w.device)
                     try:
                         await self.checkpoint(w.game, w.device)
                     except Exception as e:  # sin reintentos

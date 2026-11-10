@@ -607,6 +607,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         finished = threading.Event()
         started, t0 = scheduler.clock(), time.monotonic()
         box: dict = {}
+        hook_log.debug("hook %s juego=%s dispositivo=%s: inicio run=%s", trigger, g.name, device, run.id)
 
         def work():
             try:
@@ -617,16 +618,25 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
                 if c and c.get("code") == "err.sync.sync_in_progress":  # lock tomado por otro proceso: no cuenta como run
                     box["busy"] = True
                     hook_log.info("hook %s juego=%s omitido: lock ocupado (sync_in_progress), sin reintento", trigger, g.name)
+                    hook_log.debug("hook %s run=%s: omitido por lock ocupado tras %.1f s", trigger, run.id,
+                                   time.monotonic() - t0)
                     return
                 item, det = scheduler.game_detail(g.name, res, m, c)
                 summary = scheduler.summarize({game: res}, [item] if item else [], {game: det})
+                saved = False
                 try:
                     history.append(history.make_entry(started, time.monotonic() - t0, trigger, summary["result"],
                                                       {game: det}, summary["message"], summary.get("code"),
                                                       summary.get("params"), device=device), now=scheduler.clock())
-                except Exception:  # el registro nunca rompe el aviso
-                    pass
-                hook_log.info("hook %s juego=%s resultado=%s", trigger, g.name, res)
+                    saved = True
+                except Exception as e:  # el registro nunca rompe el aviso
+                    hook_log.warning("hook %s juego=%s: no se pudo guardar en el historial (%s)", trigger, g.name,
+                                     type(e).__name__)
+                dur, code = time.monotonic() - t0, summary.get("code")
+                hook_log.info("hook %s juego=%s resultado=%s code=%s duración=%.1f s", trigger, g.name, res,
+                              code or "-", dur)
+                hook_log.debug("hook %s run=%s: fin duración=%.1f s code=%s historial_guardado=%s", trigger, run.id,
+                               dur, code, saved)
             finally:
                 run.done = True
                 finished.set()
@@ -646,10 +656,14 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     async def close_checkpoint(game: str, device: str):
         """Checkpoint al cerrarse el juego: mismo lock y lógica que `opened`, política `skip`, sin reintentos."""
         cfg = _auto_cfg()
+        hook_log.debug("hook hook_closed juego=%s dispositivo=%s: cierre detectado, lanzando checkpoint", game, device)
         if game not in cfg.games:
+            hook_log.debug("hook hook_closed juego=%s dispositivo=%s: juego ya no está en la configuración, se omite",
+                           game, device)
             return
         if game_busy(game):
             hook_log.info("hook hook_closed juego=%s omitido: ejecución en curso, sin reintento", cfg.games[game].name)
+            hook_log.debug("hook hook_closed juego=%s dispositivo=%s: game_busy, sin reintento", game, device)
             return
         start_hook_run(cfg, game, "hook_closed", device)
 

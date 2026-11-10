@@ -4,6 +4,7 @@ En el extremo remoto, ssh entrega una cadena al shell del servidor: las rutas
 ya vienen validadas por config.normalize_path (lista blanca) y además se
 entrecomillan (shlex.quote en POSIX, comillas dobles en cmd.exe).
 """
+import logging
 import os
 import re
 import shlex
@@ -11,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import uuid
 from pathlib import Path
 from typing import Iterable, List
@@ -19,6 +21,8 @@ from . import bootstrap, settings
 from .apierror import describe_code, error_body
 from .config import PATH_CHARS_RE, PROC_RE, Device
 from .runtime import running_in_docker
+
+log = logging.getLogger("checkpoint.transport")  # DEBUG: duración de cada comando ssh/rsync (nunca args, claves ni contenidos)
 
 
 class TransportError(RuntimeError):
@@ -57,9 +61,13 @@ def _ssh_base(dev: Device) -> List[str]:
 
 
 def _run(args: List[str], timeout=600, stdin=None) -> subprocess.CompletedProcess:
+    t0 = time.monotonic()
     try:
-        return subprocess.run(args, capture_output=True, timeout=timeout, stdin=stdin)
+        p = subprocess.run(args, capture_output=True, timeout=timeout, stdin=stdin)
+        log.debug("%s: rc=%s en %.0f ms", args[0], p.returncode, (time.monotonic() - t0) * 1000)
+        return p
     except subprocess.TimeoutExpired:
+        log.debug("%s: timeout tras %.0f ms (límite %ss)", args[0], (time.monotonic() - t0) * 1000, timeout)
         raise TransportError("err.transport.timeout")
     except FileNotFoundError as e:
         raise TransportError("err.transport.missing_binary", binary=e.filename)
@@ -94,6 +102,7 @@ class PosixTransport(Transport):
         self.dev = dev
 
     def _ssh(self, remote_cmd: str, timeout=60):
+        log.debug("ssh %s:%s ejecuta %r", self.dev.host, self.dev.port, remote_cmd)
         return _run(_ssh_base(self.dev) + [remote_cmd], timeout=timeout)
 
     def check(self):
@@ -150,6 +159,7 @@ class WindowsTransport(Transport):
         self.dev = dev
 
     def _ssh(self, remote_cmd: str, timeout=60):
+        log.debug("ssh %s:%s ejecuta %r", self.dev.host, self.dev.port, remote_cmd)
         return _run(_ssh_base(self.dev) + [remote_cmd], timeout=timeout)
 
     @staticmethod
