@@ -553,7 +553,7 @@
       "on_conflict_invalid": "on_conflict debe ser 'skip' o 'newest'",
       "process_invalid": "process inválido",
       "versions_range": "debe ser un número entero entre 0 y {max} (0 = sin límite)",
-      "devices_pair": "elige exactamente dos dispositivos",
+      "devices_count": "elige uno o dos dispositivos",
       "device_required": "elige un dispositivo",
       "device_unknown": "dispositivo desconocido (id inexistente): {id}",
       "device_same": "debe ser distinto del dispositivo 1",

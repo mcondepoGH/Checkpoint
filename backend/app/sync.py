@@ -424,7 +424,8 @@ def _do_sync(cfg, game, g, dry_run, data_dir, L, transports, status, resolution=
         return ", ".join(dn(k) for k in ks)
 
     tr = {n: (transports or {}).get(n) or get_transport(cfg.devices[n]) for n in labels}
-    L(f"sync {g.name} {'(simulación (dry-run)) ' if dry_run else ''}entre {dn(labels[0])} y {dn(labels[1])}")
+    where = f"entre {dn(labels[0])} y {dn(labels[1])}" if len(labels) > 1 else f"en {dn(labels[0])} (checkpoint)"
+    L(f"sync {g.name} {'(simulación (dry-run)) ' if dry_run else ''}{where}")
 
     # 1. Conectividad: un dispositivo offline se compara solo con el hub; si no responde ninguno, no se toca nada.
     online, offline = [], []

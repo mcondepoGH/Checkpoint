@@ -11,7 +11,7 @@ devices:
 games:
   ejemplo-0a1b2c3d:
     name: "Ejemplo"
-    devices: [pc-1a2b3c4d, laptop-5e6f7a8b]   # IDs de dispositivo: exactamente dos, distintos (la pantalla Configuración conserva estos comentarios al guardar)
+    devices: [pc-1a2b3c4d, laptop-5e6f7a8b]   # IDs de dispositivo: uno (solo checkpoint: el hub guarda versiones) o dos distintos (la pantalla Configuración conserva estos comentarios al guardar)
     paths:
       pc-1a2b3c4d: "C:/Users/usuario/AppData/Local/Ejemplo/Saves"
       laptop-5e6f7a8b: "/home/usuario/.local/share/Ejemplo/Saves"
