@@ -2,6 +2,8 @@
 
 ## Sin publicar
 
+## 1.6.0 (2026-11-10)
+
 ### Novedades
 
 - API key de usuario en el perfil (sección «API key» del menú): generar, ver siempre con botón de copiar, regenerar (con confirmación; invalida la anterior) y revocar. Nuevos `GET|POST|DELETE /api/profile/apikey`. Se guarda cifrada en `data/profile/<id>/apikey.enc`; se cifra con Fernet (librería `cryptography`, nueva dependencia con wheels musllinux; clave derivada de `hub.secret`, 0600, junto a `config.yaml`, fuera de `data/`; el id de usuario va dentro del payload). Si la copia de seguridad cubre `/config` y `/data` juntos, excluye `hub.secret`.
