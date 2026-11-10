@@ -18,3 +18,4 @@ games:
     process: "ejemplo.exe"     # opcional: no copiar si está abierto
     keep_versions: 5           # opcional: sustituye a max_versions solo para este juego (0 = sin límite)
     on_conflict: skip          # opcional: skip | newest; sustituye al ajuste de la sync automática solo para este juego
+    # enabled: false           # opcional: desactiva el juego (no se sincroniza por ninguna vía; las versiones se conservan); ausente = activo
