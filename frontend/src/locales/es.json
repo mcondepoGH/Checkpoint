@@ -63,6 +63,14 @@
     "newest": "Gana el más reciente"
   },
   "sync": {
+    "allOff": {
+      "title": "Todos los juegos están desactivados",
+      "text": "No se sincroniza ninguno. Actívalos en Configuración."
+    },
+    "disabled": {
+      "label": "Desactivado",
+      "help": "Juego desactivado: no se sincroniza. Actívalo en Configuración."
+    },
     "watch": {
       "bar": {"waiting": "Esperando a que arranque · {device}", "running": "Jugando en {device}", "settling": "Cerrando · guardando checkpoint…", "stale": "Sin latido"},
       "since": "desde {time}",
@@ -129,6 +137,8 @@
     "apply": "Aplicar"
   },
   "versions": {
+    "disabledSuffix": "(desactivado)",
+    "disabledNote": "Juego desactivado: restaurar solo copia al hub y no se propaga a los dispositivos mientras esté desactivado.",
     "title": "Versiones",
     "gameAria": "Juego",
     "limit": {
@@ -198,6 +208,9 @@
     "dev2": "Dispositivo 2",
     "none": "— ninguno (solo checkpoint) —",
     "soloHint": "Con un solo dispositivo, el hub guarda versiones; no hay copia entre equipos.",
+    "enabled": "Juego activo",
+    "enabledHelp": "Desactivado: no se sincroniza (ni automático, ni manual, ni aviso de apertura o cierre). Las versiones se conservan.",
+    "disabledTag": "Desactivado",
     "choose": "— elige —",
     "pathOn": "Ruta del save en {device}",
     "process": "Proceso (opcional)",
@@ -215,6 +228,7 @@
     "launchersAria": "Ver comandos de lanzador de {title}"
   },
   "launcher": {
+    "disabledNote": "Desactivado: el aviso se omitirá.",
     "title": "Lanzadores",
     "show": "Mostrar",
     "hide": "Ocultar",
@@ -596,6 +610,7 @@
       "unexpected": "{type}: {detail}",
       "nothing_to_sync": "nada que sincronizar (todo vacío)",
       "local_missing_manual_required": "la partida local no existe; el sync automático no restaura desde el hub. Haz un sync manual para recuperarla",
+      "game_disabled": "juego desactivado: no se sincroniza. Actívalo en Configuración para sincronizarlo",
       "already_synced": "ya sincronizado",
       "conflict": "conflicto en {sides}: {cause}",
       "conflict_indeterminate": "los relojes difieren menos de {seconds} s: no se puede saber cuál es más reciente",

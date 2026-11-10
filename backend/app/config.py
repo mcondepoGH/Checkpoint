@@ -208,6 +208,8 @@ class Game(BaseModel):
     keep_versions: Optional[StrictInt] = None
     # Override por juego de la política de la sync automática ante conflictos; ausente = ajuste global.
     on_conflict: Optional[str] = None
+    # Un juego desactivado no se sincroniza por ninguna vía (automática, manual, aviso de apertura/cierre).
+    enabled: StrictBool = True
 
     @field_validator("name", mode="before")
     @classmethod
@@ -215,6 +217,13 @@ class Game(BaseModel):
         if v is None:
             raise _pyd("err.config.name_missing")
         return v
+
+    @model_serializer(mode="wrap")
+    def _ser(self, handler):
+        d = handler(self)
+        if self.enabled:  # solo se escribe `enabled: false`
+            d.pop("enabled", None)
+        return d
 
     @field_validator("on_conflict")
     @classmethod
@@ -292,6 +301,8 @@ def semantic_errors(devices, games) -> List[Tuple[str, dict]]:
         gp = f"games.{gname}"
         if not isinstance(g, dict):
             continue
+        if "enabled" in g and not isinstance(g["enabled"], bool):
+            errs.append((f"{gp}.enabled", error_body("err.config.bool_required")))
         devs = g.get("devices")
         paths = g.get("paths")
         if not isinstance(devs, list) or len(devs) not in (1, 2):

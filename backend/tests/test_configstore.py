@@ -284,3 +284,21 @@ def test_no_secrets_in_config_responses(client, monkeypatch):
     monkeypatch.setenv("CHECKPOINT_PASSWORD", "supersecretvalue")
     body = client.get("/api/config").text + client.get("/api/config/backups").text
     assert "supersecretvalue" not in body and "PRIVATE KEY" not in body
+
+
+def test_enabled_false_written_and_true_omitted(env):
+    store, _ = env
+    snap = store.snapshot()
+    d = draft_of(store)
+    assert "enabled" not in d["games"]["g"]
+    d["games"]["g"]["enabled"] = False
+    res = store.save(snap.version, validate_config(d)[0])
+    assert res["changed"]
+    assert "enabled: false" in settings.CONFIG_PATH.read_text()
+    assert store.snapshot().cfg.games["g"].enabled is False
+    snap = store.snapshot()
+    d = draft_of(store)
+    d["games"]["g"]["enabled"] = True
+    store.save(snap.version, validate_config(d)[0])
+    assert "enabled" not in settings.CONFIG_PATH.read_text()
+    assert store.snapshot().cfg.games["g"].enabled is True

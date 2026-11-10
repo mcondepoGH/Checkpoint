@@ -49,7 +49,7 @@ export const localPatch = (on, platform) => (on ? { local: true, os: localOs(pla
 // Rutas de los saves que usan un dispositivo (para «Comprobar carpeta»).
 export const pathsOf = (draft, devKey) => draft.games.flatMap((g) => [
   g.a === devKey && g.pathA ? g.pathA : null, g.b === devKey && g.pathB ? g.pathB : null].filter(Boolean));
-export const blankGame = () => ({ key: uid(), id: null, salt: hex8(), name: '', a: '', b: '', pathA: '', pathB: '', process: '', keep: '', onConflict: '' });
+export const blankGame = () => ({ key: uid(), id: null, salt: hex8(), name: '', a: '', b: '', pathA: '', pathB: '', process: '', keep: '', onConflict: '', enabled: true });
 
 // Versiones guardadas por juego: global (por defecto) y override por juego (vacío = usar el global). 0 = sin límite.
 export const DEFAULT_MAX_VERSIONS = 20;
@@ -67,6 +67,7 @@ export function fromConfig(cfg) {
     pathA: g.paths?.[g.devices[0]] ?? '', pathB: g.paths?.[g.devices[1]] ?? '',
     process: g.process || '', keep: g.keep_versions == null ? '' : String(g.keep_versions),
     onConflict: g.on_conflict || '',
+    enabled: g.enabled !== false,
   }));
   return { devices, games, maxVersions: String(cfg?.max_versions ?? DEFAULT_MAX_VERSIONS) };
 }
@@ -147,6 +148,7 @@ export function toConfig(draft) {
       ...(g.process.trim() ? { process: g.process.trim() } : {}),
       ...(String(g.keep).trim() !== '' ? { keep_versions: num(g.keep) } : {}),
       ...(g.onConflict ? { on_conflict: g.onConflict } : {}),
+      ...(g.enabled === false ? { enabled: false } : {}),  // solo se escribe `enabled: false`
     };
   }
   return { max_versions: num(draft.maxVersions), devices, games };

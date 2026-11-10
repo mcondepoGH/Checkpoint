@@ -91,3 +91,21 @@ test('etiqueta Solo checkpoint (Pill info): icono + texto y title de ayuda', { s
   assert.match(css, /&\.info/);
   assert.ok(!/font-size:\s*[\d.]+(px|rem)/.test(css.split('&.info')[1].split('\n')[0]), 'sin font-size suelto');
 });
+
+test('juego desactivado: interruptor visible sin desplegar, tarjeta atenuada y etiqueta Desactivado', { skip }, () => {
+  const on = render({});
+  assert.ok(has(on, 'role="switch"') && has(on, 'Juego activo') && has(on, 'checked=""'));
+  assert.ok(!has(on, 'cfg-card-disabled') && !has(on, 'cfg-tag'));
+  const off = render({ game: game({ enabled: false }) });
+  assert.ok(has(off, 'cfg-card-disabled') && has(off, 'class="cfg-tag">Desactivado<'));
+  assert.ok(has(off, 'role="switch"') && !has(off, 'checked=""'));
+  assert.ok(has(off, 'No se sincroniza') || has(off, 'Desactivado: no se sincroniza'));
+  // el interruptor queda fuera del contenedor plegado de campos extra
+  const sw = off.indexOf('role="switch"');
+  assert.ok(sw < off.indexOf('class="cfg-more"'));
+});
+
+test('juego sin el campo enabled (borradores antiguos) cuenta como activo', { skip }, () => {
+  const h = render({ game: game() });
+  assert.ok(has(h, 'checked=""') && !has(h, 'cfg-card-disabled'));
+});

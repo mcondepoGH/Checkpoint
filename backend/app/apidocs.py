@@ -72,13 +72,14 @@ class OpenedResult(BaseModel):
                                      "abierto...), `skipped` (juego de un dispositivo con la partida local ausente), `partial`, `error` o `timeout`.", examples=["ok"])
     game: str = Field(description="Id interno del juego.")
     device: str = Field(description="Id interno del dispositivo.")
-    run_id: str = Field(description="Id de la ejecución (la misma que verás en el historial).")
+    run_id: Optional[str] = Field(None, description="Id de la ejecución (la misma que verás en el historial). "
+                                                    "Falta si el juego está desactivado (no hubo ejecución).")
     code: Optional[str] = Field(None, description="Qué pasó, como código `err.sync.*` (o `err.hook.timeout`). "
                                                   "Sin traducir. Puede faltar.")
     params: Optional[dict] = Field(None, description="Parámetros de `code`.")
     watching: bool = Field(description="`true` si se armó la vigilancia de cierre (el juego tiene `process`).")
     watch_reason: Optional[str] = Field(None, description="Si `watching` es `false`: `no_process` (el juego no tiene "
-                                                          "`process` configurado).")
+                                                          "`process` configurado) o `disabled` (el juego está desactivado).")
 
 
 def _ok(model, description: str, *examples: tuple) -> dict:
@@ -237,6 +238,10 @@ OPENED = dict(
         "vigilancia si el juego tiene `process` (`watching: true`); si no, `watching: false` con "
         "`watch_reason: no_process`. Nunca se arma con `400`, `401`, `404` ni `409`. La respuesta no incluye la "
         "duración: la sincronización dura hasta 55 s.\n\n"
+        "**Juego desactivado** (`enabled: false` en la configuración). No se sincroniza ni se arma la vigilancia: "
+        "responde `200` con `ok: false`, `outcome: skipped`, `code: err.sync.game_disabled`, `watching: false` y "
+        "`watch_reason: disabled`, y lo deja en el historial (disparador «Aviso del juego», omitido). Antes se "
+        "resuelven juego y dispositivo (los `400`/`404` no cambian).\n\n"
         "**Juego y dispositivo.** `game` es el id o el nombre del juego. `device` (id o nombre) debe pertenecer al "
         "juego; es obligatorio si el juego está en más de un dispositivo; si tiene uno solo se deduce y puede omitirse."),
     responses={
@@ -250,6 +255,9 @@ OPENED = dict(
                   {**_OPENED_OK, "ok": False, "outcome": "aborted", "code": "err.sync.all_offline"}),
                  ("no_process", "Éxito, pero el juego no tiene `process`: sin vigilancia",
                   {**_OPENED_OK, "watching": False, "watch_reason": "no_process"}),
+                 ("disabled", "Juego desactivado: no se sincroniza ni se vigila",
+                  {"ok": False, "outcome": "skipped", "game": "g1", "device": "dev-1",
+                   "code": "err.sync.game_disabled", "params": {}, "watching": False, "watch_reason": "disabled"}),
                  ("timeout", "Superó los 55 s: sigue en segundo plano",
                   {"ok": False, "outcome": "timeout", "game": "g1", "device": "dev-1", "run_id": "3f9c1a7b2d4e",
                    "code": "err.hook.timeout", "params": {"seconds": 55}, "watching": True})),

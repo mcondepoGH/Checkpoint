@@ -343,6 +343,8 @@ def run_sync(cfg: Config, game: str, dry_run: bool = False, data_dir: Optional[P
     if conflict_policy is not None and conflict_policy not in ON_CONFLICT:
         raise SyncAbort("err.sync.policy_invalid", value=conflict_policy)
     g = cfg.games[game]
+    if not g.enabled:  # guarda central: cubre CLI, API, ciclo, aviso de apertura/cierre y simulación
+        raise SyncAbort("err.sync.game_disabled")
     started, t_run = datetime.now(), time.monotonic()
     slog.debug("run_sync inicio: juego=%s dry_run=%s resolution=%s política=%s", game, dry_run, resolution, conflict_policy)
     gs = game  # el id interno es la única clave de rutas de disco; el nombre es solo la etiqueta

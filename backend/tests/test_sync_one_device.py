@@ -207,3 +207,17 @@ def test_scheduler_ciclo_omite_y_queda_en_el_resumen(tmp_path, monkeypatch):
     item, det = s.game_detail("g", res, m, c)
     assert det == {"result": "skipped", "name": "g", "code": "err.sync.local_missing_manual_required", "params": {}}
     assert not e.pc_dir.exists()
+
+
+def test_juego_desactivado_aborta_incluso_en_dry_run(env):
+    from app.sync import SyncAbort
+    cfg = parse_config({
+        "devices": {"pc": {"name": "pc", "host": "h1", "user": "u", "os": "windows"}},
+        "games": {"g": {"name": "g", "devices": ["pc"], "paths": {"pc": "C:/Saves/g"}, "enabled": False}},
+    })
+    env.write(env.pc_dir, "s.sav", "x", 1000)
+    for dry in (False, True):
+        with pytest.raises(SyncAbort) as e:
+            run_sync(cfg, "g", dry, env.data, env.logs.append, {"pc": LocalTransport(env.root)})
+        assert e.value.code == "err.sync.game_disabled"  # y no el de partida local ausente
+    assert not env.hub.exists()

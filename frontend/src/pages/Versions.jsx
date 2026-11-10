@@ -30,13 +30,14 @@ export default function Versions({ config, onGoSettings }) {
       <div className="row between versions-head">
         <h2>{t('versions.title')}</h2>
         <Select aria-label={t('versions.gameAria')} value={game} onChange={(e) => { setGame(e.target.value); setMsg(null); }}
-          options={games.map((g) => ({ value: g, label: labelOf(config.games, g) }))} />
+          options={games.map((g) => ({ value: g, label: labelOf(config.games, g) + (config.games[g].enabled === false ? ` ${t('versions.disabledSuffix')}` : '') }))} />
       </div>
       {limit && game && (
         <p className="muted versions-limit">
           {limit.max === 0 ? t('versions.limit.unlimited', { count: limit.count }) : t('versions.limit.max', { count: limit.count, max: limit.max })}{limit.override ? t('versions.limit.override') : t('versions.limit.global')}
         </p>
       )}
+      {game && config.games[game]?.enabled === false && <Alert variant="info" compact>{t('versions.disabledNote')}</Alert>}
       {msg && <Alert variant={msg.error ? 'error' : 'ok'}>{errText(msg.body)}</Alert>}
       {list.length === 0 && (games.length === 0 ? (
         <EmptyState variant="page" icon="🎮" title={t('sync.noGames.title')}

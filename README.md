@@ -146,7 +146,7 @@ devices:
 
 ## Sincronización automática
 
-En **Configuración > Sincronización automática** activa la opción y elige cada cuántas horas se ejecuta (de 0.25 a 168). Cada ciclo sincroniza todos los juegos; si uno falla, los demás continúan. Debajo se muestra el **Registro de ejecuciones** (las últimas 50, límite fijo) con resultado por juego y detalle al hacer clic. Sin ajustes guardados, está desactivada y el intervalo es de 24 horas.
+En **Configuración > Sincronización automática** activa la opción y elige cada cuántas horas se ejecuta (de 0.25 a 168). Cada ciclo sincroniza todos los juegos **activos** (los desactivados se omiten en silencio; ver «Desactivar un juego»); si uno falla, los demás continúan. Debajo se muestra el **Registro de ejecuciones** (las últimas 50, límite fijo) con resultado por juego y detalle al hacer clic. Sin ajustes guardados, está desactivada y el intervalo es de 24 horas.
 
 ## Nuevas versiones
 
@@ -200,6 +200,18 @@ Un juego puede tener un único dispositivo (el dispositivo 2 es opcional en el f
 - **Partida local ausente:** si la ruta de guardado del dispositivo **no existe** (juego desinstalado o carpeta borrada) y el hub tiene datos, la sincronización automática (cada X horas, al arrancar) y el aviso de apertura del lanzador **no** recrean la carpeta ni restauran nada: se omiten con `err.sync.local_missing_manual_required` y quedan en el historial como omitidas. Solo una sincronización **manual** (botón Sincronizar o `checkpoint sync`) restaura la copia del hub en el dispositivo. Una carpeta que existe pero está vacía se trata como siempre. Con dos dispositivos nada cambia.
 - **Aviso de apertura:** `?device=` es opcional (se deduce el único dispositivo).
 
+## Desactivar un juego
+
+Un juego se puede desactivar sin borrarlo: en **Configuración**, el interruptor **Juego activo** del formulario del juego (visible sin pulsar «Mostrar más»); en `config.yaml`, `enabled: false` (sin el campo, el juego está activo). Un juego desactivado **no se sincroniza por ninguna vía**:
+
+- La sincronización automática (cada X horas y al arrancar) lo omite en silencio: ni entrada en el registro ni cuenta en los resúmenes.
+- `POST /api/sync/{juego}` responde `409` con `err.sync.game_disabled`, también con `dry_run: true`; la CLI (`checkpoint sync`) aborta con ese mismo código. Es una guarda central de la sincronización: para sincronizarlo hay que reactivarlo.
+- El aviso de apertura (`opened`) y el cierre automático lo omiten (ver «Hooks»).
+- En **Sincronizar** el juego sigue visible pero atenuado, con la etiqueta «Desactivado», sin botón «Sincronizar» ni «Simulación» y con un acceso a Configuración. En **Lanzadores** sigue en el selector con una nota («Desactivado: el aviso se omitirá»). `checkpoint list` lo marca «(desactivado)».
+- **Versiones:** se conservan y siguen visibles (con el sufijo «(desactivado)») y restaurables. Restaurar solo copia al hub: no se propaga a los dispositivos mientras el juego esté desactivado.
+
+Al guardar solo se escribe `enabled: false`; reactivarlo quita la línea.
+
 ## Conflictos
 
 Hay conflicto cuando los dos dispositivos han cambiado desde la última sincronización y su contenido es distinto (o, en la primera sincronización, ya difiere). Checkpoint nunca lo decide por la fecha a ciegas.
@@ -231,6 +243,7 @@ games:
       pc-1a2b3c4d: "C:/Users/usuario/AppData/Local/Ejemplo/Saves"
       laptop-5e6f7a8b: "/home/usuario/.local/share/Ejemplo/Saves"
     keep_versions: 5           # opcional: sustituye a max_versions para este juego
+    # enabled: false           # opcional: desactiva el juego (no se sincroniza por ninguna vía)
 ```
 
 La clave de cada juego y dispositivo es su **ID interno**, que no cambia nunca; `name` es solo una etiqueta y se puede renombrar libremente sin perder saves, versiones ni logs. `name` es obligatorio en cada juego y dispositivo. La CLI y la API aceptan el ID o el nombre.
@@ -313,10 +326,10 @@ Se llama justo antes de arrancar el juego. El hub hace una **sincronización pre
 - **Autenticación:** `Authorization: Bearer ck_...` (nada de cookie).
 - **Juego:** id o nombre, como `POST /api/sync/{juego}`.
 - **Dispositivo (`?device=`):** id o nombre. Se valida que pertenezca al juego; es el dispositivo donde se vigila el proceso del juego (ver «Cierre automático»). Es obligatorio si el juego está en más de un dispositivo; si el juego tiene uno solo, se deduce y puede omitirse.
-- **Respuesta `200`:** `{"ok": bool, "outcome": "...", "game": "<id>", "device": "<id>", "run_id": "...", "code": "err.sync....", "params": {...}}`. `outcome` es `ok`, `conflict`, `aborted` (dispositivo sin conexión, proceso del juego abierto...), `skipped` (juego de un dispositivo con la partida local ausente: `err.sync.local_missing_manual_required`), `partial`, `error` o `timeout`. `ok` es `true` solo con `outcome: ok`. `code`/`params` detallan qué pasó (p. ej. `err.sync.done`, `err.sync.already_synced`, `err.sync.conflict`). Un fallo de la sincronización **no** es un 5xx y no se reintenta: el cron de la sincronización automática sigue como red de seguridad. `timeout`: la sincronización superó los 55 s del servidor; sigue ejecutándose en segundo plano y deja su entrada en el historial al acabar.
+- **Respuesta `200`:** `{"ok": bool, "outcome": "...", "game": "<id>", "device": "<id>", "run_id": "...", "code": "err.sync....", "params": {...}}`. `outcome` es `ok`, `conflict`, `aborted` (dispositivo sin conexión, proceso del juego abierto...), `skipped` (juego de un dispositivo con la partida local ausente: `err.sync.local_missing_manual_required`), `partial`, `error` o `timeout`. Un juego **desactivado** responde `outcome: skipped` con `code: err.sync.game_disabled` (ver «Desactivar un juego»). `ok` es `true` solo con `outcome: ok`. `code`/`params` detallan qué pasó (p. ej. `err.sync.done`, `err.sync.already_synced`, `err.sync.conflict`). Un fallo de la sincronización **no** es un 5xx y no se reintenta: el cron de la sincronización automática sigue como red de seguridad. `timeout`: la sincronización superó los 55 s del servidor; sigue ejecutándose en segundo plano y deja su entrada en el historial al acabar.
 - **Errores:** `401` `err.apikey.invalid` (sin key, inválida, revocada o cookie de sesión; se comprueba antes que nada, así que no revela si el juego existe), `404` `err.main.game_unknown` o `err.hook.device_unknown`, `400` `err.hook.device_required` (falta `?device=` y es ambiguo) o `err.hook.device_ambiguous`, `409` `err.main.run_in_progress` (ya hay una ejecución de ese juego: cron, manual u otro aviso), `429` tras varios fallos de key seguidos desde una IP.
 - **Historial:** la ejecución aparece en el registro de la sincronización automática con el disparador «Aviso del juego» (`trigger: "hook"`).
-- **`watching`:** la respuesta añade `watching: true` si se armó la vigilancia de cierre, o `watching: false` con `watch_reason: "no_process"` si el juego no tiene `process`. Se arma con cualquier `200` (también `conflict`, `aborted` o `timeout`), nunca con `400`/`401`/`404`/`409`.
+- **`watching`:** la respuesta añade `watching: true` si se armó la vigilancia de cierre, o `watching: false` con `watch_reason: "no_process"` si el juego no tiene `process`, o `"disabled"` si el juego está desactivado (en ese caso no se sincroniza ni se vigila, y se deja una entrada `skipped` en el historial con disparador «Aviso del juego»; los `400`/`404` no cambian y se comprueban antes). Se arma con cualquier `200` (también `conflict`, `aborted` o `timeout`), nunca con `400`/`401`/`404`/`409`.
 
 ```bash
 curl -fsS -m 60 -X POST -H "Authorization: Bearer ck_..." "http://HOST:8088/api/hook/MiJuego/opened?device=MiPC"
@@ -326,7 +339,7 @@ Pon la URL **entre comillas**: el `?` lo interpretaría el shell como comodín.
 
 ### Lanzadores
 
-**Copiar los comandos de la web:** Configuración → sección **Lanzadores** (tarjeta propia tras la lista de juegos, plegada por defecto: botón Mostrar/Ocultar; también se abre con «Ver comandos de lanzador» en la tarjeta de cada juego guardado, que lo elige y baja hasta ella). Un único panel para todos los juegos: eliges el **juego** (se recuerda en el navegador) y su **dispositivo**, y en cada pestaña (Steam / Steam Deck, Lutris, Heroic, Windows con Playnite) tienes el comando completo con tu API key, el id del juego y el dispositivo ya codificados, listo para copiar (con una nota de dónde se pega). Necesita la API key del perfil (sin ella el panel pide generarla). La URL del hub se rellena con la de la página, se puede editar y se recuerda en el navegador; por HTTP fuera de localhost avisa de que la key viaja en claro. Si el juego no tiene `process`, avisa de que el hub no podrá vigilar el cierre; un juego sin guardar pide guardarlo antes. Debajo, **Último aviso** por dispositivo del juego elegido: último `opened` / cierre recibido, hace cuánto, su resultado y, si hay vigilancia activa, su estado (la key y el estado solo se piden con el panel desplegado; el estado se refresca cada 15 s).
+**Copiar los comandos de la web:** Configuración → sección **Lanzadores** (tarjeta propia tras la lista de juegos, plegada por defecto: botón Mostrar/Ocultar; también se abre con «Ver comandos de lanzador» en la tarjeta de cada juego guardado, que lo elige y baja hasta ella). Un único panel para todos los juegos: eliges el **juego** (se recuerda en el navegador) y su **dispositivo**, y en cada pestaña (Steam / Steam Deck, Lutris, Heroic, Windows con Playnite) tienes el comando completo con tu API key, el id del juego y el dispositivo ya codificados, listo para copiar (con una nota de dónde se pega). Necesita la API key del perfil (sin ella el panel pide generarla). La URL del hub se rellena con la de la página, se puede editar y se recuerda en el navegador; por HTTP fuera de localhost avisa de que la key viaja en claro. Si el juego no tiene `process`, avisa de que el hub no podrá vigilar el cierre; si está desactivado, lo indica («el aviso se omitirá»); un juego sin guardar pide guardarlo antes. Debajo, **Último aviso** por dispositivo del juego elegido: último `opened` / cierre recibido, hace cuánto, su resultado y, si hay vigilancia activa, su estado (la key y el estado solo se piden con el panel desplegado; el estado se refresca cada 15 s).
 
 Los comandos de abajo son los mismos que genera la web.
 
@@ -372,6 +385,7 @@ Tras `opened`, el hub **vigila el proceso del juego en ese dispositivo** (el `pr
 | `err.hook.never_seen` | omitido | El proceso no se vio abierto en el tiempo previsto (`CHECKPOINT_HOOK_FIRST_SEEN`); vigilancia descartada. |
 | `err.hook.busy` | omitido | Al cerrarse, ya había una ejecución de ese juego en curso o el lock estaba tomado. Sin reintento. |
 | `err.hook.game_removed` | omitido | El juego ya no está en la configuración al cerrarse. |
+| `err.sync.game_disabled` | omitido | El juego se desactivó con la vigilancia ya armada: al cerrarse no hay checkpoint (y el chip de vigilancia desaparece). |
 | `err.hook.checkpoint_failed` | error | El checkpoint lanzó una excepción antes de sincronizar; solo se guarda el tipo de excepción. |
 
 Un sondeo fallido aislado no se registra (se trata como dispositivo sin respuesta, ver arriba). Una vigilancia reemplazada por un nuevo `opened`, o cancelada al apagar el hub, tampoco deja entrada. Las vigilancias no se persisten: si el hub se reinicia se pierden y lo cubre el cron.

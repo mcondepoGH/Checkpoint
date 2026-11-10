@@ -100,7 +100,8 @@ export default function Sync({ config, watch = NO_WATCHES, onGoSettings }) {
   };
 
   const byGame = groupByGame(watch.watches);
-  const watched = games.filter((g) => byGame[g]);
+  const isOff = (g) => config.games[g].enabled === false; // juego desactivado: se ve atenuado y no se puede sincronizar
+  const allOff = games.length > 0 && games.every(isOff);
   // Franja inferior de la tarjeta: estado en texto + icono (nunca solo color); la hora solo cuando aporta (jugando, sin latido).
   const watchBar = (w) => {
     const h = watchHealth(w, watch.now);
@@ -128,27 +129,35 @@ export default function Sync({ config, watch = NO_WATCHES, onGoSettings }) {
           text={t('sync.noGames.text')}
           action={onGoSettings && <Button variant="primary" onClick={onGoSettings}>{t('common.goSettings')}</Button>} />
       )}
+      {allOff && (
+        <EmptyState variant="inline" icon="⏸️" title={t('sync.allOff.title')} text={t('sync.allOff.text')}
+          action={onGoSettings && <Button variant="primary" onClick={onGoSettings}>{t('common.goSettings')}</Button>} />
+      )}
       <div className="grid">
         {games.map((g) => {
           const s = status[g];
           const running = active && active.game === g && !active.done;
+          const off = isOff(g);
           return (
-            <div className={watchCardClass(worstHealth(byGame[g], watch.now))} key={g}>
-              <h3 title={t('sync.idTitle', { id: g })}><span className="game-name">{gameName(g)}</span> {running ? <Badge status="running">{t('sync.state.running')}</Badge> : badge(s)}</h3>
+            <div className={`${watchCardClass(worstHealth(byGame[g], watch.now))}${off ? ' game-disabled' : ''}`} key={g}>
+              <h3 title={t('sync.idTitle', { id: g })}><span className="game-name">{gameName(g)}</span> {off ? <Pill title={t('sync.disabled.help')}>{t('sync.disabled.label')}</Pill> : running ? <Badge status="running">{t('sync.state.running')}</Badge> : badge(s)}</h3>
               <p className="muted">{config.games[g].devices.map(devName).join(' ⇄ ')}</p>
               {isSoloCheckpoint(config.games[g]) && (
                 <p><Pill tone="info" title={t('sync.solo.help')}><Icon name="history" />{t('sync.solo.label')}</Pill></p>
               )}
-              <div className={`meter ${running ? 'running' : (s?.result || '')}`} role="progressbar" aria-label={t('sync.meterAria', { game: gameName(g) })}><i /></div>
-              <LastRun s={s} devName={devName} />
-              <Checkbox checked={!!dry[g]} onChange={(e) => setDry({ ...dry, [g]: e.target.checked })} label={t('common.dryRun')} />
-              {s?.result === 'conflict' && !running && (
+              {(!off || s) && <div className={`meter ${running ? 'running' : (s?.result || '')}`} role="progressbar" aria-label={t('sync.meterAria', { game: gameName(g) })}><i /></div>}
+              {(!off || s) && <LastRun s={s} devName={devName} />}
+              {off && <p className="muted game-off-note">{t('sync.disabled.help')}</p>}
+              {!off && <Checkbox checked={!!dry[g]} onChange={(e) => setDry({ ...dry, [g]: e.target.checked })} label={t('common.dryRun')} />}
+              {!off && s?.result === 'conflict' && !running && (
                 <div className="conflict-flag" role="alert">
                   <span><b>{t('sync.flagLead')}</b> {t('sync.flagText')}</span>
                   <Button onClick={() => openConflict(g)}>{t('sync.resolve')}</Button>
                 </div>
               )}
-              <Button variant="primary" disabled={running} onClick={() => run(g)}>{running ? t('sync.running') : t('sync.run')}</Button>
+              {off
+                ? onGoSettings && <Button className="game-off-actions" onClick={onGoSettings}>{t('common.goSettings')}</Button>
+                : <Button variant="primary" disabled={running} onClick={() => run(g)}>{running ? t('sync.running') : t('sync.run')}</Button>}
               {byGame[g]?.map(watchBar)}
             </div>
           );

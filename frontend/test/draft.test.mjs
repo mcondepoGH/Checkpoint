@@ -174,3 +174,27 @@ test('Settings pide al menos un dispositivo y Sync pinta la etiqueta Solo checkp
   assert.equal((st.match(/\.filter\(\(d\) => d\.name\)\.length < 1/g) || []).length, 2);
   assert.match(src('pages/Sync.jsx'), /isSoloCheckpoint\(config\.games\[g\]\)[\s\S]*sync\.solo\.label/);
 });
+
+// ---- juego desactivado ----
+test('enabled: config sin el campo carga como activo y no se envía; false se envía; true no', () => {
+  const d = fromConfig(LEGACY);
+  assert.equal(d.games[0].enabled, true);
+  assert.ok(!('enabled' in toConfig(d).games['Mi-Juego-82542a10']));
+  const off = { ...LEGACY, games: { 'Mi-Juego-82542a10': { ...LEGACY.games['Mi-Juego-82542a10'], enabled: false } } };
+  const doff = fromConfig(off);
+  assert.equal(doff.games[0].enabled, false);
+  assert.equal(toConfig(doff).games['Mi-Juego-82542a10'].enabled, false);
+  assert.equal(isDirty(doff, off), false, 'config con enabled:false cargada sin tocar: sin cambios');
+  assert.equal(isDirty(fromConfig(LEGACY), LEGACY), false);
+});
+
+test('enabled: alternar el interruptor marca cambios en ambos sentidos', () => {
+  const d = fromConfig(LEGACY);
+  d.games[0].enabled = false;
+  assert.equal(isDirty(d, LEGACY), true);
+  const off = { ...LEGACY, games: { 'Mi-Juego-82542a10': { ...LEGACY.games['Mi-Juego-82542a10'], enabled: false } } };
+  const back = fromConfig(off);
+  back.games[0].enabled = true;
+  assert.equal(isDirty(back, off), true);
+  assert.ok(!('enabled' in toConfig(back).games['Mi-Juego-82542a10']));
+});

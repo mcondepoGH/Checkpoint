@@ -115,3 +115,11 @@ button.ab-chip { cursor: pointer; display: inline-flex; align-items: center; gap
 .launcher-cmd { display: flex; flex-direction: column; gap: .25rem; min-width: 0; }
 .launcher-cmd-title { font-size: v.$fs-label; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
 .launcher-last { display: flex; flex-direction: column; gap: .25rem; margin: 0; padding: 0; list-style: none; font-size: v.$fs-hint; min-width: 0; li { overflow-wrap: anywhere; } }
+
+// Juego desactivado: tarjeta atenuada (campos y título); el interruptor y los botones siguen a plena opacidad.
+.game-enabled { display: flex; flex-direction: column; gap: .2rem; }
+.cfg-card-disabled {
+  > .field, > .two, > .cfg-more, > .game-solo-hint { opacity: .6; }
+  .cfg-title { color: var(--muted); } }
+.cfg-tag { margin-left: .5rem; padding: .05rem .45rem; border: 1px solid var(--border); border-radius: 99px;
+  font-size: v.$fs-label; letter-spacing: .04em; color: var(--muted); }

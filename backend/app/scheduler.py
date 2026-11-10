@@ -158,6 +158,9 @@ class Scheduler:
         Devuelve (resultado, texto técnico para logs, {code, params} | {message} | None para UI e historial, estado
         crudo de run_sync o None si falló). Nunca lanza: lo comparten el ciclo y el aviso `opened` del hook."""
         m, c, st = "", None, None
+        if not cfg.games[game].enabled:  # guarda de respaldo: un juego desactivado no se ejecuta
+            code = "err.sync.game_disabled"
+            return "skipped", code, {"code": code, "params": {}}, None
         try:
             st = self.runner(cfg, game, False, log=log, conflict_policy=policy or self.policy_for(cfg, game),
                              automatic=True)
@@ -205,6 +208,8 @@ class Scheduler:
         cfg = self.get_cfg()
         res, items, det = {}, [], {}
         for game in cfg.games:  # `game` es el id; en logs se muestra el nombre
+            if not cfg.games[game].enabled:
+                continue  # desactivado: se omite en silencio (ni registro, ni resumen)
             name = cfg.games[game].name
             if self.busy(game):
                 res[game] = "skipped"

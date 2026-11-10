@@ -245,3 +245,52 @@ def test_scheduler_untouched_by_hook(client):
     client.env.seed()
     opened(client)
     assert client.get("/api/scheduler").json()["last_run"] is None
+
+
+def set_enabled(e, game, value):
+    """Reescribe el config en disco (el almacén lo recarga al detectar el cambio)."""
+    p = settings.CONFIG_PATH
+    cfg = yaml.safe_load(p.read_text())
+    cfg["games"][game]["enabled"] = value
+    p.write_text(yaml.safe_dump(cfg, allow_unicode=True))
+    st = p.stat()
+    os.utime(p, (st.st_atime, st.st_mtime + 5))
+
+
+def test_disabled_game_is_skipped_without_sync_or_watch(client):
+    e = client.env
+    e.seed()
+    e.write(e.hub, "nuevo", 2000)  # habría copiado al dispositivo
+    set_enabled(e, "g1", False)
+    r = opened(client)
+    assert r.status_code == 200, r.text
+    j = r.json()
+    assert j == {"ok": False, "outcome": "skipped", "game": "g1", "device": "dev-1", "code": "err.sync.game_disabled",
+                 "params": {}, "watching": False, "watch_reason": "disabled"}
+    assert e.read(e.d1) == "base" and e.read(e.d2) == "base"  # nada sincronizado
+    h = history.read()
+    assert len(h) == 1 and h[0]["trigger"] == "hook" and h[0]["result"] == "skipped" and h[0]["device"] == "dev-1"
+    assert h[0]["games"]["g1"]["code"] == "err.sync.game_disabled" and h[0]["games"]["g1"]["name"] == "Mi Juego"
+    assert client.get("/api/hook/watches", headers=client.hdr).json() == []
+
+
+def test_disabled_game_still_validates_game_and_device(client):
+    client.env.seed()
+    set_enabled(client.env, "g1", False)
+    assert opened(client, "nope").status_code == 404
+    assert opened(client, "g1", "ghost").status_code == 404
+    assert opened(client, "g1", query=False).status_code == 400
+
+
+def test_manual_sync_of_disabled_game_is_409_even_dry_run(client):
+    e = client.env
+    e.seed()
+    e.write(e.hub, "nuevo", 2000)
+    set_enabled(e, "g1", False)
+    for body in ({}, {"dry_run": True}):
+        r = client.post("/api/sync/g1", json=body)
+        assert r.status_code == 409 and code(r) == "err.sync.game_disabled"
+    assert e.read(e.d1) == "base"
+    assert client.post("/api/sync/nope", json={}).status_code == 404
+    set_enabled(e, "g1", True)  # reactivar: vuelve a sincronizar
+    assert client.post("/api/sync/g1", json={}).status_code == 200

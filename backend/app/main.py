@@ -288,8 +288,9 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
 
     @hook.get("/watches", **apidocs.WATCHES)
     def hook_watches():
-        """Vigilancias de cierre activas (en memoria): [{game, device, state: waiting|running|settling, since}]."""
-        w = watcher.list()
+        """Vigilancias de cierre activas (en memoria): [{game, device, state: waiting|running|settling, since}]. Sin los juegos desactivados."""
+        cfg = _cfg()
+        w = [x for x in watcher.list() if x["game"] in cfg.games and cfg.games[x["game"]].enabled]
         api_log.debug("hook watches: %d vigilancias activas", len(w))
         return w
 
@@ -562,6 +563,9 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     async def start_sync(game: str, request: Request):
         cfg = _cfg()
         game = game_id(game)
+        if not cfg.games[game].enabled:  # también con dry_run: para sincronizarlo hay que reactivarlo
+            api_log.debug("sync %s: juego desactivado (409)", game)
+            raise ApiError(409, "err.sync.game_disabled")
         try:
             body = await request.json()
         except Exception:
@@ -701,6 +705,10 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
                            game, device)
             record_hook_event(game, device, "skipped", "err.hook.game_removed")
             return
+        if not cfg.games[game].enabled:
+            hook_log.debug("hook hook_closed juego=%s dispositivo=%s: juego desactivado, se omite", game, device)
+            record_hook_event(game, device, "skipped", "err.sync.game_disabled", name=cfg.games[game].name)
+            return
         if game_busy(game):
             hook_log.info("hook hook_closed juego=%s omitido: ejecución en curso, sin reintento", cfg.games[game].name)
             hook_log.debug("hook hook_closed juego=%s dispositivo=%s: game_busy, sin reintento", game, device)
@@ -745,6 +753,17 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             if dev is None:
                 api_log.debug("hook opened: juego=%s dispositivo %r desconocido (404)", g.name, device)
                 raise ApiError(404, "err.hook.device_unknown")
+        if not g.enabled:  # sin sincronizar ni vigilar; queda constancia en el historial
+            api_log.debug("hook opened: juego=%s dispositivo=%s desactivado, se omite", g.name, dev)
+            code = "err.sync.game_disabled"
+            try:
+                d = {"result": "skipped", "message": "", "code": code, "params": {}, "name": g.name}
+                history.append(history.make_entry(scheduler.clock(), 0.0, "hook", "skipped", {game: d}, "", code, {},
+                                                  device=dev), now=scheduler.clock())
+            except Exception as e:  # el registro nunca rompe el aviso
+                hook_log.warning("hook hook juego=%s: no se pudo guardar en el historial (%s)", g.name, type(e).__name__)
+            return {"ok": False, "outcome": "skipped", "game": game, "device": dev, "code": code, "params": {},
+                    "watching": False, "watch_reason": "disabled"}
         if game_busy(game):
             api_log.debug("hook opened: juego=%s dispositivo=%s ejecución en curso (409)", g.name, dev)
             raise ApiError(409, "err.main.run_in_progress")
@@ -781,7 +800,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         """Vigilancias de cierre activas para la UI (sesión): {now, watches: [{game, device, state, since, last_poll, poll}]}.
         `now` es la hora del servidor (UTC) para que el cliente mida el latido sin depender de su reloj. Sin datos sensibles."""
         cfg = _cfg()
-        w = [x for x in watcher.list() if x["game"] in cfg.games]
+        w = [x for x in watcher.list() if x["game"] in cfg.games and cfg.games[x["game"]].enabled]
         api_log.debug("watches: %d vigilancias activas", len(w))
         return {"now": iso(utcnow()), "watches": w}
 

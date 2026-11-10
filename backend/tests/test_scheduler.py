@@ -41,7 +41,7 @@ def sched(tmp_path, monkeypatch):
     calls = []
 
     class Cfg:
-        games = {k: SimpleNamespace(name=k.upper(), on_conflict=None) for k in "abc"}
+        games = {k: SimpleNamespace(name=k.upper(), on_conflict=None, enabled=True) for k in "abc"}
 
     def runner(cfg, game, dry, log, **kw):  # kw: conflict_policy
         calls.append((game, dry))
@@ -177,3 +177,33 @@ def test_history_failure_does_not_break_cycle(sched, monkeypatch):
     monkeypatch.setattr(history, "append", boom)
     asyncio.run(sched._cycle())
     assert sched.last_status["result"] == "aborted"
+
+
+def test_cycle_omits_disabled_silently(tmp_path, monkeypatch):
+    """Un juego desactivado no llega al runner, ni a `busy`, ni al resumen/historial (ciclo programado y arranque)."""
+    from app import history
+    monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
+    calls, busy_q = [], []
+
+    class Cfg:
+        games = {"a": SimpleNamespace(name="A", on_conflict=None, enabled=True),
+                 "d": SimpleNamespace(name="D", on_conflict=None, enabled=False)}
+
+    def runner(cfg, game, dry, log, **kw):
+        calls.append(game)
+        return {"result": "ok", "message": ""}
+
+    s = Scheduler(lambda: Cfg(), lambda g: busy_q.append(g) or False, clock=lambda: NOW, runner=runner)
+    s.update({"enabled": True, "run_on_start": True})
+    st = s.run_cycle()
+    assert calls == ["a"] and busy_q == ["a"] and st["games"] == {"a": "ok"} and "d" not in st["details"]
+    asyncio.run(s._cycle("startup"))
+    (e,) = history.read()
+    assert set(e["games"]) == {"a"}
+
+
+def test_run_game_guard_for_disabled(sched):
+    cfg = SimpleNamespace(games={"d": SimpleNamespace(name="D", on_conflict=None, enabled=False)})
+    res, m, c, st = sched.run_game(cfg, "d")
+    assert res == "skipped" and c == {"code": "err.sync.game_disabled", "params": {}} and st is None
+    assert sched.calls == []

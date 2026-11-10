@@ -196,3 +196,27 @@ def test_numero_de_dispositivos_fuera_de_1_o_2(devs):
 def test_un_dispositivo_sin_ruta_falla():
     _, errs = validate_config(mod(games__g__devices=["pc"], games__g__paths={}))
     assert errs["games.g.paths.pc"]["code"] == "err.config.path_missing"
+
+
+# ---------- juego desactivado (enabled) ----------
+def test_enabled_default_true_and_old_config():
+    assert parse_config(BASE).games["g"].enabled is True
+
+
+def test_enabled_false_loads():
+    assert parse_config(mod(games__g__enabled=False)).games["g"].enabled is False
+
+
+def test_enabled_serializer_only_writes_false():
+    on = parse_config(BASE).model_dump(exclude_none=True)["games"]["g"]
+    off = parse_config(mod(games__g__enabled=False)).model_dump(exclude_none=True)["games"]["g"]
+    assert "enabled" not in on
+    assert off["enabled"] is False
+
+
+def test_enabled_not_bool_is_bool_required():
+    from app.config import semantic_errors
+    errs = dict(semantic_errors(BASE["devices"], mod(games__g__enabled="no")["games"]))
+    assert errs["games.g.enabled"]["code"] == "err.config.bool_required"
+    with pytest.raises(ValidationError):
+        parse_config(mod(games__g__enabled="no"))

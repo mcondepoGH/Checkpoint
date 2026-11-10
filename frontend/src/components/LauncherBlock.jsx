@@ -14,7 +14,7 @@ const defaultUrl = () => (typeof window !== 'undefined' ? window.location.origin
 
 // Contenido de la sección «Lanzadores»: un solo panel para todos los juegos. Selector de juego, dispositivo, URL del hub, comandos
 // listos para copiar (con la API key del usuario) y último aviso por dispositivo del juego elegido.
-// `games`: [{ sel, id, name, process, devices: [{ id, name }] }] (`sel` identifica el juego en el selector; `id` vacío = sin guardar).
+// `games`: [{ sel, id, name, process, enabled (false = desactivado), devices: [{ id, name }] }] (`sel` identifica el juego en el selector; `id` vacío = sin guardar).
 // `selected`/`onSelect`: juego elegido (controlado por quien lo recuerda). `active`: panel desplegado (solo entonces pide la key y consulta el estado, cada 15 s).
 // `defaultHub`: URL por defecto (si no, el origen de la página). `initial` ({ key, loaded, status, error }) y `api` permiten pintar cada estado en pruebas sin red; `now` fija la hora.
 export default function LauncherBlock({ games, selected, onSelect, active, initial = null, api = realApi, now, defaultHub }) {
@@ -111,6 +111,7 @@ export default function LauncherBlock({ games, selected, onSelect, active, initi
           {(p) => <Select {...p} value={game.sel} onChange={(e) => onSelect(e.target.value)} options={games.map((g) => ({ value: g.sel, label: g.name || t('common.unnamed') }))} />}
         </Field>
       )}
+      {game && game.enabled === false && <Alert variant="info" compact>{t('launcher.disabledNote')}</Alert>}
       {body}
       {game && gameId && lines.length > 0 && (
         <div>
