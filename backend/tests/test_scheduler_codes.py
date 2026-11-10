@@ -48,7 +48,7 @@ def _sched(tmp_path, monkeypatch, runner):
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
 
     class Cfg:
-        games = {k: SimpleNamespace(name=k.upper(), on_conflict=None) for k in "abcde"}
+        games = {k: SimpleNamespace(name=k.upper(), on_conflict=None, enabled=True) for k in "abcde"}
     return Scheduler(lambda: Cfg(), lambda g: g == "c", clock=lambda: NOW, runner=runner)
 
 

@@ -288,3 +288,18 @@ def test_history_failure_never_breaks_watcher(cl, monkeypatch):
     monkeypatch.setattr(history, "append", boom)
     hopen(cl)
     assert wait_for(lambda: watches(cl).json() == [])  # el descarte ocurre aunque el historial falle
+
+
+def test_disabled_game_not_watched_and_close_is_skipped(cl):
+    from test_hook_opened import set_enabled
+    cl.proc.running = True
+    r = hopen(cl)
+    assert r.json()["watching"] is True and len(watches(cl).json()) == 1
+    set_enabled(cl.env, "g1", False)
+    assert watches(cl).json() == []  # el chip desaparece
+    cl.proc.running = False
+    assert wait_for(lambda: hist("hook_closed"))
+    h = hist("hook_closed")
+    assert len(h) == 1 and h[0]["result"] == "skipped" and h[0]["code"] == "err.sync.game_disabled"
+    assert h[0]["games"]["g1"]["code"] == "err.sync.game_disabled"
+    assert len(hist("hook")) == 1  # solo el aviso de apertura: sin checkpoint de cierre

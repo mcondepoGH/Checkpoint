@@ -596,6 +596,7 @@
       "unexpected": "{type}: {detail}",
       "nothing_to_sync": "nothing to sync (everything is empty)",
       "local_missing_manual_required": "the local save does not exist; automatic sync does not restore from the hub. Run a manual sync to recover it",
+      "game_disabled": "game disabled: it is not synced. Enable it in Settings to sync it",
       "already_synced": "already in sync",
       "conflict": "conflict in {sides}: {cause}",
       "conflict_indeterminate": "clocks differ by less than {seconds} s: cannot tell which is newer",

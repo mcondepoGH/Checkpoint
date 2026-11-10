@@ -91,3 +91,13 @@ def test_watches_view_requires_session_and_exposes_heartbeat(cl):
     assert w["game"] == "g1" and w["device"] == "dev-1" and w["state"] == "waiting"
     assert w["since"] and w["last_poll"] and w["poll"] > 0
     assert "key" not in str(j).lower()
+
+
+def test_disabled_opened_shows_skipped_with_reason(cl):
+    from test_hook_opened import set_enabled
+    set_enabled(cl.env, "g1", False)
+    hopen(cl)
+    session(cl)
+    d1, d2 = status(cl).json()["devices"]
+    assert d1["last"]["trigger"] == "hook" and d1["last"]["outcome"] == "skipped"
+    assert d1["last"]["code"] == "err.sync.game_disabled" and d1["watching"] is None and d2["last"] is None

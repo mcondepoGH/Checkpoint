@@ -596,6 +596,7 @@
       "unexpected": "{type}: {detail}",
       "nothing_to_sync": "nada que sincronizar (todo vacío)",
       "local_missing_manual_required": "la partida local no existe; el sync automático no restaura desde el hub. Haz un sync manual para recuperarla",
+      "game_disabled": "juego desactivado: no se sincroniza. Actívalo en Configuración para sincronizarlo",
       "already_synced": "ya sincronizado",
       "conflict": "conflicto en {sides}: {cause}",
       "conflict_indeterminate": "los relojes difieren menos de {seconds} s: no se puede saber cuál es más reciente",
