@@ -199,7 +199,7 @@ test('Historial: descartes y omitidos del cierre con texto traducido (es/en) e i
 
 const count = (h, s) => h.split(s).length - 1;
 const runEntry = (o) => ({ id: 'x1', started: '2026-11-09T11:00:00Z', duration: 0, trigger: 'hook_closed', message: '', params: {}, ...o });
-const oneGame = (result, code, params = {}, name = 'Dragon Quest VII') => runEntry({ result, code, params, games: { dq7: { name, result, code, params, message: '' } } });
+const oneGame = (result, code, params = {}, name = 'Juego 0') => runEntry({ result, code, params, games: { juego0: { name, result, code, params, message: '' } } });
 
 test('Registro: una entrada omitida de un solo juego lleva UNA etiqueta de estado y UN mensaje (es/en)', { skip }, () => {
   for (const [entry, es, en] of NOTES) {
@@ -209,7 +209,7 @@ test('Registro: una entrada omitida de un solo juego lleva UNA etiqueta de estad
       assert.equal(count(h, text), 1, h);
       assert.equal(count(h, '<svg'), 1, h);
       assert.equal(count(h, 'class="badge '), 1, h); // solo la de la cabecera
-      assert.ok(has(h, 'Dragon Quest VII') && has(h, 'hook-note'), h);
+      assert.ok(has(h, 'Juego 0') && has(h, 'hook-note'), h);
       assert.equal(has(h, 'is-error'), entry.result === 'error', h);
     }
   }
@@ -238,11 +238,11 @@ test('Registro: entrada correcta con mensaje de entrada y de juego distintos: un
 
 test('Registro: correcta de un juego = cabecera + línea de juego, UNA etiqueta, sin tercera línea (es/en)', { skip }, () => {
   for (const [trigger, es, en] of [['hook', 'Aviso del juego', 'Game opened'], ['hook_closed', 'Cierre del juego', 'Game closed']]) {
-    const e = runEntry({ trigger, result: 'ok', device: 'mi-pc', games: { dq7: { name: 'Dragon Quest VII', result: 'ok', message: '' } } });
+    const e = runEntry({ trigger, result: 'ok', device: 'mi-pc', games: { juego0: { name: 'Juego 0', result: 'ok', message: '' } } });
     for (const [lang, txt] of [['es', es], ['en', en]]) {
       const h = R('RunEntry', { entry: e }, lang);
       assert.equal(count(h, 'class="badge '), 1, h);
-      assert.equal(count(h, 'Dragon Quest VII'), 1, h);
+      assert.equal(count(h, 'Juego 0'), 1, h);
       assert.equal(count(h, 'mi-pc'), 1, h);
       assert.ok(has(h, txt) && !has(h, 'class="msg') && !has(h, '<svg'), h);
       assert.ok(has(h, '<li class="run"') && has(h, 'class="run-head"') && !has(h, '<details'), h);
@@ -322,12 +322,12 @@ test('Registro: arranque correcto (es/en)', { skip }, () => {
 test('Registro: hook y hook_closed ok / omitida / error con dispositivo: una etiqueta, mensaje una vez (es/en)', { skip }, () => {
   const cases = [['ok', null], ['skipped', 'err.hook.busy'], ['error', 'err.hook.checkpoint_failed']];
   for (const trigger of ['hook', 'hook_closed']) for (const [result, code] of cases) {
-    const g = { name: 'Dragon Quest VII', result, message: '', ...(code ? { code, params: { error: 'RuntimeError' } } : {}) };
-    const e = runEntry({ trigger, result, device: 'mi-pc', ...(code ? { code, params: { error: 'RuntimeError' } } : {}), games: { dq7: g } });
+    const g = { name: 'Juego 0', result, message: '', ...(code ? { code, params: { error: 'RuntimeError' } } : {}) };
+    const e = runEntry({ trigger, result, device: 'mi-pc', ...(code ? { code, params: { error: 'RuntimeError' } } : {}), games: { juego0: g } });
     for (const lang of ['es', 'en']) {
       const h = R('RunEntry', { entry: e }, lang);
       assert.equal(count(h, 'class="badge '), 1, h);
-      assert.equal(count(h, 'Dragon Quest VII'), 1, h);
+      assert.equal(count(h, 'Juego 0'), 1, h);
       assert.equal(count(h, 'mi-pc'), 1, h);
       assert.equal(count(h, '<svg'), code ? 1 : 0, h);
       assert.equal(count(h, 'class="msg'), code ? 1 : 0, h);
