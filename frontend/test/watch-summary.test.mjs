@@ -138,9 +138,9 @@ test('SCSS: puntos y anillo del pulso son cuadrados explícitos (círculo, no ó
   const css = (f) => fs.readFileSync(path.join(SRC, 'styles', f), 'utf8');
   const watch = css('ui/_watch.scss');
   const rule = (sel) => new RegExp(`${sel.replace(/[.]/g, '\\.')} \\{([^}]*)\\}`).exec(watch)?.[1] || '';
-  for (const sel of ['.watch-ico', '.watch-dot', '.watch-chip-dot']) {
+  for (const sel of ['.watch-mark', '.watch-dot', '.watch-chip-dot']) {
     const r = rule(sel);
-    assert.ok(/aspect-ratio: 1/.test(r) && /border-radius: 50%/.test(r) && /flex: 0 0 auto/.test(r) && /align-self: center/.test(r), sel);
+    assert.ok(/aspect-ratio: 1/.test(r) && /border-radius: 50%/.test(r) && (sel === '.watch-mark' || (/flex: 0 0 auto/.test(r) && /align-self: center/.test(r))), sel);
     const [w, h] = [/width: ([^;]+);/.exec(r)?.[1], /height: ([^;]+);/.exec(r)?.[1]];
     assert.ok(w && w === h, `${sel} ${w} x ${h}`);
     assert.ok(!/overflow/.test(r), sel);
@@ -148,5 +148,19 @@ test('SCSS: puntos y anillo del pulso son cuadrados explícitos (círculo, no ó
   assert.ok(/aspect-ratio: 1; border-radius: 50%/.test(css('_profile.scss').split('\n').find((l) => l.startsWith('.upd-dot'))));
   const pulse = /@keyframes watch-pulse \{([^@]*)\}\s*@keyframes/.exec(watch)?.[1] || '';
   assert.ok(pulse.includes('box-shadow') && !/transform|width|height|scale/.test(pulse));
-  assert.ok(/prefers-reduced-motion: reduce\) \{[^}]*\.watch-ico[^}]*\.watch-chip-dot[^}]*animation: none/.test(watch));
+  assert.ok(/prefers-reduced-motion: reduce\) \{[^}]*\.watch-mark[^}]*\.watch-chip-dot[^}]*animation: none/.test(watch));
+});
+
+test('SCSS: icono de la franja centrado por geometría y alineado con la primera línea', () => {
+  const watch = fs.readFileSync(path.join(SRC, 'styles', 'ui/_watch.scss'), 'utf8');
+  const rule = (sel) => new RegExp(`${sel.replace(/[.]/g, '\\.')} \\{([^}]*)\\}`).exec(watch)?.[1] || '';
+  const ico = rule('.watch-ico'), mark = rule('.watch-mark');
+  assert.ok(/display: grid/.test(ico) && /place-items: center/.test(ico) && /align-self: start/.test(ico) && /width: 1\.1em/.test(ico));
+  assert.ok(/height: \$watch-lh \* 1em/.test(ico) && /\$watch-lh: 1\.35/.test(watch) && /line-height: \$watch-lh/.test(watch), 'caja de la primera línea');
+  assert.ok(/inline-grid/.test(mark) && /place-items: center/.test(mark) && /width: 1\.1em/.test(mark) && /height: 1\.1em/.test(mark) && /aspect-ratio: 1/.test(mark));
+  assert.ok(/inset: 0; margin: auto/.test(rule('.watch-mark::before')));
+  assert.ok(/running \.watch-mark::before \{[^}]*55%[^}]*background: currentColor/.test(watch));
+  assert.ok(/waiting \.watch-mark::before \{[^}]*border: 2px solid currentColor/.test(watch));
+  assert.ok(/settling \.watch-mark \{ animation: watch-spin/.test(watch) && /running \.watch-mark \{ animation: watch-pulse/.test(watch));
+  assert.ok(!/[◌●↻⚠]/u.test(fs.readFileSync(path.join(SRC, 'components/ui/WatchBar.jsx'), 'utf8').replace(/\/\/.*$/gm, '')));
 });

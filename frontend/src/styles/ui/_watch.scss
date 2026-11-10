@@ -6,6 +6,7 @@
 //  - indicador en línea (WatchStatus): punto + texto, para las filas de la lista de la cabecera.
 //  - contador de la cabecera (.watch-summary, en la barra superior): chip + lista desplegable.
 // Color por estado: waiting accent, running ok, settling primary, stale warn. Siempre con texto e icono.
+$watch-lh: 1.35; // interlineado de la franja (el alto de la caja del icono se deriva de él)
 $touch-watch: 44px; // objetivo táctil del chip y las filas de la lista (local: no cambia $touch)
 
 .watch-bar, .watch, .card.watched { --wst: var(--muted); }
@@ -24,13 +25,22 @@ $touch-watch: 44px; // objetivo táctil del chip y las filas de la lista (local:
 .watch-bar { margin: auto (-1 * v.$gap) 0; padding: .5rem v.$gap; display: grid; grid-template-columns: 1.1em minmax(0, 1fr) auto; align-items: start; column-gap: .45rem;
   font-size: v.$fs-hint; font-weight: 700; color: var(--wst); overflow-wrap: anywhere; border-top: 1px solid var(--wst);
   background: color-mix(in srgb, var(--wst) 14%, var(--surface));
-  // Cuadrado explícito (el ítem de rejilla era 1.1em de ancho por el alto de la línea: el anillo del pulso salía ovalado)
-  .watch-ico { font-style: normal; display: inline-flex; align-items: center; justify-content: center; width: 1.1em; height: 1.1em; aspect-ratio: 1; flex: 0 0 auto; align-self: center; justify-self: center; border-radius: 50%; line-height: 1; }
+  // Icono dibujado por geometría, nunca por glifo de fuente (las métricas del glifo lo descentraban y dependía del dispositivo).
+  // .watch-ico = caja de la PRIMERA línea de texto (alto = line-height, en em: sirve sin soporte de lh) con la marca centrada;
+  // así, si el texto salta de línea (móvil), el icono sigue alineado con la primera y no con el bloque.
+  // .watch-mark = cuadrado 1.1em (círculo): el anillo del pulso (box-shadow) y el giro (rotate) salen de su centro, sin desplazarlo.
+  line-height: $watch-lh;
+  .watch-ico { font-style: normal; font-size: inherit; display: grid; place-items: center; width: 1.1em; height: $watch-lh * 1em; align-self: start; justify-self: center; line-height: 1; }
+  .watch-mark { display: inline-grid; place-items: center; position: relative; width: 1.1em; height: 1.1em; aspect-ratio: 1; box-sizing: border-box; border-radius: 50%; line-height: 0; }
+  .watch-mark .ico { display: block; width: 100%; height: 100%; }
+  .watch-mark::before { content: none; position: absolute; inset: 0; margin: auto; box-sizing: border-box; border-radius: 50%; aspect-ratio: 1; }
+  &.running .watch-mark::before { content: ''; width: 55%; height: 55%; background: currentColor; }
+  &.waiting .watch-mark::before { content: ''; width: 80%; height: 80%; border: 2px solid currentColor; }
   .watch-text { min-width: 0; }
   .watch-since { font-weight: 600; white-space: nowrap; }
-  &.running .watch-ico { animation: watch-pulse 1.6s ease-out infinite; }
-  &.waiting .watch-ico { animation: blink 1.4s ease-in-out infinite; }
-  &.settling .watch-ico { animation: watch-spin 1.2s linear infinite; } }
+  &.running .watch-mark { animation: watch-pulse 1.6s ease-out infinite; }
+  &.waiting .watch-mark { animation: blink 1.4s ease-in-out infinite; }
+  &.settling .watch-mark { animation: watch-spin 1.2s linear infinite; } }
 .grid > .card.watched .watch-bar { margin-bottom: 0; border-radius: 0 0 calc(v.$radius - 1px) calc(v.$radius - 1px); }
 .grid > .card.watched > .watch-bar { margin-top: .5rem; }
 @keyframes watch-pulse { 0% { box-shadow: 0 0 0 0 var(--wst); } 70%, 100% { box-shadow: 0 0 0 .5rem transparent; } }
@@ -76,5 +86,5 @@ $touch-watch: 44px; // objetivo táctil del chip y las filas de la lista (local:
 @media (max-width: v.$bp-xxs) {
   .watch-summary .watch-toggle { padding: 0 .3rem; gap: .2rem; } }
 @media (prefers-reduced-motion: reduce) {
-  .watch-bar .watch-ico, .watch .watch-dot, .watch-summary .watch-chip-dot { animation: none !important; }
+  .watch-bar .watch-mark, .watch .watch-dot, .watch-summary .watch-chip-dot { animation: none !important; }
   .watch-summary .watch-toggle, .watch-summary .watch-caret { transition: none; } }

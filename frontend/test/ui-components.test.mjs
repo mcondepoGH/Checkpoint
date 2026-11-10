@@ -106,11 +106,13 @@ test('Input: texto sin autocompletar ni corrector; number y password sin añadid
   assert.doesNotMatch(r('Input', { type: 'password', value: '', onChange() {} }), /spellcheck/);
 });
 test('Alert compact', { skip }, () => { assert.equal(r('Alert', { variant: 'warn', compact: true }, 'x'), '<div class="alert warn compact">x</div>'); });
-test('WatchBar: icono decorativo + texto + hora opcional', { skip }, () => {
-  assert.equal(r('WatchBar', { state: 'running', since: 'desde 10:05' }, 'Jugando en PC'),
-    '<div class="watch-bar running" role="status"><i class="watch-ico" aria-hidden="true">●</i><span class="watch-text">Jugando en PC</span><span class="watch-since">desde 10:05</span></div>');
-  assert.equal(r('WatchBar', { state: 'stale' }, 'Sin latido'),
-    '<div class="watch-bar stale" role="status"><i class="watch-ico" aria-hidden="true">⚠</i><span class="watch-text">Sin latido</span></div>');
+test('WatchBar: icono por geometría (sin glifos de fuente) + texto + hora opcional', { skip }, () => {
+  const run = r('WatchBar', { state: 'running', since: 'desde 10:05' }, 'Jugando en PC');
+  assert.equal(run, '<div class="watch-bar running" role="status"><i class="watch-ico" aria-hidden="true"><i class="watch-mark"></i></i><span class="watch-text">Jugando en PC</span><span class="watch-since">desde 10:05</span></div>');
+  assert.match(r('WatchBar', { state: 'waiting' }, 'x'), /<i class="watch-mark"><\/i>/);
+  assert.match(r('WatchBar', { state: 'settling' }, 'x'), /<i class="watch-mark"><svg class="ico"[^>]*aria-hidden="true"/);
+  assert.match(r('WatchBar', { state: 'stale' }, 'Sin latido'), /^<div class="watch-bar stale" role="status"><i class="watch-ico" aria-hidden="true"><i class="watch-mark"><svg/);
+  for (const st of ['waiting', 'running', 'settling', 'stale']) assert.doesNotMatch(r('WatchBar', { state: st }, 'x'), /[◌●↻⚠]/u, st);
 });
 test('WatchStatus: punto decorativo + texto', { skip }, () => {
   assert.equal(r('WatchStatus', { state: 'running' }, 'Jugando'), '<span class="watch running"><i class="watch-dot" aria-hidden="true"></i>Jugando</span>');
