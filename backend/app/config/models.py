@@ -10,6 +10,7 @@ import yaml
 from pydantic_core import PydanticCustomError
 
 from ..core.errors import error_body
+from ..core.hosts import HOST_RE
 from ..core.runtime import running_in_docker
 from pydantic import (BaseModel, ConfigDict, Field, StrictBool, StrictInt, ValidationError, field_validator, model_serializer,
                       model_validator)
@@ -18,7 +19,6 @@ NAME_MAX = 64
 RESERVED_SLUGS = ("hub",)  # el hub se guarda con ese nombre junto a los dispositivos
 # Identificador interno (clave en config.yaml): estable e inmutable; nunca se deriva del nombre tras crearlo.
 ID_RE = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
-HOST_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.:\-]{0,252}$")
 USER_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_.\-]{0,31}$")
 PROC_RE = re.compile(r"^[A-Za-z0-9_][A-Za-z0-9_. \-]{0,63}$")
 # Caracteres permitidos en rutas: nada de metacaracteres de shell/cmd.
