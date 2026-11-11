@@ -8,7 +8,7 @@ import DeviceCard from '#src/components/config/DeviceCard.jsx';
 import GameCard from '#src/components/config/GameCard.jsx';
 import LaunchersPanel from '#src/components/launchers/LaunchersPanel.jsx';
 import { loadGameSel, saveGameSel } from '#src/components/launchers/launchers.js';
-import PublicKey from '#src/components/PublicKey.jsx';
+import PublicKey from '#src/components/keyhelp/PublicKey.jsx';
 import AutoSync from '#src/components/autosync/AutoSync.jsx';
 import UpdateCheck from '#src/components/updates/UpdateCheck.jsx';
 import { updatesApplicable } from '#src/lib/updates.js';

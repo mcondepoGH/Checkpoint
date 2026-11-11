@@ -5,7 +5,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
-import { osSteps } from '#src/keyhelpSteps.js';
+import { osSteps } from '#src/components/keyhelp/keyhelpSteps.js';
 import { bundle, SRC } from './helpers/bundle.mjs';
 
 // Los botones de `ui` se sustituyen por un stub que registra sus props; el resto de `ui` es el real.
@@ -28,7 +28,7 @@ const stubButtons = {
 const { mod: m, skip } = await bundle(`import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
   import { i18n } from '#src/hooks/useI18n.js';
-  import { KeyHelp } from '#src/components/PublicKey.jsx';
+  import { KeyHelp } from '#src/components/keyhelp/PublicKey.jsx';
   export { React, renderToStaticMarkup, i18n, KeyHelp };`, { plugins: [stubButtons], tag: 'ckpt-keyhelp' });
 
 const KEY = 'ssh-ed25519 AAAATESTKEY checkpoint';

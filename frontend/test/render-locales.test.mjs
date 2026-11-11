@@ -18,7 +18,7 @@ const { mod: m, skip } = await bundle(`import React from 'react';
   import DiffView from '#src/components/config/DiffView.jsx';
   import UpdateDialog from '#src/components/updates/UpdateDialog.jsx';
   import UpdateBadge from '#src/components/updates/UpdateBadge.jsx';
-  import PublicKey from '#src/components/PublicKey.jsx';
+  import PublicKey from '#src/components/keyhelp/PublicKey.jsx';
   import ProfileMenu from '#src/components/profile/ProfileMenu.jsx';
   import Avatar from '#src/components/profile/Avatar.jsx';
   import Sync from '#src/pages/Sync.jsx';
