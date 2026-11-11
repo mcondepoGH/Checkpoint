@@ -10,7 +10,7 @@ const { mod: m, skip } = await bundle(`import React from 'react';
   import Sync from '#src/pages/Sync.jsx';
   import Versions from '#src/pages/Versions.jsx';
   import WatchSummary from '#src/components/watch/WatchSummary.jsx';
-  import LauncherBlock from '#src/components/LauncherBlock.jsx';
+  import LauncherBlock from '#src/components/launchers/LauncherBlock.jsx';
   export { React, renderToStaticMarkup, i18n, Sync, Versions, WatchSummary, LauncherBlock };`, { navigator: true, tag: 'ckpt-disabled' });
 
 const has = (h, s) => h.includes(s);

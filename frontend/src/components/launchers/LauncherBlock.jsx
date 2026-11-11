@@ -2,7 +2,7 @@ import React, { useEffect, useId, useState } from 'react';
 import { api as realApi } from '#src/lib/api.js';
 import { isInsecure } from '#src/lib/apikey.js';
 import { RESULT_TEXT, resultText } from '#src/lib/format.js';
-import { LAUNCHERS, ago, commandsFor, loadHubUrl, normalizeHubUrl, saveHubUrl } from '#src/launchers.js';
+import { LAUNCHERS, ago, commandsFor, loadHubUrl, normalizeHubUrl, saveHubUrl } from './launchers.js';
 import { errText, rich, useI18n } from '#src/hooks/useI18n.js';
 import Field from '#src/components/ui/Field.jsx';
 import Icon from '#src/components/ui/Icon.jsx';

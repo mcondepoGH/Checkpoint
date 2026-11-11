@@ -6,8 +6,8 @@ import {
 import Field from '#src/components/ui/Field.jsx';
 import DeviceCard from '#src/components/config/DeviceCard.jsx';
 import GameCard from '#src/components/config/GameCard.jsx';
-import LaunchersPanel from '#src/components/LaunchersPanel.jsx';
-import { loadGameSel, saveGameSel } from '#src/launchers.js';
+import LaunchersPanel from '#src/components/launchers/LaunchersPanel.jsx';
+import { loadGameSel, saveGameSel } from '#src/components/launchers/launchers.js';
 import PublicKey from '#src/components/PublicKey.jsx';
 import AutoSync from '#src/components/autosync/AutoSync.jsx';
 import UpdateCheck from '#src/components/updates/UpdateCheck.jsx';

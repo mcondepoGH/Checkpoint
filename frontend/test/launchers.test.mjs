@@ -1,7 +1,7 @@
 // Comandos de lanzador (funciones puras): sin navegador ni React.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { LAUNCHERS, commandsFor, hookUrl, normalizeHubUrl, ago, loadHubUrl, saveHubUrl, loadGameSel, saveGameSel } from '#src/launchers.js';
+import { LAUNCHERS, commandsFor, hookUrl, normalizeHubUrl, ago, loadHubUrl, saveHubUrl, loadGameSel, saveGameSel } from '#src/components/launchers/launchers.js';
 import { nextTabIndex } from '#src/lib/tabs.js';
 
 const KEY = 'ck_AbC123xyz';
