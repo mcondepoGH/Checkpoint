@@ -1,18 +1,18 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { api, ApiError } from './api.js';
-import AppIcon from './components/AppIcon.jsx';
-import UpdateBadge from './components/UpdateBadge.jsx';
-import ProfileMenu from './components/ProfileMenu.jsx';
-import WatchSummary from './components/WatchSummary.jsx';
+import { api, ApiError } from '#src/lib/api.js';
+import AppIcon from '#src/components/AppIcon.jsx';
+import UpdateBadge from '#src/components/UpdateBadge.jsx';
+import ProfileMenu from '#src/components/ProfileMenu.jsx';
+import WatchSummary from '#src/components/WatchSummary.jsx';
 import { useWatches } from './useWatches.js';
-import UpdateDialog from './components/UpdateDialog.jsx';
-import { installedVersion, updatesApplicable } from './updates.js';
-import Login from './pages/Login.jsx';
-import Settings from './pages/Settings.jsx';
-import Sync from './pages/Sync.jsx';
-import Versions from './pages/Versions.jsx';
+import UpdateDialog from '#src/components/UpdateDialog.jsx';
+import { installedVersion, updatesApplicable } from '#src/lib/updates.js';
+import Login from '#src/pages/Login.jsx';
+import Settings from '#src/pages/Settings.jsx';
+import Sync from '#src/pages/Sync.jsx';
+import Versions from '#src/pages/Versions.jsx';
 import { errText, initDefaultLang, useI18n } from './useI18n.js';
-import { Alert } from './components/ui/index.js';
+import { Alert } from '#src/components/ui/index.js';
 
 // Pestañas: el id es estable; las etiquetas (completa y corta, para móvil) son claves `app.tab.<id>.full|short`.
 const TABS = ['sync', 'versions', 'settings'];

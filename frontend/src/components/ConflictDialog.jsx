@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import Modal from './Modal.jsx';
-import { fmtSize, fmtWhen } from '../format.js';
-import { useI18n } from '../useI18n.js';
-import { Button } from './ui/index.js';
+import { fmtSize, fmtWhen } from '#src/lib/format.js';
+import { useI18n } from '#src/useI18n.js';
+import { Button } from '#src/components/ui/index.js';
 
 // Motivos del conflicto (ids estables del backend) -> clave `conflict.reason.<id con _>`.
 const REASONS = ['both-changed', 'no-baseline', 'inconsistent', 'indeterminate', 'stale'];

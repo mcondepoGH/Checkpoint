@@ -1,8 +1,8 @@
 import React from 'react';
 import Modal from './Modal.jsx';
-import { safeUrl, isPrerelease } from '../updates.js';
-import { useI18n } from '../useI18n.js';
-import { Alert, Button } from './ui/index.js';
+import { safeUrl, isPrerelease } from '#src/lib/updates.js';
+import { useI18n } from '#src/useI18n.js';
+import { Alert, Button } from '#src/components/ui/index.js';
 
 // Detalle de la versión nueva. Las notas se pintan como texto (React escapa todo): nunca como HTML.
 export default function UpdateDialog({ info, onClose }) {

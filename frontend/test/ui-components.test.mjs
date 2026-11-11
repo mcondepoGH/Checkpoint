@@ -8,7 +8,7 @@ import { bundle, SRC } from './helpers/bundle.mjs';
 
 const { mod, skip } = await bundle(`import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
-  import * as ui from './components/ui/index.js';
+  import * as ui from '#src/components/ui/index.js';
   export { React, renderToStaticMarkup, ui };`, { tag: 'ckpt-ui' });
 
 const r = (C, props, ...kids) => mod.renderToStaticMarkup(mod.React.createElement(mod.ui[C], props, ...kids));

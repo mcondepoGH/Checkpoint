@@ -1,26 +1,26 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { api } from '../api.js';
+import { api } from '#src/lib/api.js';
 import {
   MAX_VERSIONS_LIMIT, VERSIONS_HINT, blankDevice, blankGame, canOfferLocal, deviceId, baseKeyOf, errorsFor, fromConfig, gamesUsing, hasChanges, idOf, localErrors, nameOf, pathsOf, removeDevice, renamed, toConfig,
-} from '../draft.js';
-import Field from '../components/Field.jsx';
-import DeviceCard from '../components/DeviceCard.jsx';
-import GameCard from '../components/GameCard.jsx';
-import LaunchersPanel from '../components/LaunchersPanel.jsx';
-import { loadGameSel, saveGameSel } from '../launchers.js';
-import PublicKey from '../components/PublicKey.jsx';
-import AutoSync from '../components/AutoSync.jsx';
-import UpdateCheck from '../components/UpdateCheck.jsx';
-import { updatesApplicable } from '../updates.js';
-import SaveDialog from '../components/SaveDialog.jsx';
-import YamlDialog from '../components/YamlDialog.jsx';
-import BackupsDialog from '../components/BackupsDialog.jsx';
-import Icon from '../components/Icon.jsx';
-import EmptyState from '../components/EmptyState.jsx';
-import DiffView from '../components/DiffView.jsx';
-import { errText, useI18n } from '../useI18n.js';
-import { errorText, fieldErrorText, ui } from '../errors.js';
-import { Alert, Button, Input } from '../components/ui/index.js';
+} from '#src/draft.js';
+import Field from '#src/components/Field.jsx';
+import DeviceCard from '#src/components/DeviceCard.jsx';
+import GameCard from '#src/components/GameCard.jsx';
+import LaunchersPanel from '#src/components/LaunchersPanel.jsx';
+import { loadGameSel, saveGameSel } from '#src/launchers.js';
+import PublicKey from '#src/components/PublicKey.jsx';
+import AutoSync from '#src/components/AutoSync.jsx';
+import UpdateCheck from '#src/components/UpdateCheck.jsx';
+import { updatesApplicable } from '#src/lib/updates.js';
+import SaveDialog from '#src/components/SaveDialog.jsx';
+import YamlDialog from '#src/components/YamlDialog.jsx';
+import BackupsDialog from '#src/components/BackupsDialog.jsx';
+import Icon from '#src/components/Icon.jsx';
+import EmptyState from '#src/components/EmptyState.jsx';
+import DiffView from '#src/components/DiffView.jsx';
+import { errText, useI18n } from '#src/useI18n.js';
+import { errorText, fieldErrorText, ui } from '#src/lib/errors.js';
+import { Alert, Button, Input } from '#src/components/ui/index.js';
 
 // Pantalla única de Configuración: dispositivos y juegos como tarjetas, validación en vivo con el
 // validador del backend, vista previa de cambios antes de guardar.

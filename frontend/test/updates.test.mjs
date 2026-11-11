@@ -2,9 +2,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { es } from './helpers/locales.mjs';
-import { updatesApplicable, showBadge, safeUrl, updateSummary, channelOf, isPrerelease, installedVersion, CHANNEL_OPTIONS } from '../src/updates.js';
+import { updatesApplicable, showBadge, safeUrl, updateSummary, channelOf, isPrerelease, installedVersion, CHANNEL_OPTIONS } from '#src/lib/updates.js';
 
-import { createI18n } from '../src/i18n.js';
+import { createI18n } from '#src/lib/i18n.js';
 import { bundle } from './helpers/bundle.mjs';
 const t = createI18n({ catalogs: { es }, storage: null, languages: ['es'] }).t;
 
@@ -56,9 +56,9 @@ test('canal y marca preliminar: lógica pura', () => {
 
 const { mod, skip } = await bundle(`import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
-  import UpdateBadge from './components/UpdateBadge.jsx';
-  import UpdateDialog from './components/UpdateDialog.jsx';
-  import UpdateCheck from './components/UpdateCheck.jsx';
+  import UpdateBadge from '#src/components/UpdateBadge.jsx';
+  import UpdateDialog from '#src/components/UpdateDialog.jsx';
+  import UpdateCheck from '#src/components/UpdateCheck.jsx';
   export { React, renderToStaticMarkup, UpdateBadge, UpdateDialog, UpdateCheck };`, { tag: 'ckpt-upd' });
 const r = (C, props) => mod.renderToStaticMarkup(mod.React.createElement(C, props));
 

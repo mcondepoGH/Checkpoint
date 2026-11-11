@@ -1,6 +1,6 @@
 import React from 'react';
-import { useI18n } from '../useI18n.js';
-import { Alert } from './ui/index.js';
+import { useI18n } from '#src/useI18n.js';
+import { Alert } from '#src/components/ui/index.js';
 
 // Pie de la tarjeta: ID interno (solo lectura) y aviso al renombrar un elemento que ya existe.
 export default function IdNote({ id, isNew, renamed }) {

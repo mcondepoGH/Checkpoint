@@ -7,9 +7,9 @@ import { bundle, SRC } from './helpers/bundle.mjs';
 
 const { mod: m, skip } = await bundle(`import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
-  import { i18n } from './useI18n.js';
-  import ProfileMenu from './components/ProfileMenu.jsx';
-  import ApiKeySection from './components/ApiKeySection.jsx';
+  import { i18n } from '#src/useI18n.js';
+  import ProfileMenu from '#src/components/ProfileMenu.jsx';
+  import ApiKeySection from '#src/components/ApiKeySection.jsx';
   export { React, renderToStaticMarkup, i18n, ProfileMenu, ApiKeySection };`, { navigator: true, tag: 'ckpt-profmenu' });
 const UPD = { actual: '1.0.0', ultima: '1.1.0', hay_actualizacion: true, habilitado: true, aplicable: true };
 const menu = (o = {}, lang = 'es') => {

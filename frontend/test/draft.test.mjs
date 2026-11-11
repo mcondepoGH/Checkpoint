@@ -2,8 +2,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { baseKeyOf, fromConfig, isDirty, toConfig } from '../src/draft.js';
-import { labelOf } from '../src/names.js';
+import { baseKeyOf, fromConfig, isDirty, toConfig } from '#src/draft.js';
+import { labelOf } from '#src/lib/names.js';
 
 // Lo que devuelve /api/config para un config.yaml LEGADO (claves por nombre, sin `name`): el backend lo
 // normaliza a ids, con el nombre antiguo en `name`.
@@ -106,14 +106,14 @@ test('Configuración reinicia el borrador durante el render, no en un efecto', (
 });
 
 test('hasChanges: borrador distinto o errores locales', async () => {
-  const { hasChanges } = await import('../src/draft.js');
+  const { hasChanges } = await import('#src/draft.js');
   assert.equal(hasChanges('a', 'a', {}), false);
   assert.equal(hasChanges('a', 'b', {}), true);
   assert.equal(hasChanges('a', 'a', { x: 'err' }), true);
 });
 
 test('errorsFor traduce {code,params} con el traductor y deja pasar texto antiguo', async () => {
-  const { errorsFor } = await import('../src/draft.js');
+  const { errorsFor } = await import('#src/draft.js');
   const tr = (v) => (typeof v === 'string' ? v : `T(${v.code})`);
   const errs = { 'games.g': { code: 'a', params: {} }, 'games.g.paths.pc': { code: 'b', params: {} }, 'games.g.name': 'viejo', 'games.h.name': 'otro' };
   assert.deepEqual(errorsFor(errs, 'games.g', tr), { '': 'T(a)', 'paths.pc': 'T(b)', name: 'viejo' });
@@ -121,7 +121,7 @@ test('errorsFor traduce {code,params} con el traductor y deja pasar texto antigu
 });
 
 // ---- juegos de un solo dispositivo («solo checkpoint») ----
-import { isSoloCheckpoint, removeDevice } from '../src/draft.js';
+import { isSoloCheckpoint, removeDevice } from '#src/draft.js';
 
 const SOLO = {
   max_versions: 20,

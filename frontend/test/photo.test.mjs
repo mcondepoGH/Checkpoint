@@ -1,7 +1,7 @@
 // Foto de perfil: validación y recorte (lógica pura).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { PHOTO_MAX_BYTES, PHOTO_SIZE, photoUrl, squareCrop, targetSide, validatePhotoFile } from '../src/photo.js';
+import { PHOTO_MAX_BYTES, PHOTO_SIZE, photoUrl, squareCrop, targetSide, validatePhotoFile } from '#src/photo.js';
 
 test('validatePhotoFile: tipos permitidos, vacío y tamaño máximo', () => {
   assert.equal(validatePhotoFile({ type: 'image/jpeg', size: 1000 }), null);

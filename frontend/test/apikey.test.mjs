@@ -2,8 +2,8 @@
 // El render usa esbuild (viene con Vite); si no está disponible esos tests se saltan.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { initialState, isInsecure, reduce, run } from '../src/apikey.js';
-import { ApiError } from '../src/api.js';
+import { initialState, isInsecure, reduce, run } from '#src/lib/apikey.js';
+import { ApiError } from '#src/lib/api.js';
 import { bundle } from './helpers/bundle.mjs';
 
 const KEY = 'ck_' + 'A'.repeat(43);
@@ -70,10 +70,10 @@ test('aviso de HTTP en claro solo fuera de localhost', () => {
 // ---- render ----
 const { mod: m, skip } = await bundle(`import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
-  import { i18n } from './useI18n.js';
-  import ApiKeySection from './components/ApiKeySection.jsx';
-  import ProfileMenu from './components/ProfileMenu.jsx';
-  import { copyText } from './clipboard.js';
+  import { i18n } from '#src/useI18n.js';
+  import ApiKeySection from '#src/components/ApiKeySection.jsx';
+  import ProfileMenu from '#src/components/ProfileMenu.jsx';
+  import { copyText } from '#src/lib/clipboard.js';
   export { React, renderToStaticMarkup, i18n, ApiKeySection, ProfileMenu, copyText };`, { navigator: true, tag: 'ckpt-apikey' });
 const section = (initial, lang = 'es', props = {}) => {
   m.i18n.setLocale(lang);

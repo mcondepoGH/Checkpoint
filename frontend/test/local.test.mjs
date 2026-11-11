@@ -2,12 +2,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { es } from './helpers/locales.mjs';
-import { createI18n } from '../src/i18n.js';
-import { errorText } from '../src/errors.js';
+import { createI18n } from '#src/lib/i18n.js';
+import { errorText } from '#src/lib/errors.js';
 import {
   LOCAL_DOCKER_MSG, LOCAL_ONE_MSG, baseKeyOf, blankDevice, canOfferLocal, fromConfig, idOf, isDirty, localErrors,
   localOs, localPatch, pathsOf, removeDevice, toConfig,
-} from '../src/draft.js';
+} from '#src/draft.js';
 
 const t = createI18n({ catalogs: { es }, storage: null, languages: ['es'] }).t;
 

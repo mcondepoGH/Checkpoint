@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { api, ApiError } from '../api.js';
+import { api, ApiError } from '#src/lib/api.js';
 import EmptyState from './EmptyState.jsx';
 import Modal from './Modal.jsx';
 import DiffView from './DiffView.jsx';
-import { errText, useI18n } from '../useI18n.js';
-import { ui } from '../errors.js';
-import { Alert, Button } from './ui/index.js';
+import { errText, useI18n } from '#src/useI18n.js';
+import { ui } from '#src/lib/errors.js';
+import { Alert, Button } from '#src/components/ui/index.js';
 
 const when = (iso) => iso.replace('T', ' ');
 const kb = (n) => `${Math.max(1, Math.round(n / 1024))} KB`;

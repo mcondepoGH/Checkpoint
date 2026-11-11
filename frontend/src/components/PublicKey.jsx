@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { api } from '../api.js';
-import { copyText } from '../clipboard.js';
-import { errText, useI18n } from '../useI18n.js';
-import { Alert, Button } from './ui/index.js';
-import { osSteps } from '../keyhelpSteps.js';
+import { api } from '#src/lib/api.js';
+import { copyText } from '#src/lib/clipboard.js';
+import { errText, useI18n } from '#src/useI18n.js';
+import { Alert, Button } from '#src/components/ui/index.js';
+import { osSteps } from '#src/keyhelpSteps.js';
 
 function CodeBlock({ text }) {
   const { t } = useI18n();

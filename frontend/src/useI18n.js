@@ -1,9 +1,9 @@
 // Instancia global del navegador + hook de React. Los componentes llaman a useI18n() para re-renderizar al cambiar de idioma.
 import React, { useSyncExternalStore } from 'react';
-import { createI18n } from './i18n.js';
-import { catalogs } from './locales/index.js';
-import { errorText } from './errors.js';
-import { api } from './api.js';
+import { createI18n } from '#src/lib/i18n.js';
+import { catalogs } from '#src/locales/index.js';
+import { errorText } from '#src/lib/errors.js';
+import { api } from '#src/lib/api.js';
 
 const safeStorage = () => { try { return window.localStorage; } catch { return null; } };
 

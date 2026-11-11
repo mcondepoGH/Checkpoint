@@ -1,15 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { api } from '../api.js';
-import EmptyState from '../components/EmptyState.jsx';
-import { labelOf } from '../names.js';
-import { parseRun } from '../format.js';
-import Icon from '../components/Icon.jsx';
-import { isSoloCheckpoint } from '../draft.js';
-import ConflictDialog from '../components/ConflictDialog.jsx';
-import { errText, useI18n } from '../useI18n.js';
-import { NO_WATCHES } from '../useWatches.js';
-import { clock, groupByGame, watchCardClass, watchHealth, worstHealth } from '../watch.js';
-import { Alert, Badge, Button, Checkbox, Pill, WatchBar } from '../components/ui/index.js';
+import { api } from '#src/lib/api.js';
+import EmptyState from '#src/components/EmptyState.jsx';
+import { labelOf } from '#src/lib/names.js';
+import { parseRun } from '#src/lib/format.js';
+import Icon from '#src/components/Icon.jsx';
+import { isSoloCheckpoint } from '#src/draft.js';
+import ConflictDialog from '#src/components/ConflictDialog.jsx';
+import { errText, useI18n } from '#src/useI18n.js';
+import { NO_WATCHES } from '#src/useWatches.js';
+import { clock, groupByGame, watchCardClass, watchHealth, worstHealth } from '#src/watch.js';
+import { Alert, Badge, Button, Checkbox, Pill, WatchBar } from '#src/components/ui/index.js';
 
 
 // Estados con texto propio en el distintivo: clave `sync.state.<resultado>`; otro resultado se muestra tal cual.

@@ -1,14 +1,14 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { api } from '../api.js';
-import { ui } from '../errors.js';
-import { PHOTO_ACCEPT, photoUrl, prepareAvatar, validatePhotoFile } from '../photo.js';
-import { showBadge } from '../updates.js';
-import { errText, useI18n } from '../useI18n.js';
+import { api } from '#src/lib/api.js';
+import { ui } from '#src/lib/errors.js';
+import { PHOTO_ACCEPT, photoUrl, prepareAvatar, validatePhotoFile } from '#src/photo.js';
+import { showBadge } from '#src/lib/updates.js';
+import { errText, useI18n } from '#src/useI18n.js';
 import ApiKeySection from './ApiKeySection.jsx';
 import Avatar from './Avatar.jsx';
 import Icon from './Icon.jsx';
 import LanguageSelect from './LanguageSelect.jsx';
-import { Alert, Button } from './ui/index.js';
+import { Alert, Button } from '#src/components/ui/index.js';
 
 // Perfil en la cabecera: botón circular con la foto (o la silueta) y un popover anclado debajo, por grupos con separador y rótulo:
 // identidad (foto), actualización (solo móvil), Preferencias (idioma, tema), Integración (API key plegable y enlace a la documentación de la API) y Cuenta (salir). Con una actualización disponible, en móvil (<480 px, por CSS) el aviso sale de la cabecera: el avatar lleva un punto

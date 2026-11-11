@@ -1,6 +1,6 @@
 import React from 'react';
 import EmptyState from './EmptyState.jsx';
-import { useI18n } from '../useI18n.js';
+import { useI18n } from '#src/useI18n.js';
 
 // Las secciones del diff van por id interno; `diff.names` da el nombre de cada id. Los renombrados salen como
 // un cambio del campo `name`.

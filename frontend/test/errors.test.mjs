@@ -3,9 +3,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { es } from './helpers/locales.mjs';
-import { ApiError, api } from '../src/api.js';
-import { errorText, fieldErrorText } from '../src/errors.js';
-import { createI18n } from '../src/i18n.js';
+import { ApiError, api } from '#src/lib/api.js';
+import { errorText, fieldErrorText } from '#src/lib/errors.js';
+import { createI18n } from '#src/lib/i18n.js';
 
 const { t } = createI18n({ catalogs: { es }, storage: null, languages: ['es'] });
 
@@ -111,7 +111,7 @@ test('versión restaurada y restore_failed con causa anidada', () => {
 });
 
 test('recordText: registros de scheduler/historial con code+params, fallback al texto antiguo', async () => {
-  const { recordText } = await import('../src/errors.js');
+  const { recordText } = await import('#src/lib/errors.js');
   assert.equal(recordText({ code: 'err.scheduler.busy', params: {}, message: '' }, t), 'ya en curso');
   const sum = { code: 'err.scheduler.summary', params: { causes: [
     { path: 'Zelda', code: 'err.scheduler.skipped_busy', params: {} },

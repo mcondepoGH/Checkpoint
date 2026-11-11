@@ -1,8 +1,8 @@
 import React, { useId } from 'react';
-import { useI18n } from '../useI18n.js';
+import { useI18n } from '#src/useI18n.js';
 import Field from './Field.jsx';
 import Icon from './Icon.jsx';
-import { Select } from './ui/index.js';
+import { Select } from '#src/components/ui/index.js';
 
 // Selector de idioma: "Automático" (idioma del navegador) o uno concreto, que se recuerda. Cada idioma con su propio nombre.
 // `row`: misma fila que las demás preferencias del perfil (icono + etiqueta a la izquierda, valor actual = el propio select a la derecha).

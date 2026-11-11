@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { api } from '../api.js';
+import { api } from '#src/lib/api.js';
 import Modal from './Modal.jsx';
-import { errText, useI18n } from '../useI18n.js';
-import { ui } from '../errors.js';
-import { Alert, Button } from './ui/index.js';
+import { errText, useI18n } from '#src/useI18n.js';
+import { ui } from '#src/lib/errors.js';
+import { Alert, Button } from '#src/components/ui/index.js';
 
 // Solo lectura: el YAML tal como se escribiría (conserva los comentarios del fichero actual).
 export default function YamlDialog({ config, onClose }) {

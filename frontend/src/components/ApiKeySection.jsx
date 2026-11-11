@@ -1,9 +1,9 @@
 import React, { useEffect, useId, useReducer, useRef, useState } from 'react';
-import { api as realApi } from '../api.js';
-import { initialState, isInsecure, reduce, run } from '../apikey.js';
-import { errText, useI18n } from '../useI18n.js';
+import { api as realApi } from '#src/lib/api.js';
+import { initialState, isInsecure, reduce, run } from '#src/lib/apikey.js';
+import { errText, useI18n } from '#src/useI18n.js';
 import Icon from './Icon.jsx';
-import { Alert, Button, CopyBox } from './ui/index.js';
+import { Alert, Button, CopyBox } from '#src/components/ui/index.js';
 
 // Sección «API key» del menú del perfil, plegable y cerrada por defecto (`defaultOpen`); el contenido sigue montado (solo `hidden`), así que el estado y la carga no se pierden al plegar. Generar, ver siempre (completa, ajustada en varias líneas), copiar, regenerar y revocar.
 // Una sola key por usuario; sirve solo para /api/hook/*. `initial`, `api` e `insecure` permiten pintar cada estado en pruebas sin red.

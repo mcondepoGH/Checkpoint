@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { en, es, flat } from './helpers/locales.mjs';
-import { LAUNCHERS } from '../src/launchers.js';
+import { LAUNCHERS } from '#src/launchers.js';
 
 const read = (rel) => fs.readFileSync(new URL(rel, import.meta.url), 'utf8');
 const UNVERIFIED = /sin verificar|unverified|not verified|no verificad/i;

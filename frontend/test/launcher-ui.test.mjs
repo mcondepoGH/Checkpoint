@@ -7,12 +7,12 @@ import { bundle } from './helpers/bundle.mjs';
 
 const { mod: m, skip } = await bundle(`import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
-  import { i18n } from './useI18n.js';
-  import LauncherBlock from './components/LauncherBlock.jsx';
-  import LaunchersPanel from './components/LaunchersPanel.jsx';
-  import GameCard from './components/GameCard.jsx';
-  import { Tabs, CopyBox } from './components/ui/index.js';
-  import { EntryMessage, EntryDetail, RunEntry } from './components/AutoSyncLog.jsx';
+  import { i18n } from '#src/useI18n.js';
+  import LauncherBlock from '#src/components/LauncherBlock.jsx';
+  import LaunchersPanel from '#src/components/LaunchersPanel.jsx';
+  import GameCard from '#src/components/GameCard.jsx';
+  import { Tabs, CopyBox } from '#src/components/ui/index.js';
+  import { EntryMessage, EntryDetail, RunEntry } from '#src/components/AutoSyncLog.jsx';
   export { React, renderToStaticMarkup, i18n, LauncherBlock, LaunchersPanel, GameCard, Tabs, CopyBox, EntryMessage, EntryDetail, RunEntry };`, { navigator: true, tag: 'ckpt-launcher' });
 const KEY = 'ck_AbC123xyz';
 const has = (h, s) => h.includes(s);

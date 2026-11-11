@@ -1,8 +1,8 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { labelOf } from '../names.js';
-import { useI18n } from '../useI18n.js';
-import { chipCount, groupByGame, watchHealth } from '../watch.js';
-import { WatchStatus } from './ui/index.js';
+import { labelOf } from '#src/lib/names.js';
+import { useI18n } from '#src/useI18n.js';
+import { chipCount, groupByGame, watchHealth } from '#src/watch.js';
+import { WatchStatus } from '#src/components/ui/index.js';
 
 // Contador de vigilancia en la cabecera del hub: chip «● Vigilando · N ▾» + lista desplegable (juego, dispositivo, estado).
 // Sin vigilancia no pinta nada. Popover no modal como ProfileMenu: Esc cierra y devuelve el foco al chip; pulsar fuera o sacar el foco lo cierra.

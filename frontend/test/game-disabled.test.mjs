@@ -6,11 +6,11 @@ import { bundle } from './helpers/bundle.mjs';
 
 const { mod: m, skip } = await bundle(`import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
-  import { i18n } from './useI18n.js';
-  import Sync from './pages/Sync.jsx';
-  import Versions from './pages/Versions.jsx';
-  import WatchSummary from './components/WatchSummary.jsx';
-  import LauncherBlock from './components/LauncherBlock.jsx';
+  import { i18n } from '#src/useI18n.js';
+  import Sync from '#src/pages/Sync.jsx';
+  import Versions from '#src/pages/Versions.jsx';
+  import WatchSummary from '#src/components/WatchSummary.jsx';
+  import LauncherBlock from '#src/components/LauncherBlock.jsx';
   export { React, renderToStaticMarkup, i18n, Sync, Versions, WatchSummary, LauncherBlock };`, { navigator: true, tag: 'ckpt-disabled' });
 
 const has = (h, s) => h.includes(s);

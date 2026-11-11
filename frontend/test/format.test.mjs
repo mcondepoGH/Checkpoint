@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { parseRun } from '../src/format.js';
+import { parseRun } from '#src/lib/format.js';
 
 test('parseRun: ejecución normal, simulación (dry-run) y sin datos', () => {
   assert.deepEqual(parseRun({ winner: 'pc', targets: ['hub', 'lap'], result: 'ok' }),
@@ -14,7 +14,7 @@ test('parseRun: ejecución normal, simulación (dry-run) y sin datos', () => {
 });
 
 test('constantes compartidas de resultado y formato de fecha', async () => {
-  const { RESULT_CLASS, RESULT_TEXT, ON_CONFLICT_OPTIONS, fmtDateTime } = await import('../src/format.js');
+  const { RESULT_CLASS, RESULT_TEXT, ON_CONFLICT_OPTIONS, fmtDateTime } = await import('#src/lib/format.js');
   for (const r of ['ok', 'error', 'aborted', 'skipped', 'conflict', 'partial']) {
     assert.ok(RESULT_CLASS[r] && RESULT_TEXT[r], r);
   }

@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { api } from '../api.js';
+import { api } from '#src/lib/api.js';
 import Field from './Field.jsx';
 import AutoSyncLog from './AutoSyncLog.jsx';
-import { fmtDateTime, ON_CONFLICT_OPTIONS } from '../format.js';
-import { errText, useI18n } from '../useI18n.js';
-import { ui } from '../errors.js';
-import { Alert, Badge, Button, Checkbox, Input, Select, Switch } from './ui/index.js';
+import { fmtDateTime, ON_CONFLICT_OPTIONS } from '#src/lib/format.js';
+import { errText, useI18n } from '#src/useI18n.js';
+import { ui } from '#src/lib/errors.js';
+import { Alert, Badge, Button, Checkbox, Input, Select, Switch } from '#src/components/ui/index.js';
 
 const PRESETS = [1, 6, 12, 24];
 const ON_CONFLICT_HELP = { skip: 'autosync.help.skip', newest: 'autosync.help.newest' }; // claves del catálogo

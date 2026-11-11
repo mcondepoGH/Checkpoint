@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
-import { api, ApiError } from '../api.js';
+import { api, ApiError } from '#src/lib/api.js';
 import Modal from './Modal.jsx';
 import DiffView from './DiffView.jsx';
-import { errText, useI18n } from '../useI18n.js';
-import { ui } from '../errors.js';
-import { Alert, Button } from './ui/index.js';
+import { errText, useI18n } from '#src/useI18n.js';
+import { ui } from '#src/lib/errors.js';
+import { Alert, Button } from '#src/components/ui/index.js';
 
 // Vista previa + confirmación de guardado. Ante 409 (config.yaml cambió por fuera) vuelve a calcular
 // el diff contra la versión nueva del fichero y deja confirmar o recargar.

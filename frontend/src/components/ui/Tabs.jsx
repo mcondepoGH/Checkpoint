@@ -1,5 +1,5 @@
 import React, { useId, useRef } from 'react';
-import { nextTabIndex } from '../../tabs.js';
+import { nextTabIndex } from '#src/lib/tabs.js';
 
 // Pestañas accesibles (roles tablist/tab/tabpanel; flechas, Inicio y Fin; solo la activa entra por Tab).
 // tabs: [{ id, label }]. value: id activo. onChange(id). label: aria-label del tablist. children: contenido del panel activo.

@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { en, es, flat } from './helpers/locales.mjs';
-import { osSteps } from '../src/keyhelpSteps.js';
+import { osSteps } from '#src/keyhelpSteps.js';
 
 const K = 'ssh-ed25519 AAAATESTKEY checkpoint';
 const load = (l) => Object.fromEntries(flat({ es, en }[l]));
