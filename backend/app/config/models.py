@@ -9,7 +9,7 @@ from typing import Dict, List, Optional, Tuple
 import yaml
 from pydantic_core import PydanticCustomError
 
-from ..apierror import error_body
+from ..core.errors import error_body
 from ..core.runtime import running_in_docker
 from pydantic import (BaseModel, ConfigDict, Field, StrictBool, StrictInt, ValidationError, field_validator, model_serializer,
                       model_validator)

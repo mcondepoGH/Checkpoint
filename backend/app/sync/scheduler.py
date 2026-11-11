@@ -15,7 +15,7 @@ from starlette.concurrency import run_in_threadpool
 
 from ..users import history
 from ..core import settings
-from ..apierror import describe_code, error_body
+from ..core.errors import describe_code, error_body
 from ..config.models import ON_CONFLICT
 from .engine import SyncAbort, run_sync
 

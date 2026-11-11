@@ -4,7 +4,7 @@ import threading
 import pytest
 
 from app.core import settings
-from app.apierror import ApiError, error_body
+from app.core.errors import ApiError, error_body
 from tests.test_api import CFG, PW, client, login  # noqa: F401  (fixture client)
 
 

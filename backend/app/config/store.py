@@ -16,7 +16,7 @@ from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
 from ..core import settings
-from ..apierror import error_body
+from ..core.errors import error_body
 from .models import (DEFAULT_MAX_VERSIONS, Config, atomic_write, describe, errors_to_causes, load_yaml, validate_config,
                      yaml_error)
 

@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Optional
 
 from . import settings
-from ..apierror import describe_code, error_body
+from .errors import describe_code, error_body
 from ..config.models import HOST_RE
 
 log = logging.getLogger("checkpoint")

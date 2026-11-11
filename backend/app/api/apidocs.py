@@ -13,7 +13,7 @@ from fastapi.routing import APIRoute
 from pydantic import BaseModel, Field
 
 from ..core import settings
-from ..apierror import ApiError
+from ..core.errors import ApiError
 
 TAG = "Avisos del lanzador (API key)"
 SECURITY = "bearerAuth"
@@ -47,7 +47,7 @@ class ErrorDetail(BaseModel):
 
 
 class ErrorBody(BaseModel):
-    """Solo para el esquema de documentación: las respuestas reales las construye `apierror`."""
+    """Solo para el esquema de documentación: las respuestas reales las construye `core.errors`."""
     detail: ErrorDetail
 
 

@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Iterable, List
 
 from ..core import bootstrap, settings
-from ..apierror import describe_code, error_body
+from ..core.errors import describe_code, error_body
 from ..config.models import PATH_CHARS_RE, PROC_RE, Device
 from ..core.runtime import running_in_docker
 

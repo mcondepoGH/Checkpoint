@@ -15,7 +15,7 @@ from typing import Callable, Dict, List, Optional
 
 from . import locking
 from ..core import settings
-from ..apierror import describe_code, error_body
+from ..core.errors import describe_code, error_body
 from ..config.models import ON_CONFLICT, Config, ConfigError, resolve_ref
 from ..core.redact import redact
 from .transport import Transport, TransportError, get_transport

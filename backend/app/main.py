@@ -22,7 +22,7 @@ from .users import history
 from .core import runtime
 from .sync import engine as sync_mod
 from .core import updates
-from .apierror import ApiError, describe_code, error_body, error_response
+from .core.errors import ApiError, describe_code, error_body, error_response
 from .api.auth import Auth
 from .config.models import Config, ConfigError, Device, pyd_body, describe, normalize_path, resolve_ref, validate_config
 from .config.store import Conflict, ConfigStore, InvalidConfig, parse_text, config_events_gen, diff_configs, render_yaml
