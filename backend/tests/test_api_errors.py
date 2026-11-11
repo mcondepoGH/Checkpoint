@@ -2,7 +2,6 @@
 
 import threading
 
-import pytest
 
 from app.core import settings
 from app.core.errors import ApiError, error_body

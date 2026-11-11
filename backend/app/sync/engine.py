@@ -23,7 +23,8 @@ from .decide import CLOCK_TOLERANCE, decide, pick_resolution, valid_resolution
 from .errors import SyncAbort
 from .fingerprint import Fingerprint, fingerprint, relfiles
 from .transport import Transport, TransportError, get_transport
-from .versions import VERSION_RE, _fmt, _new_version_dir, _replace_dir, count_versions, list_versions, prune_versions
+from .versions import VERSION_RE, _fmt, _new_version_dir, _replace_dir, prune_versions
+from .versions import count_versions as count_versions, list_versions as list_versions  # reexport (API pública)
 
 slog = logging.getLogger(
     "checkpoint.sync"

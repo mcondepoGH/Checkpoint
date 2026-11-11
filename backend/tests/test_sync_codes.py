@@ -7,8 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from app.core import bootstrap, settings
-from app.config.models import Config
+from app.core import bootstrap
 from app.sync.engine import SyncAbort, resolve_game, run_sync
 from app.sync.transport import PosixTransport, TransportError, local_folder_status, local_path
 from fakes import LocalTransport

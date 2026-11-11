@@ -2,7 +2,6 @@
 
 import asyncio
 
-import pytest
 
 from app.sync.watcher import Watcher
 

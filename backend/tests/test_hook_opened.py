@@ -1,6 +1,5 @@
 """POST /api/hook/{game}/opened: sync previo bloqueante con Bearer. Dispositivos «Este equipo» reales sobre tmpdirs."""
 
-import json
 import os
 import threading
 import time

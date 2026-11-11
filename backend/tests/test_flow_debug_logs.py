@@ -4,7 +4,6 @@ Con INFO solo cambia el log `hook ... resultado=` (ahora con `code=` y `duració
 import logging
 import re
 
-import pytest
 
 from app.users import history
 from test_hook_close import cl, hist, hopen, mk, wait_for, watches  # noqa: F401 (fixtures)

@@ -12,7 +12,7 @@ from app.sync import locking
 from app.core import settings
 from app.api.auth import Auth
 from app.main import create_app
-from test_hook_opened import Env, PW, code
+from test_hook_opened import Env, PW
 
 
 class Proc:
