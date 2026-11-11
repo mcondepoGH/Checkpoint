@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from app import bootstrap, settings
+from app.core import bootstrap, settings
 from app.config import Config
 from app.sync import SyncAbort, resolve_game, run_sync
 from app.transport import PosixTransport, TransportError, local_folder_status, local_path
@@ -26,7 +26,7 @@ def has(code):
 
 
 def test_codes_in_es_json():
-    src = "".join((APP / f).read_text() for f in ("sync.py", "transport.py", "bootstrap.py"))
+    src = "".join((APP / f).read_text() for f in ("sync.py", "transport.py", "core/bootstrap.py"))
     src += (APP / "main.py").read_text()
     codes = set(re.findall(r'"(err\.(?:sync|transport|bootstrap)\.[a-z_]+)"', src))
     codes.discard("err.sync.conflict_")  # prefijo: los cinco motivos se añaden a mano

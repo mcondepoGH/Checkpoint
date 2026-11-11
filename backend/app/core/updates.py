@@ -78,7 +78,7 @@ def format_semver(s) -> Optional[str]:
 def _version_files():
     here = Path(__file__).resolve()
     # Docker: /app/VERSION (junto a app/). Nativo: VERSION en la raíz del repo.
-    return [here.parents[1] / "VERSION", here.parents[2] / "VERSION"]
+    return [here.parents[2] / "VERSION", here.parents[3] / "VERSION"]
 
 
 def installed_version() -> str:

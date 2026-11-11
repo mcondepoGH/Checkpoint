@@ -6,7 +6,7 @@ import pytest
 import yaml
 from fastapi.testclient import TestClient
 
-from app import settings
+from app.core import settings
 from app.auth import Auth
 from app.main import create_app
 from app.transport import LocalDeviceTransport
@@ -136,7 +136,7 @@ def test_test_local_no_toca_ssh(client, monkeypatch):
     def boom(*a, **k):
         raise AssertionError("no debe usar SSH")
     monkeypatch.setattr("app.main.get_transport", boom)
-    monkeypatch.setattr("app.bootstrap.ensure_host_key", boom)
+    monkeypatch.setattr("app.core.bootstrap.ensure_host_key", boom)
     monkeypatch.setattr("app.transport._run", boom)
     r = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"},
                                                 "paths": [str(client.tmp)]}).json()
@@ -197,7 +197,7 @@ def test_test_local_en_docker_rechazado(client, monkeypatch):
 
 
 def test_test_remoto_sigue_igual(client, monkeypatch):
-    monkeypatch.setattr("app.bootstrap.ensure_host_key", lambda h, p: False)
+    monkeypatch.setattr("app.core.bootstrap.ensure_host_key", lambda h, p: False)
 
     class T:
         def __init__(self, d):

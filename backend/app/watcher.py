@@ -7,7 +7,7 @@ import logging
 import time
 from typing import Awaitable, Callable, Dict, List, Optional
 
-from . import settings
+from .core import settings
 from .scheduler import iso, utcnow
 
 log = logging.getLogger("checkpoint.watcher")

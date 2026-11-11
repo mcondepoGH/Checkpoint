@@ -6,7 +6,8 @@ import pytest
 import yaml
 from fastapi.testclient import TestClient
 
-from app import history, settings
+from app import history
+from app.core import settings
 from app.auth import Auth
 from app.main import create_app
 from app.scheduler import Scheduler

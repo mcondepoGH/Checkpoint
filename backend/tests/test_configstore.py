@@ -5,7 +5,8 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from app import configstore, settings
+from app import configstore
+from app.core import settings
 from app.config import parse_config, validate_config
 from app.configstore import Conflict, ConfigStore, InvalidConfig, config_events_gen, diff_configs
 

@@ -6,7 +6,7 @@ import argparse
 import sys
 from datetime import datetime
 
-from . import runtime, settings
+from .core import runtime, settings
 from .config import load_config
 from .sync import SyncAbort, list_versions, resolve_game, run_sync, valid_resolution
 

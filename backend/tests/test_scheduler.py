@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app import settings
+from app.core import settings
 from app.scheduler import Scheduler, compute_next_run, iso, validate_settings
 from app.sync import SyncAbort
 

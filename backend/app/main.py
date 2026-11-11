@@ -16,17 +16,17 @@ from starlette.concurrency import run_in_threadpool
 from . import apidocs
 from . import apikey
 from . import avatar
-from . import settings
-from . import bootstrap
+from .core import settings
+from .core import bootstrap
 from . import history
-from . import runtime
+from .core import runtime
 from . import sync as sync_mod
-from . import updates
+from .core import updates
 from .apierror import ApiError, describe_code, error_body, error_response
 from .auth import Auth
 from .config import Config, ConfigError, Device, pyd_body, describe, normalize_path, resolve_ref, validate_config
 from .configstore import Conflict, ConfigStore, InvalidConfig, parse_text, config_events_gen, diff_configs, render_yaml
-from .redact import redact
+from .core.redact import redact
 from .scheduler import Scheduler, iso, utcnow
 from .watcher import Watcher, _log_note
 from .sync import SyncAbort, count_versions, list_versions, restore_version, run_sync, valid_resolution

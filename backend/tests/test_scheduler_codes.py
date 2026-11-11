@@ -8,7 +8,8 @@ from types import SimpleNamespace
 
 import pytest
 
-from app import history, settings
+from app import history
+from app.core import settings
 from app.scheduler import Scheduler, validate_settings
 from app.sync import SyncAbort
 

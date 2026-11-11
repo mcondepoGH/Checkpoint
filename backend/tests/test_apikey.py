@@ -5,7 +5,8 @@ import stat
 import pytest
 from fastapi.testclient import TestClient
 
-from app import apikey, avatar, settings
+from app import apikey, avatar
+from app.core import settings
 from app.auth import Auth
 from app.main import create_app
 

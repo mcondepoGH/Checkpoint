@@ -194,7 +194,7 @@ def test_dos_dispositivos_sin_cambios_automatico_repone_la_ruta_ausente(tmp_path
 
 def test_scheduler_ciclo_omite_y_queda_en_el_resumen(tmp_path, monkeypatch):
     from types import SimpleNamespace
-    from app import settings
+    from app.core import settings
     from app.scheduler import Scheduler
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path / "data")
     e = Env(tmp_path)

@@ -3,7 +3,7 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from app import settings, updates
+from app.core import settings, updates
 from app.auth import Auth
 from app.main import create_app
 

@@ -10,7 +10,7 @@ import yaml
 from pydantic_core import PydanticCustomError
 
 from .apierror import error_body
-from .runtime import running_in_docker
+from .core.runtime import running_in_docker
 from pydantic import (BaseModel, ConfigDict, Field, StrictBool, StrictInt, ValidationError, field_validator, model_serializer,
                       model_validator)
 

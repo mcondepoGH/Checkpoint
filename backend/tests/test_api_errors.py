@@ -3,7 +3,7 @@ import threading
 
 import pytest
 
-from app import settings
+from app.core import settings
 from app.apierror import ApiError, error_body
 from tests.test_api import CFG, PW, client, login  # noqa: F401  (fixture client)
 
@@ -111,7 +111,7 @@ def test_dispositivo_invalido_y_paths(client):
 
 def test_clave_ssh_no_generada(client, monkeypatch):
     login(client)
-    from app import bootstrap
+    from app.core import bootstrap
     monkeypatch.setattr(bootstrap, "public_key", lambda: None)
     r = client.get("/api/ssh/public-key")
     assert r.status_code == 404 and det(r) == ("err.main.ssh_key_missing", {})

@@ -14,7 +14,7 @@ def _run(code, **env):
 
 
 def test_removed_variables_are_ignored(tmp_path):
-    r = _run("from app import settings, scheduler, updates\n"
+    r = _run("from app import scheduler\nfrom app.core import settings, updates\n"
              "print(settings.CONFIG_PATH, settings.DATA_DIR, settings.SSH_TIMEOUT)\n"
              "print(scheduler.default_settings())\n"
              "print(updates.REPO, updates.UpdateChecker().channel())",
@@ -29,5 +29,5 @@ def test_removed_variables_are_ignored(tmp_path):
 
 
 def test_session_hours_invalid_is_clear_error():
-    r = _run("from app import settings", CHECKPOINT_SESSION_HOURS="mucho")
+    r = _run("from app.core import settings", CHECKPOINT_SESSION_HOURS="mucho")
     assert r.returncode != 0 and "CHECKPOINT_SESSION_HOURS" in r.stderr

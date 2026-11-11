@@ -5,7 +5,8 @@ import json
 import pytest
 import yaml
 
-from app import history, settings
+from app import history
+from app.core import settings
 from app.config import parse_config, validate_config
 from app.scheduler import Scheduler, validate_settings
 from app.sync import (SyncAbort, decide, fingerprint, list_versions, load_baseline, pick_resolution, run_sync,

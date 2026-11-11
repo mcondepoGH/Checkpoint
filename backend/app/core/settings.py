@@ -36,7 +36,7 @@ def _static_default() -> str:
     """Docker: /app/static. Nativo: static/ junto a app/ si existe; si no, frontend/dist del proyecto."""
     if running_in_docker():
         return "/app/static"
-    backend = Path(__file__).resolve().parent.parent
+    backend = Path(__file__).resolve().parents[2]
     for cand in (backend / "static", backend.parent / "frontend" / "dist"):
         if cand.is_dir():
             return str(cand)

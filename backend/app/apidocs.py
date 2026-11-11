@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.routing import APIRoute
 from pydantic import BaseModel, Field
 
-from . import settings
+from .core import settings
 from .apierror import ApiError
 
 TAG = "Avisos del lanzador (API key)"

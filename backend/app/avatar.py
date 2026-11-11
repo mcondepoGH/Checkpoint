@@ -9,7 +9,7 @@ import tempfile
 from pathlib import Path
 from typing import Optional, Tuple
 
-from . import settings
+from .core import settings
 
 MAX_BYTES = 2 * 1024 * 1024  # misma cota que la entrada en el navegador
 DIR = "profile"

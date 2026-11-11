@@ -8,7 +8,8 @@ from types import SimpleNamespace
 import pytest
 import yaml
 
-from app import cli, history, settings
+from app import cli, history
+from app.core import settings
 from app.config import ConfigError, load_config, parse_config, resolve_ref, validate_config
 from app.configstore import diff_configs, render_yaml
 from app.scheduler import Scheduler

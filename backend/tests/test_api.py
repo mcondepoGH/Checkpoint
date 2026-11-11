@@ -2,10 +2,10 @@ import bcrypt
 import pytest
 from fastapi.testclient import TestClient
 
-from app import settings
+from app.core import settings
 from app.auth import Auth
 from app.main import create_app
-from app.redact import redact
+from app.core.redact import redact
 
 PW = "correct horse"
 CFG = {"devices": {"a": {"name": "Equipo a", "host": "10.0.0.1", "user": "u", "os": "linux"},

@@ -6,7 +6,8 @@ import pytest
 import yaml
 from fastapi.testclient import TestClient
 
-from app import history, locking, settings
+from app import history, locking
+from app.core import settings
 from app.auth import Auth
 from app.main import create_app
 from test_hook_opened import Env, PW, code

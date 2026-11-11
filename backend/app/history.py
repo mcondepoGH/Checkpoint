@@ -10,8 +10,8 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 
-from . import settings
-from .redact import redact
+from .core import settings
+from .core.redact import redact
 
 FILE = "scheduler-history.jsonl"
 MAX_ENTRIES = 50

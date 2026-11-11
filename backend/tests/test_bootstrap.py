@@ -4,7 +4,7 @@ import subprocess
 import pytest
 from fastapi.testclient import TestClient
 
-from app import bootstrap, settings
+from app.core import bootstrap, settings
 from app.auth import Auth
 from app.config import load_config
 from app.main import create_app
@@ -172,7 +172,7 @@ def test_create_app_without_vars_fails(monkeypatch):
 
 
 def test_savesync_prefix_is_ignored(monkeypatch):
-    from app import settings
+    from app.core import settings
     for k in ("USER", "PASSWORD", "PORT"):
         monkeypatch.delenv("CHECKPOINT_" + k, raising=False)
     monkeypatch.setenv("SAVESYNC_PORT", "9000")
@@ -186,7 +186,7 @@ def test_savesync_prefix_is_ignored(monkeypatch):
 
 
 def test_password_not_logged(monkeypatch, caplog, capsys):
-    from app.redact import redact
+    from app.core.redact import redact
     monkeypatch.setenv("CHECKPOINT_USER", "admin")
     monkeypatch.setenv("CHECKPOINT_PASSWORD", "claro-123456")
     with caplog.at_level("DEBUG"):

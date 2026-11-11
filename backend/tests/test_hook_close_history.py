@@ -7,7 +7,8 @@ import threading
 import pytest
 import yaml
 
-from app import history, locking, settings
+from app import history, locking
+from app.core import settings
 from test_hook_close import cl, hist, hopen, mk, wait_for, watches  # noqa: F401 (fixtures)
 from test_hook_opened import PW
 

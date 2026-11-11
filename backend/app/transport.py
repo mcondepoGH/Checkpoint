@@ -17,10 +17,10 @@ import uuid
 from pathlib import Path
 from typing import Iterable, List
 
-from . import bootstrap, settings
+from .core import bootstrap, settings
 from .apierror import describe_code, error_body
 from .config import PATH_CHARS_RE, PROC_RE, Device
-from .runtime import running_in_docker
+from .core.runtime import running_in_docker
 
 log = logging.getLogger("checkpoint.transport")  # DEBUG: duración de cada comando ssh/rsync (nunca args, claves ni contenidos)
 
