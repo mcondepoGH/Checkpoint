@@ -34,3 +34,8 @@ venv/
 
 # Secreto del hub (cifra la API key; vive fuera de data/)
 config/hub.secret
+
+# Cobertura
+.coverage
+coverage/
+frontend/coverage/
