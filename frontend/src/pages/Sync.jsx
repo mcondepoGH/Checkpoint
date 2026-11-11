@@ -4,7 +4,7 @@ import EmptyState from '#src/components/ui/EmptyState.jsx';
 import { labelOf } from '#src/lib/names.js';
 import { parseRun } from '#src/lib/format.js';
 import Icon from '#src/components/ui/Icon.jsx';
-import { isSoloCheckpoint } from '#src/draft.js';
+import { isSoloCheckpoint } from '#src/components/config/draft.js';
 import ConflictDialog from '#src/components/ConflictDialog.jsx';
 import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { NO_WATCHES } from '#src/hooks/useWatches.js';

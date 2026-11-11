@@ -8,7 +8,7 @@ import { bundle } from './helpers/bundle.mjs';
 
 const { mod, skip } = await bundle(`import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
-  import DeviceCard from '#src/components/DeviceCard.jsx';
+  import DeviceCard from '#src/components/config/DeviceCard.jsx';
   export { React, renderToStaticMarkup, DeviceCard };`, { tag: 'ckpt-render' });
 
 const dev = (o = {}) => ({ key: 'k1', id: 'pc-1a2b3c4d', name: 'PC', orig: 'PC', local: false, host: '192.0.2.5', port: '22', user: 'usuario', os: 'linux', ...o });

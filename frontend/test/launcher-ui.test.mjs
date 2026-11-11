@@ -10,7 +10,7 @@ const { mod: m, skip } = await bundle(`import React from 'react';
   import { i18n } from '#src/hooks/useI18n.js';
   import LauncherBlock from '#src/components/LauncherBlock.jsx';
   import LaunchersPanel from '#src/components/LaunchersPanel.jsx';
-  import GameCard from '#src/components/GameCard.jsx';
+  import GameCard from '#src/components/config/GameCard.jsx';
   import { Tabs, CopyBox } from '#src/components/ui/index.js';
   import { EntryMessage, EntryDetail, RunEntry } from '#src/components/AutoSyncLog.jsx';
   export { React, renderToStaticMarkup, i18n, LauncherBlock, LaunchersPanel, GameCard, Tabs, CopyBox, EntryMessage, EntryDetail, RunEntry };`, { navigator: true, tag: 'ckpt-launcher' });

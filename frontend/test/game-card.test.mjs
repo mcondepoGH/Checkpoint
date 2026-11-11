@@ -8,7 +8,7 @@ import { bundle, SRC } from './helpers/bundle.mjs';
 
 const { mod, skip } = await bundle(`import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
-  import GameCard from '#src/components/GameCard.jsx';
+  import GameCard from '#src/components/config/GameCard.jsx';
   export { React, renderToStaticMarkup, GameCard };`, { tag: 'ckpt-render' });
 
 const game = (o = {}) => ({ key: 'g1', id: 'juego-1a2b3c4d', salt: 'a', name: 'Juego', a: 'd1', b: 'd2', pathA: '/a', pathB: '/b', process: '', keep: '', onConflict: '', ...o });

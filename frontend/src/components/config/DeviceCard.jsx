@@ -1,6 +1,6 @@
 import React, { useId } from 'react';
 import Field from '#src/components/ui/Field.jsx';
-import { LOCAL_DOCKER_MSG, LOCAL_HELP, LOCAL_LABEL, NAME_HINT, NAME_MAX, OS_OPTIONS, localPatch } from '#src/draft.js';
+import { LOCAL_DOCKER_MSG, LOCAL_HELP, LOCAL_LABEL, NAME_HINT, NAME_MAX, OS_OPTIONS, localPatch } from './draft.js';
 import IdNote from './IdNote.jsx';
 import { fieldErrorText } from '#src/lib/errors.js';
 import { errText, useI18n } from '#src/hooks/useI18n.js';

@@ -7,7 +7,7 @@ import { errorText } from '#src/lib/errors.js';
 import {
   LOCAL_DOCKER_MSG, LOCAL_ONE_MSG, baseKeyOf, blankDevice, canOfferLocal, fromConfig, idOf, isDirty, localErrors,
   localOs, localPatch, pathsOf, removeDevice, toConfig,
-} from '#src/draft.js';
+} from '#src/components/config/draft.js';
 
 const t = createI18n({ catalogs: { es }, storage: null, languages: ['es'] }).t;
 
