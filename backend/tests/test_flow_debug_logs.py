@@ -82,7 +82,7 @@ def test_no_secrets_in_flow_logs(cl, caplog):
 
 def test_transport_run_logs_duration_not_args(caplog, monkeypatch):
     import subprocess
-    from app import transport
+    from app.sync import transport
     monkeypatch.setattr(subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(a[0], 0, b"", b""))
     caplog.set_level(logging.DEBUG, logger="checkpoint.transport")
     transport._run(["ssh", "-i", "/clave/privada", "u@h", "true"])

@@ -4,7 +4,7 @@ import os
 import pytest
 
 from app.config.models import parse_config
-from app.sync import decide, fingerprint, list_versions, load_baseline, restore_version, run_sync, save_baseline
+from app.sync.engine import decide, fingerprint, list_versions, load_baseline, restore_version, run_sync, save_baseline
 from fakes import LocalTransport
 
 CFG = parse_config({
@@ -117,7 +117,7 @@ def test_dry_run_no_toca_nada(env):
 
 
 def test_decide_un_dispositivo():
-    from app.sync import Fingerprint
+    from app.sync.engine import Fingerprint
     a, b, vacio = Fingerprint("A", 1, 1), Fingerprint("B", 1, 1), Fingerprint(None, 0, 0)
     assert decide({"pc": a, "hub": a}, {})["kind"] == "same"
     assert decide({"pc": a, "hub": vacio}, {})["winner"] == "pc"  # primera vez
@@ -130,7 +130,7 @@ def test_decide_un_dispositivo():
 # ---------- protección: partida local ausente (ruta inexistente) con hub con datos ----------
 import shutil
 
-from app.sync import run_sync as _rs
+from app.sync.engine import run_sync as _rs
 
 
 def _auto(env, **kw):
@@ -195,7 +195,7 @@ def test_dos_dispositivos_sin_cambios_automatico_repone_la_ruta_ausente(tmp_path
 def test_scheduler_ciclo_omite_y_queda_en_el_resumen(tmp_path, monkeypatch):
     from types import SimpleNamespace
     from app.core import settings
-    from app.scheduler import Scheduler
+    from app.sync.scheduler import Scheduler
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path / "data")
     e = Env(tmp_path)
     e.seed("x")
@@ -210,7 +210,7 @@ def test_scheduler_ciclo_omite_y_queda_en_el_resumen(tmp_path, monkeypatch):
 
 
 def test_juego_desactivado_aborta_incluso_en_dry_run(env):
-    from app.sync import SyncAbort
+    from app.sync.engine import SyncAbort
     cfg = parse_config({
         "devices": {"pc": {"name": "pc", "host": "h1", "user": "u", "os": "windows"}},
         "games": {"g": {"name": "g", "devices": ["pc"], "paths": {"pc": "C:/Saves/g"}, "enabled": False}},

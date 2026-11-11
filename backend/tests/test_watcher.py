@@ -3,7 +3,7 @@ import asyncio
 
 import pytest
 
-from app.watcher import Watcher
+from app.sync.watcher import Watcher
 
 POLL, SETTLE, FIRST = 15, 10, 120
 

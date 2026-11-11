@@ -8,7 +8,7 @@ from datetime import datetime
 
 from .core import runtime, settings
 from .config.models import load_config
-from .sync import SyncAbort, list_versions, resolve_game, run_sync, valid_resolution
+from .sync.engine import SyncAbort, list_versions, resolve_game, run_sync, valid_resolution
 
 
 def serve(host=None, port=None) -> int:

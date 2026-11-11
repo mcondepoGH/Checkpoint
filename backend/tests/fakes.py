@@ -5,7 +5,7 @@ from pathlib import Path
 import yaml
 
 from app.config.models import atomic_write
-from app.transport import Transport, TransportError
+from app.sync.transport import Transport, TransportError
 
 
 def save_config(path, cfg):

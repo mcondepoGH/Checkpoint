@@ -14,10 +14,10 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
 from . import locking
-from .core import settings
-from .apierror import describe_code, error_body
-from .config.models import ON_CONFLICT, Config, ConfigError, resolve_ref
-from .core.redact import redact
+from ..core import settings
+from ..apierror import describe_code, error_body
+from ..config.models import ON_CONFLICT, Config, ConfigError, resolve_ref
+from ..core.redact import redact
 from .transport import Transport, TransportError, get_transport
 
 slog = logging.getLogger("checkpoint.sync")  # DEBUG: trazas de run_sync (rutas y nº de ficheros, nunca contenidos ni secretos)

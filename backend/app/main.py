@@ -20,17 +20,17 @@ from .core import settings
 from .core import bootstrap
 from .users import history
 from .core import runtime
-from . import sync as sync_mod
+from .sync import engine as sync_mod
 from .core import updates
 from .apierror import ApiError, describe_code, error_body, error_response
 from .auth import Auth
 from .config.models import Config, ConfigError, Device, pyd_body, describe, normalize_path, resolve_ref, validate_config
 from .config.store import Conflict, ConfigStore, InvalidConfig, parse_text, config_events_gen, diff_configs, render_yaml
 from .core.redact import redact
-from .scheduler import Scheduler, iso, utcnow
-from .watcher import Watcher, _log_note
-from .sync import SyncAbort, count_versions, list_versions, restore_version, run_sync, valid_resolution
-from .transport import TransportError, get_transport, local_folder_status
+from .sync.scheduler import Scheduler, iso, utcnow
+from .sync.watcher import Watcher, _log_note
+from .sync.engine import SyncAbort, count_versions, list_versions, restore_version, run_sync, valid_resolution
+from .sync.transport import TransportError, get_transport, local_folder_status
 
 api_log = logging.getLogger("checkpoint.api")  # DEBUG: una línea por petición /api y detalle por endpoint (sin secretos)
 COOKIE = "checkpoint_session"

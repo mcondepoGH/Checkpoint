@@ -195,7 +195,7 @@ def test_ejecucion_en_curso_409(client, monkeypatch):
 
 
 def test_restaurar_version_falla_400(client, monkeypatch):
-    from app.sync import SyncAbort
+    from app.sync.engine import SyncAbort
     login(client)
     cfg = {**CFG, "games": {"g": GAME("G")}}
     put_cfg(client, cfg)

@@ -6,10 +6,10 @@ import time
 
 import pytest
 
-from app import transport as T
+from app.sync import transport as T
 from app.config.models import parse_config
-from app.sync import fingerprint, relfiles
-from app.transport import LocalDeviceTransport, TransportError, get_transport, local_folder_status, local_path
+from app.sync.engine import fingerprint, relfiles
+from app.sync.transport import LocalDeviceTransport, TransportError, get_transport, local_folder_status, local_path
 
 root_only = pytest.mark.skipif(hasattr(os, "geteuid") and os.geteuid() == 0, reason="root ignora permisos")
 

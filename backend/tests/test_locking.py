@@ -6,8 +6,8 @@ import threading
 
 import pytest
 
-from app import locking
-from app.locking import LockBusy, acquire, locked
+from app.sync import locking
+from app.sync.locking import LockBusy, acquire, locked
 
 
 @pytest.mark.parametrize("backend", [None, "flock", "excl"])
@@ -45,9 +45,9 @@ def test_flock_compatible_con_fcntl_directo(tmp_path):
 
 def test_flock_entre_procesos(tmp_path):
     p = tmp_path / "g.lock"
-    code = ("import sys,time;sys.path.insert(0,%r);from app.locking import acquire;"
+    code = ("import sys,time;sys.path.insert(0,%r);from app.sync.locking import acquire;"
             "h=acquire(%r,'flock');print('ok',flush=True);time.sleep(30)" % (
-                os.path.dirname(os.path.dirname(locking.__file__)), str(p)))
+                os.path.dirname(os.path.dirname(os.path.dirname(locking.__file__))), str(p)))
     c = subprocess.Popen([sys.executable, "-c", code], stdout=subprocess.PIPE)
     try:
         assert c.stdout.readline().strip() == b"ok"
@@ -154,7 +154,7 @@ def test_backend_msvcrt_simulado(monkeypatch, tmp_path):
 
 
 def test_sync_usa_el_lock_portable_y_aborta_si_ocupado(tmp_path):
-    from app.sync import SyncAbort, _game_lock
+    from app.sync.engine import SyncAbort, _game_lock
     with _game_lock(tmp_path, "g"):
         with pytest.raises(SyncAbort, match="in_progress"):
             with _game_lock(tmp_path, "g"):

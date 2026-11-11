@@ -8,10 +8,10 @@ import yaml
 from app.users import history
 from app.core import settings
 from app.config.models import parse_config, validate_config
-from app.scheduler import Scheduler, validate_settings
-from app.sync import (SyncAbort, decide, fingerprint, list_versions, load_baseline, pick_resolution, run_sync,
+from app.sync.scheduler import Scheduler, validate_settings
+from app.sync.engine import (SyncAbort, decide, fingerprint, list_versions, load_baseline, pick_resolution, run_sync,
                       save_baseline)
-from app.transport import TransportError
+from app.sync.transport import TransportError
 from fakes import LocalTransport
 from test_sync import CFG, Env, read
 
@@ -383,7 +383,7 @@ def test_partial_failure_keeps_baseline_and_recovers(env):
 
 # ---- decide / pick_resolution (puro) ----
 def test_decide_pure():
-    from app.sync import Fingerprint
+    from app.sync.engine import Fingerprint
     fp = lambda h, m=1: Fingerprint(h, m, 1 if h else 0, 1)  # noqa: E731
     assert decide({"a": fp("x"), "hub": fp("x")}, {})["kind"] == "same"
     assert decide({"a": fp("y"), "hub": fp("x")}, {"a": "x", "hub": "x"}) == {"kind": "winner", "winner": "a"}
@@ -502,7 +502,7 @@ def test_cli_conflict_exit_code(env, monkeypatch, capsys):
     conflict(env)
     monkeypatch.setattr(C, "load_config", lambda p: CFG)
     monkeypatch.setattr(settings, "DATA_DIR", env.data)
-    import app.sync as S
+    from app.sync import engine as S
     monkeypatch.setattr(S, "get_transport", lambda dev: env.tr()["pc" if dev.host == "h1" else "laptop"])
     assert C.main(["sync", "g"]) == 3
     err = capsys.readouterr().err

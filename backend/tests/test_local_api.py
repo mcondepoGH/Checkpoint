@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from app.core import settings
 from app.auth import Auth
 from app.main import create_app
-from app.transport import LocalDeviceTransport
+from app.sync.transport import LocalDeviceTransport
 from fakes import LocalTransport
 
 PW = "correct horse"
@@ -137,7 +137,7 @@ def test_test_local_no_toca_ssh(client, monkeypatch):
         raise AssertionError("no debe usar SSH")
     monkeypatch.setattr("app.main.get_transport", boom)
     monkeypatch.setattr("app.core.bootstrap.ensure_host_key", boom)
-    monkeypatch.setattr("app.transport._run", boom)
+    monkeypatch.setattr("app.sync.transport._run", boom)
     r = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"},
                                                 "paths": [str(client.tmp)]}).json()
     assert r["ok"]
@@ -220,7 +220,7 @@ def papi(client, monkeypatch):
 
     def gt(dev):
         return orig(dev) if dev.local else LocalTransport(roots[dev.host])
-    monkeypatch.setattr("app.sync.get_transport", gt)
+    monkeypatch.setattr("app.sync.engine.get_transport", gt)
     (t / "pc saves").mkdir()
     (t / "laptop/home/usuario/g").mkdir(parents=True)
     return client
@@ -294,7 +294,7 @@ def test_remoto_offline_via_api_con_local(papi, monkeypatch):
 
     def gt(dev):
         return LocalDeviceTransport(dev) if dev.local else LocalTransport(t / "laptop", down=True)
-    monkeypatch.setattr("app.sync.get_transport", gt)
+    monkeypatch.setattr("app.sync.engine.get_transport", gt)
     w(t / "pc saves/s.sav", "pc1", 1000)
     st = wait_run(papi, papi.post("/api/sync/g1", json={}).json()["run_id"])
     assert st["result"] == "ok" and st["offline"] == [LAP]

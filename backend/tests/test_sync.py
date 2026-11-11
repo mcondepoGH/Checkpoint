@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 
 from app.config.models import parse_config
-from app.sync import SyncAbort, fingerprint, list_versions, load_baseline, restore_version, run_sync, save_baseline
+from app.sync.engine import SyncAbort, fingerprint, list_versions, load_baseline, restore_version, run_sync, save_baseline
 from fakes import LocalTransport
 
 CFG = parse_config({
@@ -227,7 +227,7 @@ def test_no_prune_if_sync_fails(env):
 
 
 def test_no_prune_if_error_after_version_saved(env, monkeypatch):
-    import app.sync as S
+    from app.sync import engine as S
     for n in OLD:
         _mkver(env, n)
     _conflict(env)
@@ -251,7 +251,7 @@ def test_prune_never_touches_other_games_or_hub(env):
 
 
 def test_prune_numeric_suffix_order(env):
-    from app.sync import prune_versions
+    from app.sync.engine import prune_versions
     for n in ["2026-01-01_100000", "2026-01-01_100000-2", "2026-01-01_100000-10", "2026-01-01_100000-1"]:
         _mkver(env, n)
     done = prune_versions(env.data, "g", 2)
@@ -260,7 +260,7 @@ def test_prune_numeric_suffix_order(env):
 
 
 def test_prune_protects_new_version_and_min_one(env):
-    from app.sync import prune_versions
+    from app.sync.engine import prune_versions
     for n in OLD:
         _mkver(env, n)
     # aunque el reloj fuera atrás y la "nueva" fuese la más antigua, no se borra
@@ -272,7 +272,7 @@ def test_prune_protects_new_version_and_min_one(env):
 
 
 def test_prune_stays_inside_game_dir_ignores_symlinks(env, tmp_path):
-    from app.sync import prune_versions
+    from app.sync.engine import prune_versions
     outside = tmp_path / "outside" / "2026-01-01_100000"
     (outside / "pc").mkdir(parents=True)
     (outside / "pc" / "s.sav").write_text("precious")

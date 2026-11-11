@@ -5,8 +5,8 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from app.core import settings
-from app.scheduler import Scheduler, compute_next_run, iso, validate_settings
-from app.sync import SyncAbort
+from app.sync.scheduler import Scheduler, compute_next_run, iso, validate_settings
+from app.sync.engine import SyncAbort
 
 NOW = datetime(2026, 1, 1, 12, 0, tzinfo=timezone.utc)
 CUR = {"enabled": False, "interval_hours": 24.0, "run_on_start": False}

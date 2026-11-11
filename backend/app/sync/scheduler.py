@@ -13,11 +13,11 @@ from typing import Callable, Optional
 
 from starlette.concurrency import run_in_threadpool
 
-from .users import history
-from .core import settings
-from .apierror import describe_code, error_body
-from .config.models import ON_CONFLICT
-from .sync import SyncAbort, run_sync
+from ..users import history
+from ..core import settings
+from ..apierror import describe_code, error_body
+from ..config.models import ON_CONFLICT
+from .engine import SyncAbort, run_sync
 
 MIN_HOURS, MAX_HOURS = 0.25, 168.0
 FILE = "scheduler.json"

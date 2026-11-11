@@ -7,7 +7,7 @@ import yaml
 from fastapi.testclient import TestClient
 
 from app.users import history
-from app import locking
+from app.sync import locking
 from app.core import settings
 from app.auth import Auth
 from app.main import create_app
@@ -25,8 +25,8 @@ class Proc:
 
 @pytest.fixture
 def mk(tmp_path, monkeypatch):
-    import app.sync as sync
-    from app.transport import TransportError
+    from app.sync import engine as sync
+    from app.sync.transport import TransportError
     from fakes import LocalTransport
     e = Env(tmp_path)
     cfg = yaml.safe_load((tmp_path / "config" / "config.yaml").read_text())

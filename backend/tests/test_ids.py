@@ -13,8 +13,8 @@ from app.users import history
 from app.core import settings
 from app.config.models import ConfigError, load_config, parse_config, resolve_ref, validate_config
 from app.config.store import diff_configs, render_yaml
-from app.scheduler import Scheduler
-from app.sync import (SyncAbort, count_versions, fingerprint, list_versions, load_baseline, resolve_game,
+from app.sync.scheduler import Scheduler
+from app.sync.engine import (SyncAbort, count_versions, fingerprint, list_versions, load_baseline, resolve_game,
                       restore_version, run_sync, save_baseline)
 from fakes import LocalTransport
 
@@ -348,7 +348,7 @@ def cli_env(tmp_path, monkeypatch):
     d["games"]["mario-00000000"] = {**d["games"]["x"], "name": "x"}  # el nombre "x" es el id de otro juego
     settings.CONFIG_PATH.write_text(yaml.safe_dump(d, allow_unicode=True))
     roots = {"h1": tmp_path / "pc", "h2": tmp_path / "laptop"}
-    monkeypatch.setattr("app.sync.get_transport", lambda dev: LocalTransport(roots[dev.host]))
+    monkeypatch.setattr("app.sync.engine.get_transport", lambda dev: LocalTransport(roots[dev.host]))
     (roots["h1"] / "C:/Saves/z").mkdir(parents=True)
     (roots["h1"] / "C:/Saves/z/s.sav").write_text("a")
     (roots["h2"] / "home/usuario/z").mkdir(parents=True)
@@ -389,7 +389,7 @@ def api(client, tmp_path, monkeypatch):  # noqa: F811
     (tmp_path / "config").mkdir(parents=True, exist_ok=True)
     (tmp_path / "config" / "config.yaml").write_text(yaml.safe_dump(NEW, allow_unicode=True))
     roots = {"h1": tmp_path / "pc", "h2": tmp_path / "laptop"}
-    monkeypatch.setattr("app.sync.get_transport", lambda dev: LocalTransport(roots[dev.host]))
+    monkeypatch.setattr("app.sync.engine.get_transport", lambda dev: LocalTransport(roots[dev.host]))
     (roots["h1"] / "C:/Saves/z").mkdir(parents=True)
     (roots["h1"] / "C:/Saves/z/s.sav").write_text("a")
     (roots["h2"] / "home/usuario/z").mkdir(parents=True)

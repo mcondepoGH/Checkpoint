@@ -10,8 +10,8 @@ import pytest
 
 from app.users import history
 from app.core import settings
-from app.scheduler import Scheduler, validate_settings
-from app.sync import SyncAbort
+from app.sync.scheduler import Scheduler, validate_settings
+from app.sync.engine import SyncAbort
 
 APP = Path(__file__).parents[1] / "app"
 ES = json.loads((Path(__file__).parents[2] / "frontend/src/locales/es.json").read_text())
@@ -27,7 +27,7 @@ def has(code):
 
 
 def test_codes_in_es_json():
-    src = (APP / "scheduler.py").read_text() + (APP / "users/history.py").read_text()
+    src = (APP / "sync/scheduler.py").read_text() + (APP / "users/history.py").read_text()
     codes = set(re.findall(r'"(err\.scheduler\.[a-z_]+)"', src))
     assert len(codes) >= 6, codes
     assert not sorted(c for c in codes if not has(c))

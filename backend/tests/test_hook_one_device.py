@@ -10,8 +10,8 @@ from app.users import history
 from app.core import settings
 from app.auth import Auth
 from app.main import create_app
-from app.scheduler import Scheduler
-from app.sync import fingerprint, save_baseline
+from app.sync.scheduler import Scheduler
+from app.sync.engine import fingerprint, save_baseline
 from app.config.models import parse_config
 
 PW = "correct horse"
@@ -46,7 +46,7 @@ class Env:
 
 @pytest.fixture
 def cl(tmp_path, monkeypatch):
-    import app.sync as sync
+    from app.sync import engine as sync
     e = Env(tmp_path)
     real = sync.get_transport
 
@@ -112,7 +112,7 @@ def test_cierre_guarda_checkpoint_en_el_hub(cl):
 
 def test_ciclo_del_scheduler_con_un_dispositivo(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path / "data")
-    from app.sync import run_sync, list_versions
+    from app.sync.engine import run_sync, list_versions
     e = Env(tmp_path)
     e.seed("old")
     e.write(e.d1, "new", 2000)

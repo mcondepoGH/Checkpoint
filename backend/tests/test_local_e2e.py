@@ -8,9 +8,9 @@ import threading
 import pytest
 
 from app.config.models import parse_config
-from app.sync import (SyncAbort, count_versions, fingerprint, list_versions, load_baseline, relfiles,
+from app.sync.engine import (SyncAbort, count_versions, fingerprint, list_versions, load_baseline, relfiles,
                       restore_version, run_sync, save_baseline)
-from app.transport import LocalDeviceTransport, TransportError
+from app.sync.transport import LocalDeviceTransport, TransportError
 from fakes import LocalTransport
 
 
@@ -401,7 +401,7 @@ def test_idempotente_varias_syncs(env):
 # ---- concurrencia ----
 def test_lock_impide_solapamiento(env):
     env.seed()
-    from app.sync import _game_lock
+    from app.sync.engine import _game_lock
     with _game_lock(env.data, "g"):
         with pytest.raises(SyncAbort, match="in_progress"):
             env.sync()
@@ -527,7 +527,7 @@ def test_limite_de_versiones_y_poda_con_local(tmp_path):
     assert count_versions(e.data, "g") == 2
     names = sorted(p.name for p in (e.data / "versions" / "g").iterdir())
     assert len(names) == 2
-    from app.sync import _version_key
+    from app.sync.engine import _version_key
     assert list_versions(e.data, "g")[0]["version"] == max(names, key=_version_key)
 
 
@@ -596,7 +596,7 @@ def test_el_log_no_filtra_nada_sensible(env):
 
 def test_el_motor_usa_LocalDeviceTransport_real_para_el_local(env, monkeypatch):
     usados = []
-    import app.sync as sync_mod
+    from app.sync import engine as sync_mod
     orig = sync_mod.get_transport
 
     def spy(dev):

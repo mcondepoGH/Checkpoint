@@ -8,7 +8,7 @@ from app.core import bootstrap, settings
 from app.auth import Auth
 from app.config.models import load_config
 from app.main import create_app
-from app.transport import PosixTransport, TransportError, _fail
+from app.sync.transport import PosixTransport, TransportError, _fail
 from app.config.models import Device
 
 
@@ -119,7 +119,7 @@ def test_check_marks_first_use_and_fails_if_keyscan_fails(tmp_path, monkeypatch)
     monkeypatch.setattr(settings, "KNOWN_HOSTS", str(tmp_path / "known_hosts"))
     dev = Device(name="Equipo", host="10.0.0.5", user="u", os="linux")
     monkeypatch.setattr(bootstrap, "_keyscan", lambda h, p: SCAN)
-    monkeypatch.setattr("app.transport._run",
+    monkeypatch.setattr("app.sync.transport._run",
                         lambda a, timeout=0, stdin=None: subprocess.CompletedProcess(a, 0, b"ok", b""))
     t = PosixTransport(dev)
     t.check()

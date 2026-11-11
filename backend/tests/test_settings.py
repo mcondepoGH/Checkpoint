@@ -14,7 +14,7 @@ def _run(code, **env):
 
 
 def test_removed_variables_are_ignored(tmp_path):
-    r = _run("from app import scheduler\nfrom app.core import settings, updates\n"
+    r = _run("from app.sync import scheduler\nfrom app.core import settings, updates\n"
              "print(settings.CONFIG_PATH, settings.DATA_DIR, settings.SSH_TIMEOUT)\n"
              "print(scheduler.default_settings())\n"
              "print(updates.REPO, updates.UpdateChecker().channel())",

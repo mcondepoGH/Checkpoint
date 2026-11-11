@@ -12,7 +12,7 @@ from app.users import history
 from app.core import settings
 from app.auth import Auth
 from app.main import create_app
-from app.sync import fingerprint, save_baseline
+from app.sync.engine import fingerprint, save_baseline
 
 PW = "correct horse"
 
@@ -50,7 +50,7 @@ class Env:
 
 @pytest.fixture
 def env(tmp_path, monkeypatch):
-    import app.sync as sync
+    from app.sync import engine as sync
     from fakes import LocalTransport
     real = sync.get_transport
     e = Env(tmp_path)
@@ -147,7 +147,7 @@ def test_resolves_by_id_and_by_name_and_device_by_name(client):
 
 def test_run_in_progress_409(client):
     client.env.seed()
-    from app import locking
+    from app.sync import locking
     h = locking.acquire(settings.DATA_DIR / "locks" / "g1.lock")  # otro proceso con el lock del juego
     try:
         r = opened(client)
@@ -205,7 +205,7 @@ def test_auth_401_before_404_and_no_cookie(client):
 def test_offline_device_aborts_with_200(client, monkeypatch):
     client.env.seed()
     from fakes import LocalTransport
-    import app.sync as sync
+    from app.sync import engine as sync
     monkeypatch.setattr(sync, "get_transport", lambda dev: LocalTransport(client.env.laptop, down=True))
     r = opened(client)
     assert r.status_code == 200
@@ -216,7 +216,7 @@ def test_offline_device_aborts_with_200(client, monkeypatch):
 
 def test_unexpected_error_is_200(client, monkeypatch):
     client.env.seed()
-    import app.sync as sync
+    from app.sync import engine as sync
     monkeypatch.setattr(sync, "get_transport", lambda dev: 1 / 0)
     r = opened(client)
     assert r.status_code == 200 and r.json()["outcome"] == "error"
