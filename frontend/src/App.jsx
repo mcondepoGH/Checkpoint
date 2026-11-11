@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { api, ApiError } from '#src/lib/api.js';
-import AppIcon from '#src/components/AppIcon.jsx';
+import AppIcon from '#src/components/ui/AppIcon.jsx';
 import UpdateBadge from '#src/components/UpdateBadge.jsx';
 import ProfileMenu from '#src/components/ProfileMenu.jsx';
 import WatchSummary from '#src/components/WatchSummary.jsx';

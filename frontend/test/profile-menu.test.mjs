@@ -99,8 +99,8 @@ test('estilos: filas de 44 px, anchos y chip compacto sin tamaños sueltos', () 
   assert.doesNotMatch(prof, /font-size: \d/);
   assert.match(read('styles', '_variables.scss'), /\$bp-xs-tabs: 400px/);
   assert.match(read('styles', '_layout.scss'), /@media \(max-width: v\.\$bp-xs-tabs\) \{\s*\.tab \{ padding: 0 \.3rem; \}/);
-  assert.match(read('styles', 'ui', '_watch.scss'), /@media \(max-width: v\.\$bp-xxs\) \{\s*\.watch-summary \.watch-toggle \{ padding: 0 \.3rem; gap: \.2rem; \}/);
-  assert.match(read('styles', 'ui', '_watch.scss'), /min-height: \$touch-watch/); // el alto de 44 px del chip se mantiene
+  assert.match(read('components', 'ui', '_watch.scss'), /@media \(max-width: v\.\$bp-xxs\) \{\s*\.watch-summary \.watch-toggle \{ padding: 0 \.3rem; gap: \.2rem; \}/);
+  assert.match(read('components', 'ui', '_watch.scss'), /min-height: \$touch-watch/); // el alto de 44 px del chip se mantiene
 });
 
 test('Esc devuelve el foco al botón y fuera cierra (contrato en el código)', () => {

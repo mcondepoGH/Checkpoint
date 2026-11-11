@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import AppIcon from '#src/components/AppIcon.jsx';
+import AppIcon from '#src/components/ui/AppIcon.jsx';
 import { api } from '#src/lib/api.js';
 import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { Alert, Button } from '#src/components/ui/index.js';

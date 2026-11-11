@@ -1,5 +1,5 @@
 import React from 'react';
-import Modal from './Modal.jsx';
+import Modal from '#src/components/ui/Modal.jsx';
 import { safeUrl, isPrerelease } from '#src/lib/updates.js';
 import { useI18n } from '#src/hooks/useI18n.js';
 import { Alert, Button } from '#src/components/ui/index.js';

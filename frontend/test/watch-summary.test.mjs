@@ -127,7 +127,7 @@ test('SCSS: puntos y anillo del pulso son cuadrados explícitos (círculo, no ó
 });
 
 test('SCSS: icono de la franja centrado por geometría y alineado con la primera línea', () => {
-  const watch = fs.readFileSync(path.join(SRC, 'styles', 'ui/_watch.scss'), 'utf8');
+  const watch = fs.readFileSync(path.join(SRC, 'components', 'ui/_watch.scss'), 'utf8');
   const rule = (sel) => new RegExp(`${sel.replace(/[.]/g, '\\.')} \\{([^}]*)\\}`).exec(watch)?.[1] || '';
   const ico = rule('.watch-ico'), mark = rule('.watch-mark');
   assert.ok(/display: grid/.test(ico) && /place-items: center/.test(ico) && /align-self: start/.test(ico) && /width: 1\.1em/.test(ico));

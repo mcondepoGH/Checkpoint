@@ -64,7 +64,7 @@ test('dispositivo 2 opcional: con b vacío sale la ayuda de solo checkpoint y no
 test('etiqueta Solo checkpoint (Pill info): icono + texto y title de ayuda', { skip }, () => {
   const src = fs.readFileSync(path.join(SRC, 'components/ui/Pill.jsx'), 'utf8');
   assert.match(src, /tone/);
-  const css = fs.readFileSync(path.join(SRC, 'styles/ui/_pill.scss'), 'utf8');
+  const css = fs.readFileSync(path.join(SRC, 'components/ui/_pill.scss'), 'utf8');
   assert.match(css, /&\.info/);
   assert.ok(!/font-size:\s*[\d.]+(px|rem)/.test(css.split('&.info')[1].split('\n')[0]), 'sin font-size suelto');
 });

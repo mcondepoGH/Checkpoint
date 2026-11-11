@@ -1,4 +1,4 @@
-@use '../variables' as v;
+@use '../../styles/variables' as v;
 
 // Vigilancia de cierre. Cuatro piezas, una sola fuente de estilo:
 //  - tarjeta de juego vigilado (.card.watched.watch-<estado>, ver watchCardClass): borde de color; sin latido, discontinuo.

@@ -1,7 +1,7 @@
 import React, { useId } from 'react';
 import { useI18n } from '#src/hooks/useI18n.js';
-import Field from './Field.jsx';
-import Icon from './Icon.jsx';
+import Field from '#src/components/ui/Field.jsx';
+import Icon from '#src/components/ui/Icon.jsx';
 import { Select } from '#src/components/ui/index.js';
 
 // Selector de idioma: "Automático" (idioma del navegador) o uno concreto, que se recuerda. Cada idioma con su propio nombre.

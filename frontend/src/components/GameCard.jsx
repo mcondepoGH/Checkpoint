@@ -1,5 +1,5 @@
 import React, { useEffect, useId, useState } from 'react';
-import Field from './Field.jsx';
+import Field from '#src/components/ui/Field.jsx';
 import { MAX_VERSIONS_LIMIT, NAME_HINT, NAME_MAX, VERSIONS_HINT } from '#src/draft.js';
 import IdNote from './IdNote.jsx';
 import { ON_CONFLICT_OPTIONS } from '#src/lib/format.js';

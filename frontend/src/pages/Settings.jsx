@@ -3,7 +3,7 @@ import { api } from '#src/lib/api.js';
 import {
   MAX_VERSIONS_LIMIT, VERSIONS_HINT, blankDevice, blankGame, canOfferLocal, deviceId, baseKeyOf, errorsFor, fromConfig, gamesUsing, hasChanges, idOf, localErrors, nameOf, pathsOf, removeDevice, renamed, toConfig,
 } from '#src/draft.js';
-import Field from '#src/components/Field.jsx';
+import Field from '#src/components/ui/Field.jsx';
 import DeviceCard from '#src/components/DeviceCard.jsx';
 import GameCard from '#src/components/GameCard.jsx';
 import LaunchersPanel from '#src/components/LaunchersPanel.jsx';
@@ -15,8 +15,8 @@ import { updatesApplicable } from '#src/lib/updates.js';
 import SaveDialog from '#src/components/SaveDialog.jsx';
 import YamlDialog from '#src/components/YamlDialog.jsx';
 import BackupsDialog from '#src/components/BackupsDialog.jsx';
-import Icon from '#src/components/Icon.jsx';
-import EmptyState from '#src/components/EmptyState.jsx';
+import Icon from '#src/components/ui/Icon.jsx';
+import EmptyState from '#src/components/ui/EmptyState.jsx';
 import DiffView from '#src/components/DiffView.jsx';
 import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { errorText, fieldErrorText, ui } from '#src/lib/errors.js';

@@ -1,4 +1,4 @@
-@use '../variables' as v;
+@use '../../styles/variables' as v;
 
 // Etiqueta de estado (componente Badge): punto de color + texto; una variante por estado.
 .badge { font-size: v.$fs-label; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: .15rem .6rem; border-radius: 99px;

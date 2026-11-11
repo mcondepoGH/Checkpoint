@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Modal from './Modal.jsx';
+import Modal from '#src/components/ui/Modal.jsx';
 import { fmtSize, fmtWhen } from '#src/lib/format.js';
 import { useI18n } from '#src/hooks/useI18n.js';
 import { Button } from '#src/components/ui/index.js';

@@ -2,7 +2,7 @@ import React, { useEffect, useId, useReducer, useRef, useState } from 'react';
 import { api as realApi } from '#src/lib/api.js';
 import { initialState, isInsecure, reduce, run } from '#src/lib/apikey.js';
 import { errText, useI18n } from '#src/hooks/useI18n.js';
-import Icon from './Icon.jsx';
+import Icon from '#src/components/ui/Icon.jsx';
 import { Alert, Button, CopyBox } from '#src/components/ui/index.js';
 
 // Sección «API key» del menú del perfil, plegable y cerrada por defecto (`defaultOpen`); el contenido sigue montado (solo `hidden`), así que el estado y la carga no se pierden al plegar. Generar, ver siempre (completa, ajustada en varias líneas), copiar, regenerar y revocar.

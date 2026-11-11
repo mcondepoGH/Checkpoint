@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import Icon from './Icon.jsx';
+import Icon from '#src/components/ui/Icon.jsx';
 
 // Foto de perfil o, si no hay (o falla al cargar), la silueta de usuario. `size`: 'sm' (botón de la cabecera) | 'lg' (popup).
 export default function Avatar({ src, size = 'sm' }) {

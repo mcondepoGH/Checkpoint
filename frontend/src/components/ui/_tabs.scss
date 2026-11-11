@@ -1,4 +1,4 @@
-@use '../variables' as v;
+@use '../../styles/variables' as v;
 
 // Pestañas (componente Tabs): fila que ajusta a varias líneas si no caben, la activa resaltada; el panel queda unido debajo.
 .uitabs { display: flex; flex-direction: column; gap: .5rem; min-width: 0; }

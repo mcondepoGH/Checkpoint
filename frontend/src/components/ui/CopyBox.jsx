@@ -1,7 +1,7 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { copyText } from '#src/lib/clipboard.js';
 import { useI18n } from '#src/hooks/useI18n.js';
-import Icon from '#src/components/Icon.jsx';
+import Icon from './Icon.jsx';
 import Button from './Button.jsx';
 
 // Caja de código de solo lectura con botón de copiar (icono copiar -> check 2 s). El texto ajusta en varias líneas.

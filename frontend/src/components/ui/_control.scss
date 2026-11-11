@@ -1,4 +1,4 @@
-@use '../variables' as v;
+@use '../../styles/variables' as v;
 
 // Controles de formulario: casilla con etiqueta (Checkbox), campos de texto/número (Input) y desplegables (Select).
 label.check { display: flex; flex-direction: row; align-items: center; gap: .5rem; cursor: pointer; }

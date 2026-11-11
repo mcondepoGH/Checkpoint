@@ -1,10 +1,12 @@
+// Solo orquesta el orden de las hojas (el orden en cascada importa). Los partials de cada componente o zona
+// viven junto a él: components/ui/, components/config/, components/autosync/, components/profile/.
 @use 'themes';
 @use 'base';
 @use 'components';
-@use 'ui';
-@use 'fields';
+@use '../components/ui';
+@use '../components/ui/field';
 @use 'config';
 @use 'autosync';
 @use 'layout';
 @use 'profile';
-@use 'empty';
+@use '../components/ui/empty-state';

@@ -4,8 +4,8 @@ import { isInsecure } from '#src/lib/apikey.js';
 import { RESULT_TEXT, resultText } from '#src/lib/format.js';
 import { LAUNCHERS, ago, commandsFor, loadHubUrl, normalizeHubUrl, saveHubUrl } from '#src/launchers.js';
 import { errText, rich, useI18n } from '#src/hooks/useI18n.js';
-import Field from './Field.jsx';
-import Icon from './Icon.jsx';
+import Field from '#src/components/ui/Field.jsx';
+import Icon from '#src/components/ui/Icon.jsx';
 import { Alert, CopyBox, Input, Select, Tabs } from '#src/components/ui/index.js';
 
 const POLL_MS = 15000;

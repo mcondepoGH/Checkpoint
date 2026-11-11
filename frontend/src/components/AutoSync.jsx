@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { api } from '#src/lib/api.js';
-import Field from './Field.jsx';
+import Field from '#src/components/ui/Field.jsx';
 import AutoSyncLog from './AutoSyncLog.jsx';
 import { fmtDateTime, ON_CONFLICT_OPTIONS } from '#src/lib/format.js';
 import { errText, useI18n } from '#src/hooks/useI18n.js';

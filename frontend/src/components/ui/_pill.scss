@@ -1,4 +1,4 @@
-@use '../variables' as v;
+@use '../../styles/variables' as v;
 
 // Pastilla (componente Pill).
 .pill { display: inline-flex; align-items: center; padding: .1rem .65rem; border-radius: 99px; font-size: v.$fs-hint; font-weight: 700; color: var(--text);

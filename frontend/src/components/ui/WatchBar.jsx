@@ -1,5 +1,5 @@
 import React from 'react';
-import Icon from '#src/components/Icon.jsx';
+import Icon from './Icon.jsx';
 
 // Franja de estado inferior de la tarjeta de un juego vigilado (la tarjeta lleva además el borde de color: ver
 // watchCardClass en watch.js). Icono decorativo + texto + hora opcional: el estado nunca depende solo del color.

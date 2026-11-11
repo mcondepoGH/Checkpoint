@@ -1,4 +1,4 @@
-@use '../variables' as v;
+@use '../../styles/variables' as v;
 
 // Aviso (componente Alert): variantes error, ok, warn e info.
 .alert { padding: .5rem .75rem; border-radius: 10px; border: 1px solid var(--border); font-size: v.$fs-body; margin: .5rem 0; background: var(--surface);

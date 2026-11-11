@@ -1,5 +1,5 @@
 import React, { useId } from 'react';
-import Field from './Field.jsx';
+import Field from '#src/components/ui/Field.jsx';
 import { LOCAL_DOCKER_MSG, LOCAL_HELP, LOCAL_LABEL, NAME_HINT, NAME_MAX, OS_OPTIONS, localPatch } from '#src/draft.js';
 import IdNote from './IdNote.jsx';
 import { fieldErrorText } from '#src/lib/errors.js';

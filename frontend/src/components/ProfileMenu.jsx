@@ -6,7 +6,7 @@ import { showBadge } from '#src/lib/updates.js';
 import { errText, useI18n } from '#src/hooks/useI18n.js';
 import ApiKeySection from './ApiKeySection.jsx';
 import Avatar from './Avatar.jsx';
-import Icon from './Icon.jsx';
+import Icon from '#src/components/ui/Icon.jsx';
 import LanguageSelect from './LanguageSelect.jsx';
 import { Alert, Button } from '#src/components/ui/index.js';
 

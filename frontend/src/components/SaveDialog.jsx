@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { api, ApiError } from '#src/lib/api.js';
-import Modal from './Modal.jsx';
+import Modal from '#src/components/ui/Modal.jsx';
 import DiffView from './DiffView.jsx';
 import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { ui } from '#src/lib/errors.js';

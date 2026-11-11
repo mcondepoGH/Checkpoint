@@ -1,5 +1,5 @@
 import React from 'react';
-import Icon from './Icon.jsx';
+import Icon from '#src/components/ui/Icon.jsx';
 import { showBadge, isPrerelease } from '#src/lib/updates.js';
 import { useI18n } from '#src/hooks/useI18n.js';
 import { Button } from '#src/components/ui/index.js';
