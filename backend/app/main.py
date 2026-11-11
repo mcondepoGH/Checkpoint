@@ -12,12 +12,13 @@ from starlette.concurrency import run_in_threadpool
 
 from .api import docs
 from .api.routers import config, profile, session
+from .api.routers import scheduler as scheduler_router
+from .api.routers import updates as updates_router
 from .users import avatar
 from .core import settings
 from .core import bootstrap
-from .users import history
 from .core import updates
-from .core.errors import ApiError, describe_code, error_body, error_response
+from .core.errors import ApiError, describe_code
 from .api.auth import Auth
 from .api.deps import body_json, hook_user, require
 from .api.middleware import RequestDebugLog
@@ -52,10 +53,12 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     ctx = AppContext(auth)
     app.state.ctx = ctx
     app.state.watcher = ctx.watcher
-    store, runs, scheduler, checker, hooks = ctx.store, ctx.runs, ctx.scheduler, ctx.checker, ctx.hooks
+    store, runs, scheduler, hooks = ctx.store, ctx.runs, ctx.scheduler, ctx.hooks
     app.include_router(session.router)
     app.include_router(profile.router)
     app.include_router(config.router)
+    app.include_router(scheduler_router.router)
+    app.include_router(updates_router.router)
 
     # Todo lo de /api/hook/* cuelga de este router y de su dependencia (aquí irá `POST /api/hook/{game}/opened`).
     hook = APIRouter(prefix="/api/hook", tags=[docs.TAG], dependencies=[Depends(hook_user)],
@@ -75,61 +78,6 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         return w
 
     # (el router se incluye tras definir `opened`, más abajo)
-
-    # ---- sync automática ----
-    @app.get("/api/scheduler", dependencies=[Depends(require)])
-    def get_scheduler():
-        st = scheduler.state()
-        api_log.debug("scheduler estado: %s", {k: v for k, v in st.items() if isinstance(v, (bool, int, float, str, type(None)))})
-        return st
-
-    @app.put("/api/scheduler", dependencies=[Depends(require)])
-    async def put_scheduler(request: Request):
-        body = await body_json(request)
-        try:
-            res = scheduler.update(body)
-            api_log.debug("scheduler actualizado: campos=%s", sorted(body))
-            return res
-        except ValueError as e:
-            api_log.debug("scheduler actualizar: inválido en %s", sorted(e.args[0]) if isinstance(e.args[0], dict) else e.args[0])
-            return error_response(422, "err.main.settings_invalid", extra={"errors": e.args[0]})
-
-    # ---- versión y actualizaciones (solo detección) ----
-    @app.get("/api/updates", dependencies=[Depends(require)])
-    def get_updates(refresh: bool = False):
-        api_log.debug("updates: refresh=%s", refresh)
-        return checker.state(refresh=refresh)
-
-    @app.put("/api/updates", dependencies=[Depends(require)])
-    async def put_updates(request: Request):
-        if not updates.applicable():
-            api_log.debug("updates actualizar: no aplicable (409)")
-            return error_response(409, "err.main.updates_not_applicable", extra={"aplicable": False})
-        body = await body_json(request)
-        errors = {}
-        if "enabled" in body and not isinstance(body["enabled"], bool):
-            errors["enabled"] = error_body("err.main.updates.enabled_bool")
-        if "channel" in body and body["channel"] not in updates.CHANNELS:
-            errors["channel"] = error_body("err.main.updates.channel_invalid")
-        if not errors and "enabled" not in body and "channel" not in body:
-            errors["enabled"] = error_body("err.main.updates.field_required")
-        if errors:
-            api_log.debug("updates actualizar: inválido en %s", sorted(errors))
-            return error_response(422, "err.main.settings_invalid", extra={"errors": errors})
-        api_log.debug("updates actualizar: enabled=%s channel=%s", body.get("enabled"), body.get("channel"))
-        if "enabled" in body:
-            checker.set_enabled(body["enabled"])
-        if "channel" in body:
-            checker.set_channel(body["channel"])
-        return await run_in_threadpool(checker.state)
-
-    @app.get("/api/scheduler/history", dependencies=[Depends(require)])
-    def get_scheduler_history(limit: int = Query(50, ge=1, le=50)):
-        snap = store.snapshot()
-        games = snap.cfg.games if snap.cfg else {}
-        entries = history.annotate(history.read(limit), games)
-        api_log.debug("scheduler history: limit=%d devueltas=%d", limit, len(entries))
-        return {"entries": entries}
 
     # ---- sync ----
     @app.post("/api/sync/{game}", dependencies=[Depends(require)])
