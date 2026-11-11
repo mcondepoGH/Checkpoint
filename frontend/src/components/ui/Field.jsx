@@ -14,8 +14,16 @@ export default function Field({ label, error: rawError, hint, children }) {
     <div className={error ? 'field has-error' : 'field'}>
       <label htmlFor={id}>{label}</label>
       {children({ id, 'aria-invalid': error ? true : undefined, 'aria-describedby': describedBy })}
-      {hint && <small id={hintId} className="muted">{hint}</small>}
-      {error && <small id={errId} className="field-error">{error}</small>}
+      {hint && (
+        <small id={hintId} className="muted">
+          {hint}
+        </small>
+      )}
+      {error && (
+        <small id={errId} className="field-error">
+          {error}
+        </small>
+      )}
     </div>
   );
 }

@@ -14,13 +14,21 @@ export const fmtDateTime = (iso, locale) => (iso ? new Date(iso).toLocaleString(
 // Resultado de una sincronización: clase del distintivo y clave de texto (se traduce con resultText o t()).
 export const RESULT_CLASS = { ok: 'ok', error: 'error', aborted: 'aborted', skipped: 'aborted', conflict: 'conflict', partial: 'aborted' };
 export const RESULT_TEXT = {
-  ok: 'result.ok', error: 'result.error', aborted: 'result.aborted', skipped: 'result.skipped', conflict: 'result.conflict', partial: 'result.partial',
+  ok: 'result.ok',
+  error: 'result.error',
+  aborted: 'result.aborted',
+  skipped: 'result.skipped',
+  conflict: 'result.conflict',
+  partial: 'result.partial',
 };
 // Texto traducido de un resultado; uno desconocido se muestra tal cual.
 export const resultText = (r, t) => (RESULT_TEXT[r] ? t(RESULT_TEXT[r]) : r);
 
 // Política ante conflictos de la sync automática: [valor estable, clave de la etiqueta].
-export const ON_CONFLICT_OPTIONS = [['skip', 'conflictPolicy.skip'], ['newest', 'conflictPolicy.newest']];
+export const ON_CONFLICT_OPTIONS = [
+  ['skip', 'conflictPolicy.skip'],
+  ['newest', 'conflictPolicy.newest'],
+];
 
 // Tamaño en bytes -> «1,5 MB» según el idioma; '—' si no es un número.
 export function fmtSize(n, locale) {
@@ -30,7 +38,10 @@ export function fmtSize(n, locale) {
   const u = ['KB', 'MB', 'GB'];
   let v = n / 1024;
   let i = 0;
-  while (v >= 1024 && i < u.length - 1) { v /= 1024; i += 1; }
+  while (v >= 1024 && i < u.length - 1) {
+    v /= 1024;
+    i += 1;
+  }
   return `${num(v, v < 10 ? 1 : 0)} ${u[i]}`;
 }
 

@@ -22,7 +22,11 @@ export async function bundle(contents, { plugins = [], navigator = false, tag = 
     const out = await build({
       stdin: { contents, resolveDir: SRC, loader: 'jsx' },
       plugins,
-      bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'transform',
+      bundle: true,
+      write: false,
+      format: 'esm',
+      platform: 'node',
+      jsx: 'transform',
       define: { 'process.env.NODE_ENV': '"production"' },
       loader: { '.svg': 'dataurl' },
       banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },

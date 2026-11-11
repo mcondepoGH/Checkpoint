@@ -15,8 +15,12 @@ const LEGACY = {
   },
   games: {
     'Mi-Juego-82542a10': {
-      name: 'Mi Juego', devices: ['pc', 'laptop'], paths: { pc: 'C:/Saves', laptop: '/home/usuario/saves' },
-      process: 'juego.exe', keep_versions: 3, on_conflict: 'skip',
+      name: 'Mi Juego',
+      devices: ['pc', 'laptop'],
+      paths: { pc: 'C:/Saves', laptop: '/home/usuario/saves' },
+      process: 'juego.exe',
+      keep_versions: 3,
+      on_conflict: 'skip',
     },
   },
 };
@@ -28,12 +32,19 @@ const NEW = {
     'laptop-5e6f7a8b': { name: 'Portátil', host: '10.0.0.2', user: 'u', os: 'linux', port: 22 },
   },
   games: {
-    'zelda-0a1b2c3d': { name: 'Zelda', devices: ['pc-1a2b3c4d', 'laptop-5e6f7a8b'], paths: { 'pc-1a2b3c4d': 'C:/z', 'laptop-5e6f7a8b': '/home/usuario/z' } },
+    'zelda-0a1b2c3d': {
+      name: 'Zelda',
+      devices: ['pc-1a2b3c4d', 'laptop-5e6f7a8b'],
+      paths: { 'pc-1a2b3c4d': 'C:/z', 'laptop-5e6f7a8b': '/home/usuario/z' },
+    },
   },
 };
 const EMPTY = { max_versions: 20, devices: {}, games: {} };
 
-for (const [label, cfg] of [['legado', LEGACY], ['nuevo', NEW]]) {
+for (const [label, cfg] of [
+  ['legado', LEGACY],
+  ['nuevo', NEW],
+]) {
   test(`sin cambios no hay pendientes (${label})`, () => {
     const d = fromConfig(cfg);
     assert.equal(isDirty(d, cfg), false);
@@ -43,17 +54,39 @@ for (const [label, cfg] of [['legado', LEGACY], ['nuevo', NEW]]) {
 
   test(`editar cualquier campo marca cambios (${label})`, () => {
     const edits = [
-      (d) => { d.maxVersions = '7'; },
-      (d) => { d.devices[0].name += ' 2'; },   // renombrar
-      (d) => { d.devices[0].host = '10.9.9.9'; },
-      (d) => { d.devices[0].port = '2200'; },
-      (d) => { d.devices[0].os = d.devices[0].os === 'linux' ? 'windows' : 'linux'; },
-      (d) => { d.games[0].name += ' 2'; },     // renombrar
-      (d) => { d.games[0].pathA += 'x'; },
-      (d) => { d.games[0].process = 'otro.exe'; },
-      (d) => { d.games[0].keep = '9'; },
-      (d) => { d.games[0].onConflict = 'hub'; },
-      (d) => { d.games.pop(); },
+      (d) => {
+        d.maxVersions = '7';
+      },
+      (d) => {
+        d.devices[0].name += ' 2';
+      }, // renombrar
+      (d) => {
+        d.devices[0].host = '10.9.9.9';
+      },
+      (d) => {
+        d.devices[0].port = '2200';
+      },
+      (d) => {
+        d.devices[0].os = d.devices[0].os === 'linux' ? 'windows' : 'linux';
+      },
+      (d) => {
+        d.games[0].name += ' 2';
+      }, // renombrar
+      (d) => {
+        d.games[0].pathA += 'x';
+      },
+      (d) => {
+        d.games[0].process = 'otro.exe';
+      },
+      (d) => {
+        d.games[0].keep = '9';
+      },
+      (d) => {
+        d.games[0].onConflict = 'hub';
+      },
+      (d) => {
+        d.games.pop();
+      },
     ];
     for (const [i, edit] of edits.entries()) {
       const d = fromConfig(cfg);
@@ -77,17 +110,21 @@ test('borrador vacío previo a la carga no cuenta como cambios al llegar la conf
   assert.equal(isDirty(fromConfig(LEGACY), LEGACY), false);
 });
 
-test('la config real normalizada por el backend (si existe copia local de prueba) no tiene cambios', { skip: !process.env.CHECKPOINT_TEST_CONFIG_JSON }, () => {
-  const cfg = JSON.parse(fs.readFileSync(process.env.CHECKPOINT_TEST_CONFIG_JSON, 'utf8'));
-  assert.equal(isDirty(fromConfig(cfg), cfg), false);
-  assert.equal(baseKeyOf(cfg), JSON.stringify(toConfig(fromConfig(cfg))));
-});
+test(
+  'la config real normalizada por el backend (si existe copia local de prueba) no tiene cambios',
+  { skip: !process.env.CHECKPOINT_TEST_CONFIG_JSON },
+  () => {
+    const cfg = JSON.parse(fs.readFileSync(process.env.CHECKPOINT_TEST_CONFIG_JSON, 'utf8'));
+    assert.equal(isDirty(fromConfig(cfg), cfg), false);
+    assert.equal(baseKeyOf(cfg), JSON.stringify(toConfig(fromConfig(cfg))));
+  },
+);
 
 test('labelOf muestra el nombre, nunca el id', () => {
   assert.equal(labelOf(LEGACY.games, 'Mi-Juego-82542a10'), 'Mi Juego');
   assert.equal(labelOf(LEGACY.devices, 'pc'), 'pc');
   assert.equal(labelOf(NEW.devices, 'pc-1a2b3c4d'), 'Mi PC');
-  assert.equal(labelOf({ x: { name: '  ' } }, 'x'), 'x');   // sin nombre: el id como último recurso
+  assert.equal(labelOf({ x: { name: '  ' } }, 'x'), 'x'); // sin nombre: el id como último recurso
   assert.equal(labelOf(undefined, 'x'), 'x');
 });
 
@@ -115,7 +152,12 @@ test('hasChanges: borrador distinto o errores locales', async () => {
 test('errorsFor traduce {code,params} con el traductor y deja pasar texto antiguo', async () => {
   const { errorsFor } = await import('#src/components/config/draft.js');
   const tr = (v) => (typeof v === 'string' ? v : `T(${v.code})`);
-  const errs = { 'games.g': { code: 'a', params: {} }, 'games.g.paths.pc': { code: 'b', params: {} }, 'games.g.name': 'viejo', 'games.h.name': 'otro' };
+  const errs = {
+    'games.g': { code: 'a', params: {} },
+    'games.g.paths.pc': { code: 'b', params: {} },
+    'games.g.name': 'viejo',
+    'games.h.name': 'otro',
+  };
   assert.deepEqual(errorsFor(errs, 'games.g', tr), { '': 'T(a)', 'paths.pc': 'T(b)', name: 'viejo' });
   assert.deepEqual(errorsFor({ 'x.y': 'z' }, 'x'), { y: 'z' });
 });
@@ -138,14 +180,17 @@ test('un juego de un dispositivo: sin cambios y toConfig envía un solo disposit
 });
 
 test('añadir y quitar el dispositivo 2 cambia entre uno y dos dispositivos', () => {
-  const two = { ...SOLO, devices: { ...SOLO.devices, 'laptop-5e6f7a8b': { name: 'Portátil', host: '10.0.0.2', user: 'u', os: 'linux', port: 22 } } };
+  const two = {
+    ...SOLO,
+    devices: { ...SOLO.devices, 'laptop-5e6f7a8b': { name: 'Portátil', host: '10.0.0.2', user: 'u', os: 'linux', port: 22 } },
+  };
   const d = fromConfig(two);
   const g = d.games[0];
   const con2 = { ...d, games: [{ ...g, b: 'laptop-5e6f7a8b', pathB: '/home/usuario/z' }] };
   const out = toConfig(con2).games['zelda-0a1b2c3d'];
   assert.deepEqual(out.devices, ['pc-1a2b3c4d', 'laptop-5e6f7a8b']);
   assert.deepEqual(out.paths, { 'pc-1a2b3c4d': 'C:/z', 'laptop-5e6f7a8b': '/home/usuario/z' });
-  const sin2 = { ...con2, games: [{ ...con2.games[0], b: '' }] };  // pathB residual no se envía
+  const sin2 = { ...con2, games: [{ ...con2.games[0], b: '' }] }; // pathB residual no se envía
   const o1 = toConfig(sin2).games['zelda-0a1b2c3d'];
   assert.deepEqual(o1.devices, ['pc-1a2b3c4d']);
   assert.deepEqual(o1.paths, { 'pc-1a2b3c4d': 'C:/z' });
@@ -154,8 +199,11 @@ test('añadir y quitar el dispositivo 2 cambia entre uno y dos dispositivos', ()
 test('sin dispositivo 1 se envía [""] (el backend marca devices.0) y quitar el dispositivo 2 deja el juego solo', () => {
   const d = fromConfig(SOLO);
   assert.deepEqual(toConfig({ ...d, games: [{ ...d.games[0], a: '' }] }).games['zelda-0a1b2c3d'].devices, ['']);
-  const two = fromConfig({ ...SOLO, devices: { ...SOLO.devices, 'l-1': { name: 'L', host: 'h', user: 'u', os: 'linux', port: 22 } },
-    games: { 'z-1': { name: 'Z', devices: ['pc-1a2b3c4d', 'l-1'], paths: { 'pc-1a2b3c4d': 'C:/z', 'l-1': '/z' } } } });
+  const two = fromConfig({
+    ...SOLO,
+    devices: { ...SOLO.devices, 'l-1': { name: 'L', host: 'h', user: 'u', os: 'linux', port: 22 } },
+    games: { 'z-1': { name: 'Z', devices: ['pc-1a2b3c4d', 'l-1'], paths: { 'pc-1a2b3c4d': 'C:/z', 'l-1': '/z' } } },
+  });
   const r = removeDevice(two, 'l-1');
   assert.deepEqual(toConfig(r).games['z-1'].devices, ['pc-1a2b3c4d']);
 });

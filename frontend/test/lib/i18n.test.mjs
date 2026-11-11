@@ -4,9 +4,23 @@ import assert from 'node:assert/strict';
 import { es as realEs } from '../helpers/locales.mjs';
 import { createI18n, pickLocale, STORAGE_KEY } from '#src/lib/i18n.js';
 
-const es = { app: { name: 'Checkpoint' }, hello: 'Hola {name}', files: { one: '{count} fichero', other: '{count} ficheros' }, solo: 'solo es' };
+const es = {
+  app: { name: 'Checkpoint' },
+  hello: 'Hola {name}',
+  files: { one: '{count} fichero', other: '{count} ficheros' },
+  solo: 'solo es',
+};
 const en = { hello: 'Hello {name}', files: { one: '{count} file', other: '{count} files' } };
-const mem = (init = {}) => { const m = { ...init }; return { getItem: (k) => (k in m ? m[k] : null), setItem: (k, v) => { m[k] = String(v); }, m }; };
+const mem = (init = {}) => {
+  const m = { ...init };
+  return {
+    getItem: (k) => (k in m ? m[k] : null),
+    setItem: (k, v) => {
+      m[k] = String(v);
+    },
+    m,
+  };
+};
 
 test('clave jerárquica y parámetros', () => {
   const i = createI18n({ catalogs: { es }, storage: mem(), languages: ['es-ES'] });
@@ -62,10 +76,15 @@ test('pickLocale: guardado > navegador > base', () => {
 test('idioma por defecto del compose: prioridad guardado > por defecto; sin guardar ignora el navegador', () => {
   const st = mem();
   const i = createI18n({ catalogs: { es, en }, storage: st, languages: ['es'] });
-  let n = 0; i.subscribe(() => { n++; });
+  let n = 0;
+  i.subscribe(() => {
+    n++;
+  });
   assert.equal(i.locale, 'es');
   i.setDefaultLocale('en');
-  assert.equal(i.locale, 'en'); assert.equal(i.preference, 'en'); assert.equal(n, 1);
+  assert.equal(i.locale, 'en');
+  assert.equal(i.preference, 'en');
+  assert.equal(n, 1);
   assert.equal(st.m[STORAGE_KEY], undefined, 'el por defecto no se guarda como elección');
   i.setDefaultLocale('zz'); // no soportado: sin cambios
   assert.equal(i.locale, 'en');
@@ -73,7 +92,8 @@ test('idioma por defecto del compose: prioridad guardado > por defecto; sin guar
   i.setDefaultLocale('en');
   assert.equal(i.locale, 'es');
   i.setLocale('auto'); // Automático: navegador (es)
-  assert.equal(i.locale, 'es'); assert.equal(i.preference, 'auto');
+  assert.equal(i.locale, 'es');
+  assert.equal(i.preference, 'auto');
   const j = createI18n({ catalogs: { es, en }, storage: mem({ [STORAGE_KEY]: 'auto' }), languages: ['en-GB'] });
   j.setDefaultLocale('es');
   assert.equal(j.locale, 'en');
@@ -93,7 +113,14 @@ test('setLocale recuerda la elección; auto la olvida y vuelve al navegador', ()
 });
 
 test('idioma desconocido en setLocale se ignora; storage roto no revienta', () => {
-  const bad = { getItem() { throw new Error('x'); }, setItem() { throw new Error('x'); } };
+  const bad = {
+    getItem() {
+      throw new Error('x');
+    },
+    setItem() {
+      throw new Error('x');
+    },
+  };
   const i = createI18n({ catalogs: { es }, storage: bad, languages: ['es'] });
   i.setLocale('zz');
   assert.equal(i.locale, 'es');
@@ -102,8 +129,14 @@ test('idioma desconocido en setLocale se ignora; storage roto no revienta', () =
 
 test('suscriptores se avisan al cambiar de idioma', () => {
   const i = createI18n({ catalogs: { es, en }, storage: mem(), languages: ['es'] });
-  let n = 0; const off = i.subscribe(() => { n++; });
-  i.setLocale('en'); i.setLocale('en'); off(); i.setLocale('es');
+  let n = 0;
+  const off = i.subscribe(() => {
+    n++;
+  });
+  i.setLocale('en');
+  i.setLocale('en');
+  off();
+  i.setLocale('es');
   assert.equal(n, 1);
 });
 

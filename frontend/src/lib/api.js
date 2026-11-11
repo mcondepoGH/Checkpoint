@@ -1,8 +1,13 @@
 // `code`/`params`: contrato de error del backend (detail = {code, params}); sin ellos, `message` es el texto recibido.
 export class ApiError extends Error {
   constructor(status, message, data, code, params) {
-    super(message); this.status = status; this.data = data;
-    if (code) { this.code = code; this.params = params ?? {}; }
+    super(message);
+    this.status = status;
+    this.data = data;
+    if (code) {
+      this.code = code;
+      this.params = params ?? {};
+    }
   }
 }
 
@@ -21,7 +26,11 @@ export async function api(path, { method = 'GET', body } = {}) {
     body: body !== undefined ? (body instanceof Blob ? body : JSON.stringify(body)) : undefined,
   });
   let data = null;
-  try { data = await res.json(); } catch { /* sin cuerpo */ }
+  try {
+    data = await res.json();
+  } catch {
+    /* sin cuerpo */
+  }
   if (!res.ok) {
     const d = data?.detail;
     const coded = d && typeof d === 'object' && typeof d.code === 'string';

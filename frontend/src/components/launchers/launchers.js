@@ -10,7 +10,9 @@ const enc = (s) => encodeURIComponent(String(s)).replace(/[!'()*]/g, (c) => `%${
 
 // URL base del hub: http(s), sin espacios ni caracteres que el shell interpretaría; sin barras finales. null si no vale.
 export function normalizeHubUrl(raw) {
-  const s = String(raw ?? '').trim().replace(/\/+$/, '');
+  const s = String(raw ?? '')
+    .trim()
+    .replace(/\/+$/, '');
   return /^https?:\/\/[^\s"'`$\\;&|<>^%]+$/.test(s) ? s : null;
 }
 
@@ -24,31 +26,54 @@ export function commandsFor(launcher, opts) {
   if (!url) return null;
   const o = { ...opts, url };
   switch (launcher) {
-    case 'steam': return [{ id: 'main', text: `${curl(o)}; %command%` }];
+    case 'steam':
+      return [{ id: 'main', text: `${curl(o)}; %command%` }];
     case 'lutris':
-    case 'heroic': return [{ id: 'main', text: curl(o) }];
-    case 'windows': return [
-      { id: 'powershell', text: `Invoke-WebRequest -Method Post -Uri "${hookUrl(o)}" -Headers @{Authorization='Bearer ${o.key}'} -TimeoutSec 60 -UseBasicParsing` },
-      { id: 'curl', text: `curl.exe${curl(o).slice('curl'.length)}` },
-    ];
-    default: return [];
+    case 'heroic':
+      return [{ id: 'main', text: curl(o) }];
+    case 'windows':
+      return [
+        {
+          id: 'powershell',
+          text: `Invoke-WebRequest -Method Post -Uri "${hookUrl(o)}" -Headers @{Authorization='Bearer ${o.key}'} -TimeoutSec 60 -UseBasicParsing`,
+        },
+        { id: 'curl', text: `curl.exe${curl(o).slice('curl'.length)}` },
+      ];
+    default:
+      return [];
   }
 }
 
 // URL del hub recordada por el viewer (localStorage inyectable; nunca lanza).
 export function loadHubUrl(storage, fallback) {
-  try { return storage?.getItem(STORE) || fallback; } catch { return fallback; }
+  try {
+    return storage?.getItem(STORE) || fallback;
+  } catch {
+    return fallback;
+  }
 }
 export function saveHubUrl(storage, url) {
-  try { storage?.setItem(STORE, url); } catch { /* sin almacenamiento: no se recuerda */ }
+  try {
+    storage?.setItem(STORE, url);
+  } catch {
+    /* sin almacenamiento: no se recuerda */
+  }
 }
 
 // Juego elegido en la sección «Lanzadores» (localStorage inyectable; nunca lanza).
 export function loadGameSel(storage) {
-  try { return storage?.getItem(STORE_GAME) || ''; } catch { return ''; }
+  try {
+    return storage?.getItem(STORE_GAME) || '';
+  } catch {
+    return '';
+  }
 }
 export function saveGameSel(storage, sel) {
-  try { storage?.setItem(STORE_GAME, sel); } catch { /* sin almacenamiento: no se recuerda */ }
+  try {
+    storage?.setItem(STORE_GAME, sel);
+  } catch {
+    /* sin almacenamiento: no se recuerda */
+  }
 }
 
 // «hace 3 minutos» en el idioma pedido; '' si la fecha no es válida. Un instante futuro (reloj desfasado) cuenta como ahora.
@@ -56,6 +81,13 @@ export function ago(iso, now, locale) {
   const ms = new Date(iso).getTime();
   if (!Number.isFinite(ms)) return '';
   const s = Math.max(0, Math.round((now.getTime() - ms) / 1000));
-  const [v, unit] = s < 60 ? [s, 'second'] : s < 3600 ? [Math.round(s / 60), 'minute'] : s < 86400 ? [Math.round(s / 3600), 'hour'] : [Math.round(s / 86400), 'day'];
+  const [v, unit] =
+    s < 60
+      ? [s, 'second']
+      : s < 3600
+        ? [Math.round(s / 60), 'minute']
+        : s < 86400
+          ? [Math.round(s / 3600), 'hour']
+          : [Math.round(s / 86400), 'day'];
   return new Intl.RelativeTimeFormat(locale, { numeric: 'always' }).format(-v, unit);
 }

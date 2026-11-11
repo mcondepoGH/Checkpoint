@@ -11,7 +11,9 @@ export function pickLocale({ stored, languages = [], available, base = BASE_LOCA
   if (stored && stored !== AUTO && available.includes(stored)) return stored;
   if (stored === AUTO) {
     for (const l of languages) {
-      const short = String(l || '').toLowerCase().split('-')[0];
+      const short = String(l || '')
+        .toLowerCase()
+        .split('-')[0];
       if (available.includes(short)) return short;
     }
   }
@@ -24,14 +26,32 @@ const fill = (s, params) => s.replace(/\{(\w+)\}/g, (m, k) => (params && k in pa
 
 export function createI18n({ catalogs, storage, languages = [], base = BASE_LOCALE }) {
   const available = Object.keys(catalogs);
-  const read = () => { try { return storage?.getItem(STORAGE_KEY) ?? null; } catch { return null; } };
-  const write = (v) => { try { storage?.setItem(STORAGE_KEY, v); } catch { /* sin almacenamiento: no se recuerda */ } };
+  const read = () => {
+    try {
+      return storage?.getItem(STORAGE_KEY) ?? null;
+    } catch {
+      return null;
+    }
+  };
+  const write = (v) => {
+    try {
+      storage?.setItem(STORAGE_KEY, v);
+    } catch {
+      /* sin almacenamiento: no se recuerda */
+    }
+  };
   const subs = new Set();
   let choice = read(); // elección manual ('auto' o un código); null = ninguna
   let defaultLocale = base; // idioma por defecto del servidor (setDefaultLocale)
   const resolve = () => pickLocale({ stored: choice, languages, available, base, defaultLocale });
   let locale = resolve();
-  const refresh = () => { const now = resolve(); if (now !== locale) { locale = now; subs.forEach((f) => f()); } };
+  const refresh = () => {
+    const now = resolve();
+    if (now !== locale) {
+      locale = now;
+      subs.forEach((f) => f());
+    }
+  };
 
   // Valor del catálogo activo; si falta, el del base. Los objetos plurales {one, other, ...} se resuelven con count.
   function t(key, params) {
@@ -60,10 +80,20 @@ export function createI18n({ catalogs, storage, languages = [], base = BASE_LOCA
   }
 
   return {
-    t, setLocale, setDefaultLocale, available,
-    get locale() { return locale; },
+    t,
+    setLocale,
+    setDefaultLocale,
+    available,
+    get locale() {
+      return locale;
+    },
     // Valor para el selector: la elección guardada ('auto' o código) o, sin elección, el idioma por defecto en uso.
-    get preference() { return choice && (choice === AUTO || available.includes(choice)) ? choice : locale; },
-    subscribe(f) { subs.add(f); return () => subs.delete(f); },
+    get preference() {
+      return choice && (choice === AUTO || available.includes(choice)) ? choice : locale;
+    },
+    subscribe(f) {
+      subs.add(f);
+      return () => subs.delete(f);
+    },
   };
 }

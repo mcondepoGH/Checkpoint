@@ -18,37 +18,50 @@ export default function BackupsDialog({ baseVersion, dirty, onRestored, onClose 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null); // error de la API o mensaje {code} (se traduce al pintar)
 
-  useEffect(() => { listBackups().then(setList).catch((e) => setError(e)); }, []);
+  useEffect(() => {
+    listBackups()
+      .then(setList)
+      .catch((e) => setError(e));
+  }, []);
 
   const preview = async (name) => {
     setError(null);
-    try { setPick({ name, diff: (await diffConfig({ backup: name })).diff }); }
-    catch (e) { setError(e); }
+    try {
+      setPick({ name, diff: (await diffConfig({ backup: name })).diff });
+    } catch (e) {
+      setError(e);
+    }
   };
 
   const restore = async () => {
     setBusy(true);
     setError(null);
-    try { onRestored(await restoreBackup(pick.name, baseVersion)); }
-    catch (e) {
+    try {
+      onRestored(await restoreBackup(pick.name, baseVersion));
+    } catch (e) {
       setError(e instanceof ApiError && e.status === 409 ? ui('backups.stale') : e);
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
     <Modal title={t('backups.title')} onClose={onClose} wide>
-      {error && <Alert variant="error" role="alert">{errText(error)}</Alert>}
+      {error && (
+        <Alert variant="error" role="alert">
+          {errText(error)}
+        </Alert>
+      )}
       {!pick && (
         <>
           {list === null && !error && <p className="muted">{t('common.loading')}</p>}
-          {list?.length === 0 && (
-            <EmptyState variant="inline" icon="🗂️" title={t('backups.none.title')}
-              text={t('backups.none.text')} />
-          )}
+          {list?.length === 0 && <EmptyState variant="inline" icon="🗂️" title={t('backups.none.title')} text={t('backups.none.text')} />}
           <ul className="backups">
             {list?.map((b) => (
               <li key={b.name} className="row between">
-                <span><code>{when(b.created)}</code> <span className="muted">· {kb(b.size)}</span></span>
+                <span>
+                  <code>{when(b.created)}</code> <span className="muted">· {kb(b.size)}</span>
+                </span>
                 <Button onClick={() => preview(b.name)}>{t('backups.view')}</Button>
               </li>
             ))}
@@ -57,16 +70,31 @@ export default function BackupsDialog({ baseVersion, dirty, onRestored, onClose 
       )}
       {pick && (
         <>
-          <p>{rich('backups.prompt', { when: when(pick.name.replace('config.yaml.bak-', '').replace('_', 'T').replace(/(\d\d)(\d\d)(\d\d)$/, '$1:$2:$3')) })}</p>
+          <p>
+            {rich('backups.prompt', {
+              when: when(
+                pick.name
+                  .replace('config.yaml.bak-', '')
+                  .replace('_', 'T')
+                  .replace(/(\d\d)(\d\d)(\d\d)$/, '$1:$2:$3'),
+              ),
+            })}
+          </p>
           {dirty && <Alert>{t('backups.dirty')}</Alert>}
           <DiffView diff={pick.diff} />
           <div className="row end">
             <Button onClick={() => setPick(null)}>{t('backups.back')}</Button>
-            <Button variant="primary" disabled={busy} onClick={restore}>{busy ? t('backups.restoring') : t('backups.restore')}</Button>
+            <Button variant="primary" disabled={busy} onClick={restore}>
+              {busy ? t('backups.restoring') : t('backups.restore')}
+            </Button>
           </div>
         </>
       )}
-      {!pick && <div className="row end"><Button onClick={onClose}>{t('common.close')}</Button></div>}
+      {!pick && (
+        <div className="row end">
+          <Button onClick={onClose}>{t('common.close')}</Button>
+        </div>
+      )}
     </Modal>
   );
 }

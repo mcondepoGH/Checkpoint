@@ -13,7 +13,8 @@ export default function IdNote({ id, isNew, renamed }) {
         </Alert>
       )}
       <p className="idnote muted" title={t('idnote.title')}>
-        {t('idnote.label')} <code>{id}</code>{isNew ? t('idnote.pending') : ''}
+        {t('idnote.label')} <code>{id}</code>
+        {isNew ? t('idnote.pending') : ''}
       </p>
     </>
   );

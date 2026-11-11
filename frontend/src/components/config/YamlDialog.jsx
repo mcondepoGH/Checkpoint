@@ -17,15 +17,23 @@ export default function YamlDialog({ config, onClose }) {
   }, [config]);
   return (
     <Modal title={t('yaml.title')} onClose={onClose} wide>
-      {err && <Alert variant="error" role="alert">{errText(err)}</Alert>}
+      {err && (
+        <Alert variant="error" role="alert">
+          {errText(err)}
+        </Alert>
+      )}
       {text === null && !err && <p className="muted">{t('yaml.generating')}</p>}
       {text !== null && (
         <>
-          <label htmlFor="yaml-view" className="sr-only">{t('yaml.label')}</label>
+          <label htmlFor="yaml-view" className="sr-only">
+            {t('yaml.label')}
+          </label>
           <textarea id="yaml-view" className="yaml" readOnly rows={18} value={text} wrap="off" />
         </>
       )}
-      <div className="row end"><Button onClick={onClose}>{t('common.close')}</Button></div>
+      <div className="row end">
+        <Button onClick={onClose}>{t('common.close')}</Button>
+      </div>
     </Modal>
   );
 }

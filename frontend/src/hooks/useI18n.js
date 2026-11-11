@@ -5,9 +5,19 @@ import { catalogs } from '#src/locales/index.js';
 import { errorText } from '#src/lib/errors.js';
 import { getPublic } from '#src/lib/api/session.js';
 
-const safeStorage = () => { try { return window.localStorage; } catch { return null; } };
+const safeStorage = () => {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+};
 
-export const i18n = createI18n({ catalogs, storage: safeStorage(), languages: navigator.languages?.length ? navigator.languages : [navigator.language] });
+export const i18n = createI18n({
+  catalogs,
+  storage: safeStorage(),
+  languages: navigator.languages?.length ? navigator.languages : [navigator.language],
+});
 export const t = (key, params) => i18n.t(key, params);
 
 // Texto con marcas mínimas: <b>negrita</b> y <code>código</code> (solo en textos del catálogo, nunca en datos).
@@ -27,17 +37,28 @@ export function rich(text) {
 }
 
 // Idioma por defecto del servidor (CHECKPOINT_LANG), público: se pide antes de pintar el login. Nunca falla.
-export const initDefaultLang = () => getPublic()
-  .then((r) => { if (r && typeof r.default_lang === 'string') i18n.setDefaultLocale(r.default_lang); })
-  .catch(() => {});
+export const initDefaultLang = () =>
+  getPublic()
+    .then((r) => {
+      if (r && typeof r.default_lang === 'string') i18n.setDefaultLocale(r.default_lang);
+    })
+    .catch(() => {});
 
 // Devuelve t, rich (t con <b>/<code> como nodos), el idioma activo, la preferencia ('auto' o código) y setLocale;
 // re-renderiza al cambiar de idioma.
 export function useI18n() {
-  useSyncExternalStore(i18n.subscribe, () => i18n.locale, () => i18n.locale); // 3.er argumento: render en servidor (tests)
+  useSyncExternalStore(
+    i18n.subscribe,
+    () => i18n.locale,
+    () => i18n.locale,
+  ); // 3.er argumento: render en servidor (tests)
   return {
-    t: i18n.t, rich: (key, params) => rich(i18n.t(key, params)), locale: i18n.locale, preference: i18n.preference,
-    available: i18n.available, setLocale: i18n.setLocale,
+    t: i18n.t,
+    rich: (key, params) => rich(i18n.t(key, params)),
+    locale: i18n.locale,
+    preference: i18n.preference,
+    available: i18n.available,
+    setLocale: i18n.setLocale,
   };
 }
 

@@ -28,9 +28,17 @@ export default function useConfigDraft({ loaded, runtime, onDirty, onVersionChan
   const hasLocal = Object.keys(local).length > 0;
 
   const dirtyRef = useRef(dirty);
-  useEffect(() => { dirtyRef.current = dirty; onDirty(dirty); }, [dirty]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
-    const h = (e) => { if (dirtyRef.current) { e.preventDefault(); e.returnValue = ''; } };
+    dirtyRef.current = dirty;
+    onDirty(dirty);
+  }, [dirty]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const h = (e) => {
+      if (dirtyRef.current) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
     window.addEventListener('beforeunload', h);
     return () => window.removeEventListener('beforeunload', h);
   }, []);
@@ -43,9 +51,15 @@ export default function useConfigDraft({ loaded, runtime, onDirty, onVersionChan
     const timer = setTimeout(async () => {
       try {
         const r = await validateConfig(JSON.parse(payloadKey));
-        if (n === seq.current) { setErrors(r.errors); setValidating(false); }
+        if (n === seq.current) {
+          setErrors(r.errors);
+          setValidating(false);
+        }
       } catch (e) {
-        if (n === seq.current) { setErrors({ '': e }); setValidating(false); }
+        if (n === seq.current) {
+          setErrors({ '': e });
+          setValidating(false);
+        }
       }
     }, 300);
     return () => clearTimeout(timer);

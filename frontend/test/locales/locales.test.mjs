@@ -19,14 +19,22 @@ function flat(o, p = '') {
   }
   return out;
 }
-const params = (v) => [...new Set((JSON.stringify(v).match(/\{(\w+)\}/g) || []))].sort();
+const params = (v) => [...new Set(JSON.stringify(v).match(/\{(\w+)\}/g) || [])].sort();
 const F = { es: flat(es), en: flat(en) };
 
 test('es y en tienen exactamente las mismas claves', () => {
   const a = Object.keys(F.es).sort();
   const b = Object.keys(F.en).sort();
-  assert.deepEqual(a.filter((k) => !(k in F.en)), [], 'faltan en en.json');
-  assert.deepEqual(b.filter((k) => !(k in F.es)), [], 'sobran en en.json');
+  assert.deepEqual(
+    a.filter((k) => !(k in F.en)),
+    [],
+    'faltan en en.json',
+  );
+  assert.deepEqual(
+    b.filter((k) => !(k in F.es)),
+    [],
+    'sobran en en.json',
+  );
   assert.ok(a.length > 400);
 });
 
@@ -43,7 +51,8 @@ test('mismos {params} en cada clave y misma forma (cadena / plural)', () => {
 });
 
 test('ninguna traducción vacía y las de en no son copia literal del español (salvo términos comunes)', () => {
-  const SAME_OK = /^(sync\.log\.title|app\.tab\.sync\.short|device\.host|diff\.general|keyhelp\.infoTitle|autosync\.hoursShort|sync\.offline|err\.main\.game_ambiguous|err\.hook\.device_ambiguous|err\.main\.restore_failed|err\.config\.invalid|err\.config\.inconsistent|err\.sync\.(ref_invalid|unexpected)|err\.scheduler\.summary|err\.configstore\.backup_invalid|profile\.apikey\.title|launcher\.tab\.(steam|lutris|heroic|windows)|launcher\.cmd\.powershell|launcher\.last)$/;
+  const SAME_OK =
+    /^(sync\.log\.title|app\.tab\.sync\.short|device\.host|diff\.general|keyhelp\.infoTitle|autosync\.hoursShort|sync\.offline|err\.main\.game_ambiguous|err\.hook\.device_ambiguous|err\.main\.restore_failed|err\.config\.invalid|err\.config\.inconsistent|err\.sync\.(ref_invalid|unexpected)|err\.scheduler\.summary|err\.configstore\.backup_invalid|profile\.apikey\.title|launcher\.tab\.(steam|lutris|heroic|windows)|launcher\.cmd\.powershell|launcher\.last)$/;
   for (const k of Object.keys(F.en)) {
     const s = JSON.stringify(F.en[k]);
     assert.ok(s.length > 2 && !/^"\s*"$/.test(s), `vacía ${k}`);
@@ -61,7 +70,8 @@ test('los códigos err.* del backend existen en el catálogo (y en inglés)', ()
   }
   assert.ok(used.size > 100);
   for (const c of used) {
-    if (c.endsWith('_')) { // prefijo de un código dinámico (p. ej. err.sync.conflict_ + motivo): debe haber claves con él
+    if (c.endsWith('_')) {
+      // prefijo de un código dinámico (p. ej. err.sync.conflict_ + motivo): debe haber claves con él
       assert.ok(Object.keys(F.es).some((k) => k.startsWith(c)) && Object.keys(F.en).some((k) => k.startsWith(c)), `prefijo ${c}`);
       continue;
     }
@@ -72,8 +82,9 @@ test('los códigos err.* del backend existen en el catálogo (y en inglés)', ()
 
 // ---- heurística de literales sin traducir en JSX ----
 function jsxFiles(d) {
-  return fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? jsxFiles(path.join(d, e.name))
-    : e.name.endsWith('.jsx') ? [path.join(d, e.name)] : []));
+  return fs
+    .readdirSync(d, { withFileTypes: true })
+    .flatMap((e) => (e.isDirectory() ? jsxFiles(path.join(d, e.name)) : e.name.endsWith('.jsx') ? [path.join(d, e.name)] : []));
 }
 // Marcas, términos técnicos y ejemplos de código que no se traducen.
 const ALLOWED = new Set(['Checkpoint']);

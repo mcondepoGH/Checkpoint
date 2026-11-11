@@ -22,11 +22,24 @@ export default function CopyBox({ value, label, what, describedBy, initialCopied
   const copyLabel = copied ? t('common.copied') : what ? t('common.copyWhat', { what }) : t('common.copy');
   return (
     <div className={['copybox', className].filter(Boolean).join(' ')}>
-      <code id={id} className="copybox-field" tabIndex={0} role="textbox" aria-readonly="true" aria-multiline="true" aria-label={label} aria-describedby={describedBy}>{value}</code>
+      <code
+        id={id}
+        className="copybox-field"
+        tabIndex={0}
+        role="textbox"
+        aria-readonly="true"
+        aria-multiline="true"
+        aria-label={label}
+        aria-describedby={describedBy}
+      >
+        {value}
+      </code>
       <Button iconOnly className="copybox-copy" onClick={copy} title={copyLabel} aria-label={copyLabel}>
         <Icon name={copied ? 'check' : 'copy'} />
       </Button>
-      <span className="sr-only" role="status">{copied ? t('common.copied') : ''}</span>
+      <span className="sr-only" role="status">
+        {copied ? t('common.copied') : ''}
+      </span>
     </div>
   );
 }

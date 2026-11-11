@@ -16,7 +16,9 @@ function CodeBlock({ text }) {
   };
   return (
     <div className="codeblock">
-      <pre><code>{text}</code></pre>
+      <pre>
+        <code>{text}</code>
+      </pre>
       <Button onClick={copy}>{ok ? t('common.copied') : t('common.copy')}</Button>
     </div>
   );
@@ -36,7 +38,21 @@ function Tabs({ label, idBase, items, value, onChange, small }) {
   return (
     <div role="tablist" aria-label={label} className={'keytabs' + (small ? ' sub' : '')} onKeyDown={onKey}>
       {items.map((o) => (
-        <Button key={o} ref={(el) => { refs.current[o] = el; }} role="tab" id={`${idBase}-tab-${o}`} aria-selected={value === o} aria-controls={`${idBase}-panel`} tabIndex={value === o ? 0 : -1} className={'tab' + (value === o ? ' active' : '')} onClick={() => onChange(o)}>{o}</Button>
+        <Button
+          key={o}
+          ref={(el) => {
+            refs.current[o] = el;
+          }}
+          role="tab"
+          id={`${idBase}-tab-${o}`}
+          aria-selected={value === o}
+          aria-controls={`${idBase}-panel`}
+          tabIndex={value === o ? 0 : -1}
+          className={'tab' + (value === o ? ' active' : '')}
+          onClick={() => onChange(o)}
+        >
+          {o}
+        </Button>
       ))}
     </div>
   );
@@ -45,7 +61,9 @@ function Tabs({ label, idBase, items, value, onChange, small }) {
 function Step({ n, title, hint, children }) {
   return (
     <li className="keystep">
-      <span className="keystep-n" aria-hidden="true">{n}</span>
+      <span className="keystep-n" aria-hidden="true">
+        {n}
+      </span>
       <div className="keystep-body">
         <h4>{title}</h4>
         {hint && <p className="muted">{hint}</p>}
@@ -71,7 +89,16 @@ export function KeyHelp({ pubKey, children, open: initialOpen = false, sys: init
     <div className="keyhelp">
       <div className="keyhelp-head">
         <div className="keyhelp-intro">{children}</div>
-        <Button className="chip" aria-label={t('keyhelp.infoAria')} title={t('keyhelp.infoTitle')} aria-expanded={open} aria-controls="keyhelp-panel" onClick={() => setOpen(!open)}>?</Button>
+        <Button
+          className="chip"
+          aria-label={t('keyhelp.infoAria')}
+          title={t('keyhelp.infoTitle')}
+          aria-expanded={open}
+          aria-controls="keyhelp-panel"
+          onClick={() => setOpen(!open)}
+        >
+          ?
+        </Button>
       </div>
       {open && (
         <div id="keyhelp-panel" className="keyhelp-panel">
@@ -82,14 +109,29 @@ export function KeyHelp({ pubKey, children, open: initialOpen = false, sys: init
             </Step>
             <Step n={2} title={t('keyhelp.s2.title')} hint={t('keyhelp.s2.hint')}>
               <Tabs label={t('keyhelp.tabs.system')} idBase="ks-sys" items={SYSTEMS} value={sys} onChange={setSys} />
-              {sys === 'Linux' && <Tabs label={t('keyhelp.tabs.distro')} idBase="ks-distro" items={DISTROS} value={distro} onChange={setDistro} small />}
-              <div role="tabpanel" id={sys === 'Linux' ? 'ks-distro-panel' : 'ks-sys-panel'} aria-labelledby={sys === 'Linux' ? `ks-distro-tab-${distro}` : 'ks-sys-tab-Windows'} className="keypanel">
+              {sys === 'Linux' && (
+                <Tabs label={t('keyhelp.tabs.distro')} idBase="ks-distro" items={DISTROS} value={distro} onChange={setDistro} small />
+              )}
+              <div
+                role="tabpanel"
+                id={sys === 'Linux' ? 'ks-distro-panel' : 'ks-sys-panel'}
+                aria-labelledby={sys === 'Linux' ? `ks-distro-tab-${distro}` : 'ks-sys-tab-Windows'}
+                className="keypanel"
+              >
                 {!pubKey && <p className="muted">{rich('keyhelp.noKey', { placeholder: PH })}</p>}
                 <ol className="keysubsteps">
                   {steps.map(({ id, cmds, alt }, i) => (
                     <li key={id} className="keysub">
-                      <h5><span className="keysub-n" aria-hidden="true">{String.fromCharCode(97 + i)}</span>{t(`keyhelp.step.${id}.title`)}</h5>
-                      <p className="muted">{t(`keyhelp.step.${id}.hint`)}{alt ? ` ${t('keyhelp.pickOne')}` : cmds.length > 1 ? ` ${t('keyhelp.inOrder')}` : ''}</p>
+                      <h5>
+                        <span className="keysub-n" aria-hidden="true">
+                          {String.fromCharCode(97 + i)}
+                        </span>
+                        {t(`keyhelp.step.${id}.title`)}
+                      </h5>
+                      <p className="muted">
+                        {t(`keyhelp.step.${id}.hint`)}
+                        {alt ? ` ${t('keyhelp.pickOne')}` : cmds.length > 1 ? ` ${t('keyhelp.inOrder')}` : ''}
+                      </p>
                       <div className="keycmds">
                         {cmds.map((c) => (
                           <div key={c.text} className="keycmd">
@@ -125,7 +167,9 @@ export default function PublicKey() {
   const area = useRef(null);
 
   useEffect(() => {
-    getPublicKey().then((r) => setKey(r.public_key)).catch((e) => setErr(e));
+    getPublicKey()
+      .then((r) => setKey(r.public_key))
+      .catch((e) => setErr(e));
   }, []);
 
   const copy = async () => {
@@ -143,7 +187,9 @@ export default function PublicKey() {
       {err && <Alert variant="error">{errText(err)}</Alert>}
       {key && (
         <>
-          <label htmlFor="pubkey-text" className="sr-only">{t('keyhelp.summary')}</label>
+          <label htmlFor="pubkey-text" className="sr-only">
+            {t('keyhelp.summary')}
+          </label>
           <textarea id="pubkey-text" ref={area} readOnly rows={3} value={key} onFocus={(e) => e.target.select()} />
           <div className="row">
             <Button onClick={copy}>{copied ? t('keyhelp.copied') : t('common.copy')}</Button>

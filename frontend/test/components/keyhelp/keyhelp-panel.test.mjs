@@ -25,22 +25,37 @@ const stubButtons = {
     }));
   },
 };
-const { mod: m, skip } = await bundle(`import React from 'react';
+const { mod: m, skip } = await bundle(
+  `import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
   import { i18n } from '#src/hooks/useI18n.js';
   import { KeyHelp } from '#src/components/keyhelp/PublicKey.jsx';
-  export { React, renderToStaticMarkup, i18n, KeyHelp };`, { plugins: [stubButtons], tag: 'ckpt-keyhelp' });
+  export { React, renderToStaticMarkup, i18n, KeyHelp };`,
+  { plugins: [stubButtons], tag: 'ckpt-keyhelp' },
+);
 
 const KEY = 'ssh-ed25519 AAAATESTKEY checkpoint';
 const ONE_LINE_EXAMPLE = 'ssh-ed25519 AAAAC3Nza...XXXX checkpoint';
-const CASES = [['Windows', 'Debian / Ubuntu'], ['Linux', 'Debian / Ubuntu'], ['Linux', 'Arch Linux']];
-const unesc = (s) => s.replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
+const CASES = [
+  ['Windows', 'Debian / Ubuntu'],
+  ['Linux', 'Debian / Ubuntu'],
+  ['Linux', 'Arch Linux'],
+];
+const unesc = (s) =>
+  s
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&amp;/g, '&');
 
 // Renderiza el panel abierto y devuelve el HTML y los botones «Copiar» (los de CodeBlock) en orden de aparición.
 function panel({ sys, distro, lang = 'es', pubKey = KEY, open = true }) {
   m.i18n.setLocale(lang);
   globalThis.__buttons = [];
-  const html = m.renderToStaticMarkup(m.React.createElement(m.KeyHelp, { pubKey, open, sys, distro }, m.React.createElement('p', null, 'intro')));
+  const html = m.renderToStaticMarkup(
+    m.React.createElement(m.KeyHelp, { pubKey, open, sys, distro }, m.React.createElement('p', null, 'intro')),
+  );
   const copyLabel = lang === 'es' ? 'Copiar' : 'Copy';
   const copyBtns = globalThis.__buttons.filter((b) => b.role !== 'tab' && b.children === copyLabel);
   const codes = [...html.matchAll(/<pre><code>([\s\S]*?)<\/code><\/pre>/g)].map((x) => unesc(x[1]));
@@ -65,7 +80,9 @@ for (const lang of ['es', 'en']) {
       // nº de cards por paso y sistema (cada paso es un <li class="keysub"> con tantas .keycmd como comandos)
       const subs = html.split('<li class="keysub">').slice(1);
       assert.equal(subs.length, steps.length);
-      subs.forEach((chunk, i) => assert.equal((chunk.split('</li>')[0].match(/<pre><code>/g) || []).length, steps[i].cmds.length, steps[i].id));
+      subs.forEach((chunk, i) =>
+        assert.equal((chunk.split('</li>')[0].match(/<pre><code>/g) || []).length, steps[i].cmds.length, steps[i].id),
+      );
       // los <code> de las cards son exactamente los comandos, en orden, más el ejemplo de una línea
       assert.deepEqual(codes, [...cmds, ONE_LINE_EXAMPLE]);
       for (const c of codes) assert.ok(!c.includes('\n'), `salto de línea en «${c}»`);
@@ -78,7 +95,10 @@ for (const lang of ['es', 'en']) {
 }
 
 test('Arch: ufw y firewalld con su etiqueta (es y en), el paso pide elegir una; Debian/Windows sin etiquetas', { skip }, () => {
-  for (const [lang, ufw, fw, pick] of [['es', 'Si usas ufw', 'Si usas firewalld', 'Elige solo una'], ['en', 'If you use ufw', 'If you use firewalld', 'Pick only one']]) {
+  for (const [lang, ufw, fw, pick] of [
+    ['es', 'Si usas ufw', 'Si usas firewalld', 'Elige solo una'],
+    ['en', 'If you use ufw', 'If you use firewalld', 'Pick only one'],
+  ]) {
     const { html } = panel({ sys: 'Linux', distro: 'Arch Linux', lang });
     assert.equal((html.match(/class="keycmd-label"/g) || []).length, 2, lang);
     assert.ok(html.includes(`<p class="keycmd-label">${ufw}</p>`), `${lang}: ${ufw}`);
@@ -91,19 +111,32 @@ test('Arch: ufw y firewalld con su etiqueta (es y en), el paso pide elegir una; 
     assert.ok(html.indexOf(ufw) < html.indexOf(`<code>${ufwCmd}</code>`) && html.indexOf(`<code>${ufwCmd}</code>`) < html.indexOf(fw));
     assert.ok(html.indexOf(fw) < html.indexOf(`<code>${fwCmd}</code>`));
     assert.ok(!html.includes(`<code>${ufwCmd}\n`) && !/# /.test(html.match(/<pre><code>[\s\S]*?<\/code>/g).join('')));
-    for (const [s, d] of [['Linux', 'Debian / Ubuntu'], ['Windows', 'Debian / Ubuntu']]) assert.ok(!panel({ sys: s, distro: d, lang }).html.includes('keycmd-label'));
+    for (const [s, d] of [
+      ['Linux', 'Debian / Ubuntu'],
+      ['Windows', 'Debian / Ubuntu'],
+    ])
+      assert.ok(!panel({ sys: s, distro: d, lang }).html.includes('keycmd-label'));
   }
 });
 
 test('clave interpolada en los comandos que la llevan; sin clave, el marcador (es y en) y el aviso', { skip }, () => {
-  for (const [sys, distro, n] of [['Windows', 'Debian / Ubuntu', 2], ['Linux', 'Debian / Ubuntu', 1], ['Linux', 'Arch Linux', 1]]) {
+  for (const [sys, distro, n] of [
+    ['Windows', 'Debian / Ubuntu', 2],
+    ['Linux', 'Debian / Ubuntu', 1],
+    ['Linux', 'Arch Linux', 1],
+  ]) {
     const w = panel({ sys, distro });
     assert.equal(w.codes.filter((c) => c.includes(KEY)).length, n, `${sys}/${distro}`);
     assert.ok(!w.html.includes('PEGA_AQUÍ_LA_CLAVE'));
   }
-  for (const [lang, ph] of [['es', 'PEGA_AQUÍ_LA_CLAVE'], ['en', null]]) {
+  for (const [lang, ph] of [
+    ['es', 'PEGA_AQUÍ_LA_CLAVE'],
+    ['en', null],
+  ]) {
     m.i18n.setLocale(lang);
-    const marker = unesc(panel({ sys: 'Linux', distro: 'Arch Linux', lang, pubKey: '' }).html.match(/<code>echo &quot;([\s\S]*?)&quot; &gt;&gt;/)?.[1] ?? '');
+    const marker = unesc(
+      panel({ sys: 'Linux', distro: 'Arch Linux', lang, pubKey: '' }).html.match(/<code>echo &quot;([\s\S]*?)&quot; &gt;&gt;/)?.[1] ?? '',
+    );
     assert.ok(marker && !marker.includes('ssh-ed25519'), lang);
     if (ph) assert.equal(marker, ph);
     const html = panel({ sys: 'Linux', distro: 'Arch Linux', lang, pubKey: '' }).html;
@@ -118,16 +151,26 @@ test('clic en «Copiar»: cada card copia SOLO su comando exacto (sin los de al 
   const realTimeout = globalThis.setTimeout;
   const realNav = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
   const written = [];
-  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { clipboard: { writeText: async (t) => { written.push(t); } } } });
+  Object.defineProperty(globalThis, 'navigator', {
+    configurable: true,
+    value: {
+      clipboard: {
+        writeText: async (t) => {
+          written.push(t);
+        },
+      },
+    },
+  });
   globalThis.setTimeout = () => 0; // sin el temporizador de 2 s del «Copiado»
   try {
-    for (const lang of ['es', 'en']) for (const [sys, distro] of CASES) {
-      const { copyBtns, codes } = panel({ sys, distro, lang });
-      written.length = 0;
-      for (const b of copyBtns) await b.onClick();
-      assert.deepEqual(written, codes, `${lang} ${sys} ${distro}`); // uno por botón, en orden, texto exacto
-      assert.equal(new Set(written).size, written.length); // ningún comando repetido: cada botón, el suyo
-    }
+    for (const lang of ['es', 'en'])
+      for (const [sys, distro] of CASES) {
+        const { copyBtns, codes } = panel({ sys, distro, lang });
+        written.length = 0;
+        for (const b of copyBtns) await b.onClick();
+        assert.deepEqual(written, codes, `${lang} ${sys} ${distro}`); // uno por botón, en orden, texto exacto
+        assert.equal(new Set(written).size, written.length); // ningún comando repetido: cada botón, el suyo
+      }
     // Arch: el botón de ufw copia solo ufw, el de firewalld solo firewalld
     const { copyBtns } = panel({ sys: 'Linux', distro: 'Arch Linux' });
     written.length = 0;
@@ -138,7 +181,8 @@ test('clic en «Copiar»: cada card copia SOLO su comando exacto (sin los de al 
     assert.deepEqual(written, ['sudo firewall-cmd --permanent --add-service=ssh && sudo firewall-cmd --reload']);
   } finally {
     globalThis.setTimeout = realTimeout;
-    if (realNav) Object.defineProperty(globalThis, 'navigator', realNav); else delete globalThis.navigator;
+    if (realNav) Object.defineProperty(globalThis, 'navigator', realNav);
+    else delete globalThis.navigator;
     m.i18n.setLocale('es');
   }
 });

@@ -5,5 +5,9 @@ import React from 'react';
 // as: etiqueta HTML (div por defecto). Resto de props (role, style...) pasan al elemento.
 export default function Alert({ variant, inline, compact, as: Tag = 'div', children, ...rest }) {
   const cls = ['alert', variant, inline && 'inline', compact && 'compact'].filter(Boolean).join(' ');
-  return <Tag className={cls} {...rest}>{children}</Tag>;
+  return (
+    <Tag className={cls} {...rest}>
+      {children}
+    </Tag>
+  );
 }

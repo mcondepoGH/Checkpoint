@@ -14,7 +14,8 @@ const swaggerAssets = () => ({
   name: 'swagger-ui-assets',
   generateBundle() {
     const dir = path.dirname(createRequire(import.meta.url).resolve('swagger-ui-dist/package.json'));
-    for (const f of [...SWAGGER_FILES, ...SWAGGER_LEGAL]) this.emitFile({ type: 'asset', fileName: `docs-assets/${f}`, source: readFileSync(path.join(dir, f)) });
+    for (const f of [...SWAGGER_FILES, ...SWAGGER_LEGAL])
+      this.emitFile({ type: 'asset', fileName: `docs-assets/${f}`, source: readFileSync(path.join(dir, f)) });
   },
 });
 

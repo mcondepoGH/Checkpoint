@@ -6,16 +6,49 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { bundle, SRC } from '../../helpers/bundle.mjs';
 
-const { mod, skip } = await bundle(`import React from 'react';
+const { mod, skip } = await bundle(
+  `import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
   import GameCard from '#src/components/config/GameCard.jsx';
-  export { React, renderToStaticMarkup, GameCard };`, { tag: 'ckpt-render' });
+  export { React, renderToStaticMarkup, GameCard };`,
+  { tag: 'ckpt-render' },
+);
 
-const game = (o = {}) => ({ key: 'g1', id: 'juego-1a2b3c4d', salt: 'a', name: 'Juego', a: 'd1', b: 'd2', pathA: '/a', pathB: '/b', process: '', keep: '', onConflict: '', ...o });
-const render = (props) => mod.renderToStaticMarkup(mod.React.createElement(mod.GameCard, {
-  game: game(), devices: [{ key: 'd1', name: 'PC' }, { key: 'd2', name: 'Deck' }], errors: {}, globalMax: 20,
-  nameA: 'PC', nameB: 'Deck', idA: 'pc', idB: 'deck', idText: 'juego-1a2b3c4d', renamed: false, onChange() {}, onRemove() {}, ...props,
-}));
+const game = (o = {}) => ({
+  key: 'g1',
+  id: 'juego-1a2b3c4d',
+  salt: 'a',
+  name: 'Juego',
+  a: 'd1',
+  b: 'd2',
+  pathA: '/a',
+  pathB: '/b',
+  process: '',
+  keep: '',
+  onConflict: '',
+  ...o,
+});
+const render = (props) =>
+  mod.renderToStaticMarkup(
+    mod.React.createElement(mod.GameCard, {
+      game: game(),
+      devices: [
+        { key: 'd1', name: 'PC' },
+        { key: 'd2', name: 'Deck' },
+      ],
+      errors: {},
+      globalMax: 20,
+      nameA: 'PC',
+      nameB: 'Deck',
+      idA: 'pc',
+      idB: 'deck',
+      idText: 'juego-1a2b3c4d',
+      renamed: false,
+      onChange() {},
+      onRemove() {},
+      ...props,
+    }),
+  );
 const has = (h, s) => h.includes(s);
 // Marcado del contenedor de campos extra y de su botón.
 const more = (h) => /<div id="([^"]+)" class="cfg-more"( hidden="")?>/.exec(h);
@@ -44,7 +77,12 @@ test('con valor propio en un campo extra: sigue plegado, botón Mostrar más', {
 });
 
 test('con error en un campo extra: expandido; error en campos visibles no expande', { skip }, () => {
-  for (const p of [{ errors: { process: 'mal' } }, { errors: { keep_versions: 'mal' } }, { errors: { on_conflict: 'mal' } }, { keepError: 'mal' }]) {
+  for (const p of [
+    { errors: { process: 'mal' } },
+    { errors: { keep_versions: 'mal' } },
+    { errors: { on_conflict: 'mal' } },
+    { keepError: 'mal' },
+  ]) {
     const h = render({ errors: {}, ...p });
     assert.ok(!more(h)[2], JSON.stringify(p));
     assert.equal(btn(h)[1], 'true');

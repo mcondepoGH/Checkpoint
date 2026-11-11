@@ -52,7 +52,9 @@ export function EntryDetail({ entry: e }) {
       {fold && (
         <button type="button" className="fold" aria-expanded={open} aria-controls={listId} onClick={() => setOpen(!open)}>
           <Icon name="chevron" />
-          <span>{t('autolog.games', { n: games.length })}: {countSummary(games, t)}</span>
+          <span>
+            {t('autolog.games', { n: games.length })}: {countSummary(games, t)}
+          </span>
         </button>
       )}
       {rows.length > 0 && (
@@ -77,7 +79,7 @@ export function EntryDetail({ entry: e }) {
 // Duración vacía o 0 (avisos que no ejecutaron nada) se muestra «—».
 export function RunEntry({ entry: e }) {
   const { t, locale } = useI18n();
-  const trig = TRIGGERS.includes(e.trigger) ? t(`autolog.trigger.${e.trigger}`) : (e.trigger || '—');
+  const trig = TRIGGERS.includes(e.trigger) ? t(`autolog.trigger.${e.trigger}`) : e.trigger || '—';
   return (
     <li className="run">
       <div className="run-head">
@@ -104,7 +106,11 @@ export default function AutoSyncLog() {
       const d = await schedulerHistory(50);
       setEntries(d.entries || []);
       setErr(null);
-    } catch (e) { setErr(e); } finally { setLoading(false); }
+    } catch (e) {
+      setErr(e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -121,14 +127,19 @@ export default function AutoSyncLog() {
           {loading ? t('autolog.refreshing') : t('autolog.refresh')}
         </Button>
       </div>
-      <div role="status" aria-live="polite">{err && <Alert as="span" variant="error" inline>{errText(err)}</Alert>}</div>
-      {entries && entries.length === 0 && !err && (
-        <EmptyState icon="📜" title={t('autolog.none.title')}
-          text={t('autolog.none.text')} />
-      )}
+      <div role="status" aria-live="polite">
+        {err && (
+          <Alert as="span" variant="error" inline>
+            {errText(err)}
+          </Alert>
+        )}
+      </div>
+      {entries && entries.length === 0 && !err && <EmptyState icon="📜" title={t('autolog.none.title')} text={t('autolog.none.text')} />}
       {entries && entries.length > 0 && (
         <ul className="runlog" aria-label={t('autolog.listAria')}>
-          {entries.map((e) => <RunEntry key={e.id} entry={e} />)}
+          {entries.map((e) => (
+            <RunEntry key={e.id} entry={e} />
+          ))}
         </ul>
       )}
     </section>

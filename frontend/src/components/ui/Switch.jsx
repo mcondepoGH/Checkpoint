@@ -5,7 +5,9 @@ export default function Switch({ label, ...rest }) {
   return (
     <label className="switch">
       <input type="checkbox" role="switch" {...rest} />
-      <span className="track" aria-hidden="true"><i /></span>
+      <span className="track" aria-hidden="true">
+        <i />
+      </span>
       <span>{label}</span>
     </label>
   );

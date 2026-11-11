@@ -9,10 +9,26 @@ import { Alert, Button, Checkbox, Input, Select } from '#src/components/ui/index
 // `runtime` ('docker' | 'native') y `platform` vienen de /api/config. «Este equipo» solo se ofrece en modo nativo.
 // Resultado de «Probar conexión»/«Comprobar carpeta»: con varias carpetas, una línea por ruta (cada una con su code si lo hay).
 // Si se guardó una host key nueva (`first_use`), se añade el aviso: « (…)» tras un OK y « […]» tras un fallo.
-const firstUse = (test, t) => (test.first_use ? (test.ok ? ` (${t('err.bootstrap.first_use')})` : ` [${t('err.bootstrap.first_use')}]`) : '');
-const testText = (test, t) => (test.results ? test.results.map((r) => `${r.path}: ${errText(r)}`).join('\n') : errText(test) + firstUse(test, t));
+const firstUse = (test, t) =>
+  test.first_use ? (test.ok ? ` (${t('err.bootstrap.first_use')})` : ` [${t('err.bootstrap.first_use')}]`) : '';
+const testText = (test, t) =>
+  test.results ? test.results.map((r) => `${r.path}: ${errText(r)}`).join('\n') : errText(test) + firstUse(test, t);
 
-export default function DeviceCard({ dev, errors, localError, localFlagError, canLocal, runtime, platform, test, idText, renamed, onChange, onTest, onRemove }) {
+export default function DeviceCard({
+  dev,
+  errors,
+  localError,
+  localFlagError,
+  canLocal,
+  runtime,
+  platform,
+  test,
+  idText,
+  renamed,
+  onChange,
+  onTest,
+  onRemove,
+}) {
   const { t } = useI18n();
   const set = (k) => (e) => onChange({ [k]: e.target.value });
   const descId = useId();
@@ -25,20 +41,31 @@ export default function DeviceCard({ dev, errors, localError, localFlagError, ca
       </Field>
       {(canLocal || dev.local) && runtime !== 'docker' && (
         <div className="local-opt">
-          <Checkbox checked={dev.local} aria-describedby={`${descId}-local`} aria-invalid={localFlagError || errors.local ? true : undefined}
-            onChange={(e) => onChange(localPatch(e.target.checked, platform))} label={t(LOCAL_LABEL)} />
-          <small id={`${descId}-local`} className="muted">{t(LOCAL_HELP)}</small>
+          <Checkbox
+            checked={dev.local}
+            aria-describedby={`${descId}-local`}
+            aria-invalid={localFlagError || errors.local ? true : undefined}
+            onChange={(e) => onChange(localPatch(e.target.checked, platform))}
+            label={t(LOCAL_LABEL)}
+          />
+          <small id={`${descId}-local`} className="muted">
+            {t(LOCAL_HELP)}
+          </small>
         </div>
       )}
-      {dev.local && runtime === 'docker' && <Alert variant="error" role="alert">{errText(LOCAL_DOCKER_MSG)}.</Alert>}
+      {dev.local && runtime === 'docker' && (
+        <Alert variant="error" role="alert">
+          {errText(LOCAL_DOCKER_MSG)}.
+        </Alert>
+      )}
       {dev.local && runtime !== 'docker' && (localFlagError || errors.local) && (
-        <Alert variant="error" role="alert">{fieldErrorText(localFlagError || errors.local, t)}</Alert>
+        <Alert variant="error" role="alert">
+          {fieldErrorText(localFlagError || errors.local, t)}
+        </Alert>
       )}
       {dev.local ? (
         <Field label={t('device.os')} hint={t('device.osHint')} error={errors.os}>
-          {(p) => (
-            <Select {...p} value={dev.os} onChange={set('os')} options={OS_OPTIONS.map(([v, l]) => ({ value: v, label: l }))} />
-          )}
+          {(p) => <Select {...p} value={dev.os} onChange={set('os')} options={OS_OPTIONS.map(([v, l]) => ({ value: v, label: l }))} />}
         </Field>
       ) : (
         <>
@@ -55,23 +82,27 @@ export default function DeviceCard({ dev, errors, localError, localFlagError, ca
               {(p) => <Input {...p} value={dev.user} onChange={set('user')} />}
             </Field>
             <Field label={t('device.os')} error={errors.os}>
-              {(p) => (
-                <Select {...p} value={dev.os} onChange={set('os')} options={OS_OPTIONS.map(([v, l]) => ({ value: v, label: l }))} />
-              )}
+              {(p) => <Select {...p} value={dev.os} onChange={set('os')} options={OS_OPTIONS.map(([v, l]) => ({ value: v, label: l }))} />}
             </Field>
           </div>
         </>
       )}
       <IdNote id={idText} isNew={!dev.id} renamed={renamed} />
       <div role="status" aria-live="polite">
-        {test && !test.busy && <Alert variant={test.ok ? 'ok' : 'error'} style={{ whiteSpace: 'pre-line' }}>{testText(test, t)}</Alert>}
+        {test && !test.busy && (
+          <Alert variant={test.ok ? 'ok' : 'error'} style={{ whiteSpace: 'pre-line' }}>
+            {testText(test, t)}
+          </Alert>
+        )}
       </div>
       <div className="row">
         <Button disabled={test?.busy} onClick={onTest}>
-          {test?.busy ? (dev.local ? t('device.checking') : t('device.testing')) : (dev.local ? t('device.checkFolder') : t('device.test'))}
+          {test?.busy ? (dev.local ? t('device.checking') : t('device.testing')) : dev.local ? t('device.checkFolder') : t('device.test')}
         </Button>
         <span className="spacer" />
-        <Button variant="danger" onClick={onRemove} aria-label={t('device.deleteAria', { title })}>{t('common.delete')}</Button>
+        <Button variant="danger" onClick={onRemove} aria-label={t('device.deleteAria', { title })}>
+          {t('common.delete')}
+        </Button>
       </div>
     </fieldset>
   );

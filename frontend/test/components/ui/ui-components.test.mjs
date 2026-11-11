@@ -6,10 +6,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { bundle, SRC } from '../../helpers/bundle.mjs';
 
-const { mod, skip } = await bundle(`import React from 'react';
+const { mod, skip } = await bundle(
+  `import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
   import * as ui from '#src/components/ui/index.js';
-  export { React, renderToStaticMarkup, ui };`, { tag: 'ckpt-ui' });
+  export { React, renderToStaticMarkup, ui };`,
+  { tag: 'ckpt-ui' },
+);
 
 const r = (C, props, ...kids) => mod.renderToStaticMarkup(mod.React.createElement(mod.ui[C], props, ...kids));
 
@@ -18,7 +21,8 @@ test('Button: clases por variante, type=button por defecto y submit explícito',
   assert.match(r('Button', { variant: 'primary' }, 'x'), /class="btn primary"/);
   assert.match(r('Button', { variant: 'ghost', className: 'tool' }, 'x'), /class="btn ghost tool"/);
   assert.match(r('Button', { variant: 'danger', disabled: true }, 'x'), /class="btn danger"[^>]*disabled/);
-  assert.match(r('Button', { type: 'submit' }, 'x'), /type="submit"/);  assert.match(r('Button', { variant: 'ghost', iconOnly: true }, 'x'), /class="btn ghost btn-icon"/);
+  assert.match(r('Button', { type: 'submit' }, 'x'), /type="submit"/);
+  assert.match(r('Button', { variant: 'ghost', iconOnly: true }, 'x'), /class="btn ghost btn-icon"/);
 });
 
 test('Button iconOnly: .btn-icon va anidada en .btn (partial del botón), no suelta antes de ella', () => {
@@ -55,7 +59,16 @@ test('Pill: normal y resaltada', { skip }, () => {
 });
 
 test('Select: opciones, placeholder vacío y props al select', { skip }, () => {
-  const html = r('Select', { id: 's', value: 'b', onChange() {}, placeholder: 'Elige', options: [{ value: 'a', label: 'A' }, { value: 'b', label: 'B' }] });
+  const html = r('Select', {
+    id: 's',
+    value: 'b',
+    onChange() {},
+    placeholder: 'Elige',
+    options: [
+      { value: 'a', label: 'A' },
+      { value: 'b', label: 'B' },
+    ],
+  });
   assert.match(html, /^<select id="s">/);
   assert.match(html, /<option value="">Elige<\/option><option value="a">A<\/option><option value="b" selected="">B<\/option>/);
   assert.doesNotMatch(r('Select', { options: [{ value: 'a', label: 'A' }] }), /value=""/);
@@ -82,16 +95,27 @@ test('Input: texto sin autocompletar ni corrector; number y password sin añadid
   assert.match(r('Input', { autoComplete: 'username', value: '', onChange() {} }), /autocomplete="username"/i);
   assert.doesNotMatch(r('Input', { type: 'password', value: '', onChange() {} }), /spellcheck/);
 });
-test('Alert compact', { skip }, () => { assert.equal(r('Alert', { variant: 'warn', compact: true }, 'x'), '<div class="alert warn compact">x</div>'); });
+test('Alert compact', { skip }, () => {
+  assert.equal(r('Alert', { variant: 'warn', compact: true }, 'x'), '<div class="alert warn compact">x</div>');
+});
 test('WatchBar: icono por geometría (sin glifos de fuente) + texto + hora opcional', { skip }, () => {
   const run = r('WatchBar', { state: 'running', since: 'desde 10:05' }, 'Jugando en PC');
-  assert.equal(run, '<div class="watch-bar running" role="status"><i class="watch-ico" aria-hidden="true"><i class="watch-mark"></i></i><span class="watch-text">Jugando en PC</span><span class="watch-since">desde 10:05</span></div>');
+  assert.equal(
+    run,
+    '<div class="watch-bar running" role="status"><i class="watch-ico" aria-hidden="true"><i class="watch-mark"></i></i><span class="watch-text">Jugando en PC</span><span class="watch-since">desde 10:05</span></div>',
+  );
   assert.match(r('WatchBar', { state: 'waiting' }, 'x'), /<i class="watch-mark"><\/i>/);
   assert.match(r('WatchBar', { state: 'settling' }, 'x'), /<i class="watch-mark"><svg class="ico"[^>]*aria-hidden="true"/);
-  assert.match(r('WatchBar', { state: 'stale' }, 'Sin latido'), /^<div class="watch-bar stale" role="status"><i class="watch-ico" aria-hidden="true"><i class="watch-mark"><svg/);
+  assert.match(
+    r('WatchBar', { state: 'stale' }, 'Sin latido'),
+    /^<div class="watch-bar stale" role="status"><i class="watch-ico" aria-hidden="true"><i class="watch-mark"><svg/,
+  );
   for (const st of ['waiting', 'running', 'settling', 'stale']) assert.doesNotMatch(r('WatchBar', { state: st }, 'x'), /[◌●↻⚠]/u, st);
 });
 test('WatchStatus: punto decorativo + texto', { skip }, () => {
-  assert.equal(r('WatchStatus', { state: 'running' }, 'Jugando'), '<span class="watch running"><i class="watch-dot" aria-hidden="true"></i>Jugando</span>');
+  assert.equal(
+    r('WatchStatus', { state: 'running' }, 'Jugando'),
+    '<span class="watch running"><i class="watch-dot" aria-hidden="true"></i>Jugando</span>',
+  );
   assert.match(r('WatchStatus', { state: 'stale' }, 'x'), /^<span class="watch stale">/);
 });

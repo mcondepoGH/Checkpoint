@@ -2,7 +2,10 @@
 export const STALE_FACTOR = 3; // sin sondeo en 3 intervalos -> «sin latido»
 export const DEFAULT_POLL_S = 15;
 
-const ms = (iso) => { const n = iso ? Date.parse(iso) : NaN; return Number.isNaN(n) ? null : n; };
+const ms = (iso) => {
+  const n = iso ? Date.parse(iso) : NaN;
+  return Number.isNaN(n) ? null : n;
+};
 
 // Estado a pintar: 'waiting' | 'running' | 'settling' | 'stale'. `now` es la hora del servidor (ISO), no la del navegador.
 export function watchHealth(w, now) {
@@ -31,7 +34,10 @@ export function clock(iso, locale) {
 const RANK = { stale: 3, settling: 2, running: 1, waiting: 0 };
 export function worstHealth(list, now) {
   let best = null;
-  for (const w of list || []) { const h = watchHealth(w, now); if (best === null || RANK[h] > RANK[best]) best = h; }
+  for (const w of list || []) {
+    const h = watchHealth(w, now);
+    if (best === null || RANK[h] > RANK[best]) best = h;
+  }
   return best;
 }
 

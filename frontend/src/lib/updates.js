@@ -17,7 +17,10 @@ export function safeUrl(u) {
 }
 
 // `label` y CHANNEL_HELP son claves del catálogo (se traducen al pintar); `value` es el valor estable del backend.
-export const CHANNEL_OPTIONS = [{ value: 'stable', label: 'updates.channel.stable' }, { value: 'beta', label: 'updates.channel.beta' }];
+export const CHANNEL_OPTIONS = [
+  { value: 'stable', label: 'updates.channel.stable' },
+  { value: 'beta', label: 'updates.channel.beta' },
+];
 export const CHANNEL_HELP = 'updates.channel.help';
 
 export function channelOf(info) {
@@ -39,7 +42,8 @@ export function installedVersion(info) {
 export function updateSummary(info, t) {
   if (!info) return '';
   if (info.habilitado === false) return t('updates.summary.disabled');
-  if (info.hay_actualizacion) return t(isPrerelease(info) ? 'updates.summary.newerPre' : 'updates.summary.newer', { latest: info.ultima, current: info.actual });
+  if (info.hay_actualizacion)
+    return t(isPrerelease(info) ? 'updates.summary.newerPre' : 'updates.summary.newer', { latest: info.ultima, current: info.actual });
   if (info.ultima) return t('updates.summary.upToDate', { current: info.actual });
   return t('updates.summary.noData', { current: info.actual });
 }

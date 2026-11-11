@@ -4,17 +4,23 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { bundle } from '../helpers/bundle.mjs';
 
-const { mod: m, skip } = await bundle(`import React from 'react';
+const { mod: m, skip } = await bundle(
+  `import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
   import { i18n } from '#src/hooks/useI18n.js';
   import Sync from '#src/pages/Sync.jsx';
   import Versions from '#src/pages/Versions.jsx';
   import WatchSummary from '#src/components/watch/WatchSummary.jsx';
   import LauncherBlock from '#src/components/launchers/LauncherBlock.jsx';
-  export { React, renderToStaticMarkup, i18n, Sync, Versions, WatchSummary, LauncherBlock };`, { navigator: true, tag: 'ckpt-disabled' });
+  export { React, renderToStaticMarkup, i18n, Sync, Versions, WatchSummary, LauncherBlock };`,
+  { navigator: true, tag: 'ckpt-disabled' },
+);
 
 const has = (h, s) => h.includes(s);
-const R = (C, props, lang = 'es') => { m.i18n.setLocale(lang); return m.renderToStaticMarkup(m.React.createElement(m[C], props)); };
+const R = (C, props, lang = 'es') => {
+  m.i18n.setLocale(lang);
+  return m.renderToStaticMarkup(m.React.createElement(m[C], props));
+};
 const dev = { name: 'PC' };
 const mk = (games) => ({ devices: { pc: dev, tv: { name: 'TV' } }, games });
 const ON = { name: 'Activo', devices: ['pc', 'tv'] };
@@ -51,7 +57,14 @@ test('Versiones: el juego desactivado sale con sufijo y nota; el activo no', { s
 });
 
 test('WatchSummary: no cuenta los desactivados', { skip }, () => {
-  const w = (game) => ({ game, device: 'pc', state: 'running', since: '2026-01-01T11:00:00Z', last_poll: '2026-01-01T11:59:55Z', poll: 15 });
+  const w = (game) => ({
+    game,
+    device: 'pc',
+    state: 'running',
+    since: '2026-01-01T11:00:00Z',
+    last_poll: '2026-01-01T11:59:55Z',
+    poll: 15,
+  });
   const watch = { now: '2026-01-01T12:00:00Z', watches: [w('a'), w('b')] };
   assert.equal(R('WatchSummary', { watch, config: mk({ a: ON, b: OFF }), open: true }).includes('Apagado'), false);
   assert.ok(has(R('WatchSummary', { watch, config: mk({ a: ON, b: OFF }), open: true }), 'Activo'));
@@ -60,8 +73,15 @@ test('WatchSummary: no cuenta los desactivados', { skip }, () => {
 
 test('LauncherBlock: nota «Desactivado: el aviso se omitirá» solo con el juego desactivado', { skip }, () => {
   const g = (o = {}) => ({ sel: 'j-1', id: 'j-1', name: 'J', process: 'j.exe', devices: [{ id: 'pc', name: 'PC' }], ...o });
-  const props = (game) => ({ games: [game], selected: 'j-1', onSelect() {}, active: true, defaultHub: 'http://h:1',
-    initial: { loaded: true, key: 'ck_abc', status: null }, now: new Date('2026-11-09T12:00:00Z') });
+  const props = (game) => ({
+    games: [game],
+    selected: 'j-1',
+    onSelect() {},
+    active: true,
+    defaultHub: 'http://h:1',
+    initial: { loaded: true, key: 'ck_abc', status: null },
+    now: new Date('2026-11-09T12:00:00Z'),
+  });
   const off = R('LauncherBlock', props(g({ enabled: false })));
   assert.ok(has(off, 'Desactivado: el aviso se omitirá.'));
   assert.ok(!has(R('LauncherBlock', props(g({ enabled: true }))), 'el aviso se omitirá'));

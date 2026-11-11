@@ -10,13 +10,18 @@ export default function LanguageSelect({ row = false }) {
   const { t, preference, available, setLocale } = useI18n();
   const id = useId();
   // Nombre del idioma en su propio idioma, con inicial mayúscula («español» -> «Español»).
-  const name = (c) => { const n = new Intl.DisplayNames([c], { type: 'language' }).of(c); return n.charAt(0).toLocaleUpperCase(c) + n.slice(1); };
+  const name = (c) => {
+    const n = new Intl.DisplayNames([c], { type: 'language' }).of(c);
+    return n.charAt(0).toLocaleUpperCase(c) + n.slice(1);
+  };
   const options = [{ value: 'auto', label: t('lang.auto') }, ...available.map((c) => ({ value: c, label: name(c) }))];
   if (row) {
     return (
       <div className="profile-row profile-pref">
         <Icon name="globe" />
-        <label htmlFor={id} className="profile-row-label">{t('lang.label')}</label>
+        <label htmlFor={id} className="profile-row-label">
+          {t('lang.label')}
+        </label>
         <Select id={id} className="profile-row-value" value={preference} onChange={(e) => setLocale(e.target.value)} options={options} />
       </div>
     );

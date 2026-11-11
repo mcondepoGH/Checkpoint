@@ -5,8 +5,20 @@ import { es } from '../../helpers/locales.mjs';
 import { createI18n } from '#src/lib/i18n.js';
 import { errorText } from '#src/lib/errors.js';
 import {
-  LOCAL_DOCKER_MSG, LOCAL_ONE_MSG, baseKeyOf, blankDevice, canOfferLocal, fromConfig, idOf, isDirty, localErrors,
-  localOs, localPatch, pathsOf, removeDevice, toConfig,
+  LOCAL_DOCKER_MSG,
+  LOCAL_ONE_MSG,
+  baseKeyOf,
+  blankDevice,
+  canOfferLocal,
+  fromConfig,
+  idOf,
+  isDirty,
+  localErrors,
+  localOs,
+  localPatch,
+  pathsOf,
+  removeDevice,
+  toConfig,
 } from '#src/components/config/draft.js';
 
 const t = createI18n({ catalogs: { es }, storage: null, languages: ['es'] }).t;
@@ -18,8 +30,11 @@ const CFG = {
     'laptop-5e6f7a8b': { name: 'Laptop', host: '192.0.2.10', user: 'usuario', os: 'linux', port: 2222 },
   },
   games: {
-    'g-0a1b2c3d': { name: 'Juego', devices: ['pc-1a2b3c4d', 'laptop-5e6f7a8b'],
-      paths: { 'pc-1a2b3c4d': '/home/usuario/saves', 'laptop-5e6f7a8b': '/home/usuario/g' } },
+    'g-0a1b2c3d': {
+      name: 'Juego',
+      devices: ['pc-1a2b3c4d', 'laptop-5e6f7a8b'],
+      paths: { 'pc-1a2b3c4d': '/home/usuario/saves', 'laptop-5e6f7a8b': '/home/usuario/g' },
+    },
   },
 };
 const REMOTE_ONLY = {

@@ -12,15 +12,41 @@ const linuxKey = (k) => ({
 export function osSteps(os, distro, k) {
   if (os === 'Windows') {
     return [
-      { id: 'winServer', cmds: [cmd('Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0'), cmd('Start-Service sshd'), cmd('Set-Service sshd -StartupType Automatic')] },
-      { id: 'winUser', cmds: [cmd('New-Item -ItemType Directory -Force "$env:USERPROFILE\\.ssh" | Out-Null'), cmd(`Add-Content -Path "$env:USERPROFILE\\.ssh\\authorized_keys" -Value '${k}'`)] },
-      { id: 'winAdmin', cmds: [cmd(`Add-Content -Path "C:\\ProgramData\\ssh\\administrators_authorized_keys" -Value '${k}'`), cmd('icacls "C:\\ProgramData\\ssh\\administrators_authorized_keys" /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F"')] },
+      {
+        id: 'winServer',
+        cmds: [
+          cmd('Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0'),
+          cmd('Start-Service sshd'),
+          cmd('Set-Service sshd -StartupType Automatic'),
+        ],
+      },
+      {
+        id: 'winUser',
+        cmds: [
+          cmd('New-Item -ItemType Directory -Force "$env:USERPROFILE\\.ssh" | Out-Null'),
+          cmd(`Add-Content -Path "$env:USERPROFILE\\.ssh\\authorized_keys" -Value '${k}'`),
+        ],
+      },
+      {
+        id: 'winAdmin',
+        cmds: [
+          cmd(`Add-Content -Path "C:\\ProgramData\\ssh\\administrators_authorized_keys" -Value '${k}'`),
+          cmd('icacls "C:\\ProgramData\\ssh\\administrators_authorized_keys" /inheritance:r /grant "Administrators:F" /grant "SYSTEM:F"'),
+        ],
+      },
     ];
   }
   if (distro === 'Arch Linux') {
     return [
       { id: 'archInstall', cmds: [cmd('sudo pacman -S --needed openssh'), cmd('sudo systemctl enable --now sshd')] },
-      { id: 'archFirewall', alt: true, cmds: [cmd('sudo ufw allow 22/tcp', 'keyhelp.alt.ufw'), cmd('sudo firewall-cmd --permanent --add-service=ssh && sudo firewall-cmd --reload', 'keyhelp.alt.firewalld')] },
+      {
+        id: 'archFirewall',
+        alt: true,
+        cmds: [
+          cmd('sudo ufw allow 22/tcp', 'keyhelp.alt.ufw'),
+          cmd('sudo firewall-cmd --permanent --add-service=ssh && sudo firewall-cmd --reload', 'keyhelp.alt.firewalld'),
+        ],
+      },
       linuxKey(k),
     ];
   }

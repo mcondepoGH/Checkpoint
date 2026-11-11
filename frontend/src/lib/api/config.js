@@ -7,6 +7,7 @@ export const validateConfig = (config) => api('/api/config/validate', { method: 
 export const diffConfig = (body) => api('/api/config/diff', { method: 'POST', body }); // { config } o { backup }
 export const configYaml = (config) => api('/api/config/yaml', { method: 'POST', body: { config } });
 export const listBackups = () => api('/api/config/backups');
-export const restoreBackup = (name, baseVersion) => api('/api/config/restore', { method: 'POST', body: { name, base_version: baseVersion } });
+export const restoreBackup = (name, baseVersion) =>
+  api('/api/config/restore', { method: 'POST', body: { name, base_version: baseVersion } });
 export const testDevice = (body) => api('/api/devices/test', { method: 'POST', body });
 export const getPublicKey = () => api('/api/ssh/public-key');

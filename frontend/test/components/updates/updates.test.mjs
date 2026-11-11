@@ -2,13 +2,33 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { es } from '../../helpers/locales.mjs';
-import { updatesApplicable, showBadge, safeUrl, updateSummary, channelOf, isPrerelease, installedVersion, CHANNEL_OPTIONS } from '#src/lib/updates.js';
+import {
+  updatesApplicable,
+  showBadge,
+  safeUrl,
+  updateSummary,
+  channelOf,
+  isPrerelease,
+  installedVersion,
+  CHANNEL_OPTIONS,
+} from '#src/lib/updates.js';
 
 import { createI18n } from '#src/lib/i18n.js';
 import { bundle } from '../../helpers/bundle.mjs';
 const t = createI18n({ catalogs: { es }, storage: null, languages: ['es'] }).t;
 
-const NEW = { actual: '0.4.2', ultima: '0.5.0', hay_actualizacion: true, habilitado: true, notas: 'Novedades <b>x</b>', url: 'https://github.com/o/r/releases/tag/v0.5.0', comprobado_en: '2026-01-01T10:00:00+00:00', error: null, canal: 'stable', prerelease: false };
+const NEW = {
+  actual: '0.4.2',
+  ultima: '0.5.0',
+  hay_actualizacion: true,
+  habilitado: true,
+  notas: 'Novedades <b>x</b>',
+  url: 'https://github.com/o/r/releases/tag/v0.5.0',
+  comprobado_en: '2026-01-01T10:00:00+00:00',
+  error: null,
+  canal: 'stable',
+  prerelease: false,
+};
 const PRE = { ...NEW, canal: 'beta', ultima: '0.6.0-rc.1', prerelease: true };
 
 test('showBadge: solo con actualización y comprobación activa', () => {
@@ -26,8 +46,8 @@ test('aplicable false (Docker): sin insignia ni tarjeta; null = aún sin respues
   assert.equal(showBadge(NA), false);
   assert.equal(showBadge({ ...NEW, aplicable: true }), true);
   assert.equal(updatesApplicable(NA), false);
-  assert.equal(updatesApplicable(null), false);       // sin respuesta: oculto, sin parpadeo
-  assert.equal(updatesApplicable(NEW), true);          // backend sin el campo: se trata como aplicable
+  assert.equal(updatesApplicable(null), false); // sin respuesta: oculto, sin parpadeo
+  assert.equal(updatesApplicable(NEW), true); // backend sin el campo: se trata como aplicable
   assert.equal(updatesApplicable({ ...NEW, aplicable: true }), true);
 });
 
@@ -44,22 +64,34 @@ test('updateSummary: texto del ajuste', () => {
 });
 
 test('canal y marca preliminar: lógica pura', () => {
-  assert.equal(channelOf(NEW), 'stable'); assert.equal(channelOf(PRE), 'beta');
+  assert.equal(channelOf(NEW), 'stable');
+  assert.equal(channelOf(PRE), 'beta');
   for (const x of [null, {}, { canal: 'raro' }]) assert.equal(channelOf(x), 'stable');
-  assert.equal(isPrerelease(PRE), true); assert.equal(isPrerelease(NEW), false); assert.equal(isPrerelease(null), false);
+  assert.equal(isPrerelease(PRE), true);
+  assert.equal(isPrerelease(NEW), false);
+  assert.equal(isPrerelease(null), false);
   assert.equal(isPrerelease({ prerelease: 'true' }), false);
-  assert.equal(installedVersion(NEW), NEW.actual); assert.equal(installedVersion({ actual: 'desconocida' }), '');
-  assert.equal(installedVersion(null), ''); assert.equal(installedVersion({}), '');
-  assert.deepEqual(CHANNEL_OPTIONS.map((o) => o.value), ['stable', 'beta']);
-  assert.match(updateSummary(PRE, t), /preliminar/); assert.ok(!/preliminar/.test(updateSummary(NEW, t)));
+  assert.equal(installedVersion(NEW), NEW.actual);
+  assert.equal(installedVersion({ actual: 'desconocida' }), '');
+  assert.equal(installedVersion(null), '');
+  assert.equal(installedVersion({}), '');
+  assert.deepEqual(
+    CHANNEL_OPTIONS.map((o) => o.value),
+    ['stable', 'beta'],
+  );
+  assert.match(updateSummary(PRE, t), /preliminar/);
+  assert.ok(!/preliminar/.test(updateSummary(NEW, t)));
 });
 
-const { mod, skip } = await bundle(`import React from 'react';
+const { mod, skip } = await bundle(
+  `import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
   import UpdateBadge from '#src/components/updates/UpdateBadge.jsx';
   import UpdateDialog from '#src/components/updates/UpdateDialog.jsx';
   import UpdateCheck from '#src/components/updates/UpdateCheck.jsx';
-  export { React, renderToStaticMarkup, UpdateBadge, UpdateDialog, UpdateCheck };`, { tag: 'ckpt-upd' });
+  export { React, renderToStaticMarkup, UpdateBadge, UpdateDialog, UpdateCheck };`,
+  { tag: 'ckpt-upd' },
+);
 const r = (C, props) => mod.renderToStaticMarkup(mod.React.createElement(C, props));
 
 test('UpdateBadge visible con actualización', { skip }, () => {
@@ -75,8 +107,10 @@ test('UpdateBadge oculta sin actualización o desactivada', { skip }, () => {
 
 test('UpdateDialog: versiones, notas escapadas, enlace https y sin botón de actualizar', { skip }, () => {
   const h = r(mod.UpdateDialog, { info: NEW, onClose() {} });
-  assert.match(h, /0\.4\.2/); assert.match(h, /0\.5\.0/);
-  assert.match(h, /&lt;b&gt;x&lt;\/b&gt;/); assert.ok(!h.includes('<b>x</b>'));
+  assert.match(h, /0\.4\.2/);
+  assert.match(h, /0\.5\.0/);
+  assert.match(h, /&lt;b&gt;x&lt;\/b&gt;/);
+  assert.ok(!h.includes('<b>x</b>'));
   assert.match(h, /href="https:\/\/github\.com\/o\/r\/releases\/tag\/v0\.5\.0"/);
   assert.match(h, /recompila la web/i);
   const bad = r(mod.UpdateDialog, { info: { ...NEW, url: 'javascript:alert(1)' }, onClose() {} });
@@ -85,7 +119,8 @@ test('UpdateDialog: versiones, notas escapadas, enlace https y sin botón de act
 
 test('UpdateCheck: ajuste activado/desactivado', { skip }, () => {
   const on = r(mod.UpdateCheck, { info: NEW, onInfo() {} });
-  assert.match(on, /Comprobar actualizaciones/); assert.match(on, /checked=""/);
+  assert.match(on, /Comprobar actualizaciones/);
+  assert.match(on, /checked=""/);
   const off = r(mod.UpdateCheck, { info: { ...NEW, habilitado: false }, onInfo() {} });
   assert.ok(!off.includes('checked=""'));
   assert.ok(!off.includes('Comprobar ahora') || /disabled/.test(off));
@@ -106,10 +141,12 @@ test('UpdateCheck: selector de canal con aviso de versiones preliminares', { ski
 
 test('UpdateBadge y UpdateDialog marcan «preliminar» solo cuando aplica', { skip }, () => {
   const bp = r(mod.UpdateBadge, { info: PRE, onOpen() {} });
-  assert.match(bp, /preliminar/); assert.match(bp, /0\.6\.0-rc\.1/);
+  assert.match(bp, /preliminar/);
+  assert.match(bp, /0\.6\.0-rc\.1/);
   assert.ok(!/preliminar/.test(r(mod.UpdateBadge, { info: NEW, onOpen() {} })));
   const dp = r(mod.UpdateDialog, { info: PRE, onClose() {} });
-  assert.match(dp, /pre-tag/); assert.match(dp, /puede fallar/);
+  assert.match(dp, /pre-tag/);
+  assert.match(dp, /puede fallar/);
   const dn = r(mod.UpdateDialog, { info: NEW, onClose() {} });
   assert.ok(!/preliminar/.test(dn));
 });

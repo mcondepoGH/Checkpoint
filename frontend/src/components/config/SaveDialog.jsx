@@ -30,11 +30,15 @@ export default function SaveDialog({ config, diff: initial, baseVersion, onSaved
           setDiff(d.diff);
           setBase(d.version);
           setConflict(true);
-        } catch (e2) { setError(e2); }
+        } catch (e2) {
+          setError(e2);
+        }
       } else if (e instanceof ApiError && e.status === 422) {
         setError(ui('save.invalid'));
       } else setError(e);
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -45,7 +49,11 @@ export default function SaveDialog({ config, diff: initial, baseVersion, onSaved
         </Alert>
       )}
       <DiffView diff={diff} />
-      {error && <Alert variant="error" role="alert">{errText(error)}</Alert>}
+      {error && (
+        <Alert variant="error" role="alert">
+          {errText(error)}
+        </Alert>
+      )}
       <div className="row end">
         {conflict && <Button onClick={onReload}>{t('save.reload')}</Button>}
         <Button onClick={onClose}>{t('common.cancel')}</Button>

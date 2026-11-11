@@ -13,8 +13,13 @@ export default function LaunchersPanel({ open, onToggle, id, ...rest }) {
   return (
     <section className="card launchers-panel" id={id} aria-labelledby={`${uid}-t`}>
       <div className="row between">
-        <h3 id={`${uid}-t`} className="launcher-title"><Icon name="code" />{t('launcher.title')}</h3>
-        <Button variant="ghost" onClick={onToggle} aria-expanded={open} aria-controls={bodyId}>{t(open ? 'launcher.hide' : 'launcher.show')}</Button>
+        <h3 id={`${uid}-t`} className="launcher-title">
+          <Icon name="code" />
+          {t('launcher.title')}
+        </h3>
+        <Button variant="ghost" onClick={onToggle} aria-expanded={open} aria-controls={bodyId}>
+          {t(open ? 'launcher.hide' : 'launcher.show')}
+        </Button>
       </div>
       <div id={bodyId} className="launchers-body" hidden={!open}>
         {open && <LauncherBlock {...rest} active />}

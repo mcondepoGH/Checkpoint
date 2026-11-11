@@ -7,9 +7,11 @@ export default function Avatar({ src, size = 'sm' }) {
   useEffect(() => setFailed(false), [src]);
   return (
     <span className={`avatar avatar-${size}`}>
-      {src && !failed
-        ? <img src={src} alt="" aria-hidden="true" width="256" height="256" onError={() => setFailed(true)} />
-        : <Icon name="user" />}
+      {src && !failed ? (
+        <img src={src} alt="" aria-hidden="true" width="256" height="256" onError={() => setFailed(true)} />
+      ) : (
+        <Icon name="user" />
+      )}
     </span>
   );
 }

@@ -3,7 +3,15 @@ import assert from 'node:assert/strict';
 import { chipCount, clock, groupByGame, watchCardClass, watchHealth, worstHealth } from '#src/components/watch/watch.js';
 
 const NOW = '2026-01-01T12:00:00Z';
-const w = (o = {}) => ({ game: 'g', device: 'd', state: 'running', since: '2026-01-01T11:00:00Z', last_poll: '2026-01-01T11:59:55Z', poll: 15, ...o });
+const w = (o = {}) => ({
+  game: 'g',
+  device: 'd',
+  state: 'running',
+  since: '2026-01-01T11:00:00Z',
+  last_poll: '2026-01-01T11:59:55Z',
+  poll: 15,
+  ...o,
+});
 
 test('latido reciente: el estado manda', () => {
   for (const s of ['waiting', 'running', 'settling']) assert.equal(watchHealth(w({ state: s }), NOW), s);
@@ -19,7 +27,10 @@ test('sin poll usa 15 s; fechas ilegibles no marcan stale; estado raro -> waitin
 });
 test('groupByGame agrupa y ordena por dispositivo', () => {
   const g = groupByGame([w({ device: 'b' }), w({ device: 'a' }), w({ game: 'h' })]);
-  assert.deepEqual(g.g.map((x) => x.device), ['a', 'b']);
+  assert.deepEqual(
+    g.g.map((x) => x.device),
+    ['a', 'b'],
+  );
   assert.equal(g.h.length, 1);
   assert.deepEqual(groupByGame(null), {});
 });

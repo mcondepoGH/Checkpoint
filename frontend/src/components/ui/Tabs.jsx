@@ -9,7 +9,11 @@ export default function Tabs({ tabs, value, onChange, label, children }) {
   const tabId = (id) => `${uid}-tab-${id}`;
   const panelId = (id) => `${uid}-panel-${id}`;
   const onKeyDown = (e) => {
-    const i = nextTabIndex(tabs.length, tabs.findIndex((x) => x.id === value), e.key);
+    const i = nextTabIndex(
+      tabs.length,
+      tabs.findIndex((x) => x.id === value),
+      e.key,
+    );
     if (i === null) return;
     e.preventDefault();
     onChange(tabs[i].id);
@@ -19,12 +23,27 @@ export default function Tabs({ tabs, value, onChange, label, children }) {
     <div className="uitabs">
       <div className="uitabs-list" role="tablist" aria-label={label} onKeyDown={onKeyDown}>
         {tabs.map((x) => (
-          <button key={x.id} ref={(el) => { refs.current[x.id] = el; }} type="button" role="tab" id={tabId(x.id)}
-            className={x.id === value ? 'uitab active' : 'uitab'} aria-selected={x.id === value} aria-controls={panelId(x.id)}
-            tabIndex={x.id === value ? 0 : -1} onClick={() => onChange(x.id)}>{x.label}</button>
+          <button
+            key={x.id}
+            ref={(el) => {
+              refs.current[x.id] = el;
+            }}
+            type="button"
+            role="tab"
+            id={tabId(x.id)}
+            className={x.id === value ? 'uitab active' : 'uitab'}
+            aria-selected={x.id === value}
+            aria-controls={panelId(x.id)}
+            tabIndex={x.id === value ? 0 : -1}
+            onClick={() => onChange(x.id)}
+          >
+            {x.label}
+          </button>
         ))}
       </div>
-      <div className="uitabs-panel" role="tabpanel" id={panelId(value)} aria-labelledby={tabId(value)} tabIndex={0}>{children}</div>
+      <div className="uitabs-panel" role="tabpanel" id={panelId(value)} aria-labelledby={tabId(value)} tabIndex={0}>
+        {children}
+      </div>
     </div>
   );
 }

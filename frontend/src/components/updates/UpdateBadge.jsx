@@ -12,7 +12,8 @@ export default function UpdateBadge({ info, onOpen }) {
   const text = t(pre ? 'updates.badgePre' : 'updates.badge', { version: info.ultima });
   return (
     <Button variant="ghost" className="tool update-badge" onClick={onOpen} title={text} aria-label={text}>
-      <Icon name="download" /><span className="lbl">{t('updates.badgeLabel')}</span>
+      <Icon name="download" />
+      <span className="lbl">{t('updates.badgeLabel')}</span>
       {pre && <span className="lbl pre-tag">{t('updates.pre')}</span>}
     </Button>
   );

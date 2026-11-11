@@ -11,7 +11,9 @@ const ICON = { settling: 'spinner', stale: 'alert' };
 export default function WatchBar({ state, since, children }) {
   return (
     <div className={`watch-bar ${state}`} role="status">
-      <i className="watch-ico" aria-hidden="true"><i className="watch-mark">{ICON[state] && <Icon name={ICON[state]} />}</i></i>
+      <i className="watch-ico" aria-hidden="true">
+        <i className="watch-mark">{ICON[state] && <Icon name={ICON[state]} />}</i>
+      </i>
       <span className="watch-text">{children}</span>
       {since && <span className="watch-since">{since}</span>}
     </div>

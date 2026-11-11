@@ -15,7 +15,10 @@ test('estado inicial: sin cargar y sin key', () => {
 
 test('generar: pide POST y el estado pasa a «con key»', async () => {
   const calls = [];
-  const api = async (p, o) => { calls.push([p, o.method]); return { exists: true, key: KEY }; };
+  const api = async (p, o) => {
+    calls.push([p, o.method]);
+    return { exists: true, key: KEY };
+  };
   let s = reduce(initialState, { type: 'start' });
   assert.equal(s.busy, true);
   s = reduce(s, await run(api, 'create'));
@@ -37,7 +40,13 @@ test('regenerar exige confirmación: pedir, cancelar y confirmar', async () => {
   assert.equal(s.key, KEY);
   s = reduce(s, { type: 'ask', what: 'regenerate' });
   const NEW = 'ck_' + 'B'.repeat(43);
-  s = reduce(s, await run(async (p, o) => { assert.equal(o.method, 'POST'); return { exists: true, key: NEW }; }, 'create'));
+  s = reduce(
+    s,
+    await run(async (p, o) => {
+      assert.equal(o.method, 'POST');
+      return { exists: true, key: NEW };
+    }, 'create'),
+  );
   assert.equal(s.key, NEW);
   assert.equal(s.confirm, null);
 });
@@ -45,7 +54,13 @@ test('regenerar exige confirmación: pedir, cancelar y confirmar', async () => {
 test('revocar: DELETE y vuelve a «sin key»', async () => {
   const calls = [];
   let s = reduce({ ...initialState, loaded: true, exists: true, key: KEY }, { type: 'ask', what: 'revoke' });
-  s = reduce(s, await run(async (p, o) => { calls.push(o.method); return { exists: false, key: null }; }, 'revoke'));
+  s = reduce(
+    s,
+    await run(async (p, o) => {
+      calls.push(o.method);
+      return { exists: false, key: null };
+    }, 'revoke'),
+  );
   assert.deepEqual(calls, ['DELETE']);
   assert.deepEqual([s.exists, s.key, s.confirm], [false, null, null]);
 });
@@ -53,7 +68,12 @@ test('revocar: DELETE y vuelve a «sin key»', async () => {
 test('un fallo de la API guarda el error (código traducible) y conserva la key mostrada', async () => {
   const err = new ApiError(403, 'err.main.origin_forbidden', null, 'err.main.origin_forbidden', {});
   let s = { ...initialState, loaded: true, exists: true, key: KEY, confirm: 'regenerate' };
-  s = reduce(s, await run(async () => { throw err; }, 'create'));
+  s = reduce(
+    s,
+    await run(async () => {
+      throw err;
+    }, 'create'),
+  );
   assert.equal(s.error, err);
   assert.equal(s.confirm, null);
   assert.equal(s.key, KEY);
@@ -68,13 +88,16 @@ test('aviso de HTTP en claro solo fuera de localhost', () => {
 });
 
 // ---- render ----
-const { mod: m, skip } = await bundle(`import React from 'react';
+const { mod: m, skip } = await bundle(
+  `import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
   import { i18n } from '#src/hooks/useI18n.js';
   import ApiKeySection from '#src/components/profile/ApiKeySection.jsx';
   import ProfileMenu from '#src/components/profile/ProfileMenu.jsx';
   import { copyText } from '#src/lib/clipboard.js';
-  export { React, renderToStaticMarkup, i18n, ApiKeySection, ProfileMenu, copyText };`, { navigator: true, tag: 'ckpt-apikey' });
+  export { React, renderToStaticMarkup, i18n, ApiKeySection, ProfileMenu, copyText };`,
+  { navigator: true, tag: 'ckpt-apikey' },
+);
 const section = (initial, lang = 'es', props = {}) => {
   m.i18n.setLocale(lang);
   return m.renderToStaticMarkup(m.React.createElement(m.ApiKeySection, { initial, ...props }));
@@ -138,10 +161,17 @@ test('en inglés no queda nada en español', { skip }, () => {
 
 test('el menú del perfil abierto incluye la sección', { skip }, () => {
   m.i18n.setLocale('es');
-  const h = m.renderToStaticMarkup(m.React.createElement(m.ProfileMenu, {
-    profile: { name: 'admin', photo: null }, theme: 'auto', effectiveTheme: 'dark',
-    onCycleTheme() {}, onLogout() {}, onPhoto() {}, open: true,
-  }));
+  const h = m.renderToStaticMarkup(
+    m.React.createElement(m.ProfileMenu, {
+      profile: { name: 'admin', photo: null },
+      theme: 'auto',
+      effectiveTheme: 'dark',
+      onCycleTheme() {},
+      onLogout() {},
+      onPhoto() {},
+      open: true,
+    }),
+  );
   assert.ok(has(h, 'class="apikey"') && has(h, 'profile-pop'));
 });
 

@@ -23,14 +23,18 @@ export default function ConflictDialog({ game, conflict, busy, onCancel, onResol
 
   return (
     <Modal title={t('conflict.title', { game })} onClose={onCancel} wide>
-      <p>{t(`conflict.reason.${reason.replace('-', '_')}`)} {t('conflict.note')}</p>
+      <p>
+        {t(`conflict.reason.${reason.replace('-', '_')}`)} {t('conflict.note')}
+      </p>
       {!choosing && (
         <ul className="conflict-sides" aria-label={t('conflict.sidesAria')}>
           {sides.map((s) => (
             <li key={sid(s)}>
               <b>{label(s)}</b>
               <span>{fmtWhen(s.mtime, locale)}</span>
-              <span>{fmtSize(s.size, locale)} · {files(s)}</span>
+              <span>
+                {fmtSize(s.size, locale)} · {files(s)}
+              </span>
             </li>
           ))}
         </ul>
@@ -40,26 +44,46 @@ export default function ConflictDialog({ game, conflict, busy, onCancel, onResol
           <legend>{t('conflict.pick')}</legend>
           {sides.map((s) => (
             <label key={sid(s)} className={`conflict-opt${pick === value(s) ? ' on' : ''}`}>
-              <input type="radio" name="conflict-winner" value={value(s)} checked={pick === value(s)}
-                onChange={() => setPick(value(s))} />
-              <span><b>{label(s)}</b><br />
-                <small>{fmtWhen(s.mtime, locale)} · {fmtSize(s.size, locale)} · {files(s)}</small></span>
+              <input type="radio" name="conflict-winner" value={value(s)} checked={pick === value(s)} onChange={() => setPick(value(s))} />
+              <span>
+                <b>{label(s)}</b>
+                <br />
+                <small>
+                  {fmtWhen(s.mtime, locale)} · {fmtSize(s.size, locale)} · {files(s)}
+                </small>
+              </span>
             </label>
           ))}
         </fieldset>
       )}
       <div className="row end">
-        <Button onClick={onCancel} disabled={busy}>{t('common.cancel')}</Button>
+        <Button onClick={onCancel} disabled={busy}>
+          {t('common.cancel')}
+        </Button>
         {!choosing && (
           <>
-            <Button disabled={busy} onClick={() => onResolve('newest', expect)}>{t('conflict.newest')}</Button>
-            <Button variant="primary" disabled={busy} onClick={() => setChoosing(true)}>{t('conflict.choose')}</Button>
+            <Button disabled={busy} onClick={() => onResolve('newest', expect)}>
+              {t('conflict.newest')}
+            </Button>
+            <Button variant="primary" disabled={busy} onClick={() => setChoosing(true)}>
+              {t('conflict.choose')}
+            </Button>
           </>
         )}
         {choosing && (
           <>
-            <Button disabled={busy} onClick={() => { setChoosing(false); setPick(''); }}>{t('conflict.back')}</Button>
-            <Button variant="primary" disabled={busy || !pick} onClick={() => onResolve(pick, expect)}>{t('conflict.apply')}</Button>
+            <Button
+              disabled={busy}
+              onClick={() => {
+                setChoosing(false);
+                setPick('');
+              }}
+            >
+              {t('conflict.back')}
+            </Button>
+            <Button variant="primary" disabled={busy || !pick} onClick={() => onResolve(pick, expect)}>
+              {t('conflict.apply')}
+            </Button>
           </>
         )}
       </div>

@@ -6,7 +6,11 @@ export default function Select({ options, placeholder, ...rest }) {
   return (
     <select {...rest}>
       {placeholder !== undefined && <option value="">{placeholder}</option>}
-      {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))}
     </select>
   );
 }

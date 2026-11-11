@@ -32,14 +32,24 @@ export default function AutoSync() {
   };
 
   const load = useCallback(async () => {
-    try { apply(await getScheduler()); } catch (e) { setMsg({ kind: 'error', body: e }); }
+    try {
+      apply(await getScheduler());
+    } catch (e) {
+      setMsg({ kind: 'error', body: e });
+    }
   }, []);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+  }, [load]);
 
   // Refresca estado (próxima ejecución) sin pisar lo que se esté editando.
   useEffect(() => {
     const timer = setInterval(async () => {
-      try { setSaved(await getScheduler()); } catch { /* sin red: se reintenta */ }
+      try {
+        setSaved(await getScheduler());
+      } catch {
+        /* sin red: se reintenta */
+      }
     }, 30000);
     return () => clearInterval(timer);
   }, []);
@@ -47,71 +57,101 @@ export default function AutoSync() {
   const min = saved?.min_hours ?? 0.25;
   const max = saved?.max_hours ?? 168;
   const num = Number(hours);
-  const localErr = hours.trim() === '' || !Number.isFinite(num) || num < min || num > max
-    ? ui('autosync.range', { min, max }) : '';
-  const dirty = saved && (enabled !== saved.enabled || num !== saved.interval_hours || runOnStart !== saved.run_on_start || onConflict !== (saved.on_conflict || 'skip'));
+  const localErr = hours.trim() === '' || !Number.isFinite(num) || num < min || num > max ? ui('autosync.range', { min, max }) : '';
+  const dirty =
+    saved &&
+    (enabled !== saved.enabled ||
+      num !== saved.interval_hours ||
+      runOnStart !== saved.run_on_start ||
+      onConflict !== (saved.on_conflict || 'skip'));
 
   const save = async () => {
-    setBusy(true); setMsg(null); setServerErr('');
+    setBusy(true);
+    setMsg(null);
+    setServerErr('');
     try {
       apply(await putScheduler({ enabled, interval_hours: num, run_on_start: runOnStart, on_conflict: onConflict }));
       setMsg({ kind: 'ok', body: ui('autosync.saved') });
     } catch (e) {
       setServerErr(e.data?.errors?.interval_hours || e.data?.errors?.on_conflict || ''); // {code, params} o texto: Field lo traduce
       setMsg({ kind: 'error', body: e });
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
     <>
-    <section className="card autosync" aria-labelledby="autosync-title">
-      <div className="row between">
-        <h3 id="autosync-title">{t('autosync.title')}</h3>
-        {saved && (
-          <Badge status={saved.running ? 'running' : saved.enabled ? 'ok' : ''}>
-            {saved.running ? t('autosync.running') : saved.enabled ? t('autosync.active') : t('autosync.disabled')}
-          </Badge>
-        )}
-      </div>
-      <p className="muted">{t('autosync.intro')}</p>
+      <section className="card autosync" aria-labelledby="autosync-title">
+        <div className="row between">
+          <h3 id="autosync-title">{t('autosync.title')}</h3>
+          {saved && (
+            <Badge status={saved.running ? 'running' : saved.enabled ? 'ok' : ''}>
+              {saved.running ? t('autosync.running') : saved.enabled ? t('autosync.active') : t('autosync.disabled')}
+            </Badge>
+          )}
+        </div>
+        <p className="muted">{t('autosync.intro')}</p>
 
-      <Switch checked={enabled} onChange={(e) => setEnabled(e.target.checked)} label={enabled ? t('common.on') : t('common.off')} />
+        <Switch checked={enabled} onChange={(e) => setEnabled(e.target.checked)} label={enabled ? t('common.on') : t('common.off')} />
 
-      <div className="autosync-grid">
-        <Field label={t('autosync.hours')} error={localErr || serverErr} hint={t('autosync.hoursHint', { min, max })}>
+        <div className="autosync-grid">
+          <Field label={t('autosync.hours')} error={localErr || serverErr} hint={t('autosync.hoursHint', { min, max })}>
+            {(p) => (
+              <Input
+                {...p}
+                type="number"
+                inputMode="decimal"
+                min={min}
+                max={max}
+                step="any"
+                value={hours}
+                onChange={(e) => setHours(e.target.value)}
+              />
+            )}
+          </Field>
+          <div className="presets" role="group" aria-label={t('autosync.presets')}>
+            {PRESETS.map((h) => (
+              <Button className="preset" key={h} aria-pressed={num === h} onClick={() => setHours(String(h))}>
+                {t('autosync.hoursShort', { count: h })}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        <Checkbox checked={runOnStart} onChange={(e) => setRunOnStart(e.target.checked)} label={t('autosync.runOnStart')} />
+
+        <Field label={t('autosync.onConflict')} hint={ON_CONFLICT_HELP[onConflict] && t(ON_CONFLICT_HELP[onConflict])}>
           {(p) => (
-            <Input {...p} type="number" inputMode="decimal" min={min} max={max} step="any" value={hours}
-              onChange={(e) => setHours(e.target.value)} />
+            <Select
+              {...p}
+              value={onConflict}
+              onChange={(e) => setOnConflict(e.target.value)}
+              options={ON_CONFLICT_OPTIONS.map(([v, l]) => ({ value: v, label: t(l) }))}
+            />
           )}
         </Field>
-        <div className="presets" role="group" aria-label={t('autosync.presets')}>
-          {PRESETS.map((h) => (
-            <Button className="preset" key={h} aria-pressed={num === h} onClick={() => setHours(String(h))}>{t('autosync.hoursShort', { count: h })}</Button>
-          ))}
+
+        <div className="row">
+          <Button variant="primary" disabled={busy || !dirty || !!localErr} onClick={save}>
+            {t('common.save')}
+          </Button>
+          <div role="status" aria-live="polite">
+            {msg && (
+              <Alert as="span" variant={msg.kind} inline>
+                {errText(msg.body)}
+              </Alert>
+            )}
+          </div>
         </div>
-      </div>
 
-      <Checkbox checked={runOnStart} onChange={(e) => setRunOnStart(e.target.checked)} label={t('autosync.runOnStart')} />
-
-      <Field label={t('autosync.onConflict')} hint={ON_CONFLICT_HELP[onConflict] && t(ON_CONFLICT_HELP[onConflict])}>
-        {(p) => (
-          <Select {...p} value={onConflict} onChange={(e) => setOnConflict(e.target.value)}
-            options={ON_CONFLICT_OPTIONS.map(([v, l]) => ({ value: v, label: t(l) }))} />
+        {saved && (
+          <p className="autosync-status" aria-live="polite">
+            {t('autosync.nextRun')} {saved.enabled ? fmtDateTime(saved.next_run, locale) : t('autosync.nextOff')}
+          </p>
         )}
-      </Field>
-
-      <div className="row">
-        <Button variant="primary" disabled={busy || !dirty || !!localErr} onClick={save}>{t('common.save')}</Button>
-        <div role="status" aria-live="polite">{msg && <Alert as="span" variant={msg.kind} inline>{errText(msg.body)}</Alert>}</div>
-      </div>
-
-      {saved && (
-        <p className="autosync-status" aria-live="polite">
-          {t('autosync.nextRun')} {saved.enabled ? fmtDateTime(saved.next_run, locale) : t('autosync.nextOff')}
-        </p>
-      )}
-    </section>
-    <AutoSyncLog />
+      </section>
+      <AutoSyncLog />
     </>
   );
 }

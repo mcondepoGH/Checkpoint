@@ -7,22 +7,45 @@ export default function Modal({ title, onClose, children, wide }) {
   useEffect(() => {
     const prev = document.activeElement;
     ref.current?.focus();
-    return () => { if (prev instanceof HTMLElement) prev.focus(); };
+    return () => {
+      if (prev instanceof HTMLElement) prev.focus();
+    };
   }, []);
   const onKey = (e) => {
-    if (e.key === 'Escape') { e.stopPropagation(); onClose(); return; }
+    if (e.key === 'Escape') {
+      e.stopPropagation();
+      onClose();
+      return;
+    }
     if (e.key !== 'Tab') return;
     const f = ref.current.querySelectorAll('button:not(:disabled), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
     if (!f.length) return;
     const first = f[0];
     const last = f[f.length - 1];
-    if (e.shiftKey && (document.activeElement === first || document.activeElement === ref.current)) { e.preventDefault(); last.focus(); }
-    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    if (e.shiftKey && (document.activeElement === first || document.activeElement === ref.current)) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
   };
   return (
-    <div className="modal" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className={wide ? 'card dialog wide' : 'card dialog'} role="dialog" aria-modal="true"
-        aria-labelledby={titleId} tabIndex={-1} ref={ref} onKeyDown={onKey}>
+    <div
+      className="modal"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className={wide ? 'card dialog wide' : 'card dialog'}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
+        ref={ref}
+        onKeyDown={onKey}
+      >
         <h3 id={titleId}>{title}</h3>
         {children}
       </div>

@@ -5,12 +5,18 @@ export const initialState = { loaded: false, exists: false, key: null, confirm: 
 // confirm: null | 'regenerate' | 'revoke' (confirmación en la propia sección, sin diálogo aparte).
 export function reduce(s, a) {
   switch (a.type) {
-    case 'start': return { ...s, busy: true, error: null };
-    case 'loaded': return { ...s, loaded: true, busy: false, exists: !!a.exists, key: a.exists ? a.key : null, confirm: null };
-    case 'failed': return { ...s, loaded: true, busy: false, confirm: null, error: a.error };
-    case 'ask': return { ...s, confirm: a.what, error: null };
-    case 'cancel': return { ...s, confirm: null };
-    default: return s;
+    case 'start':
+      return { ...s, busy: true, error: null };
+    case 'loaded':
+      return { ...s, loaded: true, busy: false, exists: !!a.exists, key: a.exists ? a.key : null, confirm: null };
+    case 'failed':
+      return { ...s, loaded: true, busy: false, confirm: null, error: a.error };
+    case 'ask':
+      return { ...s, confirm: a.what, error: null };
+    case 'cancel':
+      return { ...s, confirm: null };
+    default:
+      return s;
   }
 }
 

@@ -29,7 +29,8 @@ test('ningún texto de Heroic en los locales (pestaña, dónde pegarlo, cualquie
 });
 
 test('la fuente de los lanzadores no marca Heroic como no verificado', () => {
-  for (const f of ['../../../src/components/launchers/launchers.js', '../../../src/components/launchers/LauncherBlock.jsx']) assert.ok(!UNVERIFIED.test(read(f)), f);
+  for (const f of ['../../../src/components/launchers/launchers.js', '../../../src/components/launchers/LauncherBlock.jsx'])
+    assert.ok(!UNVERIFIED.test(read(f)), f);
 });
 
 test('README: ni Heroic ni Windows/Playnite ni la nota de Proton/Wine dicen «sin verificar»', () => {

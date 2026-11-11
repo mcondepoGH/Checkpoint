@@ -24,7 +24,9 @@ const TABS = ['sync', 'versions', 'settings'];
 
 export default function App() {
   const { t, locale } = useI18n(); // re-renderiza al cambiar de idioma
-  useEffect(() => { document.documentElement.lang = locale; }, [locale]); // lector de pantalla y traductor del navegador
+  useEffect(() => {
+    document.documentElement.lang = locale;
+  }, [locale]); // lector de pantalla y traductor del navegador
   const [authed, setAuthed] = useState(null);
   const [tab, setTab] = useState('sync');
   const [loaded, setLoaded] = useState({ version: '', config: { devices: {}, games: {} }, error: null });
@@ -53,20 +55,38 @@ export default function App() {
   useEffect(() => {
     // El idioma por defecto del servidor se pide en paralelo y se espera antes de pintar (evita parpadeo es -> en).
     const pub = initDefaultLang();
-    getSession().then(async (s) => {
-      await pub;
-      setAuthed(s.authenticated);
-      if (s.authenticated) loadConfig(true);
-    }).catch(async () => { await pub; setAuthed(false); });
+    getSession()
+      .then(async (s) => {
+        await pub;
+        setAuthed(s.authenticated);
+        if (s.authenticated) loadConfig(true);
+      })
+      .catch(async () => {
+        await pub;
+        setAuthed(false);
+      });
   }, [loadConfig]);
 
   // El backend vigila config.yaml y avisa de cambios (también ediciones a mano).
   useEffect(() => {
     if (!authed) return undefined;
     const es = new EventSource('/api/config/events');
-    es.addEventListener('config', (ev) => { try { setLatest(JSON.parse(ev.data).version); } catch { /* ignorar */ } });
+    es.addEventListener('config', (ev) => {
+      try {
+        setLatest(JSON.parse(ev.data).version);
+      } catch {
+        /* ignorar */
+      }
+    });
     es.onerror = () => {
-      getSession().then((s) => { if (!s.authenticated) { es.close(); setAuthed(false); } }).catch(() => {});
+      getSession()
+        .then((s) => {
+          if (!s.authenticated) {
+            es.close();
+            setAuthed(false);
+          }
+        })
+        .catch(() => {});
     };
     return () => es.close();
   }, [authed]);
@@ -75,53 +95,114 @@ export default function App() {
   useEffect(() => {
     if (!authed) return undefined;
     let timer = null;
-    const check = () => getUpdates().then((r) => {
-      setUpdates(r);
-      if (r && r.aplicable === false && timer) { clearInterval(timer); timer = null; } // no aplica (Docker): sin más consultas
-    }).catch(() => {});
+    const check = () =>
+      getUpdates()
+        .then((r) => {
+          setUpdates(r);
+          if (r && r.aplicable === false && timer) {
+            clearInterval(timer);
+            timer = null;
+          } // no aplica (Docker): sin más consultas
+        })
+        .catch(() => {});
     check();
     timer = setInterval(check, 6 * 3600 * 1000);
-    return () => { if (timer) clearInterval(timer); };
+    return () => {
+      if (timer) clearInterval(timer);
+    };
   }, [authed]);
 
   useEffect(() => {
-    if (authed) getProfile().then(setProfile).catch(() => {});
+    if (authed)
+      getProfile()
+        .then(setProfile)
+        .catch(() => {});
   }, [authed]);
 
   const stale = latest !== null && latest !== loaded.version;
   // Sin borrador pendiente se recarga solo; con borrador, Configuración avisa y no pisa nada.
-  useEffect(() => { if (stale && !dirty) loadConfig(); }, [stale, dirty, loadConfig]);
+  useEffect(() => {
+    if (stale && !dirty) loadConfig();
+  }, [stale, dirty, loadConfig]);
 
-  const logout = async () => { await apiLogout(); setAuthed(false); };
+  const logout = async () => {
+    await apiLogout();
+    setAuthed(false);
+  };
 
   if (authed === null) return <div className="center muted">{t('common.loading')}</div>;
   if (!authed) {
-    return <Login onDone={() => { setAuthed(true); loadConfig(true); }} />;
+    return (
+      <Login
+        onDone={() => {
+          setAuthed(true);
+          loadConfig(true);
+        }}
+      />
+    );
   }
 
   return (
     <div className="app">
       <header className="topbar">
-        <strong className="brand"><AppIcon className="brand-logo" /><span className="brand-name">Checkpoint</span></strong>
+        <strong className="brand">
+          <AppIcon className="brand-logo" />
+          <span className="brand-name">Checkpoint</span>
+        </strong>
         <nav className="tabs" aria-label={t('app.sections')}>
           {TABS.map((id) => (
-            <button key={id} className={tab === id ? 'tab active' : 'tab'} aria-current={tab === id ? 'page' : undefined} aria-label={t(`app.tab.${id}.full`)} onClick={() => setTab(id)}>
-              <span className="full" aria-hidden="true">{t(`app.tab.${id}.full`)}</span><span className="short" aria-hidden="true">{t(`app.tab.${id}.short`)}</span>
+            <button
+              key={id}
+              className={tab === id ? 'tab active' : 'tab'}
+              aria-current={tab === id ? 'page' : undefined}
+              aria-label={t(`app.tab.${id}.full`)}
+              onClick={() => setTab(id)}
+            >
+              <span className="full" aria-hidden="true">
+                {t(`app.tab.${id}.full`)}
+              </span>
+              <span className="short" aria-hidden="true">
+                {t(`app.tab.${id}.short`)}
+              </span>
             </button>
           ))}
         </nav>
         <div className="spacer" />
         <WatchSummary watch={watch} config={config} />
         <UpdateBadge info={updates} onOpen={() => setShowUpdate(true)} />
-        <ProfileMenu profile={profile} theme={theme} effectiveTheme={effectiveTheme}
-          updates={updates} onUpdate={() => setShowUpdate(true)} onCycleTheme={cycleTheme} onLogout={logout} onPhoto={(photo) => setProfile((p) => ({ ...p, photo }))} />
+        <ProfileMenu
+          profile={profile}
+          theme={theme}
+          effectiveTheme={effectiveTheme}
+          updates={updates}
+          onUpdate={() => setShowUpdate(true)}
+          onCycleTheme={cycleTheme}
+          onLogout={logout}
+          onPhoto={(photo) => setProfile((p) => ({ ...p, photo }))}
+        />
       </header>
       <main className="content">
-        {error && <Alert variant="error" role="alert">{errText(error)}</Alert>}
+        {error && (
+          <Alert variant="error" role="alert">
+            {errText(error)}
+          </Alert>
+        )}
         <div hidden={tab !== 'settings'}>
-          <Settings loaded={loaded} stale={stale && dirty} configError={loaded.error} runtime={loaded.runtime} platform={loaded.platform}
-            onApplied={(r) => { setLoaded((l) => ({ ...l, version: r.version, config: r.config, error: null })); setLatest(r.version); }}
-            onReload={() => loadConfig()} onDirty={setDirty} updates={updates} onUpdates={setUpdates} />
+          <Settings
+            loaded={loaded}
+            stale={stale && dirty}
+            configError={loaded.error}
+            runtime={loaded.runtime}
+            platform={loaded.platform}
+            onApplied={(r) => {
+              setLoaded((l) => ({ ...l, version: r.version, config: r.config, error: null }));
+              setLatest(r.version);
+            }}
+            onReload={() => loadConfig()}
+            onDirty={setDirty}
+            updates={updates}
+            onUpdates={setUpdates}
+          />
         </div>
         {tab === 'sync' && <Sync config={config} watch={watch} onGoSettings={() => setTab('settings')} />}
         {tab === 'versions' && <Versions config={config} onGoSettings={() => setTab('settings')} />}

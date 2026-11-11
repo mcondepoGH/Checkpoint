@@ -34,8 +34,14 @@ function loadBitmap(file) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
-    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
-    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('decode')); };
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(img);
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('decode'));
+    };
     img.src = url;
   });
 }
@@ -45,11 +51,13 @@ const toBlob = (canvas, type, q) => new Promise((resolve) => canvas.toBlob(resol
 // Recorta al centro, reduce a PHOTO_SIZE y codifica en WebP (o JPEG si el navegador no sabe WebP). Devuelve un Blob.
 export async function prepareAvatar(file) {
   const img = await loadBitmap(file);
-  const w = img.width; const h = img.height;
+  const w = img.width;
+  const h = img.height;
   const { sx, sy, side } = squareCrop(w, h);
   const out = targetSide(side);
   const canvas = document.createElement('canvas');
-  canvas.width = out; canvas.height = out;
+  canvas.width = out;
+  canvas.height = out;
   const ctx = canvas.getContext('2d');
   ctx.drawImage(img, sx, sy, side, side, 0, 0, out, out);
   if (typeof img.close === 'function') img.close();

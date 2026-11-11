@@ -7,7 +7,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { bundle, SRC } from './helpers/bundle.mjs';
 
-const { mod: m, skip } = await bundle(`import React from 'react';
+const { mod: m, skip } = await bundle(
+  `import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
   import { i18n, initDefaultLang } from '#src/hooks/useI18n.js';
   import Login from '#src/pages/Login.jsx';
@@ -23,28 +24,95 @@ const { mod: m, skip } = await bundle(`import React from 'react';
   import Avatar from '#src/components/profile/Avatar.jsx';
   import Sync from '#src/pages/Sync.jsx';
   import Versions from '#src/pages/Versions.jsx';
-  export { React, renderToStaticMarkup, i18n, initDefaultLang, Login, LanguageSelect, DeviceCard, GameCard, ConflictDialog, DiffView, UpdateDialog, UpdateBadge, PublicKey, ProfileMenu, Avatar, Sync, Versions };`, { tag: 'ckpt-render' });
+  export { React, renderToStaticMarkup, i18n, initDefaultLang, Login, LanguageSelect, DeviceCard, GameCard, ConflictDialog, DiffView, UpdateDialog, UpdateBadge, PublicKey, ProfileMenu, Avatar, Sync, Versions };`,
+  { tag: 'ckpt-render' },
+);
 
 const h = (C, props) => m.renderToStaticMarkup(m.React.createElement(C, props));
 const dev = { key: 'k1', id: 'pc-1', name: 'PC', orig: 'PC', local: false, host: 'h', port: '22', user: 'u', os: 'linux' };
 const game = { key: 'g1', id: 'g-1', name: 'Game', a: 'k1', b: 'k2', pathA: '/a', pathB: '/b', process: '', keep: '', onConflict: '' };
 const devices = [dev, { ...dev, key: 'k2', id: 'pc-2', name: 'PC2' }];
-const conflict = { reason: 'both-changed', sides: [{ id: 'a', name: 'PC', hash: 'x', mtime: 1700000000, size: 2048, files: 3 }, { id: 'hub', hub: true, hash: 'y', mtime: 1700000100, size: 10, files: 1 }] };
+const conflict = {
+  reason: 'both-changed',
+  sides: [
+    { id: 'a', name: 'PC', hash: 'x', mtime: 1700000000, size: 2048, files: 3 },
+    { id: 'hub', hub: true, hash: 'y', mtime: 1700000100, size: 10, files: 1 },
+  ],
+};
 const cfg = { devices: { a: { name: 'A' } }, games: { g: { name: 'G', devices: ['a', 'a'] } } };
-const NEW = { actual: '0.4.2', ultima: '0.5.0', hay_actualizacion: true, habilitado: true, notas: 'x', url: 'https://x.y/z', prerelease: false, aplicable: true };
+const NEW = {
+  actual: '0.4.2',
+  ultima: '0.5.0',
+  hay_actualizacion: true,
+  habilitado: true,
+  notas: 'x',
+  url: 'https://x.y/z',
+  prerelease: false,
+  aplicable: true,
+};
 
 // Palabras españolas que no deben aparecer en modo inglés (los datos de prueba están en inglés/neutros).
-const SPANISH = /\b(Sincronizar|Configuración|Versiones|Eliminar|Cancelar|Cerrar|Guardar|Nombre|Dispositivo|Puerto|Usuario|Contraseña|Entrar|Salir|Conflicto|Restaurar|Aplicar|Atrás|fichero|ficheros|Juego|Cargando|Probar|Comprobar|Sin |Ruta|Proceso|Simulación|Novedades|Instalada|Ganador|Destinos|Actualizados|Resolver)\b/;
+const SPANISH =
+  /\b(Sincronizar|Configuración|Versiones|Eliminar|Cancelar|Cerrar|Guardar|Nombre|Dispositivo|Puerto|Usuario|Contraseña|Entrar|Salir|Conflicto|Restaurar|Aplicar|Atrás|fichero|ficheros|Juego|Cargando|Probar|Comprobar|Sin |Ruta|Proceso|Simulación|Novedades|Instalada|Ganador|Destinos|Actualizados|Resolver)\b/;
 
-const PROFILE = { profile: { name: 'admin', photo: null }, theme: 'auto', effectiveTheme: 'dark', onCycleTheme() {}, onLogout() {}, onPhoto() {} };
+const PROFILE = {
+  profile: { name: 'admin', photo: null },
+  theme: 'auto',
+  effectiveTheme: 'dark',
+  onCycleTheme() {},
+  onLogout() {},
+  onPhoto() {},
+};
 
 const screens = () => [
   ['Login', h(m.Login, { onDone() {} })],
   ['LanguageSelect', h(m.LanguageSelect, {})],
-  ['DeviceCard', h(m.DeviceCard, { dev, errors: {}, idText: 'pc-1', renamed: true, onChange() {}, onTest() {}, onRemove() {}, runtime: 'native', platform: 'linux', canLocal: true, test: { ok: true, code: 'err.transport.connection_ok', params: {}, first_use: true } })],
-  ['GameCard', h(m.GameCard, { game, devices, errors: {}, globalMax: '20', nameA: 'PC', nameB: 'PC2', idA: 'pc-1', idB: 'pc-2', idText: 'g-1', renamed: false, onChange() {}, onRemove() {} })],
+  [
+    'DeviceCard',
+    h(m.DeviceCard, {
+      dev,
+      errors: {},
+      idText: 'pc-1',
+      renamed: true,
+      onChange() {},
+      onTest() {},
+      onRemove() {},
+      runtime: 'native',
+      platform: 'linux',
+      canLocal: true,
+      test: { ok: true, code: 'err.transport.connection_ok', params: {}, first_use: true },
+    }),
+  ],
+  [
+    'GameCard',
+    h(m.GameCard, {
+      game,
+      devices,
+      errors: {},
+      globalMax: '20',
+      nameA: 'PC',
+      nameB: 'PC2',
+      idA: 'pc-1',
+      idB: 'pc-2',
+      idText: 'g-1',
+      renamed: false,
+      onChange() {},
+      onRemove() {},
+    }),
+  ],
   ['ConflictDialog', h(m.ConflictDialog, { game: 'G', conflict, busy: false, onCancel() {}, onResolve() {} })],
-  ['DiffView', h(m.DiffView, { diff: { empty: false, general: { added: [], removed: [], changed: { max_versions: { old: 1, new: 2 } } }, devices: { added: ['a'], removed: [], changed: {} }, games: { added: [], removed: ['g'], changed: {} }, names: {} } })],
+  [
+    'DiffView',
+    h(m.DiffView, {
+      diff: {
+        empty: false,
+        general: { added: [], removed: [], changed: { max_versions: { old: 1, new: 2 } } },
+        devices: { added: ['a'], removed: [], changed: {} },
+        games: { added: [], removed: ['g'], changed: {} },
+        names: {},
+      },
+    }),
+  ],
   ['DiffView vacío', h(m.DiffView, { diff: { empty: true } })],
   ['UpdateDialog', h(m.UpdateDialog, { info: { ...NEW, prerelease: true }, onClose() {} })],
   ['UpdateBadge', h(m.UpdateBadge, { info: NEW, onOpen() {} })],
@@ -67,8 +135,19 @@ test('modo inglés: sin palabras en español', { skip }, () => {
 
 test('modo español: textos en español', { skip }, () => {
   m.i18n.setLocale('es');
-  const all = screens().map(([, x]) => x).join('\n');
-  for (const s of ['Usuario', 'Contraseña', 'Entrar', 'Probar conexión', 'Elegir dispositivo', 'Sin juegos configurados', 'Nueva versión disponible']) assert.ok(all.includes(s), s);
+  const all = screens()
+    .map(([, x]) => x)
+    .join('\n');
+  for (const s of [
+    'Usuario',
+    'Contraseña',
+    'Entrar',
+    'Probar conexión',
+    'Elegir dispositivo',
+    'Sin juegos configurados',
+    'Nueva versión disponible',
+  ])
+    assert.ok(all.includes(s), s);
 });
 
 test('cambio de idioma sin recargar: el mismo componente se repinta', { skip }, () => {
@@ -124,10 +203,12 @@ test('LanguageSelect: Automático + Español + English', { skip }, () => {
 test('plurales de ficheros en el conflicto (es y en)', { skip }, () => {
   m.i18n.setLocale('en');
   const en = h(m.ConflictDialog, { game: 'G', conflict, busy: false, onCancel() {}, onResolve() {} });
-  assert.match(en, /3 files/); assert.match(en, /1 file</);
+  assert.match(en, /3 files/);
+  assert.match(en, /1 file</);
   m.i18n.setLocale('es');
   const es = h(m.ConflictDialog, { game: 'G', conflict, busy: false, onCancel() {}, onResolve() {} });
-  assert.match(es, /3 ficheros/); assert.match(es, /1 fichero</);
+  assert.match(es, /3 ficheros/);
+  assert.match(es, /1 fichero</);
 });
 
 test('idioma por defecto del servidor (/api/public): se aplica sin elección guardada; un fallo no rompe', { skip }, async () => {
@@ -137,11 +218,15 @@ test('idioma por defecto del servidor (/api/public): se aplica sin elección gua
     globalThis.fetch = async () => ({ ok: true, json: async () => ({ default_lang: 'en' }) });
     await m.initDefaultLang();
     assert.equal(m.i18n.locale, 'es');
-    globalThis.fetch = async () => { throw new Error('sin red'); };
+    globalThis.fetch = async () => {
+      throw new Error('sin red');
+    };
     await assert.doesNotReject(m.initDefaultLang());
     globalThis.fetch = async () => ({ ok: false, status: 500, statusText: 'x', json: async () => ({}) });
     await assert.doesNotReject(m.initDefaultLang());
-  } finally { globalThis.fetch = realFetch; }
+  } finally {
+    globalThis.fetch = realFetch;
+  }
 });
 
 test('ProfileMenu: botón cerrado con aria correctos y silueta sin foto', { skip }, () => {
@@ -160,10 +245,14 @@ test('ProfileMenu: popup abierto con nombre, idioma, tema, salir; sin foto no ha
   const html = h(m.ProfileMenu, { ...PROFILE, open: true });
   assert.match(html, /aria-expanded="true"/);
   assert.match(html, /role="dialog"[^>]*aria-label="Perfil"/);
-  for (const txt of ['admin', 'Cambiar foto', 'Idioma', 'Tema', 'Automático', 'Preferencias', 'Integración', 'Cuenta', 'Salir']) assert.ok(html.includes(txt), txt);
+  for (const txt of ['admin', 'Cambiar foto', 'Idioma', 'Tema', 'Automático', 'Preferencias', 'Integración', 'Cuenta', 'Salir'])
+    assert.ok(html.includes(txt), txt);
   assert.ok(!html.includes('Quitar foto'));
   assert.match(html, /<select/);
-  assert.match(html, /type="file"[^>]*accept="image\/jpeg,image\/png,image\/webp"|accept="image\/jpeg,image\/png,image\/webp"[^>]*type="file"/);
+  assert.match(
+    html,
+    /type="file"[^>]*accept="image\/jpeg,image\/png,image\/webp"|accept="image\/jpeg,image\/png,image\/webp"[^>]*type="file"/,
+  );
 });
 
 test('ProfileMenu: con foto se pinta la imagen versionada y aparece «Quitar foto»; el menú no muestra la versión', { skip }, () => {

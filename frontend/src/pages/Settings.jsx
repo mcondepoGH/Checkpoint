@@ -1,7 +1,20 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { diffConfig, testDevice as testDeviceApi } from '#src/lib/api/config.js';
 import {
-  MAX_VERSIONS_LIMIT, VERSIONS_HINT, blankDevice, blankGame, canOfferLocal, deviceId, errorsFor, fromConfig, gamesUsing, idOf, nameOf, pathsOf, removeDevice, renamed,
+  MAX_VERSIONS_LIMIT,
+  VERSIONS_HINT,
+  blankDevice,
+  blankGame,
+  canOfferLocal,
+  deviceId,
+  errorsFor,
+  fromConfig,
+  gamesUsing,
+  idOf,
+  nameOf,
+  pathsOf,
+  removeDevice,
+  renamed,
 } from '#src/components/config/draft.js';
 import useConfigDraft from '#src/components/config/useConfigDraft.js';
 import Field from '#src/components/ui/Field.jsx';
@@ -34,17 +47,41 @@ export default function Settings({ loaded, stale, configError, runtime, platform
   const [busy, setBusy] = useState(false);
   const [staleDiff, setStaleDiff] = useState(null);
   const { draft, setDraft, errors, validating, local, hasLocal, payload, payloadKey, dirty, patch } = useConfigDraft({
-    loaded, runtime, onDirty, onVersionChange: () => setStaleDiff(null),
+    loaded,
+    runtime,
+    onDirty,
+    onVersionChange: () => setStaleDiff(null),
   });
   const [launchersOpen, setLaunchersOpen] = useState(false); // sección «Lanzadores»: plegada por defecto
-  const [launcherGame, setLauncherGame] = useState(() => { try { return loadGameSel(window.localStorage); } catch { return ''; } });
-  const chooseLauncherGame = (sel) => { setLauncherGame(sel); try { saveGameSel(window.localStorage, sel); } catch { /* sin almacenamiento */ } };
+  const [launcherGame, setLauncherGame] = useState(() => {
+    try {
+      return loadGameSel(window.localStorage);
+    } catch {
+      return '';
+    }
+  });
+  const chooseLauncherGame = (sel) => {
+    setLauncherGame(sel);
+    try {
+      saveGameSel(window.localStorage, sel);
+    } catch {
+      /* sin almacenamiento */
+    }
+  };
 
   // Juegos para el panel de lanzadores: dispositivos con nombre e id (los que el lanzador puede indicar en ?device=).
-  const launcherGames = useMemo(() => draft.games.map((g) => ({
-    sel: g.id || g.key, id: g.id, name: g.name, process: g.process, enabled: g.enabled !== false,
-    devices: [g.a, g.b].map((k) => ({ id: deviceId(draft, k), name: nameOf(draft, k) })).filter((d) => d.id && d.name),
-  })), [draft]);
+  const launcherGames = useMemo(
+    () =>
+      draft.games.map((g) => ({
+        sel: g.id || g.key,
+        id: g.id,
+        name: g.name,
+        process: g.process,
+        enabled: g.enabled !== false,
+        devices: [g.a, g.b].map((k) => ({ id: deviceId(draft, k), name: nameOf(draft, k) })).filter((d) => d.id && d.name),
+      })),
+    [draft],
+  );
   const showLaunchers = (g) => {
     chooseLauncherGame(g.id || g.key);
     setLaunchersOpen(true);
@@ -52,8 +89,13 @@ export default function Settings({ loaded, stale, configError, runtime, platform
   };
   const delDevice = (dev) => {
     const used = gamesUsing(draft, dev.key);
-    if (used.length && !window.confirm(
-      t('settings.delDevice', { device: dev.name || t('common.unnamed'), games: used.map((n) => n || t('common.unnamed')).join(', ') }))) return;
+    if (
+      used.length &&
+      !window.confirm(
+        t('settings.delDevice', { device: dev.name || t('common.unnamed'), games: used.map((n) => n || t('common.unnamed')).join(', ') }),
+      )
+    )
+      return;
     setDraft((d) => removeDevice(d, dev.key));
   };
 
@@ -62,10 +104,14 @@ export default function Settings({ loaded, stale, configError, runtime, platform
     let r;
     try {
       // «Este equipo»: sin SSH; se comprueban las carpetas de saves de los juegos que lo usan.
-      r = await testDeviceApi(dev.local
-        ? { device: { name: dev.name || 'prueba', local: true, os: dev.os }, paths: pathsOf(draft, dev.key) }
-        : { device: { name: dev.name || 'prueba', host: dev.host, user: dev.user, os: dev.os, port: Number(dev.port) || dev.port } });
-    } catch (e) { r = { ok: false, code: e.code, params: e.params, message: e.message }; }
+      r = await testDeviceApi(
+        dev.local
+          ? { device: { name: dev.name || 'prueba', local: true, os: dev.os }, paths: pathsOf(draft, dev.key) }
+          : { device: { name: dev.name || 'prueba', host: dev.host, user: dev.user, os: dev.os, port: Number(dev.port) || dev.port } },
+      );
+    } catch (e) {
+      r = { ok: false, code: e.code, params: e.params, message: e.message };
+    }
     setTests((prev) => ({ ...prev, [dev.key]: r }));
   };
 
@@ -78,7 +124,11 @@ export default function Settings({ loaded, stale, configError, runtime, platform
     try {
       const r = await diffConfig({ config: payload });
       setDialog({ kind: 'save', diff: r.diff, version: r.version, config: payload });
-    } catch (e) { setMsg({ body: e }); } finally { setBusy(false); }
+    } catch (e) {
+      setMsg({ body: e });
+    } finally {
+      setBusy(false);
+    }
   };
 
   const applied = (r, text) => {
@@ -88,8 +138,11 @@ export default function Settings({ loaded, stale, configError, runtime, platform
   };
 
   const showStaleDiff = async () => {
-    try { setStaleDiff((await diffConfig({ config: payload })).diff); }
-    catch (e) { setMsg({ body: e }); }
+    try {
+      setStaleDiff((await diffConfig({ config: payload })).diff);
+    } catch (e) {
+      setMsg({ body: e });
+    }
   };
 
   // Los errores del backend cuelgan del id interno: devices.<id>.<campo>
@@ -111,9 +164,11 @@ export default function Settings({ loaded, stale, configError, runtime, platform
     <section aria-labelledby="cfg-title" ref={rootRef}>
       <h2 id="cfg-title">{t('settings.title')}</h2>
 
-      {configError && <Alert variant="error" role="alert">
-        {t('settings.invalid', { cause: errorText(configError, t) })}
-      </Alert>}
+      {configError && (
+        <Alert variant="error" role="alert">
+          {t('settings.invalid', { cause: errorText(configError, t) })}
+        </Alert>
+      )}
       {stale && (
         <Alert variant="warn" role="alert">
           <strong>{t('settings.stale.lead')}</strong> {t('settings.stale.text')}
@@ -124,8 +179,14 @@ export default function Settings({ loaded, stale, configError, runtime, platform
           {staleDiff && <DiffBox diff={staleDiff} />}
         </Alert>
       )}
-      {generalError && <Alert variant="error" role="alert">{generalError}</Alert>}
-      <div role="status" aria-live="polite">{msg && <Alert variant={msg.ok ? 'ok' : 'error'}>{errText(msg.body)}</Alert>}</div>
+      {generalError && (
+        <Alert variant="error" role="alert">
+          {generalError}
+        </Alert>
+      )}
+      <div role="status" aria-live="polite">
+        {msg && <Alert variant={msg.ok ? 'ok' : 'error'}>{errText(msg.body)}</Alert>}
+      </div>
 
       {/* La clave SSH solo importa si hay (o puede haber) dispositivos remotos. */}
       {(draft.devices.length === 0 || draft.devices.some((d) => !d.local)) && <PublicKey />}
@@ -137,88 +198,196 @@ export default function Settings({ loaded, stale, configError, runtime, platform
       <fieldset className="card cfg-card">
         <legend className="cfg-title">{t('settings.versions.legend')}</legend>
         <Field label={t('settings.versions.max')} hint={t(VERSIONS_HINT)} error={local.maxVersions || fe(errors.max_versions)}>
-          {(p) => <Input {...p} type="number" inputMode="numeric" min="0" max={MAX_VERSIONS_LIMIT} step="1"
-            value={draft.maxVersions} onChange={(e) => setDraft((d) => ({ ...d, maxVersions: e.target.value }))} />}
+          {(p) => (
+            <Input
+              {...p}
+              type="number"
+              inputMode="numeric"
+              min="0"
+              max={MAX_VERSIONS_LIMIT}
+              step="1"
+              value={draft.maxVersions}
+              onChange={(e) => setDraft((d) => ({ ...d, maxVersions: e.target.value }))}
+            />
+          )}
         </Field>
       </fieldset>
 
       <div className="row between section-head">
         <h3>{t('settings.devices')}</h3>
-        <Button onClick={() => setDraft((d) => ({ ...d, devices: [...d.devices, blankDevice()] }))}>
-          {t('settings.addDevice')}
-        </Button>
+        <Button onClick={() => setDraft((d) => ({ ...d, devices: [...d.devices, blankDevice()] }))}>{t('settings.addDevice')}</Button>
       </div>
       <div className="grid">
         {draft.devices.map((d) => (
-          <DeviceCard key={d.key} dev={d} errors={devErrs(d)} localError={local[d.key]} localFlagError={local[`local-${d.key}`]}
-            canLocal={canOfferLocal(draft, runtime, d.key)} runtime={runtime} platform={platform} test={tests[d.key]}
-            idText={idOf(d, 'dispositivo')} renamed={renamed(d)}
-            onChange={(p) => patch('devices', d.key, p)} onTest={() => testDevice(d)} onRemove={() => delDevice(d)} />
+          <DeviceCard
+            key={d.key}
+            dev={d}
+            errors={devErrs(d)}
+            localError={local[d.key]}
+            localFlagError={local[`local-${d.key}`]}
+            canLocal={canOfferLocal(draft, runtime, d.key)}
+            runtime={runtime}
+            platform={platform}
+            test={tests[d.key]}
+            idText={idOf(d, 'dispositivo')}
+            renamed={renamed(d)}
+            onChange={(p) => patch('devices', d.key, p)}
+            onTest={() => testDevice(d)}
+            onRemove={() => delDevice(d)}
+          />
         ))}
       </div>
       {draft.devices.length === 0 && (
-        <EmptyState icon="💻" title={t('settings.noDevices.title')}
+        <EmptyState
+          icon="💻"
+          title={t('settings.noDevices.title')}
           text={t('settings.noDevices.text')}
-          action={<Button variant="primary" onClick={() => setDraft((d) => ({ ...d, devices: [...d.devices, blankDevice()] }))}>{t('settings.addDevice')}</Button>} />
+          action={
+            <Button variant="primary" onClick={() => setDraft((d) => ({ ...d, devices: [...d.devices, blankDevice()] }))}>
+              {t('settings.addDevice')}
+            </Button>
+          }
+        />
       )}
 
       <div className="row between section-head">
         <h3>{t('settings.games')}</h3>
-        <Button disabled={draft.devices.filter((d) => d.name).length < 1}
-          onClick={() => setDraft((d) => ({ ...d, games: [...d.games, blankGame()] }))}>
+        <Button
+          disabled={draft.devices.filter((d) => d.name).length < 1}
+          onClick={() => setDraft((d) => ({ ...d, games: [...d.games, blankGame()] }))}
+        >
           {t('settings.addGame')}
         </Button>
       </div>
       {draft.devices.filter((d) => d.name).length < 1 && <p className="muted">{t('settings.needOne')}</p>}
       <div className="grid">
         {draft.games.map((g) => (
-          <GameCard key={g.key} game={g} devices={draft.devices} errors={gameErrs(g)} localError={local[g.key]} keepError={local[`keep-${g.key}`]} globalMax={draft.maxVersions}
-            nameA={nameOf(draft, g.a)} nameB={nameOf(draft, g.b)} idA={deviceId(draft, g.a)} idB={deviceId(draft, g.b)}
-            idText={idOf(g, 'juego')} renamed={renamed(g)}
-            onChange={(p) => patch('games', g.key, p)} onShowLaunchers={() => showLaunchers(g)}
-            onRemove={() => setDraft((d) => ({ ...d, games: d.games.filter((x) => x.key !== g.key) }))} />
+          <GameCard
+            key={g.key}
+            game={g}
+            devices={draft.devices}
+            errors={gameErrs(g)}
+            localError={local[g.key]}
+            keepError={local[`keep-${g.key}`]}
+            globalMax={draft.maxVersions}
+            nameA={nameOf(draft, g.a)}
+            nameB={nameOf(draft, g.b)}
+            idA={deviceId(draft, g.a)}
+            idB={deviceId(draft, g.b)}
+            idText={idOf(g, 'juego')}
+            renamed={renamed(g)}
+            onChange={(p) => patch('games', g.key, p)}
+            onShowLaunchers={() => showLaunchers(g)}
+            onRemove={() => setDraft((d) => ({ ...d, games: d.games.filter((x) => x.key !== g.key) }))}
+          />
         ))}
       </div>
 
-      <LaunchersPanel id="launchers-section" open={launchersOpen} onToggle={() => setLaunchersOpen((o) => !o)}
-        games={launcherGames} selected={launcherGame} onSelect={chooseLauncherGame} />
+      <LaunchersPanel
+        id="launchers-section"
+        open={launchersOpen}
+        onToggle={() => setLaunchersOpen((o) => !o)}
+        games={launcherGames}
+        selected={launcherGame}
+        onSelect={chooseLauncherGame}
+      />
 
       <div className="actionbar" role="group" aria-label={t('settings.bar.aria')}>
         {hasErrors && !validating ? (
-          <button type="button" className="ab-chip error" onClick={jumpToError}
-            aria-label={t('settings.bar.errorsAria', { count: errorCount || 1 })}>
-            <Icon name="alert" /><b>{errorCount || 1}</b><span className="ab-long">{t('settings.bar.errors')}</span>
+          <button
+            type="button"
+            className="ab-chip error"
+            onClick={jumpToError}
+            aria-label={t('settings.bar.errorsAria', { count: errorCount || 1 })}
+          >
+            <Icon name="alert" />
+            <b>{errorCount || 1}</b>
+            <span className="ab-long">{t('settings.bar.errors')}</span>
           </button>
         ) : (
           <span className={`ab-chip${dirty ? ' dirty' : ''}`} aria-live="polite">
-            {validating ? t('settings.bar.validating') : dirty ? <><span className="ab-long">{t('settings.bar.dirty')}</span><span className="ab-short">{t('settings.bar.dirtyShort')}</span></> : t('settings.bar.clean')}
+            {validating ? (
+              t('settings.bar.validating')
+            ) : dirty ? (
+              <>
+                <span className="ab-long">{t('settings.bar.dirty')}</span>
+                <span className="ab-short">{t('settings.bar.dirtyShort')}</span>
+              </>
+            ) : (
+              t('settings.bar.clean')
+            )}
           </span>
         )}
         <span className="spacer" />
-        <Button variant="ghost" className="ab-tool" title={t('settings.bar.backups')} aria-label={t('settings.bar.backups')} onClick={() => setDialog({ kind: 'backups' })}>
-          <Icon name="history" /><span className="lbl">{t('settings.bar.backups')}</span>
+        <Button
+          variant="ghost"
+          className="ab-tool"
+          title={t('settings.bar.backups')}
+          aria-label={t('settings.bar.backups')}
+          onClick={() => setDialog({ kind: 'backups' })}
+        >
+          <Icon name="history" />
+          <span className="lbl">{t('settings.bar.backups')}</span>
         </Button>
-        <Button variant="ghost" className="ab-tool" title={t('settings.bar.yaml')} aria-label={t('settings.bar.yaml')} onClick={() => setDialog({ kind: 'yaml', config: payload })} disabled={hasErrors}>
-          <Icon name="code" /><span className="lbl">{t('settings.bar.yaml')}</span>
+        <Button
+          variant="ghost"
+          className="ab-tool"
+          title={t('settings.bar.yaml')}
+          aria-label={t('settings.bar.yaml')}
+          onClick={() => setDialog({ kind: 'yaml', config: payload })}
+          disabled={hasErrors}
+        >
+          <Icon name="code" />
+          <span className="lbl">{t('settings.bar.yaml')}</span>
         </Button>
-        <Button className="ab-tool" title={t('settings.bar.discardTitle')} aria-label={t('settings.bar.discardTitle')} disabled={!dirty} onClick={() => { setDraft(fromConfig(loaded.config)); setMsg(null); }}>
-          <Icon name="undo" /><span className="lbl">{t('settings.bar.discard')}</span>
+        <Button
+          className="ab-tool"
+          title={t('settings.bar.discardTitle')}
+          aria-label={t('settings.bar.discardTitle')}
+          disabled={!dirty}
+          onClick={() => {
+            setDraft(fromConfig(loaded.config));
+            setMsg(null);
+          }}
+        >
+          <Icon name="undo" />
+          <span className="lbl">{t('settings.bar.discard')}</span>
         </Button>
-        <Button variant="primary" disabled={!canSave} onClick={openSave}>{t('settings.bar.save')}</Button>
+        <Button variant="primary" disabled={!canSave} onClick={openSave}>
+          {t('settings.bar.save')}
+        </Button>
       </div>
 
       {dialog?.kind === 'save' && (
-        <SaveDialog config={dialog.config} diff={dialog.diff} baseVersion={loaded.version}
+        <SaveDialog
+          config={dialog.config}
+          diff={dialog.diff}
+          baseVersion={loaded.version}
           onSaved={(r) => applied(r, ui('settings.saved'))}
-          onReload={() => { setDialog(null); onReload(); }} onClose={() => setDialog(null)} />
+          onReload={() => {
+            setDialog(null);
+            onReload();
+          }}
+          onClose={() => setDialog(null)}
+        />
       )}
       {dialog?.kind === 'yaml' && <YamlDialog config={dialog.config} onClose={() => setDialog(null)} />}
       {dialog?.kind === 'backups' && (
-        <BackupsDialog baseVersion={loaded.version} dirty={dirty}
-          onRestored={(r) => applied(r, ui('settings.restored'))} onClose={() => setDialog(null)} />
+        <BackupsDialog
+          baseVersion={loaded.version}
+          dirty={dirty}
+          onRestored={(r) => applied(r, ui('settings.restored'))}
+          onClose={() => setDialog(null)}
+        />
       )}
     </section>
   );
 }
 
-function DiffBox({ diff }) { return <div className="diffbox"><DiffView diff={diff} /></div>; }
+function DiffBox({ diff }) {
+  return (
+    <div className="diffbox">
+      <DiffView diff={diff} />
+    </div>
+  );
+}

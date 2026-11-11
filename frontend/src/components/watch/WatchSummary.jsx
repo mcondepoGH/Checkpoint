@@ -18,16 +18,28 @@ export default function WatchSummary({ watch, config, open: initialOpen = false 
 
   useEffect(() => {
     if (!open) return undefined;
-    const outside = (e) => { if (wrap.current && !wrap.current.contains(e.target)) setOpen(false); };
+    const outside = (e) => {
+      if (wrap.current && !wrap.current.contains(e.target)) setOpen(false);
+    };
     document.addEventListener('pointerdown', outside);
     return () => document.removeEventListener('pointerdown', outside);
   }, [open]);
-  useEffect(() => { if (watched.length === 0) setOpen(false); }, [watched.length]);
+  useEffect(() => {
+    if (watched.length === 0) setOpen(false);
+  }, [watched.length]);
 
   if (watched.length === 0) return null;
   const count = t('sync.watch.count', { count: watched.length });
-  const onKeyDown = (e) => { if (e.key === 'Escape' && open) { e.stopPropagation(); setOpen(false); btn.current?.focus(); } };
-  const onBlur = (e) => { if (open && e.relatedTarget && !wrap.current.contains(e.relatedTarget)) setOpen(false); };
+  const onKeyDown = (e) => {
+    if (e.key === 'Escape' && open) {
+      e.stopPropagation();
+      setOpen(false);
+      btn.current?.focus();
+    }
+  };
+  const onBlur = (e) => {
+    if (open && e.relatedTarget && !wrap.current.contains(e.relatedTarget)) setOpen(false);
+  };
   const row = (w) => {
     const h = watchHealth(w, watch.now);
     return (
@@ -41,11 +53,25 @@ export default function WatchSummary({ watch, config, open: initialOpen = false 
 
   return (
     <div className="watch-summary" ref={wrap} onKeyDown={onKeyDown} onBlur={onBlur}>
-      <button ref={btn} type="button" className="watch-toggle" aria-label={count} aria-expanded={open} aria-controls={open ? listId : undefined} onClick={() => setOpen((o) => !o)}>
+      <button
+        ref={btn}
+        type="button"
+        className="watch-toggle"
+        aria-label={count}
+        aria-expanded={open}
+        aria-controls={open ? listId : undefined}
+        onClick={() => setOpen((o) => !o)}
+      >
         <i className="watch-chip-dot" aria-hidden="true" />
-        <b className="watch-num" aria-hidden="true">{chipCount(watched.length)}</b>
-        <span className="watch-lbl" aria-hidden="true">{t('sync.watch.chip', { count: chipCount(watched.length) })}</span>
-        <i className="watch-caret" aria-hidden="true">▾</i>
+        <b className="watch-num" aria-hidden="true">
+          {chipCount(watched.length)}
+        </b>
+        <span className="watch-lbl" aria-hidden="true">
+          {t('sync.watch.chip', { count: chipCount(watched.length) })}
+        </span>
+        <i className="watch-caret" aria-hidden="true">
+          ▾
+        </i>
       </button>
       {open && (
         <ul id={listId} className="watch-list" aria-label={t('sync.watch.listAria')}>

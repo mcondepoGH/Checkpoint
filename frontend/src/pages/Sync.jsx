@@ -11,7 +11,6 @@ import { clock, groupByGame, watchCardClass, watchHealth, worstHealth } from '#s
 import { Alert, Badge, Button, Checkbox, Pill, WatchBar } from '#src/components/ui/index.js';
 import { getStatus, runSync } from '#src/lib/api/sync.js';
 
-
 // Estados con texto propio en el distintivo: clave `sync.state.<resultado>`; otro resultado se muestra tal cual.
 const RES_KEYS = ['conflict', 'partial', 'dry-run', 'skipped'];
 
@@ -38,19 +37,64 @@ function LastRun({ s, devName }) {
     <dl className="lastrun">
       <div className="lr-row">
         <dt>{t('sync.last')}</dt>
-        <dd>{when ? <><strong className="lr-time">{when.time}</strong><span className="lr-date">{when.date}</span></>
-                  : <span>{s.finished?.replace('T', ' ') || '—'}</span>}
-          {s.dry_run && <span className="lr-tag">{t('common.dryRun')}</span>}</dd>
+        <dd>
+          {when ? (
+            <>
+              <strong className="lr-time">{when.time}</strong>
+              <span className="lr-date">{when.date}</span>
+            </>
+          ) : (
+            <span>{s.finished?.replace('T', ' ') || '—'}</span>
+          )}
+          {s.dry_run && <span className="lr-tag">{t('common.dryRun')}</span>}
+        </dd>
       </div>
-      {s.result === 'conflict' && <div className="lr-row"><dt>{t('sync.conflict')}</dt><dd className="lr-msg">{errText(s)}</dd></div>}
-      {s.result === 'partial' && <div className="lr-row"><dt>{t('sync.partial')}</dt><dd className="lr-msg">{errText(s)}</dd></div>}
-      {s.offline?.length > 0 && <div className="lr-row"><dt>{t('sync.offline')}</dt><dd className="pills">{s.offline.map((d) => <Pill key={d}>{devName(d)}</Pill>)}</dd></div>}
-      {winner && <div className="lr-row"><dt>{t('sync.winner')}</dt><dd><Pill highlight>{winner}</Pill></dd></div>}
-      {list.length > 0 && (
-        <div className="lr-row"><dt>{planned ? t('sync.targets') : t('sync.updated')}</dt>
-          <dd className="pills">{list.map((d) => <Pill key={d}>{d}</Pill>)}</dd></div>
+      {s.result === 'conflict' && (
+        <div className="lr-row">
+          <dt>{t('sync.conflict')}</dt>
+          <dd className="lr-msg">{errText(s)}</dd>
+        </div>
       )}
-      {!structured && (s.code || s.message) && <div className="lr-row"><dt>{t('sync.detail')}</dt><dd className="lr-msg">{errText(s)}</dd></div>}
+      {s.result === 'partial' && (
+        <div className="lr-row">
+          <dt>{t('sync.partial')}</dt>
+          <dd className="lr-msg">{errText(s)}</dd>
+        </div>
+      )}
+      {s.offline?.length > 0 && (
+        <div className="lr-row">
+          <dt>{t('sync.offline')}</dt>
+          <dd className="pills">
+            {s.offline.map((d) => (
+              <Pill key={d}>{devName(d)}</Pill>
+            ))}
+          </dd>
+        </div>
+      )}
+      {winner && (
+        <div className="lr-row">
+          <dt>{t('sync.winner')}</dt>
+          <dd>
+            <Pill highlight>{winner}</Pill>
+          </dd>
+        </div>
+      )}
+      {list.length > 0 && (
+        <div className="lr-row">
+          <dt>{planned ? t('sync.targets') : t('sync.updated')}</dt>
+          <dd className="pills">
+            {list.map((d) => (
+              <Pill key={d}>{d}</Pill>
+            ))}
+          </dd>
+        </div>
+      )}
+      {!structured && (s.code || s.message) && (
+        <div className="lr-row">
+          <dt>{t('sync.detail')}</dt>
+          <dd className="lr-msg">{errText(s)}</dd>
+        </div>
+      )}
     </dl>
   );
 }
@@ -71,16 +115,27 @@ export default function Sync({ config, watch = NO_WATCHES, onGoSettings }) {
   const esRef = useRef(null);
   const logRef = useRef(null);
 
-  const loadStatus = () => getStatus().then(setStatus).catch(() => {});
-  useEffect(() => { loadStatus(); return () => esRef.current?.close(); }, []);
-  useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [active?.lines.length]);
+  const loadStatus = () =>
+    getStatus()
+      .then(setStatus)
+      .catch(() => {});
+  useEffect(() => {
+    loadStatus();
+    return () => esRef.current?.close();
+  }, []);
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [active?.lines.length]);
 
   // resolution/expect: solo al resolver un conflicto desde el popup.
   const run = async (game, resolution, expect) => {
     setError(null);
     try {
       const body = { dry_run: !!dry[game] };
-      if (resolution) { body.resolution = resolution; body.expect = expect; }
+      if (resolution) {
+        body.resolution = resolution;
+        body.expect = expect;
+      }
       const { run_id } = await runSync(game, body);
       setActive({ game, lines: [], done: false });
       esRef.current?.close();
@@ -88,15 +143,27 @@ export default function Sync({ config, watch = NO_WATCHES, onGoSettings }) {
       esRef.current = es;
       es.onmessage = (ev) => setActive((a) => ({ ...a, lines: [...a.lines, JSON.parse(ev.data)] }));
       es.addEventListener('done', (ev) => {
-        es.close(); setActive((a) => ({ ...a, done: true })); loadStatus(); setResolving(false);
+        es.close();
+        setActive((a) => ({ ...a, done: true }));
+        loadStatus();
+        setResolving(false);
         try {
           const st = JSON.parse(ev.data);
           if (st?.result === 'conflict' && st.conflict) setConflict({ game, conflict: st.conflict });
           else setConflict(null);
-        } catch { setConflict(null); }
+        } catch {
+          setConflict(null);
+        }
       });
-      es.onerror = () => { es.close(); setResolving(false); setActive((a) => a && { ...a, done: true }); loadStatus(); };
-    } catch (e) { setError(e); }
+      es.onerror = () => {
+        es.close();
+        setResolving(false);
+        setActive((a) => a && { ...a, done: true });
+        loadStatus();
+      };
+    } catch (e) {
+      setError(e);
+    }
   };
 
   const byGame = groupByGame(watch.watches);
@@ -106,7 +173,11 @@ export default function Sync({ config, watch = NO_WATCHES, onGoSettings }) {
   const watchBar = (w) => {
     const h = watchHealth(w, watch.now);
     const since = h === 'running' || h === 'stale' ? t('sync.watch.since', { time: clock(w.since, locale) }) : null;
-    return <WatchBar key={`${w.game}|${w.device}`} state={h} since={since}>{t(`sync.watch.bar.${h}`, { device: devName(w.device) })}</WatchBar>;
+    return (
+      <WatchBar key={`${w.game}|${w.device}`} state={h} since={since}>
+        {t(`sync.watch.bar.${h}`, { device: devName(w.device) })}
+      </WatchBar>
+    );
   };
   const badge = (s) => s && <Badge status={s.result}>{RES_KEYS.includes(s.result) ? t(`sync.state.${s.result}`) : s.result}</Badge>;
   const openConflict = (g) => {
@@ -125,13 +196,34 @@ export default function Sync({ config, watch = NO_WATCHES, onGoSettings }) {
       <h2>{t('sync.title')}</h2>
       {error && <Alert variant="error">{errText(error)}</Alert>}
       {games.length === 0 && (
-        <EmptyState variant="page" icon="🎮" title={t('sync.noGames.title')}
+        <EmptyState
+          variant="page"
+          icon="🎮"
+          title={t('sync.noGames.title')}
           text={t('sync.noGames.text')}
-          action={onGoSettings && <Button variant="primary" onClick={onGoSettings}>{t('common.goSettings')}</Button>} />
+          action={
+            onGoSettings && (
+              <Button variant="primary" onClick={onGoSettings}>
+                {t('common.goSettings')}
+              </Button>
+            )
+          }
+        />
       )}
       {allOff && (
-        <EmptyState variant="inline" icon="⏸️" title={t('sync.allOff.title')} text={t('sync.allOff.text')}
-          action={onGoSettings && <Button variant="primary" onClick={onGoSettings}>{t('common.goSettings')}</Button>} />
+        <EmptyState
+          variant="inline"
+          icon="⏸️"
+          title={t('sync.allOff.title')}
+          text={t('sync.allOff.text')}
+          action={
+            onGoSettings && (
+              <Button variant="primary" onClick={onGoSettings}>
+                {t('common.goSettings')}
+              </Button>
+            )
+          }
+        />
       )}
       <div className="grid">
         {games.map((g) => {
@@ -140,37 +232,78 @@ export default function Sync({ config, watch = NO_WATCHES, onGoSettings }) {
           const off = isOff(g);
           return (
             <div className={`${watchCardClass(worstHealth(byGame[g], watch.now))}${off ? ' game-disabled' : ''}`} key={g}>
-              <h3 title={t('sync.idTitle', { id: g })}><span className="game-name">{gameName(g)}</span> {off ? <Pill title={t('sync.disabled.help')}>{t('sync.disabled.label')}</Pill> : running ? <Badge status="running">{t('sync.state.running')}</Badge> : badge(s)}</h3>
+              <h3 title={t('sync.idTitle', { id: g })}>
+                <span className="game-name">{gameName(g)}</span>{' '}
+                {off ? (
+                  <Pill title={t('sync.disabled.help')}>{t('sync.disabled.label')}</Pill>
+                ) : running ? (
+                  <Badge status="running">{t('sync.state.running')}</Badge>
+                ) : (
+                  badge(s)
+                )}
+              </h3>
               <p className="muted">{config.games[g].devices.map(devName).join(' ⇄ ')}</p>
               {isSoloCheckpoint(config.games[g]) && (
-                <p><Pill tone="info" title={t('sync.solo.help')}><Icon name="history" />{t('sync.solo.label')}</Pill></p>
+                <p>
+                  <Pill tone="info" title={t('sync.solo.help')}>
+                    <Icon name="history" />
+                    {t('sync.solo.label')}
+                  </Pill>
+                </p>
               )}
-              {(!off || s) && <div className={`meter ${running ? 'running' : (s?.result || '')}`} role="progressbar" aria-label={t('sync.meterAria', { game: gameName(g) })}><i /></div>}
+              {(!off || s) && (
+                <div
+                  className={`meter ${running ? 'running' : s?.result || ''}`}
+                  role="progressbar"
+                  aria-label={t('sync.meterAria', { game: gameName(g) })}
+                >
+                  <i />
+                </div>
+              )}
               {(!off || s) && <LastRun s={s} devName={devName} />}
               {off && <p className="muted game-off-note">{t('sync.disabled.help')}</p>}
-              {!off && <Checkbox checked={!!dry[g]} onChange={(e) => setDry({ ...dry, [g]: e.target.checked })} label={t('common.dryRun')} />}
+              {!off && (
+                <Checkbox checked={!!dry[g]} onChange={(e) => setDry({ ...dry, [g]: e.target.checked })} label={t('common.dryRun')} />
+              )}
               {!off && s?.result === 'conflict' && !running && (
                 <div className="conflict-flag" role="alert">
-                  <span><b>{t('sync.flagLead')}</b> {t('sync.flagText')}</span>
+                  <span>
+                    <b>{t('sync.flagLead')}</b> {t('sync.flagText')}
+                  </span>
                   <Button onClick={() => openConflict(g)}>{t('sync.resolve')}</Button>
                 </div>
               )}
-              {off
-                ? onGoSettings && <Button className="game-off-actions" onClick={onGoSettings}>{t('common.goSettings')}</Button>
-                : <Button variant="primary" disabled={running} onClick={() => run(g)}>{running ? t('sync.running') : t('sync.run')}</Button>}
+              {off ? (
+                onGoSettings && (
+                  <Button className="game-off-actions" onClick={onGoSettings}>
+                    {t('common.goSettings')}
+                  </Button>
+                )
+              ) : (
+                <Button variant="primary" disabled={running} onClick={() => run(g)}>
+                  {running ? t('sync.running') : t('sync.run')}
+                </Button>
+              )}
               {byGame[g]?.map(watchBar)}
             </div>
           );
         })}
       </div>
       {conflict && (
-        <ConflictDialog game={gameName(conflict.game)} conflict={conflict.conflict} busy={resolving}
-          onCancel={() => setConflict(null)} onResolve={resolve} />
+        <ConflictDialog
+          game={gameName(conflict.game)}
+          conflict={conflict.conflict}
+          busy={resolving}
+          onCancel={() => setConflict(null)}
+          onResolve={resolve}
+        />
       )}
       {active && (
         <div className="card logcard">
           <h3>{t('sync.log.title', { game: gameName(active.game), state: active.done ? t('sync.log.done') : t('sync.log.live') })}</h3>
-          <pre className="log" ref={logRef}>{active.lines.join('\n') || t('sync.log.waiting')}</pre>
+          <pre className="log" ref={logRef}>
+            {active.lines.join('\n') || t('sync.log.waiting')}
+          </pre>
         </div>
       )}
     </section>

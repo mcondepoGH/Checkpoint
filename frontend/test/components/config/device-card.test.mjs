@@ -6,16 +6,42 @@ import os from 'node:os';
 import path from 'node:path';
 import { bundle } from '../../helpers/bundle.mjs';
 
-const { mod, skip } = await bundle(`import React from 'react';
+const { mod, skip } = await bundle(
+  `import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
   import DeviceCard from '#src/components/config/DeviceCard.jsx';
-  export { React, renderToStaticMarkup, DeviceCard };`, { tag: 'ckpt-render' });
+  export { React, renderToStaticMarkup, DeviceCard };`,
+  { tag: 'ckpt-render' },
+);
 
-const dev = (o = {}) => ({ key: 'k1', id: 'pc-1a2b3c4d', name: 'PC', orig: 'PC', local: false, host: '192.0.2.5', port: '22', user: 'usuario', os: 'linux', ...o });
-const render = (props) => mod.renderToStaticMarkup(mod.React.createElement(mod.DeviceCard, {
-  dev: dev(), errors: {}, idText: 'pc-1a2b3c4d', renamed: false, onChange() {}, onTest() {}, onRemove() {},
-  runtime: 'native', platform: 'linux', canLocal: true, ...props,
-}));
+const dev = (o = {}) => ({
+  key: 'k1',
+  id: 'pc-1a2b3c4d',
+  name: 'PC',
+  orig: 'PC',
+  local: false,
+  host: '192.0.2.5',
+  port: '22',
+  user: 'usuario',
+  os: 'linux',
+  ...o,
+});
+const render = (props) =>
+  mod.renderToStaticMarkup(
+    mod.React.createElement(mod.DeviceCard, {
+      dev: dev(),
+      errors: {},
+      idText: 'pc-1a2b3c4d',
+      renamed: false,
+      onChange() {},
+      onTest() {},
+      onRemove() {},
+      runtime: 'native',
+      platform: 'linux',
+      canLocal: true,
+      ...props,
+    }),
+  );
 const has = (html, s) => html.includes(s);
 
 test('native, remoto: casilla «Este equipo» visible y campos SSH presentes', { skip }, () => {
@@ -73,8 +99,16 @@ test('resultado con code+params se traduce; first_use añade el aviso', { skip }
   assert.ok(has(ok, 'alert ok') && has(ok, 'conexión OK (host key guardada (primer uso))'));
   const bad = render({ dev: dev(), test: { ok: false, code: 'err.transport.ssh_failed', params: { detail: 'boom' }, first_use: true } });
   assert.ok(has(bad, 'SSH falló: boom [host key guardada (primer uso)]'));
-  const multi = render({ dev: dev({ local: true }), test: { ok: false, results: [{ path: '/a', ok: true, code: 'err.transport.folder_ok', params: {} },
-    { path: 'r', ok: false, code: 'err.transport.path_not_absolute', params: { path: 'r' } }] } });
+  const multi = render({
+    dev: dev({ local: true }),
+    test: {
+      ok: false,
+      results: [
+        { path: '/a', ok: true, code: 'err.transport.folder_ok', params: {} },
+        { path: 'r', ok: false, code: 'err.transport.path_not_absolute', params: { path: 'r' } },
+      ],
+    },
+  });
   assert.ok(has(multi, '/a: carpeta OK') && has(multi, 'r: la ruta no es absoluta en este sistema: r'));
 });
 

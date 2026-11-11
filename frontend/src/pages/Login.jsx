@@ -13,24 +13,38 @@ export default function Login({ onDone }) {
 
   const submit = async (e) => {
     e.preventDefault();
-    setBusy(true); setError(null);
-    try { await login(user, password); onDone(); }
-    catch (err) { setError(err); }
-    finally { setBusy(false); setPassword(''); }
+    setBusy(true);
+    setError(null);
+    try {
+      await login(user, password);
+      onDone();
+    } catch (err) {
+      setError(err);
+    } finally {
+      setBusy(false);
+      setPassword('');
+    }
   };
 
   return (
     <div className="center">
       <form className="card login" onSubmit={submit}>
-        <h1><AppIcon className="login-logo" />Checkpoint</h1>
-        <label>{t('login.user')}
+        <h1>
+          <AppIcon className="login-logo" />
+          Checkpoint
+        </h1>
+        <label>
+          {t('login.user')}
           <input value={user} onChange={(e) => setUser(e.target.value)} autoComplete="username" autoFocus required />
         </label>
-        <label>{t('login.password')}
+        <label>
+          {t('login.password')}
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" required />
         </label>
         {error && <Alert variant="error">{errText(error)}</Alert>}
-        <Button type="submit" variant="primary" disabled={busy}>{t('login.submit')}</Button>
+        <Button type="submit" variant="primary" disabled={busy}>
+          {t('login.submit')}
+        </Button>
       </form>
     </div>
   );

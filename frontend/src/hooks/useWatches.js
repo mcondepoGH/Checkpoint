@@ -13,16 +13,25 @@ export const watchState = (r) => ({ now: (r && r.now) || null, watches: Array.is
 export function useWatches(enabled = true) {
   const [watch, setWatch] = useState(NO_WATCHES);
   useEffect(() => {
-    if (!enabled) { setWatch(NO_WATCHES); return undefined; }
+    if (!enabled) {
+      setWatch(NO_WATCHES);
+      return undefined;
+    }
     let alive = true;
     const load = () => {
       if (typeof document !== 'undefined' && document.hidden) return;
-      getWatches().then((r) => alive && setWatch(watchState(r))).catch(() => {});
+      getWatches()
+        .then((r) => alive && setWatch(watchState(r)))
+        .catch(() => {});
     };
     load();
     const timer = setInterval(load, WATCH_POLL_MS);
     document.addEventListener('visibilitychange', load);
-    return () => { alive = false; clearInterval(timer); document.removeEventListener('visibilitychange', load); };
+    return () => {
+      alive = false;
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', load);
+    };
   }, [enabled]);
   return watch;
 }

@@ -6,7 +6,8 @@ import { recordText } from '#src/lib/errors.js';
 export const TRIGGERS = ['scheduled', 'startup', 'hook', 'hook_closed'];
 
 // Entrada que explica por qué NO hubo checkpoint de cierre (códigos err.hook.*): omitida (`skipped`) o con error. Lleva icono además del texto.
-export const isHookNote = (e) => typeof e?.code === 'string' && e.code.startsWith('err.hook.') && (e.result === 'skipped' || e.result === 'error');
+export const isHookNote = (e) =>
+  typeof e?.code === 'string' && e.code.startsWith('err.hook.') && (e.result === 'skipped' || e.result === 'error');
 
 // Icono del mensaje según el resultado (omitida: salto; error, abortada, conflicto y parcial: alerta). `ok` y desconocidos, sin icono.
 export const MSG_ICON = { error: 'alert', aborted: 'alert', conflict: 'alert', partial: 'alert', skipped: 'skip' };
@@ -20,9 +21,9 @@ export function countSummary(games, t) {
   const n = {};
   for (const [, d] of games) n[d.result] = (n[d.result] || 0) + 1;
   const keys = [...COUNT_ORDER.filter((k) => n[k]), ...Object.keys(n).filter((k) => !COUNT_ORDER.includes(k))];
-  return keys.map((k) => (COUNT_ORDER.includes(k)
-    ? t(`autolog.count.${k}_${n[k] === 1 ? 'one' : 'other'}`, { n: n[k] })
-    : `${n[k]} ${k}`)).join(', ');
+  return keys
+    .map((k) => (COUNT_ORDER.includes(k) ? t(`autolog.count.${k}_${n[k] === 1 ? 'one' : 'other'}`, { n: n[k] }) : `${n[k]} ${k}`))
+    .join(', ');
 }
 
 // Qué pintar en el detalle de una entrada (ver EntryDetail): mensaje propio solo si ningún juego lo dice ya,

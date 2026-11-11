@@ -4,6 +4,10 @@ import React, { forwardRef } from 'react';
 // type es 'button' por defecto (nunca envía formularios por accidente); pasa type="submit" para enviar. Acepta ref.
 const Button = forwardRef(function Button({ variant, className, iconOnly, type = 'button', children, ...rest }, ref) {
   const cls = ['btn', variant, iconOnly && 'btn-icon', className].filter(Boolean).join(' ');
-  return <button ref={ref} type={type} className={cls} {...rest}>{children}</button>;
+  return (
+    <button ref={ref} type={type} className={cls} {...rest}>
+      {children}
+    </button>
+  );
 });
 export default Button;

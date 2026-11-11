@@ -10,7 +10,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { SRC } from './helpers/bundle.mjs';
 
-const walk = (d) => fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]));
+const walk = (d) =>
+  fs.readdirSync(d, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(path.join(d, e.name)) : [path.join(d, e.name)]));
 const SPEC = /(?:\bfrom|\bimport)\s*\(?\s*(['"])([^'"\n]+)\1/g;
 const rel = (f) => path.relative(SRC, f).split(path.sep).join('/');
 
@@ -52,7 +53,8 @@ test('las capas de src/ respetan las reglas de dependencia', () => {
       if (me === 'lib' && to !== 'lib') bad.push(`${note}: lib solo importa de lib`);
       else if (me === 'hooks' && !['lib', 'hooks'].includes(to)) bad.push(`${note}: hooks solo importa de lib y hooks`);
       else if (me === 'ui' && !['lib', 'hooks', 'ui'].includes(to)) bad.push(`${note}: ui no importa de zonas ni páginas`);
-      else if (me.startsWith('zone:') && !['lib', 'hooks', 'ui', me].includes(to)) bad.push(`${note}: una zona no importa de otra zona ni de páginas`);
+      else if (me.startsWith('zone:') && !['lib', 'hooks', 'ui', me].includes(to))
+        bad.push(`${note}: una zona no importa de otra zona ni de páginas`);
     }
   }
   assert.deepEqual(bad, []);
