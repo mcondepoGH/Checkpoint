@@ -3,7 +3,7 @@ import os
 
 import pytest
 
-from app.config import parse_config
+from app.config.models import parse_config
 from app.sync import decide, fingerprint, list_versions, load_baseline, restore_version, run_sync, save_baseline
 from fakes import LocalTransport
 

@@ -93,7 +93,7 @@ def test_copia_desconocida_y_no_valida(client):
 
 def test_copia_no_valida(client, monkeypatch):
     login(client)
-    from app import configstore
+    from app.config import store as configstore
     monkeypatch.setattr(configstore.ConfigStore, "read_backup", lambda self, n: "devices: [")
     r = client.post("/api/config/diff", json={"backup": "x"})
     assert r.status_code == 422
@@ -157,7 +157,7 @@ def test_juego_desconocido_y_ambiguo(client):
 
 
 def test_juego_ambiguo(client, monkeypatch):
-    from app.config import ConfigError
+    from app.config.models import ConfigError
     login(client)
     put_cfg(client)
 

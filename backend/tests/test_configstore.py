@@ -5,10 +5,10 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from app import configstore
+from app.config import store as configstore
 from app.core import settings
-from app.config import parse_config, validate_config
-from app.configstore import Conflict, ConfigStore, InvalidConfig, config_events_gen, diff_configs
+from app.config.models import parse_config, validate_config
+from app.config.store import Conflict, ConfigStore, InvalidConfig, config_events_gen, diff_configs
 
 from test_api import CFG, client, login  # noqa: F401  (fixture)
 

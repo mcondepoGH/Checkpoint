@@ -24,8 +24,8 @@ from . import sync as sync_mod
 from .core import updates
 from .apierror import ApiError, describe_code, error_body, error_response
 from .auth import Auth
-from .config import Config, ConfigError, Device, pyd_body, describe, normalize_path, resolve_ref, validate_config
-from .configstore import Conflict, ConfigStore, InvalidConfig, parse_text, config_events_gen, diff_configs, render_yaml
+from .config.models import Config, ConfigError, Device, pyd_body, describe, normalize_path, resolve_ref, validate_config
+from .config.store import Conflict, ConfigStore, InvalidConfig, parse_text, config_events_gen, diff_configs, render_yaml
 from .core.redact import redact
 from .scheduler import Scheduler, iso, utcnow
 from .watcher import Watcher, _log_note

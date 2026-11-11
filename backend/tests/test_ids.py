@@ -10,8 +10,8 @@ import yaml
 
 from app import cli, history
 from app.core import settings
-from app.config import ConfigError, load_config, parse_config, resolve_ref, validate_config
-from app.configstore import diff_configs, render_yaml
+from app.config.models import ConfigError, load_config, parse_config, resolve_ref, validate_config
+from app.config.store import diff_configs, render_yaml
 from app.scheduler import Scheduler
 from app.sync import (SyncAbort, count_versions, fingerprint, list_versions, load_baseline, resolve_game,
                       restore_version, run_sync, save_baseline)
@@ -85,7 +85,7 @@ def test_duplicate_yaml_ids_are_a_clear_error(tmp_path):
     p.write_text("devices:\n  a: {name: A, host: h, user: u, os: linux}\n  a: {name: B, host: h, user: u, os: linux}\n")
     with pytest.raises(ConfigError, match="yaml_duplicate_key"):
         load_config(p)
-    from app.configstore import parse_text
+    from app.config.store import parse_text
     cfg, err = parse_text(p.read_text())
     assert cfg is None and err["code"] == "err.config.yaml_duplicate_key"
 

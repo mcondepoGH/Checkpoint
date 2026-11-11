@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from app.config import parse_config
+from app.config.models import parse_config
 from app.sync import SyncAbort, fingerprint, list_versions, load_baseline, restore_version, run_sync, save_baseline
 from fakes import LocalTransport
 

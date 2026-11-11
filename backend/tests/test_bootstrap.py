@@ -6,10 +6,10 @@ from fastapi.testclient import TestClient
 
 from app.core import bootstrap, settings
 from app.auth import Auth
-from app.config import load_config
+from app.config.models import load_config
 from app.main import create_app
 from app.transport import PosixTransport, TransportError, _fail
-from app.config import Device
+from app.config.models import Device
 
 
 # ---- config vacío ----

@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.config import load_config, name_error, normalize_path, parse_config, validate_config
+from app.config.models import load_config, name_error, normalize_path, parse_config, validate_config
 from fakes import save_config
 
 BASE = {
@@ -95,7 +95,7 @@ def test_versions_limit_global_override_and_zero():
 
 
 def test_versions_limit_error_messages():
-    from app.config import validate_config
+    from app.config.models import validate_config
     _, e = validate_config(mod(max_versions=-1, games__g__keep_versions=2000))
     ok = {"code": "err.config.versions_range", "params": {"max": 1000}}
     assert e["max_versions"] == ok and e["games.g.keep_versions"] == ok
@@ -215,7 +215,7 @@ def test_enabled_serializer_only_writes_false():
 
 
 def test_enabled_not_bool_is_bool_required():
-    from app.config import semantic_errors
+    from app.config.models import semantic_errors
     errs = dict(semantic_errors(BASE["devices"], mod(games__g__enabled="no")["games"]))
     assert errs["games.g.enabled"]["code"] == "err.config.bool_required"
     with pytest.raises(ValidationError):

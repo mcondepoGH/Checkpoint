@@ -2,8 +2,8 @@
 import pytest
 import yaml
 
-from app.config import load_yaml, parse_config, validate_config
-from app.configstore import diff_configs, parse_text, render_yaml
+from app.config.models import load_yaml, parse_config, validate_config
+from app.config.store import diff_configs, parse_text, render_yaml
 from fakes import save_config
 
 REMOTE = {"name": "Laptop", "host": "192.0.2.10", "user": "usuario", "os": "linux", "port": 2222}

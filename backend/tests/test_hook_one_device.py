@@ -12,7 +12,7 @@ from app.auth import Auth
 from app.main import create_app
 from app.scheduler import Scheduler
 from app.sync import fingerprint, save_baseline
-from app.config import parse_config
+from app.config.models import parse_config
 
 PW = "correct horse"
 

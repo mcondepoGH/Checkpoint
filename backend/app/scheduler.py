@@ -16,7 +16,7 @@ from starlette.concurrency import run_in_threadpool
 from . import history
 from .core import settings
 from .apierror import describe_code, error_body
-from .config import ON_CONFLICT
+from .config.models import ON_CONFLICT
 from .sync import SyncAbort, run_sync
 
 MIN_HOURS, MAX_HOURS = 0.25, 168.0

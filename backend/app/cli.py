@@ -7,7 +7,7 @@ import sys
 from datetime import datetime
 
 from .core import runtime, settings
-from .config import load_config
+from .config.models import load_config
 from .sync import SyncAbort, list_versions, resolve_game, run_sync, valid_resolution
 
 

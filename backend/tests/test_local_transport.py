@@ -7,7 +7,7 @@ import time
 import pytest
 
 from app import transport as T
-from app.config import parse_config
+from app.config.models import parse_config
 from app.sync import fingerprint, relfiles
 from app.transport import LocalDeviceTransport, TransportError, get_transport, local_folder_status, local_path
 

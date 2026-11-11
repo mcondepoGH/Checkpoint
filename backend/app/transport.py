@@ -19,7 +19,7 @@ from typing import Iterable, List
 
 from .core import bootstrap, settings
 from .apierror import describe_code, error_body
-from .config import PATH_CHARS_RE, PROC_RE, Device
+from .config.models import PATH_CHARS_RE, PROC_RE, Device
 from .core.runtime import running_in_docker
 
 log = logging.getLogger("checkpoint.transport")  # DEBUG: duración de cada comando ssh/rsync (nunca args, claves ni contenidos)

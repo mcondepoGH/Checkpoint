@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from app.core import bootstrap, settings
-from app.config import Config
+from app.config.models import Config
 from app.sync import SyncAbort, resolve_game, run_sync
 from app.transport import PosixTransport, TransportError, local_folder_status, local_path
 from fakes import LocalTransport
@@ -64,7 +64,7 @@ def test_transport_error_stderr_goes_in_detail_not_in_code():
 def test_posix_ssh_failure_is_coded(monkeypatch):
     monkeypatch.setattr(bootstrap, "ensure_host_key", lambda h, p: False)
     monkeypatch.setattr("app.transport._run", lambda a, timeout=0, stdin=None: subprocess.CompletedProcess(a, 255, b"", b"boom"))
-    from app.config import Device
+    from app.config.models import Device
     with pytest.raises(TransportError) as e:
         PosixTransport(Device(name="E", host="10.0.0.5", user="u", os="linux")).check()
     assert e.value.body() == {"code": "err.transport.ssh_failed", "params": {"detail": "boom"}}
@@ -74,7 +74,7 @@ def test_bootstrap_error_is_coded_and_wrapped_by_transport(monkeypatch):
     with pytest.raises(bootstrap.BootstrapError) as e:
         bootstrap.ensure_host_key("a b", 22)
     assert e.value.body() == {"code": "err.bootstrap.host_invalid", "params": {}}
-    from app.config import Device
+    from app.config.models import Device
 
     def boom(h, p):
         raise bootstrap.BootstrapError("err.bootstrap.hostkey_unavailable", host=h, port=p)

@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
-from app import config as C
-from app.config import ConfigError, name_error, normalize_path, resolve_ref, validate_config
-from app.configstore import Conflict, InvalidConfig, parse_text
+from app.config import models as C
+from app.config.models import ConfigError, name_error, normalize_path, resolve_ref, validate_config
+from app.config.store import Conflict, InvalidConfig, parse_text
 
 DEV = {"name": "PC", "host": "h", "user": "u", "os": "linux"}
 
@@ -96,7 +96,7 @@ def test_no_spanish_in_emitted_errors():
 def test_codes_in_es_json():
     import json
     es = json.loads((Path(__file__).parents[2] / "frontend/src/locales/es.json").read_text())
-    src = "".join((Path(C.__file__).parent / f).read_text() for f in ("config.py", "configstore.py"))
+    src = "".join((Path(C.__file__).parent / f).read_text() for f in ("models.py", "store.py"))
     codes = set(re.findall(r'"(err\.(?:config|configstore)\.[a-z_]+)"', src))
     assert len(codes) > 30
     for c in codes:

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import yaml
 
-from app.config import atomic_write
+from app.config.models import atomic_write
 from app.transport import Transport, TransportError
 
 

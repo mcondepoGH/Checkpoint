@@ -15,9 +15,9 @@ import yaml
 from ruamel.yaml import YAML
 from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
-from .core import settings
-from .apierror import error_body
-from .config import (DEFAULT_MAX_VERSIONS, Config, atomic_write, describe, errors_to_causes, load_yaml, validate_config,
+from ..core import settings
+from ..apierror import error_body
+from .models import (DEFAULT_MAX_VERSIONS, Config, atomic_write, describe, errors_to_causes, load_yaml, validate_config,
                      yaml_error)
 
 MAX_BACKUPS = 10
