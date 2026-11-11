@@ -31,14 +31,15 @@ export default function Modal({ title, onClose, children, wide }) {
     }
   };
   return (
-    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- clic en el fondo cierra; Escape ya cierra por teclado
+    // El fondo es role=presentation (sin semántica): recibe el clic que cierra y el teclado (Escape/Tab) que burbujea desde el diálogo.
     <div
       className="modal"
+      role="presentation"
+      onKeyDown={onKey}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- el diálogo gestiona Tab para atrapar el foco */}
       <div
         className={wide ? 'card dialog wide' : 'card dialog'}
         role="dialog"
@@ -46,7 +47,6 @@ export default function Modal({ title, onClose, children, wide }) {
         aria-labelledby={titleId}
         tabIndex={-1}
         ref={ref}
-        onKeyDown={onKey}
       >
         <h3 id={titleId}>{title}</h3>
         {children}
