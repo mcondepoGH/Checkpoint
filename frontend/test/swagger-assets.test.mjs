@@ -20,6 +20,6 @@ test('el paquete instalado coincide con la versión fijada y trae los ficheros q
 });
 
 test('el backend sirve exactamente los ficheros que el build copia', () => {
-  const py = fs.readFileSync(path.join(root, '..', 'backend/app/apidocs.py'), 'utf8');
+  const py = fs.readFileSync(path.join(root, '..', 'backend/app/api/apidocs.py'), 'utf8');
   for (const f of SWAGGER_FILES) assert.ok(py.includes(`"${f}"`), f);
 });
