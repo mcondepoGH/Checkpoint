@@ -1,4 +1,5 @@
 """POST /api/hook/{game}/opened: sync previo bloqueante con Bearer. Dispositivos «Este equipo» reales sobre tmpdirs."""
+
 import json
 import os
 import threading
@@ -25,10 +26,19 @@ class Env:
         self.d1, self.hub = tmp / "pc1", tmp / "data" / "hub" / "g1"
         self.laptop = tmp / "laptop"
         self.d2 = self.laptop / "home/u/g"
-        cfg = {"devices": {"dev-1": {"name": "PC uno", "local": True, "os": "linux"},
-                           "dev-2": {"name": "Laptop", "host": "192.0.2.10", "user": "u", "os": "linux"}},
-               "games": {"g1": {"name": "Mi Juego", "devices": ["dev-1", "dev-2"],
-                                "paths": {"dev-1": str(self.d1), "dev-2": "/home/u/g"}}}}
+        cfg = {
+            "devices": {
+                "dev-1": {"name": "PC uno", "local": True, "os": "linux"},
+                "dev-2": {"name": "Laptop", "host": "192.0.2.10", "user": "u", "os": "linux"},
+            },
+            "games": {
+                "g1": {
+                    "name": "Mi Juego",
+                    "devices": ["dev-1", "dev-2"],
+                    "paths": {"dev-1": str(self.d1), "dev-2": "/home/u/g"},
+                }
+            },
+        }
         (tmp / "config").mkdir(parents=True, exist_ok=True)
         (tmp / "config" / "config.yaml").write_text(yaml.safe_dump(cfg, allow_unicode=True))
 
@@ -52,6 +62,7 @@ class Env:
 def env(tmp_path, monkeypatch):
     from app.sync import engine as sync
     from fakes import LocalTransport
+
     real = sync.get_transport
     e = Env(tmp_path)
     monkeypatch.setattr(sync, "get_transport", lambda dev: real(dev) if dev.local else LocalTransport(e.laptop))
@@ -133,7 +144,9 @@ def test_conflict_always_skips_even_with_newest_policies(client):
     cfg["games"]["g1"]["on_conflict"] = "newest"  # y la del juego
     cp.write_text(yaml.safe_dump(cfg, allow_unicode=True))
     r = opened(client)
-    assert r.status_code == 200 and r.json()["outcome"] == "conflict" and r.json()["ok"] is False  # el hook nunca resuelve
+    assert (
+        r.status_code == 200 and r.json()["outcome"] == "conflict" and r.json()["ok"] is False
+    )  # el hook nunca resuelve
     assert e.read(e.d1) == "pc1" and e.read(e.d2) == "pc2" and e.read(e.hub) == "base"
 
 
@@ -148,6 +161,7 @@ def test_resolves_by_id_and_by_name_and_device_by_name(client):
 def test_run_in_progress_409(client):
     client.env.seed()
     from app.sync import locking
+
     h = locking.acquire(settings.DATA_DIR / "locks" / "g1.lock")  # otro proceso con el lock del juego
     try:
         r = opened(client)
@@ -161,6 +175,7 @@ def test_run_in_progress_with_manual_run(client):
     client.env.seed()
     gate = threading.Event()
     import app.services.runs as m
+
     real = m.run_sync
     m.run_sync = lambda *a, **k: (gate.wait(5), real(*a, **k))[1]
     try:
@@ -206,6 +221,7 @@ def test_offline_device_aborts_with_200(client, monkeypatch):
     client.env.seed()
     from fakes import LocalTransport
     from app.sync import engine as sync
+
     monkeypatch.setattr(sync, "get_transport", lambda dev: LocalTransport(client.env.laptop, down=True))
     r = opened(client)
     assert r.status_code == 200
@@ -217,6 +233,7 @@ def test_offline_device_aborts_with_200(client, monkeypatch):
 def test_unexpected_error_is_200(client, monkeypatch):
     client.env.seed()
     from app.sync import engine as sync
+
     monkeypatch.setattr(sync, "get_transport", lambda dev: 1 / 0)
     r = opened(client)
     assert r.status_code == 200 and r.json()["outcome"] == "error"
@@ -227,6 +244,7 @@ def test_server_timeout_returns_200_and_run_continues(client, monkeypatch):
     monkeypatch.setattr(settings, "HOOK_WAIT", 0.2)
     gate = threading.Event()
     from fakes import LocalTransport
+
     real = LocalTransport.check
     monkeypatch.setattr(LocalTransport, "check", lambda self: (gate.wait(5), real(self))[1])
     try:
@@ -266,8 +284,16 @@ def test_disabled_game_is_skipped_without_sync_or_watch(client):
     r = opened(client)
     assert r.status_code == 200, r.text
     j = r.json()
-    assert j == {"ok": False, "outcome": "skipped", "game": "g1", "device": "dev-1", "code": "err.sync.game_disabled",
-                 "params": {}, "watching": False, "watch_reason": "disabled"}
+    assert j == {
+        "ok": False,
+        "outcome": "skipped",
+        "game": "g1",
+        "device": "dev-1",
+        "code": "err.sync.game_disabled",
+        "params": {},
+        "watching": False,
+        "watch_reason": "disabled",
+    }
     assert e.read(e.d1) == "base" and e.read(e.d2) == "base"  # nada sincronizado
     h = history.read()
     assert len(h) == 1 and h[0]["trigger"] == "hook" and h[0]["result"] == "skipped" and h[0]["device"] == "dev-1"

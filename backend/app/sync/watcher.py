@@ -2,6 +2,7 @@
 
 Una tarea asyncio por juego, solo en memoria (si el hub se reinicia se pierde; lo cubre el cron). Las llamadas a
 transport son bloqueantes y van al executor. Reloj, `sleep`, sondeo y checkpoint son inyectables para los tests."""
+
 import asyncio
 import logging
 import time
@@ -17,7 +18,8 @@ WAITING, RUNNING, SETTLING = "waiting", "running", "settling"
 
 def _log_note(kind: str, game: str, device: str, detail: str = ""):
     (log.error if kind == "checkpoint_error" else log.info)(
-        "vigilante %s juego=%s dispositivo=%s%s", kind, game, device, f" ({detail})" if detail else "")
+        "vigilante %s juego=%s dispositivo=%s%s", kind, game, device, f" ({detail})" if detail else ""
+    )
 
 
 class Watch:
@@ -31,10 +33,17 @@ class Watch:
 
 
 class Watcher:
-    def __init__(self, probe: Callable[[str, str], bool], checkpoint: Callable[[str, str], Awaitable],
-                 clock: Callable[[], float] = time.monotonic, sleep: Callable = asyncio.sleep,
-                 poll: Optional[float] = None, settle: Optional[float] = None, first_seen: Optional[float] = None,
-                 note: Callable = _log_note):
+    def __init__(
+        self,
+        probe: Callable[[str, str], bool],
+        checkpoint: Callable[[str, str], Awaitable],
+        clock: Callable[[], float] = time.monotonic,
+        sleep: Callable = asyncio.sleep,
+        poll: Optional[float] = None,
+        settle: Optional[float] = None,
+        first_seen: Optional[float] = None,
+        note: Callable = _log_note,
+    ):
         """`probe(game, device)` -> ¿proceso abierto? (bloqueante; lanza si el dispositivo no responde).
         `checkpoint(game, device)` corre una vez al detectar el cierre. Tiempos: por defecto, los de settings (leídos al armar)."""
         self.probe, self.checkpoint, self.clock, self.sleep, self.note = probe, checkpoint, clock, sleep, note
@@ -47,9 +56,13 @@ class Watcher:
         if game in self.tasks:
             log.debug("armar: juego=%s dispositivo=%s reemplaza una vigilancia previa", game, device)
         self._drop(game)
-        poll, settle, first = (v if v is not None else d for v, d in zip(
-            self._times, (settings.HOOK_POLL, settings.HOOK_SETTLE, settings.HOOK_FIRST_SEEN)))
-        log.debug("armar: juego=%s dispositivo=%s poll=%gs settle=%gs first_seen=%gs", game, device, poll, settle, first)
+        poll, settle, first = (
+            v if v is not None else d
+            for v, d in zip(self._times, (settings.HOOK_POLL, settings.HOOK_SETTLE, settings.HOOK_FIRST_SEEN))
+        )
+        log.debug(
+            "armar: juego=%s dispositivo=%s poll=%gs settle=%gs first_seen=%gs", game, device, poll, settle, first
+        )
         w = Watch(game, device, poll)
         self.watches[game] = w
         self.tasks[game] = asyncio.create_task(self._run(w, poll, settle, first))
@@ -62,9 +75,17 @@ class Watcher:
             t.cancel()
 
     def list(self) -> List[dict]:
-        return [{"game": w.game, "device": w.device, "state": w.state, "since": iso(w.since),
-                 "last_poll": iso(w.last_poll), "poll": w.poll}
-                for w in self.watches.values()]
+        return [
+            {
+                "game": w.game,
+                "device": w.device,
+                "state": w.state,
+                "since": iso(w.since),
+                "last_poll": iso(w.last_poll),
+                "poll": w.poll,
+            }
+            for w in self.watches.values()
+        ]
 
     async def cancel_all(self):
         tasks = list(self.tasks.values())
@@ -94,8 +115,12 @@ class Watcher:
                     seen = True
                     if w.state != RUNNING:
                         w.set(RUNNING)
-                        log.debug("juego=%s dispositivo=%s: waiting -> running, visto a las %s (UTC)", w.game, w.device,
-                                  iso(w.since))
+                        log.debug(
+                            "juego=%s dispositivo=%s: waiting -> running, visto a las %s (UTC)",
+                            w.game,
+                            w.device,
+                            iso(w.since),
+                        )
                 elif seen:  # visto y ya no (o el dispositivo no responde: suspensión, SSH caído): cierre
                     w.set(SETTLING)
                     log.debug("juego=%s dispositivo=%s: running -> settling (espera %gs)", w.game, w.device, settle)
@@ -107,7 +132,9 @@ class Watcher:
                         self.note("checkpoint_error", w.game, w.device, f"{type(e).__name__}: {e}")
                     return
                 elif self.clock() - start >= first_seen:
-                    self.note("never_seen", w.game, w.device, f"proceso no visto en {first_seen:g} s; vigilancia descartada")
+                    self.note(
+                        "never_seen", w.game, w.device, f"proceso no visto en {first_seen:g} s; vigilancia descartada"
+                    )
                     return
                 await self.sleep(poll)
         finally:

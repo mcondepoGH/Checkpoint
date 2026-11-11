@@ -1,4 +1,5 @@
 """Contrato i18n de scheduler e historial: errores y estados como {code, params}; historial antiguo se lee tal cual."""
+
 import asyncio
 import json
 import re
@@ -38,6 +39,7 @@ def test_validation_errors_are_code_params():
         with pytest.raises(ValueError) as e:
             validate_settings(body, CUR)
         return e.value.args[0]
+
     assert err({"enabled": "yes"})["enabled"] == {"code": "err.scheduler.bool_required", "params": {}}
     assert err({"interval_hours": "6"})["interval_hours"]["code"] == "err.scheduler.interval_not_number"
     r = err({"interval_hours": 500})["interval_hours"]
@@ -50,6 +52,7 @@ def _sched(tmp_path, monkeypatch, runner):
 
     class Cfg:
         games = {k: SimpleNamespace(name=k.upper(), on_conflict=None, enabled=True) for k in "abcde"}
+
     return Scheduler(lambda: Cfg(), lambda g: g == "c", clock=lambda: NOW, runner=runner)
 
 
@@ -73,7 +76,11 @@ def test_cycle_status_and_history_have_code_params(tmp_path, monkeypatch):
     assert items["C"]["code"] == "err.scheduler.skipped_busy"
     assert items["D"]["code"] == "err.scheduler.skipped_conflict"
     assert items["D"]["params"]["cause"] == {"code": "err.sync.conflict_stale", "params": {}}
-    assert items["E"] == {"path": "E", "code": "err.sync.unexpected", "params": {"type": "RuntimeError", "detail": "boom"}}
+    assert items["E"] == {
+        "path": "E",
+        "code": "err.sync.unexpected",
+        "params": {"type": "RuntimeError", "detail": "boom"},
+    }
     (e,) = history.read()
     g = e["games"]
     assert g["c"]["code"] == "err.scheduler.busy" and g["c"]["message"] == ""
@@ -91,16 +98,33 @@ def test_cycle_crash_has_code(tmp_path, monkeypatch):
 
 
 def test_history_params_redacted():
-    e = history.make_entry(NOW, 1, "scheduled", "error",
-                           {"g": {"result": "error", "code": "err.sync.unexpected",
-                                  "params": {"type": "X", "detail": "password=hunter22"}}})
+    e = history.make_entry(
+        NOW,
+        1,
+        "scheduled",
+        "error",
+        {
+            "g": {
+                "result": "error",
+                "code": "err.sync.unexpected",
+                "params": {"type": "X", "detail": "password=hunter22"},
+            }
+        },
+    )
     assert "hunter22" not in json.dumps(e)
 
 
 def test_old_entries_read_as_is(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
-    old = {"id": "old1", "started": NOW.isoformat(), "duration": 1.0, "trigger": "scheduled", "result": "error",
-           "games": {"g": {"result": "error", "message": "no se pudo"}}, "message": "g: no se pudo"}
+    old = {
+        "id": "old1",
+        "started": NOW.isoformat(),
+        "duration": 1.0,
+        "trigger": "scheduled",
+        "result": "error",
+        "games": {"g": {"result": "error", "message": "no se pudo"}},
+        "message": "g: no se pudo",
+    }
     raw = json.dumps(old, ensure_ascii=False) + "\n"
     history.path().write_text(raw)
     assert history.read()[0] == old

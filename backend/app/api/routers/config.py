@@ -1,4 +1,5 @@
 """Configuración: lectura, validación, diff, YAML, guardado con versión base, copias, prueba de dispositivos y clave SSH."""
+
 import logging
 
 from fastapi import Depends, Request
@@ -12,7 +13,9 @@ from ...services.context import AppContext
 from ...services.devices import check_device
 from ..deps import body_json, get_ctx, internal_router
 
-api_log = logging.getLogger("checkpoint.api")  # DEBUG: una línea por petición /api y detalle por endpoint (sin secretos)
+api_log = logging.getLogger(
+    "checkpoint.api"
+)  # DEBUG: una línea por petición /api y detalle por endpoint (sin secretos)
 router = internal_router()
 
 
@@ -42,8 +45,11 @@ def get_config(ctx: AppContext = Depends(get_ctx)):
 
 @router.get("/api/config/events")
 def config_events(ctx: AppContext = Depends(get_ctx)):
-    return StreamingResponse(config_events_gen(ctx.store), media_type="text/event-stream",
-                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+    return StreamingResponse(
+        config_events_gen(ctx.store),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 @router.post("/api/config/validate")

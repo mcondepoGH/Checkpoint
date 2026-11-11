@@ -1,4 +1,5 @@
 """`GET /api/games/{game}/hook-status` (sesión) y campo `device` en el historial de hook / hook_closed."""
+
 from datetime import datetime, timezone
 
 from app.users import history
@@ -95,6 +96,7 @@ def test_watches_view_requires_session_and_exposes_heartbeat(cl):
 
 def test_disabled_opened_shows_skipped_with_reason(cl):
     from test_hook_opened import set_enabled
+
     set_enabled(cl.env, "g1", False)
     hopen(cl)
     session(cl)

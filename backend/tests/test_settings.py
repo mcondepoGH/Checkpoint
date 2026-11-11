@@ -1,4 +1,5 @@
 """Variables de entorno: solo la lista final; las eliminadas se ignoran."""
+
 import os
 import subprocess
 import sys
@@ -14,13 +15,21 @@ def _run(code, **env):
 
 
 def test_removed_variables_are_ignored(tmp_path):
-    r = _run("from app.sync import scheduler\nfrom app.core import settings, updates\n"
-             "print(settings.CONFIG_PATH, settings.DATA_DIR, settings.SSH_TIMEOUT)\n"
-             "print(scheduler.default_settings())\n"
-             "print(updates.REPO, updates.UpdateChecker().channel())",
-             CHECKPOINT_HOME_DIR=str(tmp_path), CHECKPOINT_CONFIG="/otra/c.yaml", CHECKPOINT_DATA="/otra/d",
-             CHECKPOINT_SSH_TIMEOUT="99", CHECKPOINT_AUTO_ENABLED="1", CHECKPOINT_AUTO_INTERVAL_HOURS="3",
-             CHECKPOINT_UPDATE_CHANNEL="beta", CHECKPOINT_UPDATE_REPO="otro/repo", CHECKPOINT_IN_DOCKER="1")
+    r = _run(
+        "from app.sync import scheduler\nfrom app.core import settings, updates\n"
+        "print(settings.CONFIG_PATH, settings.DATA_DIR, settings.SSH_TIMEOUT)\n"
+        "print(scheduler.default_settings())\n"
+        "print(updates.REPO, updates.UpdateChecker().channel())",
+        CHECKPOINT_HOME_DIR=str(tmp_path),
+        CHECKPOINT_CONFIG="/otra/c.yaml",
+        CHECKPOINT_DATA="/otra/d",
+        CHECKPOINT_SSH_TIMEOUT="99",
+        CHECKPOINT_AUTO_ENABLED="1",
+        CHECKPOINT_AUTO_INTERVAL_HOURS="3",
+        CHECKPOINT_UPDATE_CHANNEL="beta",
+        CHECKPOINT_UPDATE_REPO="otro/repo",
+        CHECKPOINT_IN_DOCKER="1",
+    )
     assert r.returncode == 0, r.stderr
     out = r.stdout.splitlines()
     assert out[0] == f"{tmp_path}/config/config.yaml {tmp_path}/data 8"

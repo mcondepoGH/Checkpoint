@@ -6,6 +6,7 @@ El backend NO traduce: la UI traduce `code` con `params`. Las respuestas con dat
 Causas anidadas (la excepción de origen sube tal cual, sin texto): un param puede ser un cuerpo
 {code, params} (`params.cause`, uno) o una lista [{path, code, params}] (`params.causes`, varios; `path`
 opcional). La UI traduce el anidado primero y lo inserta en `{cause}`/`{causes}` del mensaje padre."""
+
 from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 
@@ -25,5 +26,6 @@ class ApiError(HTTPException):
 
 
 def error_response(status_code: int, code: str, *, headers=None, extra=None, **params) -> JSONResponse:
-    return JSONResponse({"detail": error_body(code, **params), **(extra or {})},
-                        status_code=status_code, headers=headers)
+    return JSONResponse(
+        {"detail": error_body(code, **params), **(extra or {})}, status_code=status_code, headers=headers
+    )

@@ -8,9 +8,13 @@ from app.main import create_app
 from app.core.redact import redact
 
 PW = "correct horse"
-CFG = {"devices": {"a": {"name": "Equipo a", "host": "10.0.0.1", "user": "u", "os": "linux"},
-                   "b": {"name": "Equipo b", "host": "10.0.0.2", "user": "u", "os": "windows"}},
-       "games": {}}
+CFG = {
+    "devices": {
+        "a": {"name": "Equipo a", "host": "10.0.0.1", "user": "u", "os": "linux"},
+        "b": {"name": "Equipo b", "host": "10.0.0.2", "user": "u", "os": "windows"},
+    },
+    "games": {},
+}
 
 
 @pytest.fixture
@@ -32,12 +36,21 @@ def login(c, pw=PW, user="admin"):
 
 
 def test_api_requires_session(client):
-    for m, p in [("get", "/api/config"), ("put", "/api/config"), ("get", "/api/status"),
-                 ("post", "/api/sync/x"), ("get", "/api/versions/x"), ("get", "/api/runs/x/stream"),
-                 ("post", "/api/devices/test"), ("post", "/api/config/validate"),
-                 ("post", "/api/config/diff"), ("post", "/api/config/yaml"),
-                 ("get", "/api/config/events"),
-                 ("get", "/api/config/backups"), ("post", "/api/config/restore")]:
+    for m, p in [
+        ("get", "/api/config"),
+        ("put", "/api/config"),
+        ("get", "/api/status"),
+        ("post", "/api/sync/x"),
+        ("get", "/api/versions/x"),
+        ("get", "/api/runs/x/stream"),
+        ("post", "/api/devices/test"),
+        ("post", "/api/config/validate"),
+        ("post", "/api/config/diff"),
+        ("post", "/api/config/yaml"),
+        ("get", "/api/config/events"),
+        ("get", "/api/config/backups"),
+        ("post", "/api/config/restore"),
+    ]:
         assert getattr(client, m)(p).status_code == 401, p
     assert client.get("/").status_code == 200  # solo shell de login
 
@@ -113,12 +126,15 @@ def test_scheduler_endpoints(client):
 def test_scheduler_history_endpoint(client):
     from datetime import datetime, timezone
     from app.users import history
+
     assert client.get("/api/scheduler/history").status_code == 401
     login(client)
     assert client.get("/api/scheduler/history").json() == {"entries": []}
     now = datetime.now(timezone.utc)
     for i in range(205):
-        history.append(history.make_entry(now, 0.5, "scheduled", "ok", {"g": {"result": "ok", "message": ""}}, f"e{i}"), now=now)
+        history.append(
+            history.make_entry(now, 0.5, "scheduled", "ok", {"g": {"result": "ok", "message": ""}}, f"e{i}"), now=now
+        )
     assert len(client.get("/api/scheduler/history").json()["entries"]) == 50
     r = client.get("/api/scheduler/history?limit=50").json()["entries"]
     assert len(r) == 50 and r[0]["message"] == "e204"
@@ -129,10 +145,15 @@ def test_scheduler_history_endpoint(client):
 
 def test_versions_limit_endpoint(client, tmp_path):
     login(client)
-    cfg = dict(CFG, max_versions=7, games={"g": {"name": "Juego g", "devices": ["a", "b"], "paths": {"a": "/x/y", "b": "C:/z"}}})
+    cfg = dict(
+        CFG,
+        max_versions=7,
+        games={"g": {"name": "Juego g", "devices": ["a", "b"], "paths": {"a": "/x/y", "b": "C:/z"}}},
+    )
     client.sauth  # noqa
     (tmp_path / "config").mkdir(parents=True, exist_ok=True)
     import yaml
+
     (tmp_path / "config" / "config.yaml").write_text(yaml.safe_dump(cfg))
     (tmp_path / "data" / "versions" / "g" / "2026-01-01_100000" / "a").mkdir(parents=True)
     r = client.get("/api/versions/g/limit")

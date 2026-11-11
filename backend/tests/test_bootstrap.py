@@ -80,15 +80,16 @@ def test_tofu_never_overwrites_when_key_changes(tmp_path, monkeypatch):
 
 def test_tofu_non_default_port_entry(tmp_path, monkeypatch):
     kh = tmp_path / "known_hosts"
-    monkeypatch.setattr(bootstrap, "_keyscan",
-                        lambda h, p: SCAN.replace("10.0.0.5", "[10.0.0.5]:2222"))
+    monkeypatch.setattr(bootstrap, "_keyscan", lambda h, p: SCAN.replace("10.0.0.5", "[10.0.0.5]:2222"))
     assert bootstrap.ensure_host_key("10.0.0.5", 2222, kh) is True
     assert bootstrap.has_host_entry("10.0.0.5", 2222, kh)
     assert not bootstrap.has_host_entry("10.0.0.5", 22, kh)
 
 
-@pytest.mark.parametrize("host,port", [("-oProxyCommand=x", 22), ("a b", 22), ("h;rm", 22),
-                                       ("10.0.0.1", 0), ("10.0.0.1", 70000), ("10.0.0.1", "x")])
+@pytest.mark.parametrize(
+    "host,port",
+    [("-oProxyCommand=x", 22), ("a b", 22), ("h;rm", 22), ("10.0.0.1", 0), ("10.0.0.1", 70000), ("10.0.0.1", "x")],
+)
 def test_tofu_rejects_injection(tmp_path, host, port):
     with pytest.raises(bootstrap.BootstrapError):
         bootstrap.ensure_host_key(host, port, tmp_path / "kh")
@@ -100,6 +101,7 @@ def test_keyscan_uses_arg_list_no_shell(monkeypatch):
     def fake_run(args, **kw):
         seen["args"], seen["kw"] = args, kw
         return subprocess.CompletedProcess(args, 0, stdout=SCAN.encode(), stderr=b"")
+
     monkeypatch.setattr(bootstrap.subprocess, "run", fake_run)
     bootstrap._keyscan("10.0.0.5", 22)
     assert isinstance(seen["args"], list) and not seen["kw"].get("shell")
@@ -108,11 +110,15 @@ def test_keyscan_uses_arg_list_no_shell(monkeypatch):
 
 def test_changed_host_key_gives_clear_error():
     p = subprocess.CompletedProcess(
-        [], 255, b"", b"@@@ WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED! @@@\nHost key verification failed.")
+        [], 255, b"", b"@@@ WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED! @@@\nHost key verification failed."
+    )
     e = _fail("err.transport.ssh_failed", p, Device(name="Equipo", host="10.0.0.5", user="u", os="linux"))
     assert (e.code, e.params) == ("err.bootstrap.host_key_changed", {"host": "10.0.0.5", "port": 22})
-    other = _fail("err.transport.ssh_failed", subprocess.CompletedProcess([], 255, b"", b"boom"),
-                  Device(name="Equipo", host="10.0.0.5", user="u", os="linux"))
+    other = _fail(
+        "err.transport.ssh_failed",
+        subprocess.CompletedProcess([], 255, b"", b"boom"),
+        Device(name="Equipo", host="10.0.0.5", user="u", os="linux"),
+    )
     assert (other.code, other.params) == ("err.transport.ssh_failed", {"detail": "boom"})
 
 
@@ -120,8 +126,9 @@ def test_check_marks_first_use_and_fails_if_keyscan_fails(tmp_path, monkeypatch)
     monkeypatch.setattr(settings, "KNOWN_HOSTS", str(tmp_path / "known_hosts"))
     dev = Device(name="Equipo", host="10.0.0.5", user="u", os="linux")
     monkeypatch.setattr(bootstrap, "_keyscan", lambda h, p: SCAN)
-    monkeypatch.setattr("app.sync.transport.base._run",
-                        lambda a, timeout=0, stdin=None: subprocess.CompletedProcess(a, 0, b"ok", b""))
+    monkeypatch.setattr(
+        "app.sync.transport.base._run", lambda a, timeout=0, stdin=None: subprocess.CompletedProcess(a, 0, b"ok", b"")
+    )
     t = PosixTransport(dev)
     t.check()
     assert t.first_use is True
@@ -130,6 +137,7 @@ def test_check_marks_first_use_and_fails_if_keyscan_fails(tmp_path, monkeypatch)
 
     def boom(h, p):
         raise bootstrap.BootstrapError("sin respuesta")
+
     monkeypatch.setattr(settings, "KNOWN_HOSTS", str(tmp_path / "otro"))
     monkeypatch.setattr(bootstrap, "_keyscan", boom)
     with pytest.raises(TransportError):
@@ -150,8 +158,15 @@ def test_plain_password_not_kept():
     assert "s3cret pass" not in repr(vars(a))
 
 
-@pytest.mark.parametrize("env", [{}, {"CHECKPOINT_USER": "admin"}, {"CHECKPOINT_PASSWORD": "x"},
-                                 {"CHECKPOINT_USER": "", "CHECKPOINT_PASSWORD": "x"}])
+@pytest.mark.parametrize(
+    "env",
+    [
+        {},
+        {"CHECKPOINT_USER": "admin"},
+        {"CHECKPOINT_PASSWORD": "x"},
+        {"CHECKPOINT_USER": "", "CHECKPOINT_PASSWORD": "x"},
+    ],
+)
 def test_missing_var_gives_clear_error(env):
     with pytest.raises(RuntimeError, match="Faltan CHECKPOINT_USER / CHECKPOINT_PASSWORD"):
         Auth.from_env(env, rounds=4)
@@ -174,6 +189,7 @@ def test_create_app_without_vars_fails(monkeypatch):
 
 def test_savesync_prefix_is_ignored(monkeypatch):
     from app.core import settings
+
     for k in ("USER", "PASSWORD", "PORT"):
         monkeypatch.delenv("CHECKPOINT_" + k, raising=False)
     monkeypatch.setenv("SAVESYNC_PORT", "9000")
@@ -188,6 +204,7 @@ def test_savesync_prefix_is_ignored(monkeypatch):
 
 def test_password_not_logged(monkeypatch, caplog, capsys):
     from app.core.redact import redact
+
     monkeypatch.setenv("CHECKPOINT_USER", "admin")
     monkeypatch.setenv("CHECKPOINT_PASSWORD", "claro-123456")
     with caplog.at_level("DEBUG"):

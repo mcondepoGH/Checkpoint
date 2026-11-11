@@ -1,4 +1,5 @@
 """Contrato i18n de config/configstore: errores como {code, params}, sin texto en español."""
+
 import re
 from pathlib import Path
 
@@ -28,9 +29,14 @@ def test_name_error_codes():
 
 
 def test_normalize_path_raises_config_error_with_code():
-    for os_name, p, c in [("linux", "rel", "err.config.path_absolute"), ("windows", "/x", "err.config.path_windows"),
-                          ("linux", "/a/../b", "err.config.path_dotdot"), ("linux", "/", "err.config.path_root"),
-                          ("linux", "/a;b", "err.config.path_chars"), ("linux", 5, "err.config.path_text")]:
+    for os_name, p, c in [
+        ("linux", "rel", "err.config.path_absolute"),
+        ("windows", "/x", "err.config.path_windows"),
+        ("linux", "/a/../b", "err.config.path_dotdot"),
+        ("linux", "/", "err.config.path_root"),
+        ("linux", "/a;b", "err.config.path_chars"),
+        ("linux", 5, "err.config.path_text"),
+    ]:
         with pytest.raises(ConfigError) as e:
             normalize_path(os_name, p)
         assert e.value.code == c
@@ -38,7 +44,9 @@ def test_normalize_path_raises_config_error_with_code():
 
 def test_resolve_ref_ambiguous_has_code_and_matches():
     class It:
-        def __init__(self, n): self.name = n
+        def __init__(self, n):
+            self.name = n
+
     with pytest.raises(ConfigError) as e:
         resolve_ref({"a": It("Dup"), "b": It("Dup")}, "Dup")
     assert e.value.code == "err.config.ref_ambiguous" and e.value.params["ref"] == "Dup"
@@ -47,7 +55,9 @@ def test_resolve_ref_ambiguous_has_code_and_matches():
 
 
 def test_validate_config_errors_are_bodies():
-    _, errs = validate_config({"devices": {"a": {**DEV, "host": "bad host!"}, "b": {**DEV, "name": "B", "port": 70000}}})
+    _, errs = validate_config(
+        {"devices": {"a": {**DEV, "host": "bad host!"}, "b": {**DEV, "name": "B", "port": 70000}}}
+    )
     assert code(errs["devices.a.host"]) == ("err.config.host_invalid", {})
     assert code(errs["devices.b.port"]) == ("err.config.port_range", {})
     _, errs = validate_config({"max_versions": 5000, "devices": {"a": {"os": "mac"}}, "x": 1})
@@ -60,9 +70,13 @@ def test_validate_config_errors_are_bodies():
 
 def test_semantic_codes():
     d = {"a": {**DEV}, "b": {**DEV, "name": "B"}}
-    _, errs = validate_config({"devices": d, "games": {"g": {"name": "G", "devices": ["a", "a"], "paths": {"a": "/x"}}}})
+    _, errs = validate_config(
+        {"devices": d, "games": {"g": {"name": "G", "devices": ["a", "a"], "paths": {"a": "/x"}}}}
+    )
     assert code(errs["games.g.devices.1"]) == ("err.config.device_same", {})
-    _, errs = validate_config({"devices": d, "games": {"g": {"name": "G", "devices": ["a", "zz"], "paths": {"a": "/x", "q": "/y"}}}})
+    _, errs = validate_config(
+        {"devices": d, "games": {"g": {"name": "G", "devices": ["a", "zz"], "paths": {"a": "/x", "q": "/y"}}}}
+    )
     assert code(errs["games.g.devices.1"]) == ("err.config.device_unknown", {"id": "zz"})
     assert code(errs["games.g.paths.q"]) == ("err.config.path_device_unknown", {})
     _, errs = validate_config({"devices": {"a": {**DEV}, "b": {**DEV}}})
@@ -95,6 +109,7 @@ def test_no_spanish_in_emitted_errors():
 
 def test_codes_in_es_json():
     import json
+
     es = json.loads((Path(__file__).parents[2] / "frontend/src/locales/es.json").read_text())
     src = "".join((Path(C.__file__).parent / f).read_text() for f in ("models.py", "store.py"))
     codes = set(re.findall(r'"(err\.(?:config|configstore)\.[a-z_]+)"', src))

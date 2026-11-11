@@ -1,4 +1,5 @@
 """Perfil: nombre y foto (subida, tipo, tamaño, borrado, caché y sesión obligatoria)."""
+
 import re
 import struct
 
@@ -44,8 +45,12 @@ def put(c, data, ctype="image/jpeg"):
 
 
 def test_profile_requires_session(client):
-    for m, p in [("get", "/api/profile"), ("get", "/api/profile/photo"), ("put", "/api/profile/photo"),
-                 ("delete", "/api/profile/photo")]:
+    for m, p in [
+        ("get", "/api/profile"),
+        ("get", "/api/profile/photo"),
+        ("put", "/api/profile/photo"),
+        ("delete", "/api/profile/photo"),
+    ]:
         assert getattr(client, m)(p).status_code == 401, p
 
 
@@ -55,7 +60,9 @@ def test_profile_name_and_no_photo(logged):
     assert r.status_code == 404 and r.json()["detail"]["code"] == "err.main.photo_unknown"
 
 
-@pytest.mark.parametrize("data,ctype,ext", [(JPG, "image/jpeg", "jpg"), (PNG, "image/png", "png"), (WEBP, "image/webp", "webp")])
+@pytest.mark.parametrize(
+    "data,ctype,ext", [(JPG, "image/jpeg", "jpg"), (PNG, "image/png", "png"), (WEBP, "image/webp", "webp")]
+)
 def test_upload_valid_roundtrip(logged, data, ctype, ext):
     r = put(logged, data, ctype)
     assert r.status_code == 200
@@ -82,8 +89,12 @@ def test_invalid_type(logged):
         r = put(logged, data, ctype)
         assert r.status_code == 415 and r.json()["detail"]["code"] == "err.main.photo_type", ctype
     # el Content-Type declarado no basta: los bytes deben ser de ese tipo
-    for data, ctype in [(b"not an image", "image/jpeg"), (PNG, "image/jpeg"), (b"\xff\xd8\xff truncado", "image/jpeg"),
-                        (b"RIFF\x00\x00\x00\x00WEBP", "image/webp")]:
+    for data, ctype in [
+        (b"not an image", "image/jpeg"),
+        (PNG, "image/jpeg"),
+        (b"\xff\xd8\xff truncado", "image/jpeg"),
+        (b"RIFF\x00\x00\x00\x00WEBP", "image/webp"),
+    ]:
         r = put(logged, data, ctype)
         assert r.status_code == 415, (data, ctype)
     assert not (logged.tmp / "data" / "profile").exists()
@@ -105,6 +116,7 @@ def test_too_large_without_content_length(logged):
         yield JPG[:-2]
         for _ in range(3):
             yield b"\x00" * (avatar.MAX_BYTES // 2)
+
     r = logged.put("/api/profile/photo", content=gen(), headers={"Content-Type": "image/jpeg"})
     assert r.status_code == 413
 
@@ -118,7 +130,9 @@ def test_delete(logged):
 
 
 def test_foreign_origin_blocked_on_write(logged):
-    r = logged.put("/api/profile/photo", content=JPG, headers={"Content-Type": "image/jpeg", "Origin": "http://evil.example"})
+    r = logged.put(
+        "/api/profile/photo", content=JPG, headers={"Content-Type": "image/jpeg", "Origin": "http://evil.example"}
+    )
     assert r.status_code == 403
     r = logged.delete("/api/profile/photo", headers={"Origin": "http://evil.example"})
     assert r.status_code == 403

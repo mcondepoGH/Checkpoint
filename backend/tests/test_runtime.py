@@ -45,8 +45,10 @@ def test_override_invalido_se_ignora(monkeypatch, tmp_path):
     assert runtime.runtime_name() == "docker"
 
 
-@pytest.mark.parametrize("plat,esperado", [("linux", "linux"), ("win32", "windows"), ("cygwin", "windows"),
-                                           ("darwin", "macos"), ("freebsd13", "linux")])
+@pytest.mark.parametrize(
+    "plat,esperado",
+    [("linux", "linux"), ("win32", "windows"), ("cygwin", "windows"), ("darwin", "macos"), ("freebsd13", "linux")],
+)
 def test_plataforma(monkeypatch, plat, esperado):
     monkeypatch.setattr(sys, "platform", plat)
     assert runtime.platform_name() == esperado
@@ -73,8 +75,7 @@ def test_native_home_windows_y_macos(monkeypatch):
 
 def test_rutas_por_defecto_docker_no_cambian(monkeypatch):
     monkeypatch.setenv("CHECKPOINT_RUNTIME", "docker")
-    assert settings._paths() == ("/config/config.yaml", "/data", "/keys/id_ed25519", "/keys/known_hosts",
-                                 "/app/static")
+    assert settings._paths() == ("/config/config.yaml", "/data", "/keys/id_ed25519", "/keys/known_hosts", "/app/static")
 
 
 def test_rutas_por_defecto_nativo_sin_rutas_de_docker(monkeypatch, tmp_path):

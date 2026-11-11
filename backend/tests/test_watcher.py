@@ -1,4 +1,5 @@
 """Vigilante de proceso (tras `opened`): reloj, sleep, sondeo y checkpoint inyectados; sin esperas reales."""
+
 import asyncio
 
 import pytest
@@ -34,8 +35,17 @@ class Fake:
         self.checkpoints.append((game, device, self.t))
 
     def make(self, **kw):
-        return Watcher(self.probe, self.checkpoint, clock=self.clock, sleep=self.sleep,
-                       poll=POLL, settle=SETTLE, first_seen=FIRST, note=lambda *a: self.notes.append(a), **kw)
+        return Watcher(
+            self.probe,
+            self.checkpoint,
+            clock=self.clock,
+            sleep=self.sleep,
+            poll=POLL,
+            settle=SETTLE,
+            first_seen=FIRST,
+            note=lambda *a: self.notes.append(a),
+            **kw,
+        )
 
 
 async def settle_all(w):

@@ -1,4 +1,5 @@
 """Modelo y validación de config.yaml; escritura atómica."""
+
 import os
 import re
 import tempfile
@@ -12,8 +13,17 @@ from pydantic_core import PydanticCustomError
 from ..core.errors import error_body
 from ..core.hosts import HOST_RE
 from ..core.runtime import running_in_docker
-from pydantic import (BaseModel, ConfigDict, Field, StrictBool, StrictInt, ValidationError, field_validator, model_serializer,
-                      model_validator)
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StrictBool,
+    StrictInt,
+    ValidationError,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 NAME_MAX = 64
 RESERVED_SLUGS = ("hub",)  # el hub se guarda con ese nombre junto a los dispositivos
@@ -64,7 +74,9 @@ def yaml_error(e: Exception) -> ConfigError:
     if isinstance(e, DuplicateKeyError):
         return ConfigError("err.config.yaml_duplicate_key", key=str(e.key))
     problem = getattr(e, "problem", None)
-    return ConfigError("err.config.yaml_syntax", problem=problem) if problem else ConfigError("err.config.yaml_malformed")
+    return (
+        ConfigError("err.config.yaml_syntax", problem=problem) if problem else ConfigError("err.config.yaml_malformed")
+    )
 
 
 def name_error(name) -> Optional[dict]:
@@ -103,8 +115,11 @@ def resolve_ref(items, ref):
         low = ref.casefold()
         hits = [i for i, it in items.items() if str(getattr(it, "name", "")).casefold() == low]
     if len(hits) > 1:
-        raise ConfigError("err.config.ref_ambiguous", ref=ref, matches=", ".join(
-            f"{getattr(items[i], 'name', i)!r} ({i})" for i in hits))
+        raise ConfigError(
+            "err.config.ref_ambiguous",
+            ref=ref,
+            matches=", ".join(f"{getattr(items[i], 'name', i)!r} ({i})" for i in hits),
+        )
     return hits[0] if hits else None
 
 
@@ -139,8 +154,11 @@ def normalize_path(os_name: str, p: str) -> str:
 class Device(BaseModel):
     """Dispositivo remoto (SSH: host, user, port) o `local: true` = el equipo donde corre Checkpoint
     (sin SSH; solo fuera de Docker). Un dispositivo local no lleva host/user/port."""
+
     model_config = ConfigDict(extra="forbid")
-    name: str = Field(None, validate_default=True)  # obligatorio: etiqueta visible y editable; la clave del mapa es el id
+    name: str = Field(
+        None, validate_default=True
+    )  # obligatorio: etiqueta visible y editable; la clave del mapa es el id
     local: StrictBool = False
     host: Optional[str] = Field(None, validate_default=True)
     user: Optional[str] = Field(None, validate_default=True)
@@ -324,7 +342,12 @@ def semantic_errors(devices, games) -> List[Tuple[str, dict]]:
             paths = {}
         for k in paths:
             if k not in devs:
-                errs.append((f"{gp}.paths.{k}", error_body("err.config.path_extra" if k in devices else "err.config.path_device_unknown")))
+                errs.append(
+                    (
+                        f"{gp}.paths.{k}",
+                        error_body("err.config.path_extra" if k in devices else "err.config.path_device_unknown"),
+                    )
+                )
         for d in ok_devs:
             if d not in paths or paths[d] in (None, ""):
                 errs.append((f"{gp}.paths.{d}", error_body("err.config.path_missing")))
@@ -360,8 +383,9 @@ class Config(BaseModel):
 
     @model_validator(mode="after")
     def _cross(self):
-        errs = semantic_errors({k: v.model_dump() for k, v in self.devices.items()},
-                               {k: v.model_dump() for k, v in self.games.items()})
+        errs = semantic_errors(
+            {k: v.model_dump() for k, v in self.devices.items()}, {k: v.model_dump() for k, v in self.games.items()}
+        )
         if errs:
             raise _pyd("err.config.inconsistent", "{errors}", errors="; ".join(f"{p}: {m['code']}" for p, m in errs))
         for g in self.games.values():
@@ -486,4 +510,3 @@ def atomic_write(path: Path, text: str, mode: Optional[int] = None) -> None:
         if os.path.exists(tmp):
             os.unlink(tmp)
         raise
-

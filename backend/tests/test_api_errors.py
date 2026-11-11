@@ -1,4 +1,5 @@
 """Contrato de errores HTTP de main.py: detail = {"code": "err.main.<causa>", "params": {...}}. El backend no traduce."""
+
 import threading
 
 import pytest
@@ -94,6 +95,7 @@ def test_copia_desconocida_y_no_valida(client):
 def test_copia_no_valida(client, monkeypatch):
     login(client)
     from app.config import store as configstore
+
     monkeypatch.setattr(configstore.ConfigStore, "read_backup", lambda self, n: "devices: [")
     r = client.post("/api/config/diff", json={"backup": "x"})
     assert r.status_code == 422
@@ -105,13 +107,16 @@ def test_dispositivo_invalido_y_paths(client):
     login(client)
     r = client.post("/api/devices/test", json={"device": {"host": "x y"}}).json()
     assert r["ok"] is False and r["code"] == "err.main.device_invalid" and r["params"]["causes"] and r["message"]
-    r = client.post("/api/devices/test", json={"device": {"name": "PC", "local": True, "os": "linux"}, "paths": "x"}).json()
+    r = client.post(
+        "/api/devices/test", json={"device": {"name": "PC", "local": True, "os": "linux"}, "paths": "x"}
+    ).json()
     assert r["ok"] is False and r["code"] == "err.main.paths_invalid" and r["params"] == {"max": 50}
 
 
 def test_clave_ssh_no_generada(client, monkeypatch):
     login(client)
     from app.core import bootstrap
+
     monkeypatch.setattr(bootstrap, "public_key", lambda: None)
     r = client.get("/api/ssh/public-key")
     assert r.status_code == 404 and det(r) == ("err.main.ssh_key_missing", {})
@@ -158,14 +163,19 @@ def test_juego_desconocido_y_ambiguo(client):
 
 def test_juego_ambiguo(client, monkeypatch):
     from app.config.models import ConfigError
+
     login(client)
     put_cfg(client)
 
     def amb(items, ref):
         raise ConfigError("err.config.ref_ambiguous", ref="Dup", matches="a, b")
+
     monkeypatch.setattr("app.services.games.resolve_ref", amb)
     r = client.get("/api/versions/Dup")
-    assert r.status_code == 409 and det(r) == ("err.main.game_ambiguous", {"cause": {"code": "err.config.ref_ambiguous", "params": {"ref": "Dup", "matches": "a, b"}}})
+    assert r.status_code == 409 and det(r) == (
+        "err.main.game_ambiguous",
+        {"cause": {"code": "err.config.ref_ambiguous", "params": {"ref": "Dup", "matches": "a, b"}}},
+    )
 
 
 def test_sync_422_y_409_y_run_desconocido(client):
@@ -196,12 +206,14 @@ def test_ejecucion_en_curso_409(client, monkeypatch):
 
 def test_restaurar_version_falla_400(client, monkeypatch):
     from app.sync.engine import SyncAbort
+
     login(client)
     cfg = {**CFG, "games": {"g": GAME("G")}}
     put_cfg(client, cfg)
 
     def boom(*a, **k):
         raise SyncAbort("err.sync.version_unknown")
+
     monkeypatch.setattr("app.services.versions.restore_version", boom)
     r = client.post("/api/versions/g/restore", json={"version": "v", "source": "a"})
     assert r.status_code == 400

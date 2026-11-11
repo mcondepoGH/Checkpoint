@@ -1,4 +1,5 @@
 """Resolución del juego de una ruta (id o nombre). Sin FastAPI."""
+
 import logging
 
 from ..config.models import Config, ConfigError, resolve_ref

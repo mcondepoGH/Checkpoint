@@ -6,6 +6,7 @@ entrecomillan (shlex.quote en POSIX, comillas dobles en cmd.exe).
 
 Aquí: errores, interfaz `Transport` y utilidades compartidas por los transportes.
 """
+
 import logging
 import subprocess
 import time
@@ -16,7 +17,9 @@ from ...core import bootstrap, settings
 from ...core.errors import describe_code, error_body
 from ...config.models import PATH_CHARS_RE, Device
 
-log = logging.getLogger("checkpoint.transport")  # DEBUG: duración de cada comando ssh/rsync (nunca args, claves ni contenidos)
+log = logging.getLogger(
+    "checkpoint.transport"
+)  # DEBUG: duración de cada comando ssh/rsync (nunca args, claves ni contenidos)
 
 
 class TransportError(RuntimeError):
@@ -43,13 +46,23 @@ class Transport:
 
 def _ssh_base(dev: Device) -> List[str]:
     return [
-        "ssh", "-p", str(dev.port), "-i", settings.SSH_KEY,
-        "-o", "BatchMode=yes",
-        "-o", "IdentitiesOnly=yes",
-        "-o", "StrictHostKeyChecking=yes",
-        "-o", f"UserKnownHostsFile={settings.KNOWN_HOSTS}",
-        "-o", f"ConnectTimeout={settings.SSH_TIMEOUT}",
-        "-o", "ServerAliveInterval=15",
+        "ssh",
+        "-p",
+        str(dev.port),
+        "-i",
+        settings.SSH_KEY,
+        "-o",
+        "BatchMode=yes",
+        "-o",
+        "IdentitiesOnly=yes",
+        "-o",
+        "StrictHostKeyChecking=yes",
+        "-o",
+        f"UserKnownHostsFile={settings.KNOWN_HOSTS}",
+        "-o",
+        f"ConnectTimeout={settings.SSH_TIMEOUT}",
+        "-o",
+        "ServerAliveInterval=15",
         f"{dev.user}@{dev.host}",
     ]
 

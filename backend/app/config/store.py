@@ -1,5 +1,6 @@
 """Config en vivo: carga en memoria con detección de cambios externos, guardado con
 control de versión optimista, copias de seguridad, diff y serialización (ruamel conserva comentarios)."""
+
 import hashlib
 import io
 import os
@@ -17,8 +18,16 @@ from ruamel.yaml.comments import CommentedMap, CommentedSeq
 
 from ..core import settings
 from ..core.errors import error_body
-from .models import (DEFAULT_MAX_VERSIONS, Config, atomic_write, describe, errors_to_causes, load_yaml, validate_config,
-                     yaml_error)
+from .models import (
+    DEFAULT_MAX_VERSIONS,
+    Config,
+    atomic_write,
+    describe,
+    errors_to_causes,
+    load_yaml,
+    validate_config,
+    yaml_error,
+)
 
 MAX_BACKUPS = 10
 BACKUP_PREFIX = "config.yaml.bak-"
@@ -27,6 +36,7 @@ BACKUP_RE = re.compile(r"^config\.yaml\.bak-(\d{4})-(\d{2})-(\d{2})_(\d{2})(\d{2
 
 class Conflict(Exception):
     """El fichero cambió desde la versión base que envió la UI."""
+
     code = "err.configstore.conflict"
     params: dict = {}
 
@@ -37,6 +47,7 @@ class Conflict(Exception):
 
 class InvalidConfig(ValueError):
     """Borrador/copia no válidos; `errors` = {ruta: {code, params}} (la ruta "" = error general)."""
+
     code = "err.configstore.invalid"
 
     def __init__(self, errors: Dict[str, dict]):
@@ -142,8 +153,7 @@ def _section_diff(old: dict, new: dict) -> dict:
                 fields[k] = {"old": a, "new": b}
         if fields:
             changed[name] = fields
-    return {"added": sorted(new.keys() - old.keys()), "removed": sorted(old.keys() - new.keys()),
-            "changed": changed}
+    return {"added": sorted(new.keys() - old.keys()), "removed": sorted(old.keys() - new.keys()), "changed": changed}
 
 
 def diff_configs(old: dict, new: dict) -> dict:
@@ -152,13 +162,21 @@ def diff_configs(old: dict, new: dict) -> dict:
     ov, nv = old.get("max_versions", DEFAULT_MAX_VERSIONS), new.get("max_versions", DEFAULT_MAX_VERSIONS)
     # Las secciones van por id (un renombrado es un cambio de `name`, no una baja y un alta); `names` da el
     # nombre visible de cada id (el nuevo si existe; si no, el que tenía).
-    d["names"] = {s: {i: (v.get("name") if isinstance(v, dict) and v.get("name") else i)
-                      for i, v in {**(old.get(s) or {}), **(new.get(s) or {})}.items()}
-                  for s in ("devices", "games")}
-    d["general"] = {"added": [], "removed": [],
-                    "changed": {"General": {"max_versions": {"old": ov, "new": nv}}} if ov != nv else {}}
-    d["empty"] = not any(v["added"] or v["removed"] or v["changed"]
-                         for k, v in d.items() if isinstance(v, dict) and k != "names")
+    d["names"] = {
+        s: {
+            i: (v.get("name") if isinstance(v, dict) and v.get("name") else i)
+            for i, v in {**(old.get(s) or {}), **(new.get(s) or {})}.items()
+        }
+        for s in ("devices", "games")
+    }
+    d["general"] = {
+        "added": [],
+        "removed": [],
+        "changed": {"General": {"max_versions": {"old": ov, "new": nv}}} if ov != nv else {},
+    }
+    d["empty"] = not any(
+        v["added"] or v["removed"] or v["changed"] for k, v in d.items() if isinstance(v, dict) and k != "names"
+    )
     return d
 
 
@@ -279,8 +297,13 @@ class ConfigStore:
         return (self.backup_dir / name).read_text(encoding="utf-8", errors="replace")
 
 
-def config_events_gen(store: ConfigStore, interval: float = 1.0, keepalive: float = 15.0,
-                      max_ticks: Optional[int] = None, sleep=time.sleep):
+def config_events_gen(
+    store: ConfigStore,
+    interval: float = 1.0,
+    keepalive: float = 15.0,
+    max_ticks: Optional[int] = None,
+    sleep=time.sleep,
+):
     """SSE: emite `config` al conectar y cada vez que cambia la versión del fichero (edición externa incluida)."""
     last, idle, ticks = None, 0.0, 0
     while max_ticks is None or ticks < max_ticks:

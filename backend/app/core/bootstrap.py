@@ -2,6 +2,7 @@
 
 Todo con listas de argumentos (sin shell local). Nunca se expone la clave privada.
 """
+
 import logging
 import os
 import re
@@ -65,12 +66,17 @@ def ensure_ssh_key(key: str = None) -> bool:
         key.parent.mkdir(parents=True, exist_ok=True)
         _pub_path(key).unlink(missing_ok=True)  # .pub huérfana: ssh-keygen preguntaría si sobrescribir
         try:
-            p = subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", "checkpoint",
-                                "-f", str(key)], capture_output=True, timeout=30)
+            p = subprocess.run(
+                ["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-C", "checkpoint", "-f", str(key)],
+                capture_output=True,
+                timeout=30,
+            )
         except (OSError, subprocess.TimeoutExpired) as e:
             raise BootstrapError("err.bootstrap.keygen_failed", detail=str(e))
         if p.returncode != 0:
-            raise BootstrapError("err.bootstrap.keygen_error", detail=p.stderr.decode("utf-8", "replace").strip()[-200:])
+            raise BootstrapError(
+                "err.bootstrap.keygen_error", detail=p.stderr.decode("utf-8", "replace").strip()[-200:]
+            )
         os.chmod(key, 0o600)
         log.warning("clave SSH generada en %s (primer arranque)", key)
         return True
@@ -128,8 +134,7 @@ def has_host_entry(host: str, port: int, known_hosts: str = None) -> bool:
     if not Path(kh).is_file():
         return False
     try:
-        p = subprocess.run(["ssh-keygen", "-F", _kh_name(host, port), "-f", kh],
-                           capture_output=True, timeout=15)
+        p = subprocess.run(["ssh-keygen", "-F", _kh_name(host, port), "-f", kh], capture_output=True, timeout=15)
     except (OSError, subprocess.TimeoutExpired) as e:
         raise BootstrapError("err.bootstrap.known_hosts_read", detail=str(e))
     return p.returncode == 0
@@ -137,13 +142,14 @@ def has_host_entry(host: str, port: int, known_hosts: str = None) -> bool:
 
 def _keyscan(host: str, port: int) -> str:
     try:
-        p = subprocess.run(["ssh-keyscan", "-T", str(settings.SSH_TIMEOUT), "-p", str(port),
-                            "-t", "ed25519,ecdsa,rsa", host], capture_output=True,
-                           timeout=settings.SSH_TIMEOUT * 3 + 5)
+        p = subprocess.run(
+            ["ssh-keyscan", "-T", str(settings.SSH_TIMEOUT), "-p", str(port), "-t", "ed25519,ecdsa,rsa", host],
+            capture_output=True,
+            timeout=settings.SSH_TIMEOUT * 3 + 5,
+        )
     except (OSError, subprocess.TimeoutExpired) as e:
         raise BootstrapError("err.bootstrap.keyscan_failed", detail=str(e))
-    lines = [l for l in p.stdout.decode("utf-8", "replace").splitlines()
-             if l.strip() and not l.startswith("#")]
+    lines = [l for l in p.stdout.decode("utf-8", "replace").splitlines() if l.strip() and not l.startswith("#")]
     if not lines:
         raise BootstrapError("err.bootstrap.hostkey_unavailable", host=host, port=port)
     return "\n".join(lines) + "\n"

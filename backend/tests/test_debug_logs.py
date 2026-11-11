@@ -1,4 +1,5 @@
 """Logs DEBUG de los endpoints: aparecen con DEBUG, no con INFO y nunca llevan secretos."""
+
 import logging
 
 import pytest

@@ -9,6 +9,7 @@ Cifrado: Fernet de la librería `cryptography` (AES-128-CBC + HMAC-SHA256, con m
 (32 bytes en base64 urlsafe) se deriva del secreto con HMAC-SHA256. Fernet no tiene datos asociados (AAD): el id de
 usuario va DENTRO del payload cifrado y se verifica al descifrar. Un fichero manipulado, de otro usuario o cifrado con
 otro secreto no descifra (se trata como «sin key»)."""
+
 import base64
 import hashlib
 import hmac
@@ -83,8 +84,11 @@ def decrypt(blob: bytes, secret: bytes, uid: str) -> Optional[bytes]:
     """El texto en claro, o None si el token no es válido, no es de este secreto o el id de usuario no coincide."""
     try:
         data = json.loads(_fernet(secret).decrypt(blob))
-        if not isinstance(data, dict) or not isinstance(data.get("k"), str) or not hmac.compare_digest(
-                str(data.get("u", "")).encode(), uid.encode()):
+        if (
+            not isinstance(data, dict)
+            or not isinstance(data.get("k"), str)
+            or not hmac.compare_digest(str(data.get("u", "")).encode(), uid.encode())
+        ):
             return None
         return data["k"].encode("ascii")
     except (InvalidToken, ValueError, TypeError, UnicodeError):

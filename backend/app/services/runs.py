@@ -1,4 +1,5 @@
 """Ejecuciones de sync en memoria: las manuales (`POST /api/sync/{juego}`) y las que lanza el hook. Sin FastAPI."""
+
 import logging
 import threading
 import uuid
@@ -62,15 +63,23 @@ def start_manual_sync(registry: RunRegistry, scheduler, cfg: Config, game: str, 
     if resolution is not None and not valid_resolution(resolution):
         raise ApiError(422, "err.main.resolution_invalid")
     expect = body.get("expect")
-    if expect is not None and not (isinstance(expect, dict) and all(
-            isinstance(k, str) and (v is None or isinstance(v, str)) for k, v in expect.items())):
+    if expect is not None and not (
+        isinstance(expect, dict)
+        and all(isinstance(k, str) and (v is None or isinstance(v, str)) for k, v in expect.items())
+    ):
         raise ApiError(422, "err.main.expect_invalid")
     if game_busy(scheduler, registry, game):
         api_log.debug("sync %s: ya hay una ejecución en curso (409)", game)
         raise ApiError(409, "err.main.run_in_progress")
     run = registry.create(game, dry, cfg.games[game].name)
-    api_log.debug("sync %s: run=%s dry_run=%s resolution=%s expect=%s", game, run.id, dry, resolution,
-                  sorted(expect) if expect else None)
+    api_log.debug(
+        "sync %s: run=%s dry_run=%s resolution=%s expect=%s",
+        game,
+        run.id,
+        dry,
+        resolution,
+        sorted(expect) if expect else None,
+    )
     registry.prune()
 
     def work():
@@ -78,13 +87,20 @@ def start_manual_sync(registry: RunRegistry, scheduler, cfg: Config, game: str, 
             run.status = run_sync(cfg, game, dry, log=run.lines.append, resolution=resolution, expect=expect)
         except SyncAbort as e:
             run.lines.append(redact(f"ABORTADO: {e}"))
-            run.status = {"result": "aborted", "code": e.code, "params": e.params, "message": str(e),
-                          "game": game, "name": cfg.games[game].name}
+            run.status = {
+                "result": "aborted",
+                "code": e.code,
+                "params": e.params,
+                "message": str(e),
+                "game": game,
+                "name": cfg.games[game].name,
+            }
         finally:
             run.done = True
             st = run.status if isinstance(run.status, dict) else {}
-            api_log.debug("sync %s: run=%s terminado resultado=%s código=%s", game, run.id, st.get("result"),
-                          st.get("code"))
+            api_log.debug(
+                "sync %s: run=%s terminado resultado=%s código=%s", game, run.id, st.get("result"), st.get("code")
+            )
 
     threading.Thread(target=work, daemon=True).start()
     return run

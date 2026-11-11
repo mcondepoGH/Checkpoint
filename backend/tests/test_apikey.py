@@ -1,4 +1,5 @@
 """API key de usuario: gestión desde el perfil (cookie), cifrado en reposo, secreto del hub y /api/hook/ping (Bearer)."""
+
 import os
 import stat
 
@@ -66,7 +67,11 @@ def test_generate_view_regenerate_revoke(logged):
 
 
 def test_responses_are_not_cacheable(logged):
-    for r in (logged.get("/api/profile/apikey"), logged.post("/api/profile/apikey"), logged.delete("/api/profile/apikey")):
+    for r in (
+        logged.get("/api/profile/apikey"),
+        logged.post("/api/profile/apikey"),
+        logged.delete("/api/profile/apikey"),
+    ):
         assert r.headers["cache-control"] == "no-store"
 
 
@@ -148,6 +153,7 @@ def test_current_user_is_the_single_point(logged, monkeypatch):
     import inspect
     from app.api import deps
     from app.api.routers import profile
+
     src = inspect.getsource(deps)
     assert "auth.user" in src and src.count("def current_user") == 1
     assert "Depends(current_user)" in inspect.getsource(profile).split("def get_apikey")[1].split("\n")[0]
@@ -169,10 +175,22 @@ def test_ping_valid_key_ignores_origin(logged):
     assert r.status_code == 200
 
 
-@pytest.mark.parametrize("hdr", [
-    None, "", "Bearer", "Bearer ", "ck_abc", "Basic Zm9v", "Bearer ck_corta", "Bearer ck_" + "A" * 44,
-    "Bearer ck_" + "A" * 42 + "!", "Token ck_" + "A" * 43, "Bearer x y",
-])
+@pytest.mark.parametrize(
+    "hdr",
+    [
+        None,
+        "",
+        "Bearer",
+        "Bearer ",
+        "ck_abc",
+        "Basic Zm9v",
+        "Bearer ck_corta",
+        "Bearer ck_" + "A" * 44,
+        "Bearer ck_" + "A" * 42 + "!",
+        "Token ck_" + "A" * 43,
+        "Bearer x y",
+    ],
+)
 def test_ping_missing_or_malformed(logged, hdr):
     logged.post("/api/profile/apikey")
     r = ping(logged, {"Authorization": hdr} if hdr is not None else {})
@@ -200,17 +218,32 @@ def test_ping_regenerated_and_revoked(logged):
 
 def test_session_cookie_does_not_work_on_ping(logged):
     assert logged.get("/api/hook/ping").status_code == 401  # el cliente lleva la cookie de sesión válida
-    assert logged.get("/api/hook/ping", headers={"Authorization": "Bearer " + logged.cookies.get("checkpoint_session", "")}).status_code == 401
+    assert (
+        logged.get(
+            "/api/hook/ping", headers={"Authorization": "Bearer " + logged.cookies.get("checkpoint_session", "")}
+        ).status_code
+        == 401
+    )
 
 
 def test_key_does_not_open_other_routes(logged):
     key = logged.post("/api/profile/apikey").json()["key"]
     anon = TestClient(logged.app)
     h = bearer(key)
-    for m, p in [("get", "/api/profile"), ("get", "/api/profile/apikey"), ("post", "/api/profile/apikey"),
-                 ("get", "/api/config"), ("get", "/api/scheduler/history"), ("get", "/api/session")]:
+    for m, p in [
+        ("get", "/api/profile"),
+        ("get", "/api/profile/apikey"),
+        ("post", "/api/profile/apikey"),
+        ("get", "/api/config"),
+        ("get", "/api/scheduler/history"),
+        ("get", "/api/session"),
+    ]:
         r = getattr(anon, m)(p, headers=h)
-        assert r.status_code == 401 or (p == "/api/session" and r.json() == {"authenticated": False}), (m, p, r.status_code)
+        assert r.status_code == 401 or (p == "/api/session" and r.json() == {"authenticated": False}), (
+            m,
+            p,
+            r.status_code,
+        )
 
 
 def test_hook_router_is_extensible_and_guarded(logged):
@@ -341,7 +374,9 @@ def test_rate_limit_with_trust_proxy_uses_last_xff_entry(tmp_path, monkeypatch):
         anon.get("/api/hook/ping", headers=xff(f"6.6.6.{i}, 10.0.0.5", **bearer(apikey.new_key())))
     assert list(auth.hook_fails) == ["10.0.0.5"]
     assert anon.get("/api/hook/ping", headers=xff("1.1.1.1, 10.0.0.5", **bearer(key))).status_code == 429
-    assert anon.get("/api/hook/ping", headers=xff("1.1.1.1, 10.0.0.6", **bearer(key))).status_code == 200  # otro cliente tras el proxy
+    assert (
+        anon.get("/api/hook/ping", headers=xff("1.1.1.1, 10.0.0.6", **bearer(key))).status_code == 200
+    )  # otro cliente tras el proxy
 
 
 def test_rate_limit_shared_ip_behind_proxy_without_trust(tmp_path, monkeypatch):
@@ -412,6 +447,7 @@ def test_rate_limit_http_other_ip_is_not_blocked_without_proxy(tmp_path, monkeyp
 def test_rate_limit_http_forget_inactive_ips_after_one_hour(tmp_path, monkeypatch):
     """Los fallos de una IP sin actividad desde 1 h tras acabar su bloqueo se olvidan (FAIL_FORGET) al registrar otro fallo."""
     from app.api import auth as auth_mod
+
     anon, auth, clock, key = _limited(tmp_path, monkeypatch, trust=True)
     for _ in range(3):
         _ping(anon, apikey.new_key(), **xff("10.0.0.5"))

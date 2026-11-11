@@ -93,7 +93,9 @@ from app.users import history  # noqa: E402
 
 
 def _entry(i, started=NOW, result="ok"):
-    return history.make_entry(started, 1.234, "scheduled", result, {"g": {"result": result, "message": f"m{i}"}}, f"e{i}")
+    return history.make_entry(
+        started, 1.234, "scheduled", result, {"g": {"result": result, "message": f"m{i}"}}, f"e{i}"
+    )
 
 
 def test_history_write_read_order(tmp_path, monkeypatch):
@@ -133,6 +135,7 @@ def test_history_fixed_cap_50(tmp_path, monkeypatch):
 def test_history_prunes_old_file_on_read(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
     import json
+
     tmp_path.joinpath(history.FILE).write_text("".join(json.dumps(_entry(i)) + "\n" for i in range(75)))
     r = history.read(200)
     assert [e["message"] for e in r] == [f"e{i}" for i in range(74, 24, -1)]
@@ -153,7 +156,9 @@ def test_history_corrupt_lines_ignored(tmp_path, monkeypatch):
 
 def test_history_no_secrets_and_truncation(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
-    e = history.make_entry(NOW, 0, "x", "weird", {"g": {"result": "ok", "message": "password=hunter22 " + "z" * 999}}, "token: abc")
+    e = history.make_entry(
+        NOW, 0, "x", "weird", {"g": {"result": "ok", "message": "password=hunter22 " + "z" * 999}}, "token: abc"
+    )
     assert "hunter22" not in e["games"]["g"]["message"] and len(e["games"]["g"]["message"]) <= history.MSG_LEN
     assert "abc" not in e["message"] and e["trigger"] == "scheduled" and e["result"] == "error"
 
@@ -174,6 +179,7 @@ def test_cycle_records_history_and_triggers(sched):
 def test_history_failure_does_not_break_cycle(sched, monkeypatch):
     def boom(*a, **k):
         raise OSError("disk")
+
     monkeypatch.setattr(history, "append", boom)
     asyncio.run(sched._cycle())
     assert sched.last_status["result"] == "aborted"
@@ -182,12 +188,15 @@ def test_history_failure_does_not_break_cycle(sched, monkeypatch):
 def test_cycle_omits_disabled_silently(tmp_path, monkeypatch):
     """Un juego desactivado no llega al runner, ni a `busy`, ni al resumen/historial (ciclo programado y arranque)."""
     from app.users import history
+
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
     calls, busy_q = [], []
 
     class Cfg:
-        games = {"a": SimpleNamespace(name="A", on_conflict=None, enabled=True),
-                 "d": SimpleNamespace(name="D", on_conflict=None, enabled=False)}
+        games = {
+            "a": SimpleNamespace(name="A", on_conflict=None, enabled=True),
+            "d": SimpleNamespace(name="D", on_conflict=None, enabled=False),
+        }
 
     def runner(cfg, game, dry, log, **kw):
         calls.append(game)

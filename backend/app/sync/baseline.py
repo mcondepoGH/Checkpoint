@@ -1,4 +1,5 @@
 """Baseline: huella que cada participante tenía tras la última sync completa."""
+
 import json
 import os
 from datetime import datetime

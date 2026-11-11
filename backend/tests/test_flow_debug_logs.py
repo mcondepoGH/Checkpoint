@@ -1,5 +1,6 @@
 """Logs de trazabilidad apertura -> vigilancia -> cierre -> sync: DEBUG visible con DEBUG, ausente con INFO y sin secretos.
 Con INFO solo cambia el log `hook ... resultado=` (ahora con `code=` y `duración=`)."""
+
 import logging
 import re
 
@@ -28,9 +29,21 @@ def test_debug_traces_whole_flow(cl, caplog):
     caplog.set_level(logging.DEBUG, logger="checkpoint")
     run_cycle(cl)
     text = "\n".join(f"{r.name} {r.getMessage()}" for r in flow_records(caplog))
-    for frag in ("armar: juego=g1", "sondeo: juego=g1", "waiting -> running", "running -> settling",
-                 "iniciando checkpoint", "cierre detectado, lanzando checkpoint", "inicio run=", "fin duración=",
-                 "historial_guardado=True", "run_sync inicio", "run_sync fin", "conexión OK en", "decisión:"):
+    for frag in (
+        "armar: juego=g1",
+        "sondeo: juego=g1",
+        "waiting -> running",
+        "running -> settling",
+        "iniciando checkpoint",
+        "cierre detectado, lanzando checkpoint",
+        "inicio run=",
+        "fin duración=",
+        "historial_guardado=True",
+        "run_sync inicio",
+        "run_sync fin",
+        "conexión OK en",
+        "decisión:",
+    ):
         assert frag in text, frag
 
 
@@ -44,6 +57,7 @@ def test_debug_replace_and_cancel(cl, caplog):
 
 def test_debug_silent_exit_unknown_game(cl, caplog):
     import asyncio
+
     caplog.set_level(logging.DEBUG, logger="checkpoint.hook")
     w = cl.app.state.watcher
     asyncio.run(w.checkpoint("no-existe", "dev-1"))
@@ -57,13 +71,16 @@ def test_info_closed_line_has_code_and_duration_and_no_debug(cl, caplog):
     recs = flow_records(caplog)
     assert all(r.levelno >= logging.INFO for r in recs)
     res = [r.getMessage() for r in recs if "resultado=" in r.getMessage()]
-    assert any(re.fullmatch(r"hook hook_closed juego=\S+.* resultado=ok code=\S+ duración=\d+\.\d s", x) for x in res), res
+    assert any(
+        re.fullmatch(r"hook hook_closed juego=\S+.* resultado=ok code=\S+ duración=\d+\.\d s", x) for x in res
+    ), res
     assert any(x.startswith("hook hook juego=") and "duración=" in x for x in res)
 
 
 def test_history_failure_leaves_trace_without_breaking(cl, caplog, monkeypatch):
     def boom(*a, **k):
         raise OSError("disco lleno /secreto")
+
     monkeypatch.setattr(history, "append", boom)
     caplog.set_level(logging.INFO, logger="checkpoint.hook")
     assert hopen(cl).json()["outcome"] == "ok"
@@ -83,6 +100,7 @@ def test_no_secrets_in_flow_logs(cl, caplog):
 def test_transport_run_logs_duration_not_args(caplog, monkeypatch):
     import subprocess
     from app.sync.transport import base as transport
+
     monkeypatch.setattr(subprocess, "run", lambda *a, **k: subprocess.CompletedProcess(a[0], 0, b"", b""))
     caplog.set_level(logging.DEBUG, logger="checkpoint.transport")
     transport._run(["ssh", "-i", "/clave/privada", "u@h", "true"])
@@ -104,8 +122,14 @@ def test_debug_history_entry_for_skipped_never_seen(cl, caplog):
     assert wait_for(lambda: hist("hook_closed"))
     m = [x for x in hook_msgs(caplog) if "entrada de historial" in x]
     assert len(m) == 1, m
-    for frag in ("hook hook_closed", "juego=", "dispositivo=dev-1", "resultado=skipped", "code=err.hook.never_seen",
-                 "historial_guardado=True"):
+    for frag in (
+        "hook hook_closed",
+        "juego=",
+        "dispositivo=dev-1",
+        "resultado=skipped",
+        "code=err.hook.never_seen",
+        "historial_guardado=True",
+    ):
         assert frag in m[0], (frag, m[0])
 
 

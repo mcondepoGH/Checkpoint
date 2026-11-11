@@ -1,5 +1,6 @@
 """Motor real de sync con «Este equipo» (LocalDeviceTransport REAL sobre un tmpdir) + un remoto simulado
 (LocalTransport de tests, que sustituye a SSH) y el hub. Cubre la tabla de casos de conflictos."""
+
 import json
 import os
 import subprocess
@@ -8,8 +9,17 @@ import threading
 import pytest
 
 from app.config.models import parse_config
-from app.sync.engine import (SyncAbort, count_versions, fingerprint, list_versions, load_baseline, relfiles,
-                      restore_version, run_sync, save_baseline)
+from app.sync.engine import (
+    SyncAbort,
+    count_versions,
+    fingerprint,
+    list_versions,
+    load_baseline,
+    relfiles,
+    restore_version,
+    run_sync,
+    save_baseline,
+)
 from app.sync.transport import LocalDeviceTransport, TransportError
 from fakes import LocalTransport
 
@@ -23,16 +33,24 @@ class LEnv:
         self.laptop_dir = self.laptop_root / "home/usuario/g"
         self.hub = self.data / "hub" / "g"
         self.logs = []
-        game = {"name": "Juego", "devices": ["pc-1a2b3c4d", "laptop-5e6f7a8b"],
-                "paths": {"pc-1a2b3c4d": str(self.pc_dir), "laptop-5e6f7a8b": "/home/usuario/g"}}
+        game = {
+            "name": "Juego",
+            "devices": ["pc-1a2b3c4d", "laptop-5e6f7a8b"],
+            "paths": {"pc-1a2b3c4d": str(self.pc_dir), "laptop-5e6f7a8b": "/home/usuario/g"},
+        }
         if process:
             game["process"] = process
         if keep is not None:
             game["keep_versions"] = keep
-        self.cfg = parse_config({
-            "devices": {"pc-1a2b3c4d": {"name": "PC", "local": True, "os": "linux"},
-                        "laptop-5e6f7a8b": {"name": "Laptop", "host": "192.0.2.10", "user": "usuario", "os": "linux"}},
-            "games": {"g": game}})
+        self.cfg = parse_config(
+            {
+                "devices": {
+                    "pc-1a2b3c4d": {"name": "PC", "local": True, "os": "linux"},
+                    "laptop-5e6f7a8b": {"name": "Laptop", "host": "192.0.2.10", "user": "usuario", "os": "linux"},
+                },
+                "games": {"g": game},
+            }
+        )
         self.pc, self.lap = "pc-1a2b3c4d", "laptop-5e6f7a8b"
 
     def tr(self, laptop=None, pc=None):
@@ -75,6 +93,7 @@ def fake_run(running):
     def run(args, **kw):
         r = running()
         return subprocess.CompletedProcess(args, 0 if r else 1, b"4242\n" if r else b"", b"")
+
     return run
 
 
@@ -85,7 +104,10 @@ def test_local_cambio_gana_y_propaga_al_remoto_y_hub(env):
     st = env.sync()
     assert st["result"] == "ok" and st["winner"] == env.pc and set(st["targets"]) == {env.lap, "hub"}
     assert read(env.laptop_dir) == read(env.hub) == "pc-new"
-    assert {s["source"] for s in list_versions(env.data, "g")[0]["sources"]} == {env.lap, "hub"}  # perdedores versionados
+    assert {s["source"] for s in list_versions(env.data, "g")[0]["sources"]} == {
+        env.lap,
+        "hub",
+    }  # perdedores versionados
     h = fingerprint(env.pc_dir).hash
     assert load_baseline(env.data, "g") == {env.pc: h, env.lap: h, "hub": h}
 
@@ -282,12 +304,20 @@ def test_fichero_grande(env):
 def test_dry_run_no_cambia_nada(env):
     env.seed()
     env.write(env.pc_dir, "s.sav", "pc-new", 3000)
-    snap = (fingerprint(env.pc_dir).hash, fingerprint(env.laptop_dir).hash, fingerprint(env.hub).hash,
-            load_baseline(env.data, "g"))
+    snap = (
+        fingerprint(env.pc_dir).hash,
+        fingerprint(env.laptop_dir).hash,
+        fingerprint(env.hub).hash,
+        load_baseline(env.data, "g"),
+    )
     st = env.sync(dry=True)
     assert st["result"] == "dry-run" and st["winner"] == env.pc
-    assert (fingerprint(env.pc_dir).hash, fingerprint(env.laptop_dir).hash, fingerprint(env.hub).hash,
-            load_baseline(env.data, "g")) == snap
+    assert (
+        fingerprint(env.pc_dir).hash,
+        fingerprint(env.laptop_dir).hash,
+        fingerprint(env.hub).hash,
+        load_baseline(env.data, "g"),
+    ) == snap
     assert count_versions(env.data, "g") == 0
     assert sorted(p.name for p in env.pc_dir.parent.iterdir()) == ["saves ñ"]
 
@@ -304,7 +334,11 @@ def test_proceso_abierto_en_local_aborta_antes_de_tocar(env):
     env.seed()
     env.write(env.laptop_dir, "s.sav", "lap-new", 3000)
     st = env.sync(pc=LocalDeviceTransport(run=fake_run(lambda: True)))
-    assert st["result"] == "aborted" and st["code"] == "err.sync.process_open" and st["params"] == {"process": "juego.bin", "device": "PC"}
+    assert (
+        st["result"] == "aborted"
+        and st["code"] == "err.sync.process_open"
+        and st["params"] == {"process": "juego.bin", "device": "PC"}
+    )
     assert read(env.pc_dir) == "base" and read(env.hub) == "base" and count_versions(env.data, "g") == 0
 
 
@@ -315,6 +349,7 @@ def test_proceso_abierto_en_remoto_con_local_cerrado(env):
     class Open(LocalTransport):
         def process_running(self, name):
             return True
+
     st = env.sync(laptop=Open(env.laptop_root), pc=LocalDeviceTransport(run=fake_run(lambda: False)))
     assert st["result"] == "aborted" and "Laptop" in st["message"] and read(env.laptop_dir) == "base"
 
@@ -327,6 +362,7 @@ def test_recheck_del_proceso_justo_antes_de_escribir_en_local(env):
     def running():
         calls["n"] += 1
         return calls["n"] >= 2  # cerrado en la 1ª comprobación, abierto en el re-chequeo
+
     st = env.sync(pc=LocalDeviceTransport(run=fake_run(running)))
     assert calls["n"] == 2
     assert st["result"] == "aborted"
@@ -339,8 +375,11 @@ def test_error_al_comprobar_proceso_aborta(env):
 
     def run(args, **kw):
         return subprocess.CompletedProcess(args, 2, b"", b"boom")
+
     st = env.sync(pc=LocalDeviceTransport(run=run))
-    assert st["result"] == "aborted" and st["code"] == "err.sync.process_check_failed" and st["params"]["device"] == "PC"
+    assert (
+        st["result"] == "aborted" and st["code"] == "err.sync.process_check_failed" and st["params"]["device"] == "PC"
+    )
 
 
 def test_sin_proceso_configurado_no_se_comprueba(tmp_path):
@@ -350,6 +389,7 @@ def test_sin_proceso_configurado_no_se_comprueba(tmp_path):
 
     def run(*a, **k):
         raise AssertionError("no debe llamarse")
+
     assert e.sync(pc=LocalDeviceTransport(run=run))["result"] == "ok"
 
 
@@ -362,6 +402,7 @@ def test_fallo_parcial_en_el_remoto_no_actualiza_baseline_y_se_recupera(env):
     class FailPush(LocalTransport):
         def push(self, src, path, extras=()):
             raise TransportError("disco lleno")
+
     st = env.sync(laptop=FailPush(env.laptop_root))
     assert st["result"] == "partial" and st["failed"] == [env.lap]
     assert read(env.hub) == "pc-new" and read(env.laptop_dir) == "base"
@@ -378,6 +419,7 @@ def test_fallo_parcial_en_el_local_se_reporta_y_se_recupera(env, monkeypatch):
 
     def boom(self, src, path, extras=()):
         raise TransportError("sin permiso para escribir")
+
     monkeypatch.setattr(LocalDeviceTransport, "push", boom)
     st = env.sync()
     assert st["result"] == "partial" and st["failed"] == [env.pc] and "sin permiso" in st["message"]
@@ -402,6 +444,7 @@ def test_idempotente_varias_syncs(env):
 def test_lock_impide_solapamiento(env):
     env.seed()
     from app.sync.engine import _game_lock
+
     with _game_lock(env.data, "g"):
         with pytest.raises(SyncAbort, match="in_progress"):
             env.sync()
@@ -418,10 +461,12 @@ def test_dos_syncs_concurrentes_solo_una_corre(env):
             entered.set()
             gate.wait(10)
             return super().pull(path, dest)
+
     res = {}
 
     def a():
         res["a"] = env.sync(laptop=Slow(env.laptop_root))
+
     t = threading.Thread(target=a)
     t.start()
     assert entered.wait(10)
@@ -502,7 +547,10 @@ def test_renombrar_dispositivo_local_y_juego_no_cambia_rutas(env):
     assert st["result"] == "ok" and st["winner"] == env.pc and read(env.hub) == "pc-newer"
     assert sorted(p.name for p in (env.data / "hub").iterdir()) == ["g"]
     assert sorted(p.name for p in (env.data / "versions").iterdir()) == ["g"]
-    srcs = {x["source"]: x["name"] for x in list_versions(env.data, "g", {k: d.name for k, d in cfg2.devices.items()})[0]["sources"]}
+    srcs = {
+        x["source"]: x["name"]
+        for x in list_versions(env.data, "g", {k: d.name for k, d in cfg2.devices.items()})[0]["sources"]
+    }
     assert srcs[env.lap] == "Laptop"
 
 
@@ -528,6 +576,7 @@ def test_limite_de_versiones_y_poda_con_local(tmp_path):
     names = sorted(p.name for p in (e.data / "versions" / "g").iterdir())
     assert len(names) == 2
     from app.sync.versions import _version_key
+
     assert list_versions(e.data, "g")[0]["version"] == max(names, key=_version_key)
 
 
@@ -569,7 +618,9 @@ def test_symlink_en_saves_locales_no_filtra_ni_se_escribe_fuera(env):
     assert (env.pc_dir / "enlace").is_symlink()  # el enlace del usuario sigue ahí
     env.write(env.laptop_dir, "s.sav", "lap-new", 3000)
     assert env.sync()["result"] == "ok"
-    assert sorted(p.name for p in fuera.iterdir()) == ["secreto.txt"] and (fuera / "secreto.txt").read_text() == "SECRETO"
+    assert (
+        sorted(p.name for p in fuera.iterdir()) == ["secreto.txt"] and (fuera / "secreto.txt").read_text() == "SECRETO"
+    )
 
 
 def test_ruta_local_inexistente_sin_permiso_error_claro_y_nada_cambia(env):
@@ -597,12 +648,14 @@ def test_el_log_no_filtra_nada_sensible(env):
 def test_el_motor_usa_LocalDeviceTransport_real_para_el_local(env, monkeypatch):
     usados = []
     from app.sync import engine as sync_mod
+
     orig = sync_mod.get_transport
 
     def spy(dev):
         t = orig(dev)
         usados.append((dev.name, type(t).__name__))
         return t
+
     monkeypatch.setattr(sync_mod, "get_transport", spy)
     env.seed()
     env.write(env.pc_dir, "s.sav", "pc-new", 3000)

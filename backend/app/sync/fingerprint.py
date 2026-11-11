@@ -1,4 +1,5 @@
 """Huella de un directorio (hash, mtime, nº de ficheros, tamaño) y listado de ficheros."""
+
 import hashlib
 from dataclasses import dataclass
 from pathlib import Path

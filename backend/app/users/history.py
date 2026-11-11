@@ -3,6 +3,7 @@
 Un fichero JSONL (DATA_DIR/scheduler-history.jsonl), una entrada por línea. Retención acotada por número
 (MAX_ENTRIES, fijo: nunca más de 50 en disco ni en la API) y por antigüedad (MAX_DAYS). Las líneas ilegibles se ignoran y se descartan al reescribir.
 Nunca guarda secretos: los mensajes pasan por redact() y se truncan."""
+
 import json
 import os
 import threading
@@ -50,8 +51,17 @@ def _coded(d: dict, out: dict) -> dict:
     return out
 
 
-def make_entry(started: datetime, duration: float, trigger: str, result: str, games: dict, message: str = "",
-               code: Optional[str] = None, params: Optional[dict] = None, device: Optional[str] = None) -> dict:
+def make_entry(
+    started: datetime,
+    duration: float,
+    trigger: str,
+    result: str,
+    games: dict,
+    message: str = "",
+    code: Optional[str] = None,
+    params: Optional[dict] = None,
+    device: Optional[str] = None,
+) -> dict:
     """`games`: {id del juego: {"result": ..., "message": ..., "name": ..., "code"?, "params"?}}. Registros nuevos
     llevan `code`+`params` (sin `message`); los antiguos solo `message` y se leen tal cual. Valores desconocidos se normalizan.
     `device` (solo hook / hook_closed): id del dispositivo del aviso; las entradas antiguas no lo tienen.
@@ -59,26 +69,35 @@ def make_entry(started: datetime, duration: float, trigger: str, result: str, ga
     gs = {}
     for g, d in games.items():
         r = d.get("result") if isinstance(d, dict) else d
-        gs[str(g)] = {"result": r if r in RESULTS else "error",
-                      "message": short(d.get("message", "")) if isinstance(d, dict) else ""}
+        gs[str(g)] = {
+            "result": r if r in RESULTS else "error",
+            "message": short(d.get("message", "")) if isinstance(d, dict) else "",
+        }
         if isinstance(d, dict) and isinstance(d.get("name"), str) and d["name"]:
             gs[str(g)]["name"] = short(d["name"], 64)
         if isinstance(d, dict):
             _coded(d, gs[str(g)])
-    entry = {"id": uuid.uuid4().hex[:12],
-            "started": started.astimezone(timezone.utc).isoformat(timespec="seconds"),
-            "duration": round(max(0.0, float(duration)), 1),
-            "trigger": trigger if trigger in TRIGGERS else "scheduled",
-            "result": result if result in RESULTS else "error",
-            "games": gs, "message": short(message)}
+    entry = {
+        "id": uuid.uuid4().hex[:12],
+        "started": started.astimezone(timezone.utc).isoformat(timespec="seconds"),
+        "duration": round(max(0.0, float(duration)), 1),
+        "trigger": trigger if trigger in TRIGGERS else "scheduled",
+        "result": result if result in RESULTS else "error",
+        "games": gs,
+        "message": short(message),
+    }
     if isinstance(device, str) and device:
         entry["device"] = short(device, 64)
     return _coded({"code": code, "params": params}, entry)
 
 
 def _valid(e) -> bool:
-    return (isinstance(e, dict) and isinstance(e.get("id"), str) and isinstance(e.get("started"), str)
-            and isinstance(e.get("games"), dict))
+    return (
+        isinstance(e, dict)
+        and isinstance(e.get("id"), str)
+        and isinstance(e.get("started"), str)
+        and isinstance(e.get("games"), dict)
+    )
 
 
 def _read_all() -> tuple:

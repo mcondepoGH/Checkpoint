@@ -1,4 +1,5 @@
 """Sync manual, ejecuciones (log en directo), estado por juego y vigilancias de cierre para la UI."""
+
 import json
 import logging
 import time
@@ -13,7 +14,9 @@ from ...services.status import read_statuses
 from ...sync.scheduler import iso, utcnow
 from ..deps import get_ctx, internal_router
 
-api_log = logging.getLogger("checkpoint.api")  # DEBUG: una línea por petición /api y detalle por endpoint (sin secretos)
+api_log = logging.getLogger(
+    "checkpoint.api"
+)  # DEBUG: una línea por petición /api y detalle por endpoint (sin secretos)
 router = internal_router()
 
 
@@ -54,8 +57,9 @@ def stream(run_id: str, ctx: AppContext = Depends(get_ctx)):
     if not run:
         api_log.debug("stream: run %s desconocido (404)", run_id)
         raise ApiError(404, "err.main.run_unknown")
-    api_log.debug("stream: run=%s juego=%s líneas ya disponibles=%d hecho=%s", run_id, run.game, len(run.lines),
-                  run.done)
+    api_log.debug(
+        "stream: run=%s juego=%s líneas ya disponibles=%d hecho=%s", run_id, run.game, len(run.lines), run.done
+    )
 
     def gen():
         i = 0
@@ -69,8 +73,9 @@ def stream(run_id: str, ctx: AppContext = Depends(get_ctx)):
                 return
             time.sleep(0.3)
 
-    return StreamingResponse(gen(), media_type="text/event-stream",
-                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+    return StreamingResponse(
+        gen(), media_type="text/event-stream", headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+    )
 
 
 @router.get("/api/status")

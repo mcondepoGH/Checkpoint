@@ -1,4 +1,5 @@
 """Transporte de «Este equipo» (solo fuera de Docker): Python puro, sin SSH."""
+
 import os
 import re
 import shutil
@@ -12,6 +13,7 @@ from typing import Iterable
 from ...core.errors import describe_code
 from ...config.models import PROC_RE, Device
 from .base import Transport, TransportError, _err
+
 
 # ---------------------------------------------------------------------------------------------------------
 # «Este equipo»: el dispositivo es la propia máquina donde corre Checkpoint (solo fuera de Docker).

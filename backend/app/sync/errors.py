@@ -1,4 +1,5 @@
 """Error controlado de la sincronización."""
+
 from ..core.errors import describe_code, error_body
 
 

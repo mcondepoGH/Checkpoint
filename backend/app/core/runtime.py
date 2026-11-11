@@ -2,6 +2,7 @@
 
 La app no usa nada más del sistema que esto: es lo único que se expone a la UI.
 """
+
 import os
 import sys
 from pathlib import Path

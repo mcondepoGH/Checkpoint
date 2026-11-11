@@ -1,4 +1,5 @@
 """Versiones (copias) de los saves de un juego: listado, límite y restauración. Sin FastAPI."""
+
 import logging
 
 from ..config.models import Config
@@ -17,8 +18,11 @@ def versions_of(cfg: Config, game: str):
 
 
 def limit_of(cfg: Config, game: str) -> dict:
-    out = {"max": cfg.versions_limit(game), "count": count_versions(settings.DATA_DIR, game),
-           "override": cfg.games[game].keep_versions is not None}
+    out = {
+        "max": cfg.versions_limit(game),
+        "count": count_versions(settings.DATA_DIR, game),
+        "override": cfg.games[game].keep_versions is not None,
+    }
     api_log.debug("versions limit: juego=%s %s", game, out)
     return out
 
@@ -26,12 +30,17 @@ def limit_of(cfg: Config, game: str) -> dict:
 def restore(cfg: Config, game: str, body: dict) -> dict:
     """Restaura la versión `body["version"]` en `body["source"]`. 400 `err.main.restore_failed` si el motor aborta."""
     try:
-        res = restore_version(cfg, game, str(body.get("version", "")), str(body.get("source", "")),
-                              settings.DATA_DIR)
+        res = restore_version(cfg, game, str(body.get("version", "")), str(body.get("source", "")), settings.DATA_DIR)
     except SyncAbort as e:
-        api_log.debug("restaurar versión: juego=%s versión=%r origen=%r falló código=%s", game, body.get("version"),
-                      body.get("source"), e.code)
+        api_log.debug(
+            "restaurar versión: juego=%s versión=%r origen=%r falló código=%s",
+            game,
+            body.get("version"),
+            body.get("source"),
+            e.code,
+        )
         raise ApiError(400, "err.main.restore_failed", cause=e.body())
-    api_log.debug("restaurar versión: juego=%s versión=%r origen=%r correcto", game, body.get("version"),
-                  body.get("source"))
+    api_log.debug(
+        "restaurar versión: juego=%s versión=%r origen=%r correcto", game, body.get("version"), body.get("source")
+    )
     return {"ok": True, "message": describe_code(res["code"], res["params"]), **res}

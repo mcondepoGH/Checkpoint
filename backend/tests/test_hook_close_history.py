@@ -1,6 +1,7 @@
 """Historial del cierre automático, extremo a extremo (HTTP real + vigilante real) con reloj y esperas del vigilante
 simulados: `sleep` solo avanza un reloj falso, así que los umbrales (2 min sin ver el proceso, 10 s de asentamiento)
 se cumplen al instante y no dependen del tiempo real. Las esperas de los tests son sondeos acotados de una condición."""
+
 import asyncio
 import threading
 
@@ -75,16 +76,25 @@ def test_never_seen_one_entry_and_hook_status_last(cl, sim):
     g = e["games"]["g1"]
     assert g["result"] == "skipped" and g["code"] == "err.hook.never_seen" and g["name"] == "Mi Juego"
     assert g["params"] == {"seconds": 120.0}
-    assert [x["trigger"] for x in history.read()] == ["hook_closed", "hook"]  # más reciente primero: el descarte y el `opened`
+    assert [x["trigger"] for x in history.read()] == [
+        "hook_closed",
+        "hook",
+    ]  # más reciente primero: el descarte y el `opened`
     session(cl)
-    assert last(cl) == {"trigger": "hook_closed", "at": e["started"], "outcome": "skipped",
-                        "code": "err.hook.never_seen", "params": {"seconds": 120.0}}
+    assert last(cl) == {
+        "trigger": "hook_closed",
+        "at": e["started"],
+        "outcome": "skipped",
+        "code": "err.hook.never_seen",
+        "params": {"seconds": 120.0},
+    }
     assert cl.app.state.watcher.tasks == {}  # sin reintento: la tarea terminó
 
 
 # ---- b. ocupado ----
 def test_closed_while_run_in_progress_is_skipped_busy_and_run_untouched(cl, sim, monkeypatch):
     import app.services.runs as m
+
     seen_running(cl)  # `opened` con 409 si ya hay un run: primero se arma la vigilancia y luego arranca el run manual
     session(cl)
     gate, entered, calls = threading.Event(), threading.Event(), []
@@ -145,6 +155,7 @@ def test_game_removed_from_config_logs_game_removed(cl, sim):
 # ---- d. fallo del checkpoint ----
 def test_checkpoint_exception_logs_only_the_type_never_the_message(cl, sim, monkeypatch, caplog):
     import app.services.runs as m
+
     seen_running(cl)
 
     def boom(*a, **k):
@@ -159,7 +170,11 @@ def test_checkpoint_exception_logs_only_the_type_never_the_message(cl, sim, monk
         assert frag not in str(history.read()), frag
     session(cl)
     st = last(cl)
-    assert st["outcome"] == "error" and st["code"] == "err.hook.checkpoint_failed" and st["params"] == {"error": "RuntimeError"}
+    assert (
+        st["outcome"] == "error"
+        and st["code"] == "err.hook.checkpoint_failed"
+        and st["params"] == {"error": "RuntimeError"}
+    )
     assert "SECRETO" not in str(st)
     assert cl.app.state.watcher.tasks == {}  # no se reintenta
 
@@ -180,12 +195,17 @@ def test_normal_open_seen_and_closed_makes_one_ok_checkpoint_and_no_skip_entries
     assert (e.read(e.hub), e.read(e.d2)) == ("jugado", "jugado")
     session(cl)
     st = last(cl)
-    assert st["trigger"] == "hook_closed" and st["outcome"] == "ok" and not str(st.get("code") or "").startswith("err.hook.")
+    assert (
+        st["trigger"] == "hook_closed"
+        and st["outcome"] == "ok"
+        and not str(st.get("code") or "").startswith("err.hook.")
+    )
 
 
 # ---- f. fallo del historial ----
 def test_history_write_failure_never_breaks_watcher_nor_leaks(cl, sim, monkeypatch, caplog):
     import logging
+
     caplog.set_level(logging.WARNING)
 
     def boom(*a, **k):

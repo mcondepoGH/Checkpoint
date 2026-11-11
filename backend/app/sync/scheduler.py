@@ -1,6 +1,7 @@
 """Sincronización automática periódica: una tarea asyncio que ejecuta todos los juegos cada X horas.
 
 Ajustes persistentes en DATA_DIR/scheduler.json (se editan desde la UI; sin fichero, valores por defecto). Fechas internas en UTC, en ISO 8601."""
+
 import asyncio
 import json
 import logging
@@ -25,7 +26,9 @@ MIN_HOURS, MAX_HOURS = 0.25, 168.0
 FILE = "scheduler.json"
 log = logging.getLogger("checkpoint.scheduler")
 _root = logging.getLogger("checkpoint")
-if not _root.handlers and not logging.getLogger().handlers:  # uvicorn no configura loggers de la app: sin esto el INFO se pierde
+if (
+    not _root.handlers and not logging.getLogger().handlers
+):  # uvicorn no configura loggers de la app: sin esto el INFO se pierde
     _h = logging.StreamHandler()
     _h.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s: %(message)s"))
     _root.addHandler(_h)
@@ -78,8 +81,14 @@ def validate_settings(body: dict, current: dict) -> dict:
     return out
 
 
-def compute_next_run(enabled: bool, interval_hours: float, last_run: Optional[datetime], now: datetime,
-                     run_on_start: bool = False, starting: bool = False) -> Optional[datetime]:
+def compute_next_run(
+    enabled: bool,
+    interval_hours: float,
+    last_run: Optional[datetime],
+    now: datetime,
+    run_on_start: bool = False,
+    starting: bool = False,
+) -> Optional[datetime]:
     """Próxima ejecución. Al arrancar: ahora si run_on_start; si no, last_run+intervalo si aún no pasó,
     o ahora+intervalo. Fuera del arranque (cambio de ajustes, fin de ciclo): ahora+intervalo."""
     if not enabled:
@@ -99,8 +108,13 @@ def default_settings() -> dict:
 
 
 class Scheduler:
-    def __init__(self, get_cfg: Callable, busy: Callable[[str], bool], clock: Callable[[], datetime] = utcnow,
-                 runner: Callable = run_sync):
+    def __init__(
+        self,
+        get_cfg: Callable,
+        busy: Callable[[str], bool],
+        clock: Callable[[], datetime] = utcnow,
+        runner: Callable = run_sync,
+    ):
         self.get_cfg, self.busy, self.clock, self.runner = get_cfg, busy, clock, runner
         self._lock = threading.Lock()
         self.cfg = self._load()
@@ -108,8 +122,14 @@ class Scheduler:
         self.last_status = self.cfg.pop("last_status", None)
         self.running = False
         self.current: Optional[str] = None
-        self.next_run = compute_next_run(self.cfg["enabled"], self.cfg["interval_hours"], self.last_run,
-                                         self.clock(), self.cfg["run_on_start"], starting=True)
+        self.next_run = compute_next_run(
+            self.cfg["enabled"],
+            self.cfg["interval_hours"],
+            self.last_run,
+            self.clock(),
+            self.cfg["run_on_start"],
+            starting=True,
+        )
         self._wake: Optional[asyncio.Event] = None
         self._booting = True  # el primer ciclo tras arrancar (sin cambios de ajustes) es 'startup' si run_on_start
 
@@ -136,16 +156,23 @@ class Scheduler:
 
     # ---- API ----
     def state(self) -> dict:
-        return {**self.cfg, "next_run": iso(self.next_run) if self.cfg["enabled"] else None,
-                "last_run": iso(self.last_run), "last_status": self.last_status, "running": self.running,
-                "min_hours": MIN_HOURS, "max_hours": MAX_HOURS}
+        return {
+            **self.cfg,
+            "next_run": iso(self.next_run) if self.cfg["enabled"] else None,
+            "last_run": iso(self.last_run),
+            "last_status": self.last_status,
+            "running": self.running,
+            "min_hours": MIN_HOURS,
+            "max_hours": MAX_HOURS,
+        }
 
     def update(self, body: dict) -> dict:
         with self._lock:
             self.cfg = validate_settings(body, self.cfg)
             self._booting = False
-            self.next_run = compute_next_run(self.cfg["enabled"], self.cfg["interval_hours"], self.last_run,
-                                             self.clock())
+            self.next_run = compute_next_run(
+                self.cfg["enabled"], self.cfg["interval_hours"], self.last_run, self.clock()
+            )
             self._save()
         if self._wake:
             self._wake.set()  # reprograma ya
@@ -165,13 +192,14 @@ class Scheduler:
             code = "err.sync.game_disabled"
             return "skipped", code, {"code": code, "params": {}}, None
         try:
-            st = self.runner(cfg, game, False, log=log, conflict_policy=policy or self.policy_for(cfg, game),
-                             automatic=True)
+            st = self.runner(
+                cfg, game, False, log=log, conflict_policy=policy or self.policy_for(cfg, game), automatic=True
+            )
             res = st["result"]
             sc = {"code": st["code"], "params": st.get("params") or {}} if st.get("code") else None
             if st["result"] == "conflict":
                 m = "omitido por conflicto: " + st.get("message", "")
-                c = ({"code": "err.scheduler.skipped_conflict", "params": {"cause": sc}} if sc else None)
+                c = {"code": "err.scheduler.skipped_conflict", "params": {"cause": sc}} if sc else None
             elif st["result"] != "ok":
                 m, c = st.get("message", ""), sc
             if not c and m:
@@ -195,15 +223,27 @@ class Scheduler:
     def summarize(res: dict, items: list, det: dict) -> dict:
         """Resultado global y mensaje/code del resumen a partir de {juego: resultado}, items y detalles."""
         vals = set(res.values())
-        result = ("error" if "error" in vals else "aborted" if "aborted" in vals
-                  else "partial" if "partial" in vals else "conflict" if "conflict" in vals
-                  else "skipped" if vals == {"skipped"} else "ok")
+        result = (
+            "error"
+            if "error" in vals
+            else "aborted"
+            if "aborted" in vals
+            else "partial"
+            if "partial" in vals
+            else "conflict"
+            if "conflict" in vals
+            else "skipped"
+            if vals == {"skipped"}
+            else "ok"
+        )
         out = {"result": result, "games": res, "message": "", "details": det}
         coded = [i for i in items if "code" in i]
         if coded and len(coded) == len(items):
             out.update(code="err.scheduler.summary", params={"causes": items})
         elif items:  # alguno sin code (runner ajeno): texto técnico unido, como antes
-            out["message"] = "; ".join(f"{i['path']}: {i.get('message') or describe_code(i['code'], i['params'])}" for i in items)
+            out["message"] = "; ".join(
+                f"{i['path']}: {i.get('message') or describe_code(i['code'], i['params'])}" for i in items
+            )
         return out
 
     def run_cycle(self) -> dict:
@@ -229,7 +269,8 @@ class Scheduler:
             if item:
                 items.append(item)
             (log.error if res[game] == "error" else log.info)(
-                "auto-sync juego=%s resultado=%s%s", name, res[game], f" ({history.short(m, 120)})" if m else "")
+                "auto-sync juego=%s resultado=%s%s", name, res[game], f" ({history.short(m, 120)})" if m else ""
+            )
         return self.summarize(res, items, det)
 
     async def _cycle(self, trigger: str = "scheduled"):
@@ -241,8 +282,13 @@ class Scheduler:
         try:
             status = await run_in_threadpool(self.run_cycle)
         except Exception as e:
-            status = {"result": "error", "games": {}, "message": "", "code": "err.sync.unexpected",
-                      "params": {"type": type(e).__name__, "detail": str(e)}}
+            status = {
+                "result": "error",
+                "games": {},
+                "message": "",
+                "code": "err.sync.unexpected",
+                "params": {"type": type(e).__name__, "detail": str(e)},
+            }
         finally:
             self.running = False
         dur = time.monotonic() - t0
@@ -250,21 +296,36 @@ class Scheduler:
             status["params"] = history.clean_params(status["params"])  # last_status se persiste: sin secretos
         details = status.pop("details", None) or {g: {"result": r, "message": ""} for g, r in status["games"].items()}
         try:
-            history.append(history.make_entry(started, dur, trigger, status["result"], details, status["message"],
-                               status.get("code"), status.get("params")),
-                           now=self.clock())
+            history.append(
+                history.make_entry(
+                    started,
+                    dur,
+                    trigger,
+                    status["result"],
+                    details,
+                    status["message"],
+                    status.get("code"),
+                    status.get("params"),
+                ),
+                now=self.clock(),
+            )
         except Exception as e:  # el registro nunca rompe el ciclo
             log.error("auto-sync no se pudo guardar el registro: %s", type(e).__name__)
         (log.error if status["result"] == "error" else log.info)(
-            "auto-sync ciclo terminado resultado=%s duracion=%.1fs juegos=%s%s", status["result"], dur,
+            "auto-sync ciclo terminado resultado=%s duracion=%.1fs juegos=%s%s",
+            status["result"],
+            dur,
             ",".join(f"{g}={r}" for g, r in status["games"].items()),
             f" mensaje={history.short(status['message'] or describe_code(status['code'], status['params']), 200)}"
-            if status["message"] or status.get("code") else "")
+            if status["message"] or status.get("code")
+            else "",
+        )
         with self._lock:
             self.last_run = self.clock()
             self.last_status = status
-            self.next_run = compute_next_run(self.cfg["enabled"], self.cfg["interval_hours"], self.last_run,
-                                             self.clock())
+            self.next_run = compute_next_run(
+                self.cfg["enabled"], self.cfg["interval_hours"], self.last_run, self.clock()
+            )
             try:
                 self._save()
             except OSError:

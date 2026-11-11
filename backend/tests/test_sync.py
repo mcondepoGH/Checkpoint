@@ -4,16 +4,34 @@ from pathlib import Path
 import pytest
 
 from app.config.models import parse_config
-from app.sync.engine import SyncAbort, fingerprint, list_versions, load_baseline, restore_version, run_sync, save_baseline
+from app.sync.engine import (
+    SyncAbort,
+    fingerprint,
+    list_versions,
+    load_baseline,
+    restore_version,
+    run_sync,
+    save_baseline,
+)
 from fakes import LocalTransport
 
-CFG = parse_config({
-    "devices": {"pc": {"name": "pc", "host": "h1", "user": "u", "os": "windows"},
-                "laptop": {"name": "laptop", "host": "h2", "user": "d", "os": "linux"}},
-    "games": {"g": {"name": "g", "devices": ["pc", "laptop"],
-                    "paths": {"pc": "C:/Saves/g", "laptop": "/home/usuario/g"},
-                    "process": "g.exe", "keep_versions": 2}},
-})
+CFG = parse_config(
+    {
+        "devices": {
+            "pc": {"name": "pc", "host": "h1", "user": "u", "os": "windows"},
+            "laptop": {"name": "laptop", "host": "h2", "user": "d", "os": "linux"},
+        },
+        "games": {
+            "g": {
+                "name": "g",
+                "devices": ["pc", "laptop"],
+                "paths": {"pc": "C:/Saves/g", "laptop": "/home/usuario/g"},
+                "process": "g.exe",
+                "keep_versions": 2,
+            }
+        },
+    }
+)
 
 
 class Env:
@@ -26,8 +44,10 @@ class Env:
         self.logs = []
 
     def tr(self, **kw):
-        return {"pc": LocalTransport(self.pc_root, **kw.get("pc", {})),
-                "laptop": LocalTransport(self.laptop_root, **kw.get("laptop", {}))}
+        return {
+            "pc": LocalTransport(self.pc_root, **kw.get("pc", {})),
+            "laptop": LocalTransport(self.laptop_root, **kw.get("laptop", {})),
+        }
 
     def write(self, d: Path, name, content, mtime):
         f = d / name
@@ -138,7 +158,9 @@ def test_keep_versions_prunes(env):
         env.write(env.pc_dir, "s.sav", f"pc{i}", t)
         env.write(env.laptop_dir, "s.sav", f"dk{i}", t + 50)
         env.sync(opts={"conflict_policy": "newest"})
-        import time; time.sleep(1.1)  # nombres de versión por segundo
+        import time
+
+        time.sleep(1.1)  # nombres de versión por segundo
     assert len(list_versions(env.data, "g")) == 2
 
 
@@ -157,9 +179,16 @@ def _cfg(max_versions=20, keep=None):
     g = {"name": "g", "devices": ["pc", "laptop"], "paths": {"pc": "C:/Saves/g", "laptop": "/home/usuario/g"}}
     if keep is not None:
         g["keep_versions"] = keep
-    return parse_config({"max_versions": max_versions, "devices": {
-        "pc": {"name": "pc", "host": "h1", "user": "u", "os": "windows"},
-        "laptop": {"name": "laptop", "host": "h2", "user": "d", "os": "linux"}}, "games": {"g": g}})
+    return parse_config(
+        {
+            "max_versions": max_versions,
+            "devices": {
+                "pc": {"name": "pc", "host": "h1", "user": "u", "os": "windows"},
+                "laptop": {"name": "laptop", "host": "h2", "user": "d", "os": "linux"},
+            },
+            "games": {"g": g},
+        }
+    )
 
 
 def _sync_with(env, cfg, dry=False, **kw):
@@ -228,6 +257,7 @@ def test_no_prune_if_sync_fails(env):
 
 def test_no_prune_if_error_after_version_saved(env, monkeypatch):
     from app.sync import engine as S
+
     for n in OLD:
         _mkver(env, n)
     _conflict(env)
@@ -252,6 +282,7 @@ def test_prune_never_touches_other_games_or_hub(env):
 
 def test_prune_numeric_suffix_order(env):
     from app.sync.engine import prune_versions
+
     for n in ["2026-01-01_100000", "2026-01-01_100000-2", "2026-01-01_100000-10", "2026-01-01_100000-1"]:
         _mkver(env, n)
     done = prune_versions(env.data, "g", 2)
@@ -261,6 +292,7 @@ def test_prune_numeric_suffix_order(env):
 
 def test_prune_protects_new_version_and_min_one(env):
     from app.sync.engine import prune_versions
+
     for n in OLD:
         _mkver(env, n)
     # aunque el reloj fuera atrás y la "nueva" fuese la más antigua, no se borra
@@ -273,6 +305,7 @@ def test_prune_protects_new_version_and_min_one(env):
 
 def test_prune_stays_inside_game_dir_ignores_symlinks(env, tmp_path):
     from app.sync.engine import prune_versions
+
     outside = tmp_path / "outside" / "2026-01-01_100000"
     (outside / "pc").mkdir(parents=True)
     (outside / "pc" / "s.sav").write_text("precious")
@@ -294,10 +327,21 @@ def test_prune_stays_inside_game_dir_ignores_symlinks(env, tmp_path):
 
 
 def test_config_without_max_versions_uses_default(env):
-    cfg = parse_config({"devices": {"pc": {"name": "pc", "host": "h1", "user": "u", "os": "windows"},
-                                    "laptop": {"name": "laptop", "host": "h2", "user": "d", "os": "linux"}},
-                        "games": {"g": {"name": "g", "devices": ["pc", "laptop"],
-                                        "paths": {"pc": "C:/Saves/g", "laptop": "/home/usuario/g"}}}})
+    cfg = parse_config(
+        {
+            "devices": {
+                "pc": {"name": "pc", "host": "h1", "user": "u", "os": "windows"},
+                "laptop": {"name": "laptop", "host": "h2", "user": "d", "os": "linux"},
+            },
+            "games": {
+                "g": {
+                    "name": "g",
+                    "devices": ["pc", "laptop"],
+                    "paths": {"pc": "C:/Saves/g", "laptop": "/home/usuario/g"},
+                }
+            },
+        }
+    )
     assert cfg.versions_limit("g") == 20
     for i in range(1, 26):
         _mkver(env, f"2026-01-{i:02d}_100000")
@@ -320,6 +364,7 @@ def test_restore_after_prune_still_works(env):
 
 def test_restore_blocked_while_game_locked(env):
     import fcntl
+
     _mkver(env, OLD[0])
     (env.data / "locks").mkdir(parents=True, exist_ok=True)
     with open(env.data / "locks" / "g.lock", "w") as f:
@@ -353,6 +398,7 @@ def test_unknown_game(env):
 
 def test_lock_prevents_overlap(env):
     import fcntl
+
     (env.data / "locks").mkdir(parents=True)
     f = open(env.data / "locks/g.lock", "w")
     fcntl.flock(f, fcntl.LOCK_EX)
@@ -364,11 +410,15 @@ def test_lock_prevents_overlap(env):
 def test_free_names_use_id_paths_only(tmp_path):
     gn, an, bn = "Mi Juego: Edición", "Mi PC (salón)", "Consola & Co"
     g, a, b = "juego-1a2b3c4d", "pc-5e6f7a8b", "consola-9c0d1e2f"  # los ids no se derivan del nombre
-    cfg = parse_config({
-        "devices": {a: {"name": an, "host": "h1", "user": "u", "os": "windows"},
-                    b: {"name": bn, "host": "h2", "user": "d", "os": "linux"}},
-        "games": {g: {"name": gn, "devices": [a, b], "paths": {a: "C:/S/g", b: "/home/d/g"}, "keep_versions": 2}},
-    })
+    cfg = parse_config(
+        {
+            "devices": {
+                a: {"name": an, "host": "h1", "user": "u", "os": "windows"},
+                b: {"name": bn, "host": "h2", "user": "d", "os": "linux"},
+            },
+            "games": {g: {"name": gn, "devices": [a, b], "paths": {a: "C:/S/g", b: "/home/d/g"}, "keep_versions": 2}},
+        }
+    )
     pc, laptop, data = tmp_path / "pc", tmp_path / "laptop", tmp_path / "data"
     (pc / "C:/S/g").mkdir(parents=True)
     (laptop / "home/d/g").mkdir(parents=True)

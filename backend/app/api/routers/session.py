@@ -1,4 +1,5 @@
 """Sesión web: login, logout, estado de la sesión y ajustes públicos de la pantalla de login (sin sesión)."""
+
 import logging
 
 from fastapi import Depends, Request, Response
@@ -9,7 +10,9 @@ from ...core.errors import error_response
 from ...services.context import AppContext
 from ..deps import COOKIE, body_json, client_ip, get_ctx, public_router
 
-api_log = logging.getLogger("checkpoint.api")  # DEBUG: una línea por petición /api y detalle por endpoint (sin secretos)
+api_log = logging.getLogger(
+    "checkpoint.api"
+)  # DEBUG: una línea por petición /api y detalle por endpoint (sin secretos)
 router = public_router()
 
 
@@ -22,15 +25,21 @@ async def login(request: Request, response: Response, ctx: AppContext = Depends(
         tok = auth.login(ip, str(body.get("user", "")), str(body.get("password", "")))
     except PermissionError as e:
         api_log.debug("login: ip=%s bloqueada %ss por intentos fallidos", ip, e.args[0])
-        return error_response(429, "err.main.too_many_attempts", headers={"Retry-After": str(e.args[0])},
-                              extra={"retry_after": e.args[0]}, seconds=e.args[0])
+        return error_response(
+            429,
+            "err.main.too_many_attempts",
+            headers={"Retry-After": str(e.args[0])},
+            extra={"retry_after": e.args[0]},
+            seconds=e.args[0],
+        )
     if not tok:
         api_log.debug("login: ip=%s usuario=%r credenciales incorrectas", ip, str(body.get("user", "")))
         return error_response(401, "err.main.bad_credentials")
     api_log.debug("login: ip=%s usuario=%r correcto", ip, str(body.get("user", "")))
     r = JSONResponse({"ok": True})
-    r.set_cookie(COOKIE, tok, max_age=int(auth.ttl), httponly=True, samesite="strict",
-                 secure=settings.COOKIE_SECURE, path="/")
+    r.set_cookie(
+        COOKIE, tok, max_age=int(auth.ttl), httponly=True, samesite="strict", secure=settings.COOKIE_SECURE, path="/"
+    )
     return r
 
 

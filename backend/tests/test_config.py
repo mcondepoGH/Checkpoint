@@ -5,16 +5,24 @@ from app.config.models import load_config, name_error, normalize_path, parse_con
 from fakes import save_config
 
 BASE = {
-    "devices": {"pc": {"name": "Equipo A", "host": "192.0.2.10", "user": "u", "os": "windows"},
-                "laptop": {"name": "Equipo B", "host": "192.0.2.11", "user": "laptop", "os": "linux"}},
-    "games": {"g": {"name": "Juego de prueba", "devices": ["pc", "laptop"],
-                    "paths": {"pc": "C:\\Users\\u\\Saves", "laptop": "/home/usuario/saves"},
-                    "process": "game.exe"}},
+    "devices": {
+        "pc": {"name": "Equipo A", "host": "192.0.2.10", "user": "u", "os": "windows"},
+        "laptop": {"name": "Equipo B", "host": "192.0.2.11", "user": "laptop", "os": "linux"},
+    },
+    "games": {
+        "g": {
+            "name": "Juego de prueba",
+            "devices": ["pc", "laptop"],
+            "paths": {"pc": "C:\\Users\\u\\Saves", "laptop": "/home/usuario/saves"},
+            "process": "game.exe",
+        }
+    },
 }
 
 
 def mod(**kw):
     import copy
+
     d = copy.deepcopy(BASE)
     for k, v in kw.items():
         cur = d
@@ -32,35 +40,38 @@ def test_valid_and_normalizes():
     assert c.versions_limit("g") == 20
 
 
-@pytest.mark.parametrize("bad", [
-    mod(games__g__devices=["pc", "pc"]),
-    mod(games__g__devices=["pc", "laptop", "pc"]),
-    mod(games__g__devices=[]),
-    mod(games__g__devices=["pc", "nope"]),
-    mod(games__g__paths={"pc": "C:/a", "other": "/x"}),
-    mod(games__g__paths={"pc": "C:/a/../b", "laptop": "/x/y"}),
-    mod(games__g__paths={"pc": "C:/a", "laptop": "rel/path"}),
-    mod(games__g__paths={"pc": "C:/a", "laptop": "/x; rm -rf /"}),
-    mod(games__g__paths={"pc": "C:/a", "laptop": "/x/$(id)"}),
-    mod(games__g__paths={"pc": "C:/a&calc", "laptop": "/x/y"}),
-    mod(games__g__paths={"pc": "relative", "laptop": "/x/y"}),
-    mod(games__g__paths={"pc": "C:/", "laptop": "/x/y"}),
-    mod(games__g__process="a;b"),
-    mod(games__g__keep_versions=-1),
-    mod(games__g__keep_versions=1001),
-    mod(games__g__keep_versions=True),
-    mod(games__g__keep_versions=2.5),
-    mod(games__g__keep_versions="5"),
-    mod(max_versions=-1),
-    mod(max_versions=1001),
-    mod(max_versions=False),
-    mod(max_versions="x"),
-    mod(max_versions=None),
-    mod(devices__pc__host="-oProxyCommand=x"),
-    mod(devices__pc__user="a b"),
-    mod(devices__pc__os="plan9"),
-    mod(devices__pc__port=70000),
-])
+@pytest.mark.parametrize(
+    "bad",
+    [
+        mod(games__g__devices=["pc", "pc"]),
+        mod(games__g__devices=["pc", "laptop", "pc"]),
+        mod(games__g__devices=[]),
+        mod(games__g__devices=["pc", "nope"]),
+        mod(games__g__paths={"pc": "C:/a", "other": "/x"}),
+        mod(games__g__paths={"pc": "C:/a/../b", "laptop": "/x/y"}),
+        mod(games__g__paths={"pc": "C:/a", "laptop": "rel/path"}),
+        mod(games__g__paths={"pc": "C:/a", "laptop": "/x; rm -rf /"}),
+        mod(games__g__paths={"pc": "C:/a", "laptop": "/x/$(id)"}),
+        mod(games__g__paths={"pc": "C:/a&calc", "laptop": "/x/y"}),
+        mod(games__g__paths={"pc": "relative", "laptop": "/x/y"}),
+        mod(games__g__paths={"pc": "C:/", "laptop": "/x/y"}),
+        mod(games__g__process="a;b"),
+        mod(games__g__keep_versions=-1),
+        mod(games__g__keep_versions=1001),
+        mod(games__g__keep_versions=True),
+        mod(games__g__keep_versions=2.5),
+        mod(games__g__keep_versions="5"),
+        mod(max_versions=-1),
+        mod(max_versions=1001),
+        mod(max_versions=False),
+        mod(max_versions="x"),
+        mod(max_versions=None),
+        mod(devices__pc__host="-oProxyCommand=x"),
+        mod(devices__pc__user="a b"),
+        mod(devices__pc__os="plan9"),
+        mod(devices__pc__port=70000),
+    ],
+)
 def test_invalid(bad):
     with pytest.raises(ValidationError):
         parse_config(bad)
@@ -96,6 +107,7 @@ def test_versions_limit_global_override_and_zero():
 
 def test_versions_limit_error_messages():
     from app.config.models import validate_config
+
     _, e = validate_config(mod(max_versions=-1, games__g__keep_versions=2000))
     ok = {"code": "err.config.versions_range", "params": {"max": 1000}}
     assert e["max_versions"] == ok and e["games.g.keep_versions"] == ok
@@ -134,8 +146,17 @@ def test_atomic_roundtrip(tmp_path):
     assert [f.name for f in tmp_path.iterdir()] == ["config.yaml"]  # sin temporales
 
 
-FREE = ["Mi Juego: Edición", "Mi PC (salón)", "Nintendo Switch & Co", "It's \"x\"", "Pokémon 🎮",
-        "Mi-Juego-VII", "A.B", "👩\u200d💻 Dev", "a" * 64]
+FREE = [
+    "Mi Juego: Edición",
+    "Mi PC (salón)",
+    "Nintendo Switch & Co",
+    'It\'s "x"',
+    "Pokémon 🎮",
+    "Mi-Juego-VII",
+    "A.B",
+    "👩\u200d💻 Dev",
+    "a" * 64,
+]
 
 
 @pytest.mark.parametrize("n", FREE)
@@ -146,8 +167,29 @@ def test_free_names_ok(n):
     assert c.devices["pc"].name == n and "pc" in c.devices and "g" in c.games
 
 
-@pytest.mark.parametrize("n", ["", "   ", " x", "x ", "a  b", "a/b", "a\\b", "../x", "..", "...", "a\nb", "a\x00b",
-                              "a\tb", "a\u00a0b", "a\u2028b", "a" * 65, 5, None])
+@pytest.mark.parametrize(
+    "n",
+    [
+        "",
+        "   ",
+        " x",
+        "x ",
+        "a  b",
+        "a/b",
+        "a\\b",
+        "../x",
+        "..",
+        "...",
+        "a\nb",
+        "a\x00b",
+        "a\tb",
+        "a\u00a0b",
+        "a\u2028b",
+        "a" * 65,
+        5,
+        None,
+    ],
+)
 def test_bad_free_names(n):
     assert name_error(n)
     with pytest.raises(ValidationError):
@@ -216,6 +258,7 @@ def test_enabled_serializer_only_writes_false():
 
 def test_enabled_not_bool_is_bool_required():
     from app.config.models import semantic_errors
+
     errs = dict(semantic_errors(BASE["devices"], mod(games__g__enabled="no")["games"]))
     assert errs["games.g.enabled"]["code"] == "err.config.bool_required"
     with pytest.raises(ValidationError):

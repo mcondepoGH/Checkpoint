@@ -1,4 +1,5 @@
 """Dispositivo `local: true` ("Este equipo"): modelo, validación, YAML y diff."""
+
 import pytest
 import yaml
 
@@ -10,11 +11,16 @@ REMOTE = {"name": "Laptop", "host": "192.0.2.10", "user": "usuario", "os": "linu
 
 
 def cfg_dict(**extra_dev):
-    d = {"devices": {"pc-aaaa1111": {"name": "PC", "local": True, "os": "linux"},
-                     "laptop-bbbb2222": dict(REMOTE)},
-         "games": {"g-cccc3333": {"name": "Juego", "devices": ["pc-aaaa1111", "laptop-bbbb2222"],
-                                  "paths": {"pc-aaaa1111": "/home/usuario/saves",
-                                            "laptop-bbbb2222": "/home/usuario/g"}}}}
+    d = {
+        "devices": {"pc-aaaa1111": {"name": "PC", "local": True, "os": "linux"}, "laptop-bbbb2222": dict(REMOTE)},
+        "games": {
+            "g-cccc3333": {
+                "name": "Juego",
+                "devices": ["pc-aaaa1111", "laptop-bbbb2222"],
+                "paths": {"pc-aaaa1111": "/home/usuario/saves", "laptop-bbbb2222": "/home/usuario/g"},
+            }
+        },
+    }
     d["devices"]["pc-aaaa1111"].update(extra_dev)
     return d
 
@@ -38,7 +44,9 @@ def test_remoto_dump_identico_a_antes_sin_campo_local():
 
 def test_remoto_sin_local_y_local_false_equivalentes():
     a = parse_config({"devices": {"x": {"name": "X", **{k: v for k, v in REMOTE.items() if k != "name"}}}})
-    b = parse_config({"devices": {"x": {"name": "X", "local": False, **{k: v for k, v in REMOTE.items() if k != "name"}}}})
+    b = parse_config(
+        {"devices": {"x": {"name": "X", "local": False, **{k: v for k, v in REMOTE.items() if k != "name"}}}}
+    )
     assert a == b and a.devices["x"].local is False
     assert "local" not in a.devices["x"].model_dump()
 
@@ -124,8 +132,10 @@ def test_round_trip_yaml(tmp_path):
 
 
 def test_render_yaml_conserva_comentarios_con_local():
-    txt = ("devices:\n  pc-aaaa1111:\n    name: PC\n    local: true  # este equipo\n    os: linux\n"
-           "games: {}\nmax_versions: 20\n")
+    txt = (
+        "devices:\n  pc-aaaa1111:\n    name: PC\n    local: true  # este equipo\n    os: linux\n"
+        "games: {}\nmax_versions: 20\n"
+    )
     c, err = parse_text(txt)
     assert err is None
     assert render_yaml(txt, c) == txt
@@ -142,7 +152,9 @@ def test_ids_estables_al_renombrar_local():
 
 
 def test_diff_marcar_y_desmarcar_local():
-    remoto = parse_config({"devices": {"pc-aaaa1111": {"name": "PC", "host": "192.0.2.4", "user": "usuario", "os": "linux"}}})
+    remoto = parse_config(
+        {"devices": {"pc-aaaa1111": {"name": "PC", "host": "192.0.2.4", "user": "usuario", "os": "linux"}}}
+    )
     local = parse_config({"devices": {"pc-aaaa1111": {"name": "PC", "local": True, "os": "linux"}}})
     d = diff_configs(remoto.model_dump(exclude_none=True), local.model_dump(exclude_none=True))
     ch = d["devices"]["changed"]["pc-aaaa1111"]
@@ -159,9 +171,13 @@ def test_yaml_con_local_y_clave_repetida_sigue_detectando():
 
 
 def test_sin_local_los_dispositivos_son_remotos():
-    d = {"devices": {"pc": {"name": "A", "host": "h1", "user": "u", "os": "windows"},
-                     "laptop": {"name": "B", "host": "h2", "user": "d", "os": "linux", "port": 2200}},
-         "games": {"g": {"name": "G", "devices": ["pc", "laptop"], "paths": {"pc": "C:/S/g", "laptop": "/h/g"}}}}
+    d = {
+        "devices": {
+            "pc": {"name": "A", "host": "h1", "user": "u", "os": "windows"},
+            "laptop": {"name": "B", "host": "h2", "user": "d", "os": "linux", "port": 2200},
+        },
+        "games": {"g": {"name": "G", "devices": ["pc", "laptop"], "paths": {"pc": "C:/S/g", "laptop": "/h/g"}}},
+    }
     c = parse_config(d)
     assert all(not dv.local for dv in c.devices.values())
     assert c.devices["laptop"].port == 2200 and c.devices["pc"].port == 22

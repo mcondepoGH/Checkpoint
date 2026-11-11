@@ -1,5 +1,6 @@
 """Cierre automático: `opened` arma el vigilante (proceso real del dispositivo vía transport falso) y el checkpoint
 de cierre queda en el historial con trigger `hook_closed`. Servidor con lifespan (`with TestClient`), tiempos mínimos."""
+
 import time
 
 import pytest
@@ -16,6 +17,7 @@ from test_hook_opened import Env, PW, code
 
 class Proc:
     """Estado del «proceso del juego» y del dispositivo remoto, consultados por el transport falso."""
+
     running = False
     fail = False  # el sondeo del proceso lanza TransportError (SSH caído)
     down = False  # el dispositivo remoto no responde para la sync
@@ -28,11 +30,15 @@ def mk(tmp_path, monkeypatch):
     from app.sync import engine as sync
     from app.sync.transport import TransportError
     from fakes import LocalTransport
+
     e = Env(tmp_path)
     cfg = yaml.safe_load((tmp_path / "config" / "config.yaml").read_text())
     cfg["games"]["g1"]["process"] = "game.exe"
-    cfg["games"]["g2"] = {"name": "Sin Proceso", "devices": ["dev-1", "dev-2"],
-                          "paths": {"dev-1": str(tmp_path / "p2"), "dev-2": "/home/u/g2"}}
+    cfg["games"]["g2"] = {
+        "name": "Sin Proceso",
+        "devices": ["dev-1", "dev-2"],
+        "paths": {"dev-1": str(tmp_path / "p2"), "dev-2": "/home/u/g2"},
+    }
     (tmp_path / "config" / "config.yaml").write_text(yaml.safe_dump(cfg, allow_unicode=True))
     p = Proc()
 
@@ -111,7 +117,13 @@ def test_opened_arms_watch_and_reports_watching(cl):
     j = r.json()
     assert r.status_code == 200 and j["watching"] is True and "watch_reason" not in j and j["outcome"] == "ok"
     w = watches(cl).json()
-    assert len(w) == 1 and w[0]["game"] == "g1" and w[0]["device"] == "dev-1" and w[0]["state"] == "waiting" and w[0]["since"]
+    assert (
+        len(w) == 1
+        and w[0]["game"] == "g1"
+        and w[0]["device"] == "dev-1"
+        and w[0]["state"] == "waiting"
+        and w[0]["since"]
+    )
     assert set(w[0]) == {"game", "device", "state", "since", "last_poll", "poll"}
 
 
@@ -195,6 +207,7 @@ def test_second_opened_replaces_watch_single_checkpoint(cl):
 
 def test_locked_checkpoint_not_retried_and_logged(cl, caplog):
     import logging
+
     caplog.set_level(logging.INFO)
     hopen(cl)
     cl.proc.running = True
@@ -287,6 +300,7 @@ def test_checkpoint_error_is_logged_without_message(cl):
 def test_history_failure_never_breaks_watcher(cl, monkeypatch):
     def boom(*a, **k):
         raise OSError("disco lleno")
+
     monkeypatch.setattr(history, "append", boom)
     hopen(cl)
     assert wait_for(lambda: watches(cl).json() == [])  # el descarte ocurre aunque el historial falle
@@ -294,6 +308,7 @@ def test_history_failure_never_breaks_watcher(cl, monkeypatch):
 
 def test_disabled_game_not_watched_and_close_is_skipped(cl):
     from test_hook_opened import set_enabled
+
     cl.proc.running = True
     r = hopen(cl)
     assert r.json()["watching"] is True and len(watches(cl).json()) == 1

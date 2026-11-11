@@ -1,4 +1,5 @@
 """Middleware ASGI de la API."""
+
 import logging
 import time
 
@@ -27,8 +28,22 @@ class RequestDebugLog:
         try:
             await self.app(scope, receive, _send)
         except Exception as e:
-            self.log.debug("%s %s query=[%s] ip=%s excepción %s tras %.0f ms", scope["method"], scope["path"], params,
-                           ip, type(e).__name__, (time.monotonic() - t0) * 1000)
+            self.log.debug(
+                "%s %s query=[%s] ip=%s excepción %s tras %.0f ms",
+                scope["method"],
+                scope["path"],
+                params,
+                ip,
+                type(e).__name__,
+                (time.monotonic() - t0) * 1000,
+            )
             raise
-        self.log.debug("%s %s query=[%s] ip=%s -> %s en %.0f ms", scope["method"], scope["path"], params, ip,
-                       status[0], (time.monotonic() - t0) * 1000)
+        self.log.debug(
+            "%s %s query=[%s] ip=%s -> %s en %.0f ms",
+            scope["method"],
+            scope["path"],
+            params,
+            ip,
+            status[0],
+            (time.monotonic() - t0) * 1000,
+        )

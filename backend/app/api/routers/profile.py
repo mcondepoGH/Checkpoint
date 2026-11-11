@@ -1,4 +1,5 @@
 """Perfil del usuario de la sesión: nombre, foto y API key (se gestionan con la cookie de sesión)."""
+
 import logging
 
 from fastapi import Depends, Request, Response
@@ -8,11 +9,16 @@ from ...core.errors import ApiError
 from ...users import apikey, avatar
 from ..deps import current_user, internal_router
 
-api_log = logging.getLogger("checkpoint.api")  # DEBUG: una línea por petición /api y detalle por endpoint (sin secretos)
+api_log = logging.getLogger(
+    "checkpoint.api"
+)  # DEBUG: una línea por petición /api y detalle por endpoint (sin secretos)
 router = internal_router()
 
-PHOTO_HEADERS = {"Cache-Control": "private, no-cache", "X-Content-Type-Options": "nosniff",
-                 "Content-Security-Policy": "default-src 'none'; sandbox"}
+PHOTO_HEADERS = {
+    "Cache-Control": "private, no-cache",
+    "X-Content-Type-Options": "nosniff",
+    "Content-Security-Policy": "default-src 'none'; sandbox",
+}
 NO_STORE = {"Cache-Control": "no-store"}
 
 

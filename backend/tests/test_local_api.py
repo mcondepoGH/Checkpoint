@@ -1,4 +1,5 @@
 """API con «Este equipo»: modos native y docker, test de carpeta, sync y conflicto por API."""
+
 import json
 import os
 
@@ -32,10 +33,15 @@ def client(tmp_path, monkeypatch):
 
 
 def cfg(tmp, **local):
-    return {"devices": {PC: {"name": "PC", "local": True, "os": "linux", **local},
-                        LAP: {"name": "Laptop", "host": "192.0.2.10", "user": "usuario", "os": "linux"}},
-            "games": {"g1": {"name": "Juego", "devices": [PC, LAP],
-                             "paths": {PC: str(tmp / "pc saves"), LAP: "/home/usuario/g"}}}}
+    return {
+        "devices": {
+            PC: {"name": "PC", "local": True, "os": "linux", **local},
+            LAP: {"name": "Laptop", "host": "192.0.2.10", "user": "usuario", "os": "linux"},
+        },
+        "games": {
+            "g1": {"name": "Juego", "devices": [PC, LAP], "paths": {PC: str(tmp / "pc saves"), LAP: "/home/usuario/g"}}
+        },
+    }
 
 
 def put_config(c, data):
@@ -135,11 +141,13 @@ def test_test_local_sin_ruta(client):
 def test_test_local_no_toca_ssh(client, monkeypatch):
     def boom(*a, **k):
         raise AssertionError("no debe usar SSH")
+
     monkeypatch.setattr("app.services.devices.get_transport", boom)
     monkeypatch.setattr("app.core.bootstrap.ensure_host_key", boom)
     monkeypatch.setattr("app.sync.transport.base._run", boom)
-    r = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"},
-                                                "paths": [str(client.tmp)]}).json()
+    r = client.post(
+        "/api/devices/test", json={"device": {"local": True, "os": "linux"}, "paths": [str(client.tmp)]}
+    ).json()
     assert r["ok"]
 
 
@@ -147,11 +155,14 @@ def test_test_local_ruta_ok_inexistente_creable_y_fichero(client):
     t = client.tmp
     ok = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"}, "paths": [str(t)]}).json()
     assert ok["ok"] and ok["code"] == "err.transport.folder_ok"
-    nueva = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"},
-                                                    "paths": [str(t / "a" / "b")]}).json()
+    nueva = client.post(
+        "/api/devices/test", json={"device": {"local": True, "os": "linux"}, "paths": [str(t / "a" / "b")]}
+    ).json()
     assert nueva["ok"] and nueva["code"] == "err.transport.folder_will_be_created"
     (t / "f").write_text("x")
-    f = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"}, "paths": [str(t / "f")]}).json()
+    f = client.post(
+        "/api/devices/test", json={"device": {"local": True, "os": "linux"}, "paths": [str(t / "f")]}
+    ).json()
     assert not f["ok"] and f["code"] == "err.transport.not_a_folder_short"
 
 
@@ -163,9 +174,15 @@ def test_test_local_ruta_ilegible_y_no_escribible(client):
     (t / "ro").mkdir()
     (t / "ro").chmod(0o555)
     try:
-        a = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"}, "paths": [str(t / "ni")]}).json()
-        b = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"}, "paths": [str(t / "ro")]}).json()
-        c = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"}, "paths": [str(t / "ro" / "x")]}).json()
+        a = client.post(
+            "/api/devices/test", json={"device": {"local": True, "os": "linux"}, "paths": [str(t / "ni")]}
+        ).json()
+        b = client.post(
+            "/api/devices/test", json={"device": {"local": True, "os": "linux"}, "paths": [str(t / "ro")]}
+        ).json()
+        c = client.post(
+            "/api/devices/test", json={"device": {"local": True, "os": "linux"}, "paths": [str(t / "ro" / "x")]}
+        ).json()
     finally:
         (t / "ni").chmod(0o755)
         (t / "ro").chmod(0o755)
@@ -176,9 +193,15 @@ def test_test_local_ruta_ilegible_y_no_escribible(client):
 
 def test_test_local_varias_rutas_y_rutas_invalidas(client):
     t = client.tmp
-    r = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"},
-                                                "paths": [str(t), "relativa", "/a/../b"]}).json()
-    assert not r["ok"] and r["message"].count("\n") == 2 and [x.get("code") for x in r["results"]] == ["err.transport.folder_ok", "err.config.path_absolute", "err.config.path_dotdot"]
+    r = client.post(
+        "/api/devices/test", json={"device": {"local": True, "os": "linux"}, "paths": [str(t), "relativa", "/a/../b"]}
+    ).json()
+    assert (
+        not r["ok"]
+        and r["message"].count("\n") == 2
+        and [x.get("code") for x in r["results"]]
+        == ["err.transport.folder_ok", "err.config.path_absolute", "err.config.path_dotdot"]
+    )
     r = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"}, "paths": "x"}).json()
     assert not r["ok"]
     r = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"}, "paths": [1]}).json()
@@ -205,6 +228,7 @@ def test_test_remoto_sigue_igual(client, monkeypatch):
 
         def check(self):
             return None
+
     monkeypatch.setattr("app.services.devices.get_transport", lambda d: T(d))
     r = client.post("/api/devices/test", json={"device": {"host": "192.0.2.1", "user": "u", "os": "linux"}}).json()
     assert r["ok"] and r["code"] == "err.transport.connection_ok" and r["first_use"] is False
@@ -220,6 +244,7 @@ def papi(client, monkeypatch):
 
     def gt(dev):
         return orig(dev) if dev.local else LocalTransport(roots[dev.host])
+
     monkeypatch.setattr("app.sync.engine.get_transport", gt)
     (t / "pc saves").mkdir()
     (t / "laptop/home/usuario/g").mkdir(parents=True)
@@ -286,7 +311,10 @@ def test_sync_por_api_en_docker_con_local_no_arranca(papi, monkeypatch):
     monkeypatch.setenv("CHECKPOINT_RUNTIME", "docker")
     settings.CONFIG_PATH.write_text(settings.CONFIG_PATH.read_text() + "\n")
     r = papi.post("/api/sync/g1", json={})
-    assert r.status_code == 500 and r.json()["detail"]["params"]["cause"]["params"]["causes"][0]["code"] == "err.config.local_docker"
+    assert (
+        r.status_code == 500
+        and r.json()["detail"]["params"]["cause"]["params"]["causes"][0]["code"] == "err.config.local_docker"
+    )
 
 
 def test_remoto_offline_via_api_con_local(papi, monkeypatch):
@@ -294,6 +322,7 @@ def test_remoto_offline_via_api_con_local(papi, monkeypatch):
 
     def gt(dev):
         return LocalDeviceTransport(dev) if dev.local else LocalTransport(t / "laptop", down=True)
+
     monkeypatch.setattr("app.sync.engine.get_transport", gt)
     w(t / "pc saves/s.sav", "pc1", 1000)
     st = wait_run(papi, papi.post("/api/sync/g1", json={}).json()["run_id"])
@@ -304,6 +333,7 @@ def test_remoto_offline_via_api_con_local(papi, monkeypatch):
 # ---- CLI serve ----
 def test_cli_serve_exige_credenciales(monkeypatch, capsys):
     from app import cli
+
     for k in ("CHECKPOINT_USER", "CHECKPOINT_PASSWORD"):
         monkeypatch.delenv(k, raising=False)
     assert cli.main(["serve"]) == 2
@@ -313,13 +343,15 @@ def test_cli_serve_exige_credenciales(monkeypatch, capsys):
 def test_cli_serve_llama_a_uvicorn(monkeypatch, capsys):
     import uvicorn
     from app import cli
+
     monkeypatch.setenv("CHECKPOINT_USER", "u")
     monkeypatch.setenv("CHECKPOINT_PASSWORD", "p")
     llamadas = []
     monkeypatch.setattr(uvicorn, "run", lambda *a, **k: llamadas.append((a, k)))
     assert cli.main(["serve"]) == 0
-    assert llamadas == [(("app.main:app_factory",), {"factory": True, "host": "127.0.0.1", "port": 8088,
-                                                      "server_header": False})]
+    assert llamadas == [
+        (("app.main:app_factory",), {"factory": True, "host": "127.0.0.1", "port": 8088, "server_header": False})
+    ]
     monkeypatch.setenv("CHECKPOINT_HOST", "0.0.0.0")
     monkeypatch.setenv("CHECKPOINT_PORT", "9001")
     cli.main(["serve"])

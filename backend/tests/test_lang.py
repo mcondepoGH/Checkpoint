@@ -1,4 +1,5 @@
 """Idioma por defecto (CHECKPOINT_LANG): opcional, español si falta o no es válido; endpoint público."""
+
 import logging
 
 import pytest

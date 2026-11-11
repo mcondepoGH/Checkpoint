@@ -1,4 +1,5 @@
 """LocalDeviceTransport («Este equipo»): sistema de ficheros local sin SSH, rsync ni tar."""
+
 import os
 import subprocess
 import sys
@@ -44,8 +45,14 @@ def test_check_siempre_online(tr):
 
 
 def test_get_transport_local_y_remoto():
-    c = parse_config({"devices": {"a": {"name": "A", "local": True, "os": "linux"},
-                                  "b": {"name": "B", "host": "192.0.2.1", "user": "u", "os": "linux"}}})
+    c = parse_config(
+        {
+            "devices": {
+                "a": {"name": "A", "local": True, "os": "linux"},
+                "b": {"name": "B", "host": "192.0.2.1", "user": "u", "os": "linux"},
+            }
+        }
+    )
     assert isinstance(get_transport(c.devices["a"]), LocalDeviceTransport)
     assert type(get_transport(c.devices["b"])).__name__ == "PosixTransport"
 
@@ -109,8 +116,15 @@ def test_pull_copia_arbol_con_mtime(tr, tmp_path):
 
 def test_pull_nombres_raros(tr, tmp_path):
     s, d = tmp_path / "saves", tmp_path / "dest"
-    nombres = ["con espacios.sav", "ñandú-€-日本語.dat", "sím#bolos(1)[2]+3,@~=.x", "emoji 🎮.sav", ".oculto",
-               "UPPER.SAV", "a b/c d/e f.sav"]
+    nombres = [
+        "con espacios.sav",
+        "ñandú-€-日本語.dat",
+        "sím#bolos(1)[2]+3,@~=.x",
+        "emoji 🎮.sav",
+        ".oculto",
+        "UPPER.SAV",
+        "a b/c d/e f.sav",
+    ]
     for n in nombres:
         put(s, n, n)
     d.mkdir()
@@ -239,6 +253,7 @@ def test_push_atomico_si_falla_la_copia_el_destino_queda_intacto(tr, tmp_path, m
         if n["c"] == 2:
             raise OSError(28, "No space left on device")
         return real(a, b, *k, **kw)
+
     monkeypatch.setattr(T.shutil, "copy2", flaky)
     with pytest.raises(TransportError, match="space"):
         tr.push(src, str(dst))
@@ -258,6 +273,7 @@ def test_push_si_falla_el_rename_final_se_deshace(tr, tmp_path, monkeypatch):
         if len(calls) == 2:  # new -> target
             raise OSError(5, "Input/output error")
         return real(a, b)
+
     monkeypatch.setattr(T.os, "rename", rn)
     with pytest.raises(TransportError, match="Input/output"):
         tr.push(src, str(dst))
@@ -433,6 +449,7 @@ def run_with(monkeypatch, plat, results, calls):
         if isinstance(r, Exception):
             raise r
         return r
+
     return LocalDeviceTransport(run=run)
 
 
@@ -522,6 +539,7 @@ def test_proceso_nombre_invalido(tr, n):
 
 def test_sin_shell():
     import inspect
+
     assert "shell=True" not in inspect.getsource(T)
 
 

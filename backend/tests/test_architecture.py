@@ -5,6 +5,7 @@
 - `services` no importa de `api`.
 - `api` puede importar de `config`, `users`, `sync`, `core` y `services`.
 """
+
 import ast
 from pathlib import Path
 
@@ -43,7 +44,7 @@ def _imports_of(source: str, mod: str, is_package: bool = False):
     out = set()
     for n in ast.walk(ast.parse(source)):
         if isinstance(n, ast.Import):
-            out |= {a.name[len("app."):] for a in n.names if a.name.startswith("app.")}
+            out |= {a.name[len("app.") :] for a in n.names if a.name.startswith("app.")}
         elif isinstance(n, ast.ImportFrom):
             if n.level:
                 base = pkg[: len(pkg) - (n.level - 1)]
@@ -83,9 +84,18 @@ def test_documented_exception_still_needed():
 
 
 def test_import_parser_resolves_relative_imports():
-    src = "from ..api import auth\nfrom . import x\nfrom ..services.runs import y\nimport app.users.history\nimport os\n"
+    src = (
+        "from ..api import auth\nfrom . import x\nfrom ..services.runs import y\nimport app.users.history\nimport os\n"
+    )
     assert _imports_of(src, "core.mod") == {
-        "api", "api.auth", "core", "core.x", "services.runs", "services.runs.y", "users.history"}
+        "api",
+        "api.auth",
+        "core",
+        "core.x",
+        "services.runs",
+        "services.runs.y",
+        "users.history",
+    }
 
 
 def test_checker_flags_a_forbidden_import():

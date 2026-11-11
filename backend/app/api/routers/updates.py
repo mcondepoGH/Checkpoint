@@ -1,4 +1,5 @@
 """Versión y actualizaciones (solo detección): estado, comprobación y ajustes del comprobador."""
+
 import logging
 
 from fastapi import Depends, Request
@@ -9,7 +10,9 @@ from ...core.errors import error_body, error_response
 from ...services.context import AppContext
 from ..deps import body_json, get_ctx, internal_router
 
-api_log = logging.getLogger("checkpoint.api")  # DEBUG: una línea por petición /api y detalle por endpoint (sin secretos)
+api_log = logging.getLogger(
+    "checkpoint.api"
+)  # DEBUG: una línea por petición /api y detalle por endpoint (sin secretos)
 router = internal_router()
 
 

@@ -1,4 +1,5 @@
 """Juegos con un solo dispositivo («solo checkpoint»): el hub guarda versiones, no hay copia entre equipos."""
+
 import os
 
 import pytest
@@ -7,10 +8,12 @@ from app.config.models import parse_config
 from app.sync.engine import decide, fingerprint, list_versions, load_baseline, restore_version, run_sync, save_baseline
 from fakes import LocalTransport
 
-CFG = parse_config({
-    "devices": {"pc": {"name": "pc", "host": "h1", "user": "u", "os": "windows"}},
-    "games": {"g": {"name": "g", "devices": ["pc"], "paths": {"pc": "C:/Saves/g"}, "process": "g.exe"}},
-})
+CFG = parse_config(
+    {
+        "devices": {"pc": {"name": "pc", "host": "h1", "user": "u", "os": "windows"}},
+        "games": {"g": {"name": "g", "devices": ["pc"], "paths": {"pc": "C:/Saves/g"}, "process": "g.exe"}},
+    }
+)
 
 
 class Env:
@@ -28,7 +31,9 @@ class Env:
         os.utime(f, (mtime, mtime))
 
     def sync(self, dry=False, opts=None, **kw):
-        return run_sync(CFG, "g", dry, self.data, self.logs.append, {"pc": LocalTransport(self.root, **kw)}, **(opts or {}))
+        return run_sync(
+            CFG, "g", dry, self.data, self.logs.append, {"pc": LocalTransport(self.root, **kw)}, **(opts or {})
+        )
 
     def seed(self, content="base"):
         for d in (self.pc_dir, self.hub):
@@ -118,6 +123,7 @@ def test_dry_run_no_toca_nada(env):
 
 def test_decide_un_dispositivo():
     from app.sync.engine import Fingerprint
+
     a, b, vacio = Fingerprint("A", 1, 1), Fingerprint("B", 1, 1), Fingerprint(None, 0, 0)
     assert decide({"pc": a, "hub": a}, {})["kind"] == "same"
     assert decide({"pc": a, "hub": vacio}, {})["winner"] == "pc"  # primera vez
@@ -134,8 +140,16 @@ from app.sync.engine import run_sync as _rs
 
 
 def _auto(env, **kw):
-    return _rs(CFG, "g", kw.pop("dry", False), env.data, env.logs.append, {"pc": LocalTransport(env.root)},
-               conflict_policy="skip", automatic=True)
+    return _rs(
+        CFG,
+        "g",
+        kw.pop("dry", False),
+        env.data,
+        env.logs.append,
+        {"pc": LocalTransport(env.root)},
+        conflict_policy="skip",
+        automatic=True,
+    )
 
 
 def _borrar_local(env):
@@ -185,6 +199,7 @@ def test_automatico_dry_run_no_crea_nada(env):
 
 def test_dos_dispositivos_sin_cambios_automatico_repone_la_ruta_ausente(tmp_path):
     import test_sync as ts
+
     e = ts.Env(tmp_path)
     e.seed("x")
     shutil.rmtree(e.pc_dir)
@@ -196,12 +211,16 @@ def test_scheduler_ciclo_omite_y_queda_en_el_resumen(tmp_path, monkeypatch):
     from types import SimpleNamespace
     from app.core import settings
     from app.sync.scheduler import Scheduler
+
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path / "data")
     e = Env(tmp_path)
     e.seed("x")
     _borrar_local(e)
-    s = Scheduler(lambda: CFG, lambda g: False,
-                  runner=lambda c, g, dry, log, **kw: _rs(c, g, dry, e.data, log, {"pc": LocalTransport(e.root)}, **kw))
+    s = Scheduler(
+        lambda: CFG,
+        lambda g: False,
+        runner=lambda c, g, dry, log, **kw: _rs(c, g, dry, e.data, log, {"pc": LocalTransport(e.root)}, **kw),
+    )
     res, m, c, st = s.run_game(CFG, "g")
     assert res == "skipped" and c["code"] == "err.sync.local_missing_manual_required"
     item, det = s.game_detail("g", res, m, c)
@@ -211,10 +230,13 @@ def test_scheduler_ciclo_omite_y_queda_en_el_resumen(tmp_path, monkeypatch):
 
 def test_juego_desactivado_aborta_incluso_en_dry_run(env):
     from app.sync.engine import SyncAbort
-    cfg = parse_config({
-        "devices": {"pc": {"name": "pc", "host": "h1", "user": "u", "os": "windows"}},
-        "games": {"g": {"name": "g", "devices": ["pc"], "paths": {"pc": "C:/Saves/g"}, "enabled": False}},
-    })
+
+    cfg = parse_config(
+        {
+            "devices": {"pc": {"name": "pc", "host": "h1", "user": "u", "os": "windows"}},
+            "games": {"g": {"name": "g", "devices": ["pc"], "paths": {"pc": "C:/Saves/g"}, "enabled": False}},
+        }
+    )
     env.write(env.pc_dir, "s.sav", "x", 1000)
     for dry in (False, True):
         with pytest.raises(SyncAbort) as e:

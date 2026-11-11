@@ -1,4 +1,5 @@
 """Decisión pura de quién manda en una sync y resolución de conflictos."""
+
 from typing import Callable, Dict, List, Optional
 
 from .errors import SyncAbort
@@ -53,8 +54,9 @@ def decide(fps: Dict[str, Fingerprint], base: Dict[str, Optional[str]]) -> dict:
     return {"kind": "conflict", "sides": nonempty, "reason": "no-baseline"}
 
 
-def pick_resolution(resolution: str, sides: List[str], fps: Dict[str, Fingerprint],
-                    dn: Callable[[str], str] = lambda k: k) -> Optional[str]:
+def pick_resolution(
+    resolution: str, sides: List[str], fps: Dict[str, Fingerprint], dn: Callable[[str], str] = lambda k: k
+) -> Optional[str]:
     """Elige ganador para un conflicto. None = indeterminado (relojes demasiado parecidos).
     Lanza SyncAbort si `resolution` no es válida."""
     if resolution == "newest":
@@ -67,7 +69,7 @@ def pick_resolution(resolution: str, sides: List[str], fps: Dict[str, Fingerprin
     if resolution == "hub":
         name = "hub"
     elif resolution.startswith("device:"):
-        name = resolution[len("device:"):]
+        name = resolution[len("device:") :]
     else:
         raise SyncAbort("err.sync.resolution_invalid", value=resolution)
     if name not in fps:
@@ -78,5 +80,4 @@ def pick_resolution(resolution: str, sides: List[str], fps: Dict[str, Fingerprin
 
 
 def valid_resolution(value) -> bool:
-    return isinstance(value, str) and (value in ("newest", "hub") or
-                                       (value.startswith("device:") and len(value) > 7))
+    return isinstance(value, str) and (value in ("newest", "hub") or (value.startswith("device:") and len(value) > 7))

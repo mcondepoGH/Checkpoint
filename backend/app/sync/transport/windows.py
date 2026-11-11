@@ -1,4 +1,5 @@
 """Transporte SSH + tar hacia Windows (OpenSSH Server, cmd.exe)."""
+
 import subprocess
 
 from ...core import settings
@@ -37,19 +38,24 @@ class WindowsTransport(Transport):
 
     def pull(self, path, dest):
         dest.mkdir(parents=True, exist_ok=True)
-        a = subprocess.Popen(_ssh_base(self.dev) + [f'tar -cf - -C "{path}" .'],
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        b = subprocess.Popen(["tar", "-xf", "-", "-C", str(dest)], stdin=a.stdout,
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        a = subprocess.Popen(
+            _ssh_base(self.dev) + [f'tar -cf - -C "{path}" .'], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        b = subprocess.Popen(
+            ["tar", "-xf", "-", "-C", str(dest)], stdin=a.stdout, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
         a.stdout.close()
         try:
             _, berr = b.communicate(timeout=1800)
             _, aerr = a.communicate(timeout=60)
         except subprocess.TimeoutExpired:
-            a.kill(); b.kill()
+            a.kill()
+            b.kill()
             raise TransportError("err.transport.timeout")
         if a.returncode != 0 or b.returncode != 0:
-            raise TransportError("err.transport.tar_pull_failed", detail=(aerr or berr).decode("utf-8", "replace")[-300:])
+            raise TransportError(
+                "err.transport.tar_pull_failed", detail=(aerr or berr).decode("utf-8", "replace")[-300:]
+            )
 
     def push(self, src, path, extras=()):
         # Limitación: tar extrae sobre la carpeta en uso (no hay equivalente sencillo a rsync --delay-updates),
@@ -62,19 +68,27 @@ class WindowsTransport(Transport):
             if not _safe_rel(rel):
                 continue
             self._ssh(f'del /f /q "{self._win(path + "/" + rel)}"')
-        a = subprocess.Popen(["tar", "--format=pax", "-cf", "-", "-C", str(src), "."],
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        b = subprocess.Popen(_ssh_base(self.dev) + [f'tar -xf - -C "{path}"'], stdin=a.stdout,
-                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        a = subprocess.Popen(
+            ["tar", "--format=pax", "-cf", "-", "-C", str(src), "."], stdout=subprocess.PIPE, stderr=subprocess.PIPE
+        )
+        b = subprocess.Popen(
+            _ssh_base(self.dev) + [f'tar -xf - -C "{path}"'],
+            stdin=a.stdout,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
         a.stdout.close()
         try:
             _, berr = b.communicate(timeout=1800)
             _, aerr = a.communicate(timeout=60)
         except subprocess.TimeoutExpired:
-            a.kill(); b.kill()
+            a.kill()
+            b.kill()
             raise TransportError("err.transport.timeout")
         if a.returncode != 0 or b.returncode != 0:
-            raise TransportError("err.transport.tar_push_failed", detail=(berr or aerr).decode("utf-8", "replace")[-300:])
+            raise TransportError(
+                "err.transport.tar_push_failed", detail=(berr or aerr).decode("utf-8", "replace")[-300:]
+            )
 
     def process_running(self, name):
         if not PROC_RE.match(name):

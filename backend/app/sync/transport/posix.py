@@ -1,4 +1,5 @@
 """Transporte SSH + rsync hacia dispositivos POSIX."""
+
 import re
 import shlex
 
@@ -35,8 +36,9 @@ class PosixTransport(Transport):
 
     def pull(self, path, dest):
         dest.mkdir(parents=True, exist_ok=True)
-        p = base._run(["rsync", "-a", "--delete", "-s", "-e", self._rsh(),
-                  f"{self.dev.user}@{self.dev.host}:{path}/", f"{dest}/"])
+        p = base._run(
+            ["rsync", "-a", "--delete", "-s", "-e", self._rsh(), f"{self.dev.user}@{self.dev.host}:{path}/", f"{dest}/"]
+        )
         if p.returncode != 0:
             raise _fail("err.transport.rsync_pull_failed", p, self.dev)
 
@@ -45,8 +47,19 @@ class PosixTransport(Transport):
         if p.returncode != 0:
             raise _fail("err.transport.mkdir_failed", p, self.dev)
         # --delay-updates/--delete-delay: los ficheros se colocan al final de la transferencia (casi atómico).
-        p = base._run(["rsync", "-a", "--delete-delay", "--delay-updates", "-s", "-e", self._rsh(),
-                  f"{src}/", f"{self.dev.user}@{self.dev.host}:{path}/"])
+        p = base._run(
+            [
+                "rsync",
+                "-a",
+                "--delete-delay",
+                "--delay-updates",
+                "-s",
+                "-e",
+                self._rsh(),
+                f"{src}/",
+                f"{self.dev.user}@{self.dev.host}:{path}/",
+            ]
+        )
         if p.returncode != 0:
             raise _fail("err.transport.rsync_push_failed", p, self.dev)
 

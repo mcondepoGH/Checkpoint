@@ -1,4 +1,5 @@
 """Login con bcrypt, sesiones en memoria y límite de intentos por IP."""
+
 import hmac
 import os
 import secrets
@@ -18,8 +19,7 @@ class Auth:
     """Usuario y contraseña en claro (del entorno). La contraseña se hashea con bcrypt en
     memoria al construir; el claro no se guarda ni se escribe a disco ni se loguea."""
 
-    def __init__(self, user: str, password: str, session_hours: float = None, clock=time.time,
-                 rounds: int = 12):
+    def __init__(self, user: str, password: str, session_hours: float = None, clock=time.time, rounds: int = 12):
         if not user or not password:
             raise RuntimeError("Faltan CHECKPOINT_USER / CHECKPOINT_PASSWORD")
         self.user = user

@@ -2,6 +2,7 @@
      | serve [--host H] [--port P]   (arranque sin Docker; en Docker lo hace uvicorn directamente)
 
 <juego> y <dispositivo> aceptan el id interno o el nombre."""
+
 import argparse
 import sys
 from datetime import datetime
@@ -22,9 +23,12 @@ def serve(host=None, port=None) -> int:
         print("puerto fuera de rango", file=sys.stderr)
         return 2
     import uvicorn
-    print(f"Checkpoint ({runtime.runtime_name()}, {runtime.platform_name()}) en http://{host}:{port}\n"
-          f"  config: {settings.CONFIG_PATH}\n  datos:  {settings.DATA_DIR}\n  web:    {settings.STATIC_DIR}",
-          file=sys.stderr)
+
+    print(
+        f"Checkpoint ({runtime.runtime_name()}, {runtime.platform_name()}) en http://{host}:{port}\n"
+        f"  config: {settings.CONFIG_PATH}\n  datos:  {settings.DATA_DIR}\n  web:    {settings.STATIC_DIR}",
+        file=sys.stderr,
+    )
     uvicorn.run("app.main:app_factory", factory=True, host=host, port=port, server_header=False)
     return 0
 
@@ -35,8 +39,11 @@ def main(argv=None) -> int:
     s = sub.add_parser("sync")
     s.add_argument("game")
     s.add_argument("--dry-run", action="store_true")
-    s.add_argument("--resolve", metavar="newest|hub|device:<dispositivo>",
-                   help="resuelve un conflicto: gana el más reciente, el hub o el save de un dispositivo")
+    s.add_argument(
+        "--resolve",
+        metavar="newest|hub|device:<dispositivo>",
+        help="resuelve un conflicto: gana el más reciente, el hub o el save de un dispositivo",
+    )
     sv = sub.add_parser("serve", help="arranca la web (modo nativo, sin Docker)")
     sv.add_argument("--host", default=None, help="por defecto CHECKPOINT_HOST o 127.0.0.1")
     sv.add_argument("--port", type=int, default=None, help="por defecto CHECKPOINT_PORT o 8088")
@@ -55,8 +62,11 @@ def main(argv=None) -> int:
     if a.cmd == "list":
         for g in cfg.games.values():
             names_ = " <-> ".join(cfg.devices[d].name for d in g.devices)
-            print(f"{g.name}: {names_}" + (" (checkpoint)" if len(g.devices) == 1 else "")
-                  + ("" if g.enabled else " (desactivado)"))
+            print(
+                f"{g.name}: {names_}"
+                + (" (checkpoint)" if len(g.devices) == 1 else "")
+                + ("" if g.enabled else " (desactivado)")
+            )
         return 0
     try:
         gid = resolve_game(cfg, a.game)
@@ -81,8 +91,10 @@ def main(argv=None) -> int:
         for s_ in st.get("conflict", {}).get("sides", []):
             when = datetime.fromtimestamp(s_["mtime"]).strftime("%Y-%m-%d %H:%M:%S") if s_["mtime"] else "-"
             print(f"  {s_['name']}: {when}, {s_['size']} bytes, {s_['files']} ficheros", file=sys.stderr)
-        print("Nada se ha modificado. Resuélvelo con: checkpoint sync <juego> --resolve "
-              "newest|hub|device:<dispositivo>", file=sys.stderr)
+        print(
+            "Nada se ha modificado. Resuélvelo con: checkpoint sync <juego> --resolve newest|hub|device:<dispositivo>",
+            file=sys.stderr,
+        )
         return 3
     return 0 if st["result"] in ("ok", "dry-run") else 1
 

@@ -1,4 +1,5 @@
 """Conflictos, baseline y resolución: casos de decisión de _do_sync."""
+
 import asyncio
 import json
 
@@ -9,8 +10,16 @@ from app.users import history
 from app.core import settings
 from app.config.models import parse_config, validate_config
 from app.sync.scheduler import Scheduler, validate_settings
-from app.sync.engine import (SyncAbort, decide, fingerprint, list_versions, load_baseline, pick_resolution, run_sync,
-                      save_baseline)
+from app.sync.engine import (
+    SyncAbort,
+    decide,
+    fingerprint,
+    list_versions,
+    load_baseline,
+    pick_resolution,
+    run_sync,
+    save_baseline,
+)
 from app.sync.transport import TransportError
 from fakes import LocalTransport
 from test_sync import CFG, Env, read
@@ -344,6 +353,7 @@ def test_process_open_aborts_before_anything(env):
 
 class Flip(LocalTransport):
     """El proceso aparece justo después de la primera comprobación (TOCTOU)."""
+
     calls = 0
 
     def process_running(self, name):
@@ -384,6 +394,7 @@ def test_partial_failure_keeps_baseline_and_recovers(env):
 # ---- decide / pick_resolution (puro) ----
 def test_decide_pure():
     from app.sync.engine import Fingerprint
+
     fp = lambda h, m=1: Fingerprint(h, m, 1 if h else 0, 1)  # noqa: E731
     assert decide({"a": fp("x"), "hub": fp("x")}, {})["kind"] == "same"
     assert decide({"a": fp("y"), "hub": fp("x")}, {"a": "x", "hub": "x"}) == {"kind": "winner", "winner": "a"}
@@ -394,8 +405,13 @@ def test_decide_pure():
 
 # ---- config / scheduler ----
 def test_game_on_conflict_validation():
-    base = {"devices": {"pc": {"name": "pc", "host": "h", "user": "u", "os": "linux"}, "l": {"name": "l", "host": "h2", "user": "u", "os": "linux"}},
-            "games": {"g": {"name": "g", "devices": ["pc", "l"], "paths": {"pc": "/a", "l": "/b"}}}}
+    base = {
+        "devices": {
+            "pc": {"name": "pc", "host": "h", "user": "u", "os": "linux"},
+            "l": {"name": "l", "host": "h2", "user": "u", "os": "linux"},
+        },
+        "games": {"g": {"name": "g", "devices": ["pc", "l"], "paths": {"pc": "/a", "l": "/b"}}},
+    }
     assert parse_config(base).games["g"].on_conflict is None  # config antigua: sin override
     base["games"]["g"]["on_conflict"] = "newest"
     assert parse_config(base).games["g"].on_conflict == "newest"
@@ -421,11 +437,22 @@ def test_scheduler_on_conflict_validation_and_default(tmp_path, monkeypatch):
 
 def _sched(env, monkeypatch, **cfg_extra):
     monkeypatch.setattr(settings, "DATA_DIR", env.data)
-    cfg = parse_config({
-        "devices": {"pc": {"name": "pc", "host": "h1", "user": "u", "os": "windows"},
-                    "laptop": {"name": "laptop", "host": "h2", "user": "d", "os": "linux"}},
-        "games": {"g": {"name": "g", "devices": ["pc", "laptop"], "paths": {"pc": "C:/Saves/g", "laptop": "/home/usuario/g"},
-                        **cfg_extra}}})
+    cfg = parse_config(
+        {
+            "devices": {
+                "pc": {"name": "pc", "host": "h1", "user": "u", "os": "windows"},
+                "laptop": {"name": "laptop", "host": "h2", "user": "d", "os": "linux"},
+            },
+            "games": {
+                "g": {
+                    "name": "g",
+                    "devices": ["pc", "laptop"],
+                    "paths": {"pc": "C:/Saves/g", "laptop": "/home/usuario/g"},
+                    **cfg_extra,
+                }
+            },
+        }
+    )
 
     def runner(cfg_, game, dry, log, **kw):
         return run_sync(cfg_, game, dry, env.data, log, env.tr(), **kw)
@@ -465,15 +492,24 @@ def test_api_resolution_passthrough_and_validation(tmp_path, monkeypatch):
     from fastapi.testclient import TestClient
     import app.main as M
     from app.api.auth import Auth
+
     monkeypatch.setattr(settings, "CONFIG_PATH", tmp_path / "config" / "config.yaml")
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path / "data")
     monkeypatch.setattr(settings, "STATIC_DIR", tmp_path / "static")
     (tmp_path / "static").mkdir()
     (tmp_path / "static/index.html").write_text("x")
     (tmp_path / "config").mkdir()
-    (tmp_path / "config/config.yaml").write_text(yaml.safe_dump({
-        "devices": {"pc": {"name": "pc", "host": "h", "user": "u", "os": "linux"}, "l": {"name": "l", "host": "h2", "user": "u", "os": "linux"}},
-        "games": {"g": {"name": "g", "devices": ["pc", "l"], "paths": {"pc": "/a", "l": "/b"}}}}))
+    (tmp_path / "config/config.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "devices": {
+                    "pc": {"name": "pc", "host": "h", "user": "u", "os": "linux"},
+                    "l": {"name": "l", "host": "h2", "user": "u", "os": "linux"},
+                },
+                "games": {"g": {"name": "g", "devices": ["pc", "l"], "paths": {"pc": "/a", "l": "/b"}}},
+            }
+        )
+    )
     seen = {}
 
     def fake(cfg, game, dry, log=None, **kw):
@@ -499,10 +535,12 @@ def test_api_resolution_passthrough_and_validation(tmp_path, monkeypatch):
 
 def test_cli_conflict_exit_code(env, monkeypatch, capsys):
     import app.cli as C
+
     conflict(env)
     monkeypatch.setattr(C, "load_config", lambda p: CFG)
     monkeypatch.setattr(settings, "DATA_DIR", env.data)
     from app.sync import engine as S
+
     monkeypatch.setattr(S, "get_transport", lambda dev: env.tr()["pc" if dev.host == "h1" else "laptop"])
     assert C.main(["sync", "g"]) == 3
     err = capsys.readouterr().err

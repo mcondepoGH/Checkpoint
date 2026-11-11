@@ -2,6 +2,7 @@
 El id de carpeta se deriva del nombre de usuario con SHA-256 (ver user_id): el nombre en crudo jamás forma parte de una ruta.
 El navegador ya la recorta y la reduce a 256x256; aquí solo se valida el tipo real (por los bytes, sin Pillow:
 no hay decodificación, así que se comprueba firma y estructura mínima), el tamaño y se escribe de forma atómica."""
+
 import hashlib
 import os
 import re
@@ -23,8 +24,12 @@ def sniff(data: bytes) -> Optional[str]:
         return "image/jpeg"
     if data[:8] == b"\x89PNG\r\n\x1a\n" and data[12:16] == b"IHDR" and b"IEND" in data[-16:]:
         return "image/png"
-    if data[:4] == b"RIFF" and data[8:12] == b"WEBP" and data[12:16] in (b"VP8 ", b"VP8L", b"VP8X") \
-            and 12 <= int.from_bytes(data[4:8], "little") + 8 <= len(data):
+    if (
+        data[:4] == b"RIFF"
+        and data[8:12] == b"WEBP"
+        and data[12:16] in (b"VP8 ", b"VP8L", b"VP8X")
+        and 12 <= int.from_bytes(data[4:8], "little") + 8 <= len(data)
+    ):
         return "image/webp"
     return None
 

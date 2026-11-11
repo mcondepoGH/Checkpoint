@@ -1,4 +1,5 @@
 """Prueba de conexión de un dispositivo con los datos del formulario (aunque aún no estén guardados). Sin FastAPI."""
+
 import logging
 import time
 
@@ -23,17 +24,32 @@ async def check_device(body: dict) -> dict:
         dev = Device.model_validate(raw)
     except ValidationError as e:
         causes = [{"path": ".".join(str(x) for x in err["loc"]), **pyd_body(err)} for err in e.errors()]
-        return {"ok": False, "message": "err.main.device_invalid",
-                "code": "err.main.device_invalid", "params": {"causes": causes}}
+        return {
+            "ok": False,
+            "message": "err.main.device_invalid",
+            "code": "err.main.device_invalid",
+            "params": {"causes": causes},
+        }
     t0 = time.monotonic()
     if dev.local:
         res = await run_in_threadpool(_check_local, dev, body)
-        api_log.debug("devices/test: local ok=%s code=%s en %.0f ms", res.get("ok"), res.get("code"),
-                      (time.monotonic() - t0) * 1000)
+        api_log.debug(
+            "devices/test: local ok=%s code=%s en %.0f ms",
+            res.get("ok"),
+            res.get("code"),
+            (time.monotonic() - t0) * 1000,
+        )
         return res
     res = await run_in_threadpool(_check_connection, dev)
-    api_log.debug("devices/test: %s@%s:%s ok=%s code=%s en %.0f ms", dev.user, dev.host, dev.port, res.get("ok"),
-                  res.get("code"), (time.monotonic() - t0) * 1000)
+    api_log.debug(
+        "devices/test: %s@%s:%s ok=%s code=%s en %.0f ms",
+        dev.user,
+        dev.host,
+        dev.port,
+        res.get("ok"),
+        res.get("code"),
+        (time.monotonic() - t0) * 1000,
+    )
     return res
 
 
@@ -43,8 +59,12 @@ def _check_local(dev: Device, body: dict):
         return {"ok": False, "message": "err.config.local_docker", "code": "err.config.local_docker", "params": {}}
     paths = body.get("paths", [])
     if not isinstance(paths, list) or len(paths) > 50 or not all(isinstance(p, str) for p in paths):
-        return {"ok": False, "message": "paths debe ser una lista de rutas (máx. 50)",
-                "code": "err.main.paths_invalid", "params": {"max": 50}}
+        return {
+            "ok": False,
+            "message": "paths debe ser una lista de rutas (máx. 50)",
+            "code": "err.main.paths_invalid",
+            "params": {"max": 50},
+        }
     if not paths:
         return local_folder_status(None)
     results = []
@@ -58,9 +78,11 @@ def _check_local(dev: Device, body: dict):
     if len(results) == 1:
         return results[0][1]
     # `message`: respaldo técnico (sin traducir); `results`: por ruta, con code/params (la UI los traduce).
-    return {"ok": all(r["ok"] for _, r in results),
-            "message": "\n".join(f"{p}: {r['message']}" for p, r in results),
-            "results": [{"path": p, **r} for p, r in results]}
+    return {
+        "ok": all(r["ok"] for _, r in results),
+        "message": "\n".join(f"{p}: {r['message']}" for p, r in results),
+        "results": [{"path": p, **r} for p, r in results],
+    }
 
 
 def _check_connection(dev: Device):
@@ -70,9 +92,19 @@ def _check_connection(dev: Device):
     try:
         first = bootstrap.ensure_host_key(dev.host, dev.port)
         get_transport(dev).check()
-        return {"ok": True, "message": "err.transport.connection_ok", "code": "err.transport.connection_ok",
-                "params": {}, "first_use": first}
+        return {
+            "ok": True,
+            "message": "err.transport.connection_ok",
+            "code": "err.transport.connection_ok",
+            "params": {},
+            "first_use": first,
+        }
     except (TransportError, bootstrap.BootstrapError) as e:
         params = {k: redact(v) if isinstance(v, str) else v for k, v in e.params.items()}
-        return {"ok": False, "message": describe_code(e.code, params), "code": e.code, "params": params,
-                "first_use": first}
+        return {
+            "ok": False,
+            "message": describe_code(e.code, params),
+            "code": e.code,
+            "params": params,
+            "first_use": first,
+        }

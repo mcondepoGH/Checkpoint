@@ -1,5 +1,6 @@
 """Estado compartido de la app (una instancia por `create_app`): sesión, config, ejecuciones, scheduler, hook y
 comprobador de actualizaciones. Los routers lo reciben con `Depends(get_ctx)` (ver `api/deps.py`); no hay globales."""
+
 from typing import Callable, Optional
 
 from ..config.models import Config, describe
@@ -26,7 +27,9 @@ class AppContext:
         return self.hooks.watcher
 
     def _config(self, error: Callable[[Optional[dict]], Exception]) -> Config:
-        snap = self.store.snapshot()  # recarga si el fichero cambió; cada ejecución conserva la Config con la que empezó
+        snap = (
+            self.store.snapshot()
+        )  # recarga si el fichero cambió; cada ejecución conserva la Config con la que empezó
         if snap.error:
             raise error(snap.error)
         return snap.cfg

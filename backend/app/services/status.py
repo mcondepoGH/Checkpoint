@@ -1,4 +1,5 @@
 """Último estado de sync de cada juego (ficheros `DATA_DIR/status/<id>.json`). Sin FastAPI."""
+
 import json
 import logging
 

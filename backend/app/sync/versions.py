@@ -1,4 +1,5 @@
 """Versiones guardadas en data/versions/<juego>/ y reemplazo casi atómico de directorios."""
+
 import os
 import re
 import shutil
@@ -33,8 +34,14 @@ def list_versions(data_dir: Path, game: str, names: Optional[Dict[str, str]] = N
                 for s in sorted(d.iterdir()):
                     if s.is_dir():
                         fp = fingerprint(s)
-                        sources.append({"source": s.name, "name": names.get(s.name, s.name),
-                                        "files": fp.files, "mtime": _fmt(fp.mtime)})
+                        sources.append(
+                            {
+                                "source": s.name,
+                                "name": names.get(s.name, s.name),
+                                "files": fp.files,
+                                "mtime": _fmt(fp.mtime),
+                            }
+                        )
                 out.append({"version": d.name, "sources": sources})
     return out
 
@@ -46,7 +53,9 @@ def count_versions(data_dir: Path, game: str) -> int:
     return sum(1 for d in base.iterdir() if d.is_dir() and not d.is_symlink() and VERSION_RE.match(d.name))
 
 
-def prune_versions(data_dir: Path, game: str, keep: int, log=lambda m: None, protect: Optional[str] = None) -> List[str]:
+def prune_versions(
+    data_dir: Path, game: str, keep: int, log=lambda m: None, protect: Optional[str] = None
+) -> List[str]:
     """Borra las versiones MÁS ANTIGUAS de `game` hasta dejar `keep` (0 = sin límite: no borra nada).
 
     Orden por el nombre de la versión (no por mtime). Nunca borra `protect` (la recién creada) ni deja
@@ -60,9 +69,10 @@ def prune_versions(data_dir: Path, game: str, keep: int, log=lambda m: None, pro
     if base.is_symlink() or not base.is_dir() or base.resolve().parent != root:
         return []
     base = base.resolve()
-    dirs = sorted((d for d in base.iterdir()
-                   if d.is_dir() and not d.is_symlink() and VERSION_RE.match(d.name)),
-                  key=lambda d: _version_key(d.name))
+    dirs = sorted(
+        (d for d in base.iterdir() if d.is_dir() and not d.is_symlink() and VERSION_RE.match(d.name)),
+        key=lambda d: _version_key(d.name),
+    )
     done: List[str] = []
     for d in dirs[: max(0, len(dirs) - keep)]:
         if d.name == protect or d.resolve().parent != base:

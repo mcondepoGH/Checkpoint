@@ -5,6 +5,7 @@
 - Sin ninguno de los dos: fichero `<lock>.excl` creado con O_EXCL que contiene el PID; un PID muerto
   (solo comprobable en POSIX) se considera lock huérfano.
 """
+
 import os
 import sys
 import uuid
@@ -123,6 +124,7 @@ def _acquire_excl(path: Path) -> _Handle:
                 lock.unlink()
             except FileNotFoundError:
                 pass
+
         return _Handle(release)
     raise LockBusy()
 

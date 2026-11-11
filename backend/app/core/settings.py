@@ -1,5 +1,6 @@
 """Ajustes desde variables de entorno (CHECKPOINT_*): USER, PASSWORD, PORT, HOST, HOME_DIR, SESSION_HOURS,
 COOKIE_SECURE, TRUST_PROXY, RUNTIME, LANG, LOG_LEVEL y HOOK_POLL/HOOK_SETTLE/HOOK_FIRST_SEEN (vigilante de cierre). El resto de rutas y valores se derivan de ellas o son constantes."""
+
 import os
 from pathlib import Path
 
@@ -48,8 +49,13 @@ def _paths():
     if running_in_docker():
         return "/config/config.yaml", "/data", "/keys/id_ed25519", "/keys/known_hosts", _static_default()
     h = native_home()
-    return (str(h / "config" / "config.yaml"), str(h / "data"), str(h / "keys" / "id_ed25519"),
-            str(h / "keys" / "known_hosts"), _static_default())
+    return (
+        str(h / "config" / "config.yaml"),
+        str(h / "data"),
+        str(h / "keys" / "id_ed25519"),
+        str(h / "keys" / "known_hosts"),
+        _static_default(),
+    )
 
 
 _CONFIG, _DATA, _KEY, _KNOWN, _STATIC = _paths()
@@ -86,8 +92,9 @@ def resolve_lang(environ=None):
     short = raw.strip().lower().replace("_", "-").split("-")[0]
     if short in SUPPORTED_LANGS:
         return short, None
-    return DEFAULT_LANG, (f"CHECKPOINT_LANG={raw!r} no es un idioma soportado ({', '.join(SUPPORTED_LANGS)}); "
-                          f"se usa '{DEFAULT_LANG}'")
+    return DEFAULT_LANG, (
+        f"CHECKPOINT_LANG={raw!r} no es un idioma soportado ({', '.join(SUPPORTED_LANGS)}); se usa '{DEFAULT_LANG}'"
+    )
 
 
 def default_lang(environ=None) -> str:

@@ -2,6 +2,7 @@
 
 Solo monta la app: estado compartido (`services.context.AppContext`), middleware, routers por tema (`api/routers`),
 documentación (`api/docs`) y SPA. Puntos de entrada estables: `app.main:app_factory` y `app.cli`."""
+
 import asyncio
 import logging
 from contextlib import asynccontextmanager
@@ -21,7 +22,9 @@ from .core import bootstrap, updates
 from .services.context import AppContext
 from .users import avatar
 
-api_log = logging.getLogger("checkpoint.api")  # DEBUG: una línea por petición /api y detalle por endpoint (sin secretos)
+api_log = logging.getLogger(
+    "checkpoint.api"
+)  # DEBUG: una línea por petición /api y detalle por endpoint (sin secretos)
 
 
 def create_app(auth: Optional[Auth] = None) -> FastAPI:
@@ -36,17 +39,32 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             await ctx.watcher.cancel_all()
 
     # La documentación (/api/docs, /api/openapi.json) la monta `docs.install` con la dependencia de sesión.
-    app = FastAPI(title=docs.TITLE, version=updates.installed_version(), description=docs.DESCRIPTION,
-                  openapi_tags=[{"name": docs.TAG, "description": docs.TAG_DESCRIPTION}],
-                  docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
+    app = FastAPI(
+        title=docs.TITLE,
+        version=updates.installed_version(),
+        description=docs.DESCRIPTION,
+        openapi_tags=[{"name": docs.TAG, "description": docs.TAG_DESCRIPTION}],
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
+        lifespan=lifespan,
+    )
     app.add_middleware(RequestDebugLog, logger=api_log)
     if auth is None:
         auth = Auth.from_env()
     ctx = AppContext(auth)
     app.state.ctx = ctx
     app.state.watcher = ctx.watcher
-    for router in (session.router, profile.router, config.router, scheduler_router.router, updates_router.router,
-                   sync.router, versions.router, hook.router):
+    for router in (
+        session.router,
+        profile.router,
+        config.router,
+        scheduler_router.router,
+        updates_router.router,
+        sync.router,
+        versions.router,
+        hook.router,
+    ):
         app.include_router(router)
     # Documentación OpenAPI (solo la API de la API key; con sesión). Antes del catch-all SPA.
     docs.install(app, require)

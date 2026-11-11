@@ -1,4 +1,5 @@
 """Ids estables: el id interno no depende del nombre; renombrar no mueve nada en disco."""
+
 import copy
 import json
 import os
@@ -14,8 +15,17 @@ from app.core import settings
 from app.config.models import ConfigError, load_config, parse_config, resolve_ref, validate_config
 from app.config.store import diff_configs, render_yaml
 from app.sync.scheduler import Scheduler
-from app.sync.engine import (SyncAbort, count_versions, fingerprint, list_versions, load_baseline, resolve_game,
-                      restore_version, run_sync, save_baseline)
+from app.sync.engine import (
+    SyncAbort,
+    count_versions,
+    fingerprint,
+    list_versions,
+    load_baseline,
+    resolve_game,
+    restore_version,
+    run_sync,
+    save_baseline,
+)
 from fakes import LocalTransport
 
 from test_api import client, login  # noqa: F401  (fixture)
@@ -25,16 +35,32 @@ GID = "juego-de-prueba-28d4413f"  # id interno estable: es la carpeta de data/ d
 PC, LAPTOP = "pc", "laptop"
 
 BASE = {
-    "devices": {PC: {"name": PC, "host": "h1", "user": "u", "os": "windows"},
-                LAPTOP: {"name": LAPTOP, "host": "h2", "user": "d", "os": "linux"}},
-    "games": {GID: {"name": GAME, "devices": [PC, LAPTOP], "paths": {PC: "C:/Saves/dq", LAPTOP: "/home/usuario/dq"},
-                    "process": "dq.exe", "keep_versions": 3}},
+    "devices": {
+        PC: {"name": PC, "host": "h1", "user": "u", "os": "windows"},
+        LAPTOP: {"name": LAPTOP, "host": "h2", "user": "d", "os": "linux"},
+    },
+    "games": {
+        GID: {
+            "name": GAME,
+            "devices": [PC, LAPTOP],
+            "paths": {PC: "C:/Saves/dq", LAPTOP: "/home/usuario/dq"},
+            "process": "dq.exe",
+            "keep_versions": 3,
+        }
+    },
 }
 NEW = {
-    "devices": {"pc-1a2b3c4d": {"name": "Mi PC", "host": "h1", "user": "u", "os": "windows"},
-                "laptop-5e6f7a8b": {"name": "Portátil", "host": "h2", "user": "d", "os": "linux"}},
-    "games": {"zelda-0a1b2c3d": {"name": "Zelda", "devices": ["pc-1a2b3c4d", "laptop-5e6f7a8b"],
-                                 "paths": {"pc-1a2b3c4d": "C:/Saves/z", "laptop-5e6f7a8b": "/home/usuario/z"}}},
+    "devices": {
+        "pc-1a2b3c4d": {"name": "Mi PC", "host": "h1", "user": "u", "os": "windows"},
+        "laptop-5e6f7a8b": {"name": "Portátil", "host": "h2", "user": "d", "os": "linux"},
+    },
+    "games": {
+        "zelda-0a1b2c3d": {
+            "name": "Zelda",
+            "devices": ["pc-1a2b3c4d", "laptop-5e6f7a8b"],
+            "paths": {"pc-1a2b3c4d": "C:/Saves/z", "laptop-5e6f7a8b": "/home/usuario/z"},
+        }
+    },
 }
 
 
@@ -87,6 +113,7 @@ def test_duplicate_yaml_ids_are_a_clear_error(tmp_path):
     with pytest.raises(ConfigError, match="yaml_duplicate_key"):
         load_config(p)
     from app.config.store import parse_text
+
     cfg, err = parse_text(p.read_text())
     assert cfg is None and err["code"] == "err.config.yaml_duplicate_key"
 
@@ -154,8 +181,11 @@ def test_id_is_stable_when_renaming():
 
 
 def test_resolve_ref_by_id_name_and_ambiguity():
-    items = {"a-1": SimpleNamespace(name="Zelda"), "b-2": SimpleNamespace(name="Mario"),
-             "Zelda": SimpleNamespace(name="Otro")}
+    items = {
+        "a-1": SimpleNamespace(name="Zelda"),
+        "b-2": SimpleNamespace(name="Mario"),
+        "Zelda": SimpleNamespace(name="Otro"),
+    }
     assert resolve_ref(items, "b-2") == "b-2" and resolve_ref(items, "Mario") == "b-2"
     assert resolve_ref(items, "mario") == "b-2"  # sin mayúsculas si es único
     assert resolve_ref(items, "nope") is None and resolve_ref(items, "") is None and resolve_ref(items, 3) is None
@@ -221,7 +251,9 @@ def test_rename_game_and_device_changes_no_disk_path_and_keeps_data(disk):
     assert (disk.data / "state" / f"{GID}.json").exists() and (disk.data / "status" / f"{GID}.json").exists()
     assert (disk.data / "locks" / f"{GID}.lock").exists()
     v = list_versions(disk.data, GID, {k: d.name for k, d in c.devices.items()})
-    assert {s["source"] for s in v[0]["sources"]} <= {PC, "hub"} and "Ordenador de mesa" in {s["name"] for v_ in v for s in v_["sources"]}
+    assert {s["source"] for s in v[0]["sources"]} <= {PC, "hub"} and "Ordenador de mesa" in {
+        s["name"] for v_ in v for s in v_["sources"]
+    }
 
 
 def test_logs_and_messages_show_names_not_ids(disk):
@@ -314,7 +346,7 @@ def test_history_annotate_current_and_deleted():
     mk = lambda games: {"id": "e", "started": "2026-01-01T00:00:00+00:00", "games": games}  # noqa: E731
     new_e = mk({gid: {"result": "ok", "message": "", "name": "Nombre viejo"}})
     deleted_new = mk({"gone-00000000": {"result": "ok", "message": "", "name": "Era este"}})
-    no_name = mk({"Zelda": {"result": "ok", "message": ""}})   # clave que no es un id actual: no se mapea por nombre
+    no_name = mk({"Zelda": {"result": "ok", "message": ""}})  # clave que no es un id actual: no se mapea por nombre
     a = history.annotate([new_e, deleted_new, no_name], cfg.games)
     assert a[0]["games"][gid]["name"] == "Zelda" and a[0]["games"][gid]["id"] == gid  # nombre actual
     assert a[1]["games"]["gone-00000000"]["name"] == "Era este" and a[1]["games"]["gone-00000000"]["id"] is None
@@ -332,7 +364,9 @@ def test_diff_rename_is_a_name_change_not_add_remove():
     assert d["games"]["added"] == [] and d["games"]["removed"] == []
     assert d["games"]["changed"] == {"zelda-0a1b2c3d": {"name": {"old": "Zelda", "new": "Zelda BOTW"}}}
     assert d["devices"]["changed"] == {"pc-1a2b3c4d": {"name": {"old": "Mi PC", "new": "Torre"}}}
-    assert d["names"]["games"]["zelda-0a1b2c3d"] == "Zelda BOTW" and d["names"]["devices"]["laptop-5e6f7a8b"] == "Portátil"
+    assert (
+        d["names"]["games"]["zelda-0a1b2c3d"] == "Zelda BOTW" and d["names"]["devices"]["laptop-5e6f7a8b"] == "Portátil"
+    )
     assert d["empty"] is False
     assert diff_configs(old, old)["empty"] is True
 
@@ -343,8 +377,11 @@ def cli_env(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path / "data")
     monkeypatch.setattr(settings, "CONFIG_PATH", tmp_path / "config.yaml")
     d = copy.deepcopy(NEW)
-    d["games"]["x"] = {"name": "Mario", "devices": ["pc-1a2b3c4d", "laptop-5e6f7a8b"],
-                       "paths": {"pc-1a2b3c4d": "C:/m", "laptop-5e6f7a8b": "/home/usuario/m"}}
+    d["games"]["x"] = {
+        "name": "Mario",
+        "devices": ["pc-1a2b3c4d", "laptop-5e6f7a8b"],
+        "paths": {"pc-1a2b3c4d": "C:/m", "laptop-5e6f7a8b": "/home/usuario/m"},
+    }
     d["games"]["mario-00000000"] = {**d["games"]["x"], "name": "x"}  # el nombre "x" es el id de otro juego
     settings.CONFIG_PATH.write_text(yaml.safe_dump(d, allow_unicode=True))
     roots = {"h1": tmp_path / "pc", "h2": tmp_path / "laptop"}
@@ -412,7 +449,7 @@ def test_api_sync_by_id_and_by_name_and_status_keys(api):
     assert api.post("/api/sync/nada", json={}).status_code == 404
     status = api.get("/api/status").json()
     assert list(status) == [gid] and status[gid]["name"] == "Zelda"
-    assert (api.get("/api/versions/Zelda").json() == api.get(f"/api/versions/{gid}").json())
+    assert api.get("/api/versions/Zelda").json() == api.get(f"/api/versions/{gid}").json()
     assert api.get("/api/versions/nada").status_code == 404
     assert api.get("/api/versions/Zelda/limit").json()["max"] == 20
 
@@ -450,11 +487,15 @@ def test_api_conflict_resolution_device_by_name(api, tmp_path):
 
 def test_api_history_annotated_with_names(api):
     now = datetime.now(timezone.utc)
-    history.append(history.make_entry(now, 1, "scheduled", "ok",
-                                      {"zelda-0a1b2c3d": {"result": "ok", "message": "", "name": "Nombre viejo"}}, ""), now=now)
+    history.append(
+        history.make_entry(
+            now, 1, "scheduled", "ok", {"zelda-0a1b2c3d": {"result": "ok", "message": "", "name": "Nombre viejo"}}, ""
+        ),
+        now=now,
+    )
     es = api.get("/api/scheduler/history").json()["entries"]
     g = es[0]["games"]["zelda-0a1b2c3d"]
-    assert g["name"] == "Zelda" and g["id"] == "zelda-0a1b2c3d"   # nombre actual de la config
+    assert g["name"] == "Zelda" and g["id"] == "zelda-0a1b2c3d"  # nombre actual de la config
 
 
 def test_api_validate_reports_id_paths_and_test_device_without_name(api):

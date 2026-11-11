@@ -1,4 +1,5 @@
 """Juego de un solo dispositivo («solo checkpoint»): aviso `opened` sin ?device=, cierre y ciclo del scheduler."""
+
 import os
 import time
 
@@ -21,9 +22,17 @@ class Env:
     def __init__(self, tmp):
         self.tmp = tmp
         self.d1, self.hub = tmp / "pc1", tmp / "data" / "hub" / "g1"
-        cfg = {"devices": {"dev-1": {"name": "PC uno", "local": True, "os": "linux"}},
-               "games": {"g1": {"name": "Mi Juego", "devices": ["dev-1"], "paths": {"dev-1": str(self.d1)},
-                                "process": "game.exe"}}}
+        cfg = {
+            "devices": {"dev-1": {"name": "PC uno", "local": True, "os": "linux"}},
+            "games": {
+                "g1": {
+                    "name": "Mi Juego",
+                    "devices": ["dev-1"],
+                    "paths": {"dev-1": str(self.d1)},
+                    "process": "game.exe",
+                }
+            },
+        }
         (tmp / "config").mkdir(parents=True, exist_ok=True)
         (tmp / "config" / "config.yaml").write_text(yaml.safe_dump(cfg, allow_unicode=True))
         self.running = False
@@ -47,6 +56,7 @@ class Env:
 @pytest.fixture
 def cl(tmp_path, monkeypatch):
     from app.sync import engine as sync
+
     e = Env(tmp_path)
     real = sync.get_transport
 
@@ -113,19 +123,22 @@ def test_cierre_guarda_checkpoint_en_el_hub(cl):
 def test_ciclo_del_scheduler_con_un_dispositivo(tmp_path, monkeypatch):
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path / "data")
     from app.sync.engine import run_sync, list_versions
+
     e = Env(tmp_path)
     e.seed("old")
     e.write(e.d1, "new", 2000)
     cfg = parse_config(yaml.safe_load((tmp_path / "config" / "config.yaml").read_text()))
     data = tmp_path / "data"
-    s = Scheduler(lambda: cfg, lambda g: False,
-                  runner=lambda c, g, dry, log, **kw: run_sync(c, g, dry, data, log, **kw))
+    s = Scheduler(
+        lambda: cfg, lambda g: False, runner=lambda c, g, dry, log, **kw: run_sync(c, g, dry, data, log, **kw)
+    )
     res, m, c, st = s.run_game(cfg, "g1")
     assert res == "ok" and e.read(e.hub) == "new" and len(list_versions(data, "g1")) == 1
 
 
 def test_opened_omite_si_la_ruta_local_no_existe(cl):
     import shutil
+
     e = cl.env
     shutil.rmtree(e.d1)
     r = cl.post("/api/hook/g1/opened", headers=cl.hdr)
@@ -134,11 +147,16 @@ def test_opened_omite_si_la_ruta_local_no_existe(cl):
     assert j["code"] == "err.sync.local_missing_manual_required"
     assert not e.d1.exists() and e.read(e.hub) == "base"
     h = [x for x in history.read() if x["trigger"] == "hook"]
-    assert len(h) == 1 and h[0]["result"] == "skipped" and h[0]["games"]["g1"]["code"] == "err.sync.local_missing_manual_required"
+    assert (
+        len(h) == 1
+        and h[0]["result"] == "skipped"
+        and h[0]["games"]["g1"]["code"] == "err.sync.local_missing_manual_required"
+    )
 
 
 def test_sync_manual_api_restaura_la_ruta_local(cl):
     import shutil
+
     e = cl.env
     shutil.rmtree(e.d1)
     cl.cookies.clear()

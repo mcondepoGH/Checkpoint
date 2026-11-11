@@ -6,6 +6,7 @@ red, ni caché, ni ajustes.
 
 Nunca descarga ni instala nada. Un fallo de red no es un error para el usuario: se conserva lo último
 conocido y se reintenta más tarde. Con la comprobación desactivada no se hace ninguna petición."""
+
 import json
 import os
 import re
@@ -20,16 +21,18 @@ from typing import Callable, Optional
 from . import runtime, settings
 
 REPO = "mcondepoGH/Checkpoint"
-CACHE_TTL = 6 * 3600   # s de validez de una comprobación correcta
+CACHE_TTL = 6 * 3600  # s de validez de una comprobación correcta
 UNKNOWN = "desconocida"
-TIMEOUT = 5            # s por petición
-MIN_REFRESH = 60       # s mínimos entre comprobaciones forzadas
-RETRY_AFTER = 900      # s antes de reintentar tras un fallo
-NOTES_MAX = 6000       # caracteres de notas que se devuelven
-MAX_BODY = 1_000_000   # bytes máximos de respuesta
+TIMEOUT = 5  # s por petición
+MIN_REFRESH = 60  # s mínimos entre comprobaciones forzadas
+RETRY_AFTER = 900  # s antes de reintentar tras un fallo
+NOTES_MAX = 6000  # caracteres de notas que se devuelven
+MAX_BODY = 1_000_000  # bytes máximos de respuesta
 SETTINGS_FILE = "updates.json"
 CACHE_FILE = "update_cache.json"
-_SEMVER_RE = re.compile(r"^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z.-]+)?$")
+_SEMVER_RE = re.compile(
+    r"^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*))?(?:\+[0-9A-Za-z.-]+)?$"
+)
 CHANNELS = ("stable", "beta")
 DEFAULT_CHANNEL = "stable"
 
@@ -106,7 +109,8 @@ def _opener():
 def fetch_releases(repo: str) -> list:
     req = urllib.request.Request(
         f"https://api.github.com/repos/{repo}/releases?per_page=30",
-        headers={"Accept": "application/vnd.github+json", "User-Agent": "Checkpoint-update-check"})
+        headers={"Accept": "application/vnd.github+json", "User-Agent": "Checkpoint-update-check"},
+    )
     with _opener().open(req, timeout=TIMEOUT) as r:
         data = json.loads(r.read(MAX_BODY))
     if not isinstance(data, list):
@@ -133,10 +137,12 @@ def pick_latest(releases, channel: str = DEFAULT_CHANNEL) -> Optional[dict]:
     if not best:
         return None
     url = best.get("html_url")
-    return {"version": format_semver(best["tag_name"]),
-            "prerelease": bool(best.get("prerelease")) or best_k[1] == 0,
-            "notes": str(best.get("body") or "")[:NOTES_MAX],
-            "url": url if isinstance(url, str) and url.startswith("https://") else None}
+    return {
+        "version": format_semver(best["tag_name"]),
+        "prerelease": bool(best.get("prerelease")) or best_k[1] == 0,
+        "notes": str(best.get("body") or "")[:NOTES_MAX],
+        "url": url if isinstance(url, str) and url.startswith("https://") else None,
+    }
 
 
 def applicable() -> bool:
@@ -205,22 +211,57 @@ class UpdateChecker:
         old = self._cache if self._same(self._cache, repo, channel) else {}
         try:
             latest = pick_latest((self._fetch or fetch_releases)(repo), channel)
-            self._cache = {"repo": repo, "channel": channel, "attempt_at": now, "checked_at": now, "ok": True, "latest": latest}
+            self._cache = {
+                "repo": repo,
+                "channel": channel,
+                "attempt_at": now,
+                "checked_at": now,
+                "ok": True,
+                "latest": latest,
+            }
         except Exception:  # red caída, límite de GitHub, JSON roto...: silencioso, se conserva lo anterior
-            self._cache = {"repo": repo, "channel": channel, "attempt_at": now, "checked_at": old.get("checked_at"), "ok": False,
-                           "latest": old.get("latest")}
+            self._cache = {
+                "repo": repo,
+                "channel": channel,
+                "attempt_at": now,
+                "checked_at": old.get("checked_at"),
+                "ok": False,
+                "latest": old.get("latest"),
+            }
         self._write(CACHE_FILE, self._cache)
 
     def state(self, refresh: bool = False) -> dict:
         actual = installed_version()
         if not applicable():
             # Sin red, sin caché, sin leer ajustes guardados: campos neutros y sin error.
-            return {"aplicable": False, "actual": actual, "ultima": None, "hay_actualizacion": False, "notas": "",
-                    "url": None, "comprobado_en": None, "error": None, "habilitado": False, "repo": REPO,
-                    "canal": DEFAULT_CHANNEL, "prerelease": False}
-        base = {"aplicable": True, "actual": actual, "ultima": None, "hay_actualizacion": False, "notas": "", "url": None,
-                "comprobado_en": None, "error": None, "habilitado": self.enabled(), "repo": REPO,
-                "canal": self.channel(), "prerelease": False}
+            return {
+                "aplicable": False,
+                "actual": actual,
+                "ultima": None,
+                "hay_actualizacion": False,
+                "notas": "",
+                "url": None,
+                "comprobado_en": None,
+                "error": None,
+                "habilitado": False,
+                "repo": REPO,
+                "canal": DEFAULT_CHANNEL,
+                "prerelease": False,
+            }
+        base = {
+            "aplicable": True,
+            "actual": actual,
+            "ultima": None,
+            "hay_actualizacion": False,
+            "notas": "",
+            "url": None,
+            "comprobado_en": None,
+            "error": None,
+            "habilitado": self.enabled(),
+            "repo": REPO,
+            "canal": self.channel(),
+            "prerelease": False,
+        }
         if not base["habilitado"]:
             return base
         with self._lock:

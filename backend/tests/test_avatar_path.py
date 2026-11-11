@@ -1,4 +1,5 @@
 """Resolución de la carpeta de foto por usuario: id seguro para cualquier nombre."""
+
 import re
 
 import pytest
@@ -6,8 +7,26 @@ import pytest
 from app.users import avatar
 from app.core import settings
 
-HOSTILE = ["../../etc/passwd", "..", ".", "a/b", "a\\b", "/abs", "..\\..", "ñandú", "管理员", "A\x00B", "x" * 5000,
-           " admin ", "Admin", "admin\n", "\ud800", "%2e%2e%2f", "con:aux", "-rf"]
+HOSTILE = [
+    "../../etc/passwd",
+    "..",
+    ".",
+    "a/b",
+    "a\\b",
+    "/abs",
+    "..\\..",
+    "ñandú",
+    "管理员",
+    "A\x00B",
+    "x" * 5000,
+    " admin ",
+    "Admin",
+    "admin\n",
+    "\ud800",
+    "%2e%2e%2f",
+    "con:aux",
+    "-rf",
+]
 
 
 @pytest.fixture(autouse=True)

@@ -1,4 +1,5 @@
 """Dependencias comunes de los routers: contexto de la app, sesión por cookie, Origin/CSRF, API key (Bearer) y cuerpo JSON."""
+
 import logging
 
 from fastapi import APIRouter, Depends, Request
@@ -8,7 +9,9 @@ from ..core.errors import ApiError
 from ..services.context import AppContext
 from ..users import apikey, avatar
 
-api_log = logging.getLogger("checkpoint.api")  # DEBUG: una línea por petición /api y detalle por endpoint (sin secretos)
+api_log = logging.getLogger(
+    "checkpoint.api"
+)  # DEBUG: una línea por petición /api y detalle por endpoint (sin secretos)
 COOKIE = "checkpoint_session"
 
 
@@ -34,8 +37,9 @@ def require(request: Request):
         origin = request.headers.get("origin")
         host = request.headers.get("host")
         if origin and host and origin.split("://", 1)[-1] != host:
-            api_log.debug("%s %s: Origin %r no coincide con Host %r (403)", request.method, request.url.path,
-                          origin, host)
+            api_log.debug(
+                "%s %s: Origin %r no coincide con Host %r (403)", request.method, request.url.path, origin, host
+            )
             raise ApiError(403, "err.main.origin_forbidden")
 
 
@@ -79,7 +83,11 @@ def hook_user(request: Request) -> str:
     apikey.verify(user, token)  # mismo trabajo con entrada mal formada: sin diferencias de tiempo
     auth.hook_fail(ip)
     # Solo se registra el motivo grueso, nunca el token recibido.
-    api_log.debug("hook auth: ip=%s fallo (%s) (401)", ip, "sin Bearer o mal formada" if not apikey.is_well_formed(token) else "key no válida")
+    api_log.debug(
+        "hook auth: ip=%s fallo (%s) (401)",
+        ip,
+        "sin Bearer o mal formada" if not apikey.is_well_formed(token) else "key no válida",
+    )
     raise ApiError(401, "err.apikey.invalid", headers={"WWW-Authenticate": "Bearer"})
 
 

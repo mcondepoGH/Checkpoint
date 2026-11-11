@@ -50,14 +50,30 @@ def test_validate_ok():
 
 
 def test_validate_errors_by_field_path():
-    d = {"devices": {"pc": {"name": "Equipo pc", "host": "x y", "user": "u", "os": "linux", "port": 70000},
-                     "laptop": {"name": "Equipo laptop", "host": "h", "user": "u", "os": "linux"}},
-         "games": {"ejemplo": {"name": "Juego ejemplo", "devices": ["pc", "laptop"], "paths": {"pc": "rel", "laptop": "/x/y"},
-                               "process": "a;b", "keep_versions": -1}}}
+    d = {
+        "devices": {
+            "pc": {"name": "Equipo pc", "host": "x y", "user": "u", "os": "linux", "port": 70000},
+            "laptop": {"name": "Equipo laptop", "host": "h", "user": "u", "os": "linux"},
+        },
+        "games": {
+            "ejemplo": {
+                "name": "Juego ejemplo",
+                "devices": ["pc", "laptop"],
+                "paths": {"pc": "rel", "laptop": "/x/y"},
+                "process": "a;b",
+                "keep_versions": -1,
+            }
+        },
+    }
     cfg, errs = validate_config(d)
     assert cfg is None
-    assert set(errs) >= {"devices.pc.host", "devices.pc.port", "games.ejemplo.process",
-                         "games.ejemplo.keep_versions", "games.ejemplo.paths.pc"}
+    assert set(errs) >= {
+        "devices.pc.host",
+        "devices.pc.port",
+        "games.ejemplo.process",
+        "games.ejemplo.keep_versions",
+        "games.ejemplo.paths.pc",
+    }
     assert errs["games.ejemplo.paths.pc"]["code"] == "err.config.path_absolute"
     assert "games.ejemplo.paths.laptop" not in errs
 
@@ -82,7 +98,10 @@ def test_validate_incomplete_game_and_duplicates():
 
 def test_validate_via_endpoint(client):
     login(client)
-    r = client.post("/api/config/validate", json={"config": {"devices": {"a": {"name": "Equipo a", "host": "-x", "user": "u", "os": "linux"}}}})
+    r = client.post(
+        "/api/config/validate",
+        json={"config": {"devices": {"a": {"name": "Equipo a", "host": "-x", "user": "u", "os": "linux"}}}},
+    )
     assert r.status_code == 200 and r.json()["ok"] is False and "devices.a.host" in r.json()["errors"]
     assert client.post("/api/config/validate", json={"config": CFG}).json() == {"ok": True, "errors": {}}
     assert client.post("/api/config/validate", json=[1]).status_code == 400
@@ -192,7 +211,9 @@ def test_invalid_external_edit_reported_not_crashing(env):
     snap = store.snapshot()
     assert snap.error and snap.cfg is None
     settings.CONFIG_PATH.write_text("devices:\n  a: {host: 'x y', user: u, os: linux}\n")
-    assert {"path": "devices.a.host", "code": "err.config.host_invalid", "params": {}} in store.snapshot().error["params"]["causes"]
+    assert {"path": "devices.a.host", "code": "err.config.host_invalid", "params": {}} in store.snapshot().error[
+        "params"
+    ]["causes"]
 
 
 # ---------- restauración ----------
@@ -223,8 +244,14 @@ def test_restore_conflict_and_invalid(env):
 
 # ---------- diff ----------
 def test_diff():
-    old = parse_config({"devices": {"a": {"name": "Equipo a", "host": "h1", "user": "u", "os": "linux"},
-                                    "b": {"name": "Equipo b", "host": "h2", "user": "u", "os": "linux"}}}).model_dump()
+    old = parse_config(
+        {
+            "devices": {
+                "a": {"name": "Equipo a", "host": "h1", "user": "u", "os": "linux"},
+                "b": {"name": "Equipo b", "host": "h2", "user": "u", "os": "linux"},
+            }
+        }
+    ).model_dump()
     new = copy.deepcopy(old)
     new["devices"]["a"]["port"] = 2200
     del new["devices"]["b"]

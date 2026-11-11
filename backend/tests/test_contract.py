@@ -1,4 +1,5 @@
 """Contrato JSON de la API que consume el frontend (claves exactas) y cuerpos mal formados."""
+
 import json
 
 import pytest
@@ -11,10 +12,13 @@ from app.main import create_app
 PW = "correct horse"
 GID = "g1"
 DEV_A, DEV_B = "equipo-a", "equipo-b"
-CFG = {"devices": {DEV_A: {"name": "Equipo A", "host": "192.0.2.1", "user": "u", "os": "linux"},
-                   DEV_B: {"name": "Equipo B", "host": "192.0.2.2", "user": "u", "os": "windows"}},
-       "games": {GID: {"name": "Juego de prueba", "devices": [DEV_A, DEV_B],
-                       "paths": {DEV_A: "/x/y", DEV_B: "C:/z"}}}}
+CFG = {
+    "devices": {
+        DEV_A: {"name": "Equipo A", "host": "192.0.2.1", "user": "u", "os": "linux"},
+        DEV_B: {"name": "Equipo B", "host": "192.0.2.2", "user": "u", "os": "windows"},
+    },
+    "games": {GID: {"name": "Juego de prueba", "devices": [DEV_A, DEV_B], "paths": {DEV_A: "/x/y", DEV_B: "C:/z"}}},
+}
 
 
 @pytest.fixture
@@ -42,7 +46,13 @@ def test_contract_config(api):
 
 def test_contract_scheduler(api):
     assert set(api.get("/api/scheduler").json()) >= {
-        "enabled", "interval_hours", "run_on_start", "on_conflict", "next_run", "last_run"}
+        "enabled",
+        "interval_hours",
+        "run_on_start",
+        "on_conflict",
+        "next_run",
+        "last_run",
+    }
 
 
 def test_contract_updates(api):

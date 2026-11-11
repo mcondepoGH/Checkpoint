@@ -1,4 +1,5 @@
 """Lock por juego portable: flock (POSIX), msvcrt (simulado) y fallback O_EXCL + PID."""
+
 import os
 import subprocess
 import sys
@@ -33,6 +34,7 @@ def test_context_manager_libera_con_excepcion(tmp_path, backend):
 def test_flock_compatible_con_fcntl_directo(tmp_path):
     """Los tests históricos y otros procesos toman el mismo fichero con fcntl.flock."""
     import fcntl
+
     p = tmp_path / "g.lock"
     f = open(p, "w")
     fcntl.flock(f, fcntl.LOCK_EX)
@@ -45,9 +47,11 @@ def test_flock_compatible_con_fcntl_directo(tmp_path):
 
 def test_flock_entre_procesos(tmp_path):
     p = tmp_path / "g.lock"
-    code = ("import sys,time;sys.path.insert(0,%r);from app.sync.locking import acquire;"
-            "h=acquire(%r,'flock');print('ok',flush=True);time.sleep(30)" % (
-                os.path.dirname(os.path.dirname(os.path.dirname(locking.__file__))), str(p)))
+    code = (
+        "import sys,time;sys.path.insert(0,%r);from app.sync.locking import acquire;"
+        "h=acquire(%r,'flock');print('ok',flush=True);time.sleep(30)"
+        % (os.path.dirname(os.path.dirname(os.path.dirname(locking.__file__))), str(p))
+    )
     c = subprocess.Popen([sys.executable, "-c", code], stdout=subprocess.PIPE)
     try:
         assert c.stdout.readline().strip() == b"ok"
@@ -104,6 +108,7 @@ def test_excl_concurrencia_solo_uno_gana(tmp_path):
             winners.append(h)
         except LockBusy:
             pass
+
     ts = [threading.Thread(target=w) for _ in range(8)]
     [t.start() for t in ts]
     [t.join() for t in ts]
@@ -155,6 +160,7 @@ def test_backend_msvcrt_simulado(monkeypatch, tmp_path):
 
 def test_sync_usa_el_lock_portable_y_aborta_si_ocupado(tmp_path):
     from app.sync.engine import SyncAbort, _game_lock
+
     with _game_lock(tmp_path, "g"):
         with pytest.raises(SyncAbort, match="in_progress"):
             with _game_lock(tmp_path, "g"):
@@ -166,6 +172,7 @@ def test_sync_usa_el_lock_portable_y_aborta_si_ocupado(tmp_path):
 def test_excl_sin_enlaces_duros_usa_creacion_exclusiva(monkeypatch, tmp_path):
     def nolink(a, b):
         raise OSError(1, "Operation not permitted")
+
     monkeypatch.setattr(os, "link", nolink)
     p = tmp_path / "g.lock"
     h = acquire(p, "excl")

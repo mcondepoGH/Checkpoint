@@ -1,4 +1,5 @@
 """Web (SPA): estáticos del build del frontend y `index.html` para el resto de rutas. Catch-all: se monta el último."""
+
 from fastapi.responses import FileResponse
 
 from ...core import settings

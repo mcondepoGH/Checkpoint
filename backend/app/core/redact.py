@@ -1,4 +1,5 @@
 """Redacción de secretos en logs."""
+
 import os
 import re
 
