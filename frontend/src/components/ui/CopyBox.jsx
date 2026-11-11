@@ -22,11 +22,10 @@ export default function CopyBox({ value, label, what, describedBy, initialCopied
   const copyLabel = copied ? t('common.copied') : what ? t('common.copyWhat', { what }) : t('common.copy');
   return (
     <div className={['copybox', className].filter(Boolean).join(' ')}>
-      <code
+      <div
         id={id}
         className="copybox-field"
         tabIndex={0}
-        // eslint-disable-next-line jsx-a11y/no-noninteractive-element-to-interactive-role -- textbox de solo lectura enfocable, para leer y seleccionar el valor
         role="textbox"
         aria-readonly="true"
         aria-multiline="true"
@@ -34,7 +33,7 @@ export default function CopyBox({ value, label, what, describedBy, initialCopied
         aria-describedby={describedBy}
       >
         {value}
-      </code>
+      </div>
       <Button iconOnly className="copybox-copy" onClick={copy} title={copyLabel} aria-label={copyLabel}>
         <Icon name={copied ? 'check' : 'copy'} />
       </Button>
