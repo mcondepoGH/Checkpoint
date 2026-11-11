@@ -28,7 +28,7 @@ export default function Versions({ config, onGoSettings }) {
   useEffect(() => {
     load(game);
     loadLimit(game);
-  }, [game, config]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [game, config]);
 
   const restore = async (version, source, sourceName) => {
     if (!window.confirm(t('versions.confirm', { version, source: sourceName }))) return;

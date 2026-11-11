@@ -4,7 +4,6 @@
 // con un portapapeles falso. Usa esbuild (viene con Vite); si no está disponible el test se salta.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import path from 'node:path';
 import { osSteps } from '#src/components/keyhelp/keyhelpSteps.js';
 import { bundle, SRC } from '../../helpers/bundle.mjs';
 

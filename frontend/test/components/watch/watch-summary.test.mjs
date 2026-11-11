@@ -149,7 +149,6 @@ test('cadenas de vigilancia y de actualización del perfil resueltas en es y en 
 });
 
 test('SCSS: puntos y anillo del pulso son cuadrados explícitos (círculo, no óvalo) y el pulso respeta reduced-motion', () => {
-  const css = (f) => fs.readFileSync(path.join(SRC, 'styles', f), 'utf8');
   const watch = fs.readFileSync(path.join(SRC, 'components/ui/_watch.scss'), 'utf8');
   const rule = (sel) => new RegExp(`${sel.replace(/[.]/g, '\\.')} \\{([^}]*)\\}`).exec(watch)?.[1] || '';
   for (const sel of ['.watch-mark', '.watch-dot', '.watch-chip-dot']) {

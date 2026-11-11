@@ -35,6 +35,7 @@ export default function Login({ onDone }) {
         </h1>
         <label>
           {t('login.user')}
+          {/* eslint-disable-next-line jsx-a11y/no-autofocus -- pantalla de acceso: el foco inicial va al usuario */}
           <input value={user} onChange={(e) => setUser(e.target.value)} autoComplete="username" autoFocus required />
         </label>
         <label>

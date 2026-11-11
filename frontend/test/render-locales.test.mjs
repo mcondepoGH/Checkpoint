@@ -3,7 +3,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import { bundle, SRC } from './helpers/bundle.mjs';
 
@@ -39,7 +38,6 @@ const conflict = {
     { id: 'hub', hub: true, hash: 'y', mtime: 1700000100, size: 10, files: 1 },
   ],
 };
-const cfg = { devices: { a: { name: 'A' } }, games: { g: { name: 'G', devices: ['a', 'a'] } } };
 const NEW = {
   actual: '0.4.2',
   ultima: '0.5.0',

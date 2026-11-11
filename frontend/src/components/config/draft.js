@@ -24,6 +24,7 @@ const hex8 = () => {
 export const idPrefix = (name, kind) => {
   const base = String(name || '')
     .normalize('NFKD')
+    // eslint-disable-next-line no-control-regex -- se descartan los no ASCII (incluye \x00)
     .replace(/[^\x00-\x7f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9_-]+/g, '-')
@@ -137,6 +138,7 @@ export const NAME_MAX = 64;
 export const NAME_HINT = 'draft.nameHint'; // clave del catálogo; parámetro {max} = NAME_MAX
 export const cleanName = (n) => String(n).replace(/\s+/g, ' ').trim();
 const SLASH_NAME = /[/\\]/;
+// eslint-disable-next-line no-control-regex -- los caracteres de control son justo lo que se busca
 const CONTROL_NAME = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/;
 const nameKey = (n) => cleanName(n).toLowerCase();
 

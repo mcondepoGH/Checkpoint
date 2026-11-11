@@ -46,7 +46,7 @@ export default function Settings({ loaded, stale, configError, runtime, platform
   const [msg, setMsg] = useState(null); // {ok?, body}: `body` es un error de la API o un mensaje {code} (se traduce al pintar)
   const [busy, setBusy] = useState(false);
   const [staleDiff, setStaleDiff] = useState(null);
-  const { draft, setDraft, errors, validating, local, hasLocal, payload, payloadKey, dirty, patch } = useConfigDraft({
+  const { draft, setDraft, errors, validating, local, hasLocal, payload, dirty, patch } = useConfigDraft({
     loaded,
     runtime,
     onDirty,

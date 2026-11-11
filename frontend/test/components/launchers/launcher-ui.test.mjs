@@ -1,8 +1,6 @@
 // Tabs, CopyBox y la sección Lanzadores (panel único con selector de juego), renderizados a HTML (esbuild + react-dom/server).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import path from 'node:path';
 import { bundle } from '../../helpers/bundle.mjs';
 
 const { mod: m, skip } = await bundle(

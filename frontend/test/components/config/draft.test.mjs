@@ -130,7 +130,7 @@ test('labelOf muestra el nombre, nunca el id', () => {
 
 test('las pantallas no pintan ids de juego como título', () => {
   const src = (f) => fs.readFileSync(new URL(`../../../src/${f}`, import.meta.url), 'utf8');
-  assert.match(src('pages/Sync.jsx'), /<h3 title=.*><span className=\"game-name\">\{gameName\(g\)\}<\/span>/);
+  assert.match(src('pages/Sync.jsx'), /<h3 title=.*><span className="game-name">\{gameName\(g\)\}<\/span>/);
   assert.match(src('pages/Versions.jsx'), /labelOf\(config\.games, g\)/);
 });
 

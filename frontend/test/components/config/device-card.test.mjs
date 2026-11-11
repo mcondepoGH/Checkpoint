@@ -2,8 +2,6 @@
 // si no está disponible (p. ej. instalación solo de producción) el test se salta.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import os from 'node:os';
-import path from 'node:path';
 import { bundle } from '../../helpers/bundle.mjs';
 
 const { mod, skip } = await bundle(
