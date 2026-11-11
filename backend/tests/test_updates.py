@@ -159,12 +159,12 @@ def test_fetch_https_only_and_parses(monkeypatch):
         def __exit__(self, *a):
             return False
 
-    class O:
+    class Opener:
         def open(self, req, timeout=None):
             seen["url"], seen["timeout"] = req.full_url, timeout
             return R(json.dumps([rel("v1.0.0")]).encode())
 
-    monkeypatch.setattr(updates, "_opener", lambda: O())
+    monkeypatch.setattr(updates, "_opener", lambda: Opener())
     out = updates.fetch_releases("o/r")
     assert seen["url"].startswith("https://api.github.com/repos/o/r/releases") and seen["timeout"] <= 10
     assert out[0]["tag_name"] == "v1.0.0"

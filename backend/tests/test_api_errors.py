@@ -8,7 +8,8 @@ from app.core.errors import ApiError, error_body
 from tests.test_api import CFG, PW, client, login  # noqa: F401  (fixture client)
 
 
-GAME = lambda n: {"name": n, "devices": ["a", "b"], "paths": {"a": "/x/y", "b": "C:\\x"}}
+def GAME(n):
+    return {"name": n, "devices": ["a", "b"], "paths": {"a": "/x/y", "b": "C:\\x"}}
 
 
 def det(r):

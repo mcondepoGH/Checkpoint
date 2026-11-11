@@ -217,7 +217,7 @@ def test_primera_sync_local_inexistente_se_trata_como_vacia_y_se_rellena(env):
     st = env.sync()
     assert st["result"] == "ok" and read(env.pc_dir) == "lap"
     assert count_versions(env.data, "g") == 0  # nada que versionar: estaba vacío
-    assert any("no existe todavía" in l for l in env.logs)
+    assert any("no existe todavía" in ln for ln in env.logs)
 
 
 def test_primera_sync_local_con_datos_remoto_vacio(env):

@@ -1,11 +1,13 @@
 """Juegos con un solo dispositivo («solo checkpoint»): el hub guarda versiones, no hay copia entre equipos."""
 
 import os
+import shutil
 
 import pytest
 
 from app.config.models import parse_config
 from app.sync.engine import decide, fingerprint, list_versions, load_baseline, restore_version, run_sync, save_baseline
+from app.sync.engine import run_sync as _rs
 from fakes import LocalTransport
 
 CFG = parse_config(
@@ -134,9 +136,6 @@ def test_decide_un_dispositivo():
 
 
 # ---------- protección: partida local ausente (ruta inexistente) con hub con datos ----------
-import shutil
-
-from app.sync.engine import run_sync as _rs
 
 
 def _auto(env, **kw):
