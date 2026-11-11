@@ -2,6 +2,10 @@
 
 ## Sin publicar
 
+### Cambios
+
+- Las carpetas `config/`, `data/` y `keys/` ya no vienen en el repositorio (se quitan los `.gitkeep`): se crean al arrancar, con Docker o sin él. README y `docker-compose.yml` explican el `mkdir -p config data keys` previo opcional.
+
 ## 1.10.0 (2026-11-10)
 
 ### Cambios

@@ -14,6 +14,8 @@ services:
       # navegador (selector de la cabecera) conserva su elección; "Automático" sigue el idioma del navegador.
       # CHECKPOINT_LANG: ${CHECKPOINT_LANG:-es}
     volumes:
+      # Las carpetas no vienen en el repo: si no existen, Docker las crea como root y el entrypoint las pasa al
+      # usuario del contenedor. Para crearlas tú antes con tu usuario: mkdir -p config data keys
       - ./config:/config
       - ./keys:/keys   # clave SSH (se genera sola) y known_hosts
       - ./data:/data   # copias, versiones y logs

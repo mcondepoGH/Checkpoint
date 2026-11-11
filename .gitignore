@@ -2,8 +2,7 @@
 .env
 .env.*
 !.env.example
-keys/*
-!keys/.gitkeep
+keys/
 *.pem
 *.key
 id_ed25519*
@@ -11,8 +10,7 @@ known_hosts
 
 # Config y estado local
 config/config.yaml
-data/*
-!data/.gitkeep
+data/
 status/
 scheduler*.json
 update_cache.json

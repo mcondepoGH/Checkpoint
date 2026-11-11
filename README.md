@@ -229,7 +229,13 @@ En todos los casos la copia perdedora se guarda antes en versiones. En la primer
 | `keys/` | clave SSH generada y `known_hosts` |
 | `data/` | copias, versiones, logs, registro de la sync automática y la foto de perfil (`data/profile/`) |
 
-Se crean solas al arrancar. `config.yaml` se edita desde la UI (valida, muestra diff y guarda copias) o a mano; ver [`config.example.yaml`](config.example.yaml). Ejemplo mínimo:
+Estas carpetas no vienen en el repositorio (están en `.gitignore`): se crean solas al arrancar, con Docker (bind mounts de `docker-compose.yml`) o sin Docker (`CHECKPOINT_HOME_DIR`, ver «Sin Docker»). Con Docker, si no existen en el clon, Docker las crea como root en el primer `docker compose up`; el contenedor arranca como root, las pasa a su usuario `checkpoint` (uid/gid 1000 por defecto, argumentos `PUID`/`PGID` del `Dockerfile`) y deja `keys/` en `0700`, así que funciona igual. Si prefieres que el propietario inicial en el host sea tu usuario, créalas antes del primer arranque:
+
+```bash
+mkdir -p config data keys && docker compose up -d
+```
+
+(El arranque vuelve a asignarlas al uid 1000 del contenedor; si tu usuario del host es el 1000, no cambia nada.) `config.yaml` se edita desde la UI (valida, muestra diff y guarda copias) o a mano; ver [`config.example.yaml`](config.example.yaml). Ejemplo mínimo:
 
 ```yaml
 devices:
