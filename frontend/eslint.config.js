@@ -37,6 +37,13 @@ export default [
     files: ['src/**/*.{js,jsx}'],
     ...jsxA11y.flatConfigs.recommended,
     languageOptions: { globals: { ...globals.browser }, parserOptions: { ecmaFeatures: { jsx: true } } },
+    rules: {
+      ...jsxA11y.flatConfigs.recommended.rules,
+      // Zonas con scroll enfocables (WCAG 2.1.1): solo role=region con nombre, además de tabpanel.
+      'jsx-a11y/no-noninteractive-tabindex': ['error', { tags: [], roles: ['tabpanel', 'region'], allowExpressionValues: true }],
+      // El texto de la etiqueta puede estar anidado a 3 niveles (label > span > b > texto).
+      'jsx-a11y/label-has-associated-control': ['error', { depth: 3 }],
+    },
   },
   { files: ['public/sw.js'], languageOptions: { globals: { ...globals.serviceworker } } },
   {
