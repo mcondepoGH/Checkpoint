@@ -8,6 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "test": "node --test \"test/**/*.test.mjs\"",
+    "test:coverage": "node scripts/check-coverage.mjs",
+    "check:size": "node scripts/check-bundle-size.mjs",
     "lint": "eslint .",
     "format": "prettier --write \"src/**/*.{js,jsx,scss}\" \"test/**/*.mjs\" \"scripts/**/*.mjs\" vite.config.js eslint.config.js",
     "format:check": "prettier --check \"src/**/*.{js,jsx,scss}\" \"test/**/*.mjs\" \"scripts/**/*.mjs\" vite.config.js eslint.config.js"
