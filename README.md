@@ -260,7 +260,7 @@ Orden de prioridad:
 
 Es decir, sin elección guardada manda el servidor, no el navegador: así una instalación se puede dejar en inglés para todos los usuarios que no hayan elegido. Para fijarlo en Docker, descomenta `CHECKPOINT_LANG` en el `environment:` de `docker-compose.yml` (o añádelo al `.env`).
 
-El backend no traduce nada: devuelve códigos y parámetros (`{"code": "err.sync.dry_run", "params": {...}}`) y la traducción vive en `frontend/src/locales/*.json`. Para añadir un idioma, crea `<código>.json` con las mismas claves que `es.json` (el test `locales.test.mjs` lo comprueba), regístralo en `frontend/src/locales/index.js` y añade el código a `SUPPORTED_LANGS` de `backend/app/settings.py`.
+El backend no traduce nada: devuelve códigos y parámetros (`{"code": "err.sync.dry_run", "params": {...}}`) y la traducción vive en `frontend/src/locales/*.json`. Para añadir un idioma, crea `<código>.json` con las mismas claves que `es.json` (el test `frontend/test/locales/locales.test.mjs` lo comprueba), regístralo en `frontend/src/locales/index.js` y añade el código a `SUPPORTED_LANGS` de `backend/app/core/settings.py`.
 
 Se mantienen en español a propósito: la CLI, los logs internos del servidor, el log técnico de cada ejecución (las líneas del registro en vivo de «Sincronizar») y los textos de estado antiguos guardados en `data/` antes de este cambio.
 
@@ -313,7 +313,7 @@ La API que usa la API key (`GET /api/hook/ping`, `GET /api/hook/watches` y `POST
 - **Probar:** pulsa «Authorize», pega tu API key (sin el prefijo `Bearer`) y usa «Try it out». Ojo: `POST .../opened` **ejecuta de verdad** una sincronización previa y arma el vigilante de cierre del juego.
 - **Sin internet:** Swagger UI va empaquetada en la imagen (`swagger-ui-dist`, versión fijada en `frontend/package.json`; el build de Vite la copia a `docs-assets/` y el backend la sirve en `/api/docs-assets/`). No se carga nada de CDNs ni de terceros.
 - **Idioma:** los textos de la documentación están en español; los códigos `err.*` van sin traducir.
-- **Mantenimiento:** toda ruta `/api/*` nueva queda fuera del esquema por defecto; para publicarla hay que ponerle el tag público de `backend/app/apidocs.py`. `backend/tests/test_apidocs.py` falla si el esquema deja de tener exactamente las rutas de la API key.
+- **Mantenimiento:** toda ruta `/api/*` nueva queda fuera del esquema por defecto; para publicarla hay que ponerle el tag público (`TAG` en `backend/app/api/docs/install.py`). `backend/tests/test_apidocs.py` falla si el esquema deja de tener exactamente las rutas de la API key.
 
 ## Hooks
 
@@ -446,9 +446,28 @@ Checkpoint sigue siendo instalable desde el menú del navegador (manifest, icono
 cd backend && python3 -m venv .venv && . .venv/bin/activate
 pip install -r requirements.txt -r requirements-dev.txt && pytest
 cd ../frontend && npm install && npm run dev     # desarrollo
-npm test                                         # pruebas de node (borrador, formato, i18n es/en, tarjeta de dispositivo y avisos de versión)
+npm test                                         # pruebas de node (borrador, formato, i18n es/en, tarjeta de dispositivo, avisos de versión y arquitectura)
 npm run build                                    # producción
 ```
+
+### Estructura del código
+
+El detalle (árbol, reglas de dependencia y cómo añadir un módulo) está en [`docs/structure.md`](docs/structure.md). Resumen:
+
+**Backend (`backend/app/`)**: `main.py` es solo la fábrica de la app (`app_factory`); `cli.py` es la CLI.
+
+| Carpeta | Contenido |
+|---|---|
+| `api/` | Capa web (FastAPI): `routers/` (uno por área: `hook`, `session`, `profile`, `config`, `sync`, `versions`, `scheduler`, `updates`, `spa`), `auth.py`, `deps.py`, `middleware.py` y `docs/` (OpenAPI y Swagger de la API key) |
+| `services/` | Lógica de negocio sin FastAPI (`context`, `runs`, `hooks`, `devices`, `games`, `status`, `versions`) |
+| `sync/` | Motor de sincronización: `engine`, `decide`, `fingerprint`, `versions`, `baseline`, `errors`, `locking`, `scheduler`, `watcher` y `transport/` (`base`, `posix`, `windows`, `local`) |
+| `config/` | Modelo y almacén de `config.yaml` |
+| `users/` | Datos por usuario: `apikey`, `avatar`, `history` |
+| `core/` | Utilidades base: `settings`, `errors`, `hosts`, `bootstrap`, `redact`, `runtime`, `updates` |
+
+**Frontend (`frontend/src/`)**: `main.jsx` y `App.jsx`; `pages/` (Login, Sync, Versions, Settings); `components/ui/` (componentes genéricos con su SCSS); `components/<zona>/` (`profile`, `updates`, `watch`, `config`, `autosync`, `launchers`, `keyhelp`, `sync`); `hooks/`; `lib/` (cliente de la API en `lib/api.js` y `lib/api/<recurso>.js`, i18n, errores, formato...); `locales/`; `styles/` (variables, temas, base y `main.scss`, que solo ordena los `@use`). Los imports entre carpetas usan el alias `#src/` (`package.json` → `imports`; `#/` no es válido en Node). Los tests de `frontend/test/` reflejan esa estructura, con utilidades comunes en `test/helpers/`.
+
+Dos tests comprueban las reglas de dependencia: `backend/tests/test_architecture.py` y `frontend/test/architecture.test.mjs`.
 
 ### Escala tipográfica
 
@@ -469,7 +488,7 @@ Excepciones explícitas: `$fs-input-mobile` (1rem = 16 px, evita el zoom de iOS)
 
 ### Componentes de UI
 
-Los elementos que se repiten viven en `frontend/src/components/ui/` (importa desde `components/ui/index.js`), cada uno con su partial en `frontend/src/styles/ui/`. Para cambiar el aspecto de todos los usos, edita el partial; para cambiar el marcado, el componente. No escribas a mano `className="btn"`, `badge`, `alert`, etc.
+Los elementos que se repiten viven en `frontend/src/components/ui/` (importa desde `components/ui/index.js`), cada uno con su partial SCSS al lado (`frontend/src/components/ui/_<componente>.scss`). Para cambiar el aspecto de todos los usos, edita el partial; para cambiar el marcado, el componente. No escribas a mano `className="btn"`, `badge`, `alert`, etc.
 
 | Componente | Props | Estilos |
 |---|---|---|
@@ -482,14 +501,14 @@ Los elementos que se repiten viven en `frontend/src/components/ui/` (importa des
 | `Switch` | `label` + props del input | `_switch.scss` |
 | `Tabs` | `tabs` (`[{ id, label }]`), `value`, `onChange`, `label`; los hijos son el panel activo. Roles `tablist`/`tab`/`tabpanel`, flechas, Inicio y Fin | `_tabs.scss` |
 | `CopyBox` | `value`, `label`, `what` (qué se copia: el botón dice «Copiar {what}», p. ej. «Copiar comando de Steam» o «Copiar clave API»), `describedBy`; caja de código monoespaciada que ajusta líneas + botón copiar (`copy` → `check` 2 s, `clipboard.js` con fallback) | `_copybox.scss` |
-| `WatchBar` | `state` (`waiting`, `running`, `settling`, `stale`), `since` (opcional), hijos = texto; franja inferior de la tarjeta con icono decorativo + texto, color por estado (el icono se dibuja sin glifos de fuente: punto y anillo por CSS, `spinner` y `alert` de `Icon`; alineado con la primera línea del texto); la tarjeta lleva el borde con `watchCardClass(estado)` de `src/watch.js` | `_watch.scss` |
+| `WatchBar` | `state` (`waiting`, `running`, `settling`, `stale`), `since` (opcional), hijos = texto; franja inferior de la tarjeta con icono decorativo + texto, color por estado (el icono se dibuja sin glifos de fuente: punto y anillo por CSS, `spinner` y `alert` de `Icon`; alineado con la primera línea del texto); la tarjeta lleva el borde con `watchCardClass(estado)` de `src/components/watch/watch.js` | `_watch.scss` |
 | `WatchStatus` | `state` (igual), hijos = texto; punto decorativo + texto en línea (filas de la lista de la cabecera), `running` pulsa | `_watch.scss` |
 | `WatchSummary` (componente de la app, no genérico) | `watch` (`{now, watches}` de `useWatches`), `config`; chip «● Vigilando · N ▾» en la barra superior con lista desplegable (juego, dispositivo, estado con `WatchStatus`); oculto sin vigilancia; Esc, clic fuera y salir del foco lo cierran. En móvil (<=640 px) es punto + número («99+»; el texto completo va en `aria-label`) y la lista ocupa el ancho de la barra con 8 px de margen y scroll propio; chip y filas de 44 px (`$touch-watch`, local) | `_watch.scss` |
 | `Input` | props del input (texto sin autocompletar ni corrector por defecto); acepta `ref` | `_control.scss` |
 
 Registro de ejecuciones (`AutoSyncLog`): cada entrada es un `<li class="run">` con cabecera en rejilla (fecha y hora, tipo, duración —«—» si es 0 o falta— y una única `Badge` de estado) y, debajo, una línea por juego (nombre y dispositivo si consta) con su mensaje; solo se repite la `Badge` en una fila de juego si hay resultados distintos. Todo lo que no es correcto lleva icono además de texto, y el motivo sale una sola vez (el resumen de una entrada con `code` no se repite si su juego dice lo mismo). Con más de 3 juegos, los correctos van plegados tras un botón-resumen con `aria-expanded` («N juegos: 12 correctos, 1 error») y los omitidos, con error o abortados se ven siempre. Tipos y resultados desconocidos se muestran tal cual. El estilo vive solo en `_autosync.scss`; las columnas de la cabecera usan `minmax(..., max-content)` y en <=640 px pasa a dos líneas.
 
-La consulta de `/api/watches` (cada 5 s, solo con la pestaña visible) vive en un único hook, `useWatches` (`src/useWatches.js`), llamado desde `App`: el contador de la barra y las tarjetas de Sincronizar reciben los mismos datos, sin peticiones duplicadas.
+La consulta de `/api/watches` (cada 5 s, solo con la pestaña visible) vive en un único hook, `useWatches` (`src/hooks/useWatches.js`), llamado desde `App`: el contador de la barra y las tarjetas de Sincronizar reciben los mismos datos, sin peticiones duplicadas.
 
 Aviso de actualización: en pantallas anchas (>=480 px) es el botón de la barra; por debajo sale de la barra y pasa al menú del perfil como entrada «Actualizar a vX.Y.Z» (abre el mismo diálogo), y el avatar muestra un punto con texto accesible mientras haya actualización aplicable.
 
@@ -497,7 +516,7 @@ Menú del perfil (`ProfileMenu`), de arriba abajo, con separador fino y rótulo 
 
 El perfil usa estos componentes: la sección «API key» es un bloque con fondo `--surface-2` (encabezado con icono `key`), la key completa en un cuadro monoespaciado que ajusta en varias líneas, `CopyBox` para la key y para los comandos de la sección Lanzadores (copia con icono `copy` → `check` 2 s), `Button` y `Button variant="danger"` (Regenerar / Revocar, mismo ancho) y `Alert compact` para el aviso de HTTP.
 
-Los tests `test/ui-components.test.mjs` fijan las clases y atributos que producen.
+Los tests `frontend/test/components/ui/ui-components.test.mjs` fijan las clases y atributos que producen.
 
 ## Licencia
 

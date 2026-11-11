@@ -2,7 +2,7 @@
 
 ## Estado de la migración (fase 3 completada)
 
-Las listas de abajo son el inventario original de la fase 1 (histórico, no se actualiza línea a línea). Estado actual:
+Las listas de abajo son el inventario original de la fase 1 (histórico, no se actualiza línea a línea). Las rutas de fichero de esas listas son las de entonces; la estructura actual está en [`structure.md`](structure.md). Estado actual:
 
 | Área | Estado |
 |---|---|

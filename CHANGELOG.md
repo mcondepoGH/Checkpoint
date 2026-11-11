@@ -2,6 +2,12 @@
 
 ## Sin publicar
 
+### Cambios
+
+- Reorganización interna del código, sin cambios visibles ni de comportamiento (API, `config.yaml`, CLI y pantallas iguales). Backend: `main.py` pasa a ser solo la fábrica de la app; el código se reparte en `api/` (routers y documentación), `services/`, `sync/` (con `engine` dividido en `decide`, `fingerprint`, `versions`, `baseline` y `errors`, y `transport/` en `base`, `posix`, `windows` y `local`), `config/`, `users/` y `core/`. Frontend: `src/` pasa a `lib/`, `hooks/`, `components/ui/`, `components/<zona>/` y `pages/`, con los parciales SCSS junto a cada componente, el cliente de la API en `lib/api/<recurso>.js`, el alias de imports `#src/`, `useTheme` y `useConfigDraft` extraídos y los tests en espejo de `src/`.
+- Documentación: nuevo `docs/structure.md` (estructura, reglas de dependencia y cómo añadir módulos) y mapa del código en el README; `docs/i18n-inventario.md` pasa a `docs/i18n-inventory.md`.
+- Tests: nuevos tests de arquitectura (`backend/tests/test_architecture.py`, `frontend/test/architecture.test.mjs`) y utilidades compartidas de los tests del frontend en `frontend/test/helpers/`.
+
 ## 1.10.0 (2026-11-10)
 
 ### Cambios
