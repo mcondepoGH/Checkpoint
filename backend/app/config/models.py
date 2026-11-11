@@ -485,7 +485,7 @@ def load_config(path: Path) -> Config:
     try:
         data = load_yaml(path.read_text(encoding="utf-8"))
     except yaml.YAMLError as e:
-        raise yaml_error(e)
+        raise yaml_error(e) from e
     return parse_config(data)
 
 

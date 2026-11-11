@@ -39,7 +39,7 @@ def restore(cfg: Config, game: str, body: dict) -> dict:
             body.get("source"),
             e.code,
         )
-        raise ApiError(400, "err.main.restore_failed", cause=e.body())
+        raise ApiError(400, "err.main.restore_failed", cause=e.body()) from e
     api_log.debug(
         "restaurar versión: juego=%s versión=%r origen=%r correcto", game, body.get("version"), body.get("source")
     )

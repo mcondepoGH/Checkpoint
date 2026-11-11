@@ -44,7 +44,7 @@ def _game_lock(data_dir: Path, gs: str):
         with locking.locked(Path(data_dir) / "locks" / f"{gs}.lock"):
             yield
     except locking.LockBusy:
-        raise SyncAbort("err.sync.op_in_progress")
+        raise SyncAbort("err.sync.op_in_progress") from None
 
 
 def _side(k: str, fp: Fingerprint, name: Optional[str] = None) -> dict:
@@ -65,7 +65,7 @@ def resolve_game(cfg: Config, ref) -> str:
     try:
         gid = resolve_ref(cfg.games, ref)
     except ConfigError as e:
-        raise SyncAbort("err.sync.ref_invalid", cause=e.body())
+        raise SyncAbort("err.sync.ref_invalid", cause=e.body()) from e
     if gid is None:
         raise SyncAbort("err.sync.game_unknown", ref=ref)
     return gid
@@ -79,7 +79,7 @@ def _origin_id(cfg: Config, gid: str, ref):
     try:
         return resolve_ref(devs, ref) or ref
     except ConfigError as e:
-        raise SyncAbort("err.sync.ref_invalid", cause=e.body())
+        raise SyncAbort("err.sync.ref_invalid", cause=e.body()) from e
 
 
 def run_sync(
@@ -142,7 +142,7 @@ def run_sync(
         handle = locking.acquire(data_dir / "locks" / f"{gs}.lock")
     except locking.LockBusy:
         slog.debug("run_sync: juego=%s lock ocupado tras %.0f ms", game, (time.monotonic() - t_run) * 1000)
-        raise SyncAbort("err.sync.sync_in_progress")
+        raise SyncAbort("err.sync.sync_in_progress") from None
     try:
         try:
             _do_sync(
@@ -189,7 +189,7 @@ def _check_process(g, tr, online, L=None, dn=lambda k: k):
         try:
             running = tr[n].process_running(g.process)
         except TransportError as e:
-            raise SyncAbort("err.sync.process_check_failed", device=dn(n), cause=e.body())
+            raise SyncAbort("err.sync.process_check_failed", device=dn(n), cause=e.body()) from e
         if running:
             raise SyncAbort("err.sync.process_open", process=g.process, device=dn(n))
     if L:

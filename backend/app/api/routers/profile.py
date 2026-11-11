@@ -52,7 +52,7 @@ async def put_photo(request: Request, user: str = Depends(current_user)):
         if int(request.headers.get("content-length", "0")) > avatar.MAX_BYTES:
             raise ApiError(413, "err.main.photo_too_large", max_mb=avatar.MAX_BYTES // (1024 * 1024))
     except ValueError:
-        raise ApiError(400, "err.main.photo_empty")
+        raise ApiError(400, "err.main.photo_empty") from None
     buf = bytearray()
     async for chunk in request.stream():
         buf += chunk

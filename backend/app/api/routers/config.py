@@ -68,7 +68,7 @@ async def diff(request: Request, ctx: AppContext = Depends(get_ctx)):
         try:
             text = store.read_backup(str(body["backup"]))
         except FileNotFoundError:
-            raise ApiError(404, "err.main.backup_unknown")
+            raise ApiError(404, "err.main.backup_unknown") from None
         cfg, err = parse_text(text)
         if err:
             raise ApiError(422, "err.main.backup_invalid", cause=err)
@@ -129,7 +129,7 @@ async def restore_config(request: Request, ctx: AppContext = Depends(get_ctx)):
         res = store.restore(base, str(body.get("name", "")))
     except FileNotFoundError:
         api_log.debug("config restaurar: backup %r desconocido (404)", body.get("name"))
-        raise ApiError(404, "err.main.backup_unknown")
+        raise ApiError(404, "err.main.backup_unknown") from None
     except InvalidConfig as e:
         api_log.debug("config restaurar: backup inválido (%d errores)", len(e.errors))
         return invalid_response(e)

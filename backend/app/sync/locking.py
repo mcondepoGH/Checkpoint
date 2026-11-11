@@ -58,7 +58,7 @@ def acquire(path: Path, backend: str = None) -> _Handle:
             try:
                 fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
             except (BlockingIOError, PermissionError):
-                raise LockBusy()
+                raise LockBusy() from None
 
             def release():
                 try:
@@ -70,7 +70,7 @@ def acquire(path: Path, backend: str = None) -> _Handle:
                 f.seek(0)
                 msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
             except OSError:
-                raise LockBusy()
+                raise LockBusy() from None
 
             def release():
                 try:
@@ -100,20 +100,20 @@ def _acquire_excl(path: Path) -> _Handle:
                 pid = 0
             tmp.unlink(missing_ok=True)
             if pid and _pid_alive(pid):
-                raise LockBusy()
+                raise LockBusy() from None
             try:  # huérfano (proceso muerto o fichero ilegible): se retira y se reintenta una vez
                 lock.unlink()
             except FileNotFoundError:
                 pass
             except OSError:
-                raise LockBusy()
+                raise LockBusy() from None
             continue
         except OSError:  # el sistema de ficheros no admite enlaces duros: creación exclusiva directa
             tmp.unlink(missing_ok=True)
             try:
                 fd = os.open(lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
             except OSError:
-                raise LockBusy()
+                raise LockBusy() from None
             with os.fdopen(fd, "w") as f:
                 f.write(str(os.getpid()))
         else:

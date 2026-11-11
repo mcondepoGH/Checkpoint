@@ -70,7 +70,7 @@ def _float_env(suffix, default):
     try:
         return float(env(suffix, default))
     except ValueError:
-        raise SystemExit(f"CHECKPOINT_{suffix} debe ser un número (valor: {env(suffix)!r})")
+        raise SystemExit(f"CHECKPOINT_{suffix} debe ser un número (valor: {env(suffix)!r})") from None
 
 
 SESSION_HOURS = _float_env("SESSION_HOURS", "12")

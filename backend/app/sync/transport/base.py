@@ -73,11 +73,11 @@ def _run(args: List[str], timeout=600, stdin=None) -> subprocess.CompletedProces
         p = subprocess.run(args, capture_output=True, timeout=timeout, stdin=stdin)
         log.debug("%s: rc=%s en %.0f ms", args[0], p.returncode, (time.monotonic() - t0) * 1000)
         return p
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as e:
         log.debug("%s: timeout tras %.0f ms (límite %ss)", args[0], (time.monotonic() - t0) * 1000, timeout)
-        raise TransportError("err.transport.timeout")
+        raise TransportError("err.transport.timeout") from e
     except FileNotFoundError as e:
-        raise TransportError("err.transport.missing_binary", binary=e.filename)
+        raise TransportError("err.transport.missing_binary", binary=e.filename) from e
 
 
 def _err(p: subprocess.CompletedProcess) -> str:
@@ -97,7 +97,7 @@ def _ensure_host_key(dev: Device) -> bool:
     try:
         return bootstrap.ensure_host_key(dev.host, dev.port)
     except bootstrap.BootstrapError as e:
-        raise TransportError(e.code, **e.params)
+        raise TransportError(e.code, **e.params) from e
 
 
 def _safe_rel(rel: str) -> bool:

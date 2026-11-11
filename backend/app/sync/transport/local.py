@@ -44,7 +44,7 @@ def _resolve(p: Path) -> Path:
     try:
         return Path(os.path.realpath(p))
     except (OSError, RuntimeError, ValueError) as e:
-        raise TransportError("err.transport.path_unresolvable", detail=str(e))
+        raise TransportError("err.transport.path_unresolvable", detail=str(e)) from e
 
 
 def _walk_files(root: Path):
@@ -83,7 +83,7 @@ def _copy_tree(src: Path, dst: Path):
         try:
             shutil.copy2(src / f, dst / f)
         except OSError as e:
-            raise TransportError("err.transport.copy_failed", file=f, detail=_oserr(e))
+            raise TransportError("err.transport.copy_failed", file=f, detail=_oserr(e)) from e
 
 
 def _tmp_name(base: Path, tag: str) -> Path:
@@ -111,9 +111,9 @@ class LocalDeviceTransport(Transport):
             if not os.access(root, os.R_OK | os.X_OK):
                 raise TransportError("err.transport.no_read_permission", path=path)
         except PermissionError as e:
-            raise TransportError("err.transport.access_denied", path=path, detail=_oserr(e))
+            raise TransportError("err.transport.access_denied", path=path, detail=_oserr(e)) from e
         except OSError as e:
-            raise TransportError("err.transport.access_failed", path=path, detail=_oserr(e))
+            raise TransportError("err.transport.access_failed", path=path, detail=_oserr(e)) from e
         return True
 
     def pull(self, path: str, dest: Path) -> None:
@@ -130,14 +130,14 @@ class LocalDeviceTransport(Transport):
         try:
             target.parent.mkdir(parents=True, exist_ok=True)
         except OSError as e:
-            raise TransportError("err.transport.mkdir_local_failed", path=str(target.parent), detail=_oserr(e))
+            raise TransportError("err.transport.mkdir_local_failed", path=str(target.parent), detail=_oserr(e)) from e
         try:
             if not self._swap(src, target):
                 self._in_place(src, target)
         except TransportError:
             raise
         except OSError as e:
-            raise TransportError("err.transport.write_failed", path=path, detail=_oserr(e))
+            raise TransportError("err.transport.write_failed", path=path, detail=_oserr(e)) from e
 
     # -- escritura --
     def _swap(self, src: Path, target: Path) -> bool:
@@ -169,7 +169,7 @@ class LocalDeviceTransport(Transport):
                 if old is not None:
                     os.rename(old, target)  # deshacer
                     old = None
-                raise TransportError("err.transport.place_failed", detail=_oserr(e))
+                raise TransportError("err.transport.place_failed", detail=_oserr(e)) from e
         except BaseException:
             shutil.rmtree(new, ignore_errors=True)
             raise
@@ -214,14 +214,14 @@ class LocalDeviceTransport(Transport):
                     tmp.unlink()
                 except OSError:
                     pass
-                raise TransportError("err.transport.write_file_failed", file=rel, detail=_oserr(e))
+                raise TransportError("err.transport.write_file_failed", file=rel, detail=_oserr(e)) from e
         t_files, t_dirs, _ = _walk_files(target)
         for rel in t_files:
             if rel not in wanted:
                 try:
                     os.unlink(target / rel)
                 except OSError as e:
-                    raise TransportError("err.transport.delete_failed", file=rel, detail=_oserr(e))
+                    raise TransportError("err.transport.delete_failed", file=rel, detail=_oserr(e)) from e
         keep = {os.path.dirname(f) for f in wanted} | set(s_dirs)
         keep = {k for r in keep for k in _parents(r)}
         for rel in sorted(t_dirs, key=len, reverse=True):
@@ -255,8 +255,8 @@ class LocalDeviceTransport(Transport):
     def _exec(self, args):
         try:
             return self._run(args, capture_output=True, timeout=15)
-        except subprocess.TimeoutExpired:
-            raise TransportError("err.transport.process_timeout")
+        except subprocess.TimeoutExpired as e:
+            raise TransportError("err.transport.process_timeout") from e
 
     @staticmethod
     def _proc_scan(name: str) -> bool:

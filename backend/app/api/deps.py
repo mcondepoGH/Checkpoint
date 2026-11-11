@@ -47,7 +47,7 @@ async def body_json(request: Request) -> dict:
     try:
         body = await request.json()
     except Exception:
-        raise ApiError(400, "err.main.json_body_required")
+        raise ApiError(400, "err.main.json_body_required") from None
     if not isinstance(body, dict):
         raise ApiError(400, "err.main.json_body_required")
     return body

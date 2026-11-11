@@ -215,7 +215,7 @@ class HookService:
                 dev = resolve_ref(devs, device)
             except ConfigError as e:
                 api_log.debug("hook opened: juego=%s dispositivo %r ambiguo (400)", g.name, device)
-                raise ApiError(400, "err.hook.device_ambiguous", cause=e.body())
+                raise ApiError(400, "err.hook.device_ambiguous", cause=e.body()) from e
             if dev is None:
                 api_log.debug("hook opened: juego=%s dispositivo %r desconocido (404)", g.name, device)
                 raise ApiError(404, "err.hook.device_unknown")

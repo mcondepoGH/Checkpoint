@@ -72,7 +72,7 @@ def ensure_ssh_key(key: str = None) -> bool:
                 timeout=30,
             )
         except (OSError, subprocess.TimeoutExpired) as e:
-            raise BootstrapError("err.bootstrap.keygen_failed", detail=str(e))
+            raise BootstrapError("err.bootstrap.keygen_failed", detail=str(e)) from e
         if p.returncode != 0:
             raise BootstrapError(
                 "err.bootstrap.keygen_error", detail=p.stderr.decode("utf-8", "replace").strip()[-200:]
@@ -119,7 +119,7 @@ def _check_target(host: str, port) -> int:
     try:
         port = int(port)
     except (TypeError, ValueError):
-        raise BootstrapError("err.bootstrap.port_invalid")
+        raise BootstrapError("err.bootstrap.port_invalid") from None
     if not 1 <= port <= 65535:
         raise BootstrapError("err.bootstrap.port_range")
     return port
@@ -136,7 +136,7 @@ def has_host_entry(host: str, port: int, known_hosts: str = None) -> bool:
     try:
         p = subprocess.run(["ssh-keygen", "-F", _kh_name(host, port), "-f", kh], capture_output=True, timeout=15)
     except (OSError, subprocess.TimeoutExpired) as e:
-        raise BootstrapError("err.bootstrap.known_hosts_read", detail=str(e))
+        raise BootstrapError("err.bootstrap.known_hosts_read", detail=str(e)) from e
     return p.returncode == 0
 
 
@@ -148,8 +148,8 @@ def _keyscan(host: str, port: int) -> str:
             timeout=settings.SSH_TIMEOUT * 3 + 5,
         )
     except (OSError, subprocess.TimeoutExpired) as e:
-        raise BootstrapError("err.bootstrap.keyscan_failed", detail=str(e))
-    lines = [l for l in p.stdout.decode("utf-8", "replace").splitlines() if l.strip() and not l.startswith("#")]
+        raise BootstrapError("err.bootstrap.keyscan_failed", detail=str(e)) from e
+    lines = [ln for ln in p.stdout.decode("utf-8", "replace").splitlines() if ln.strip() and not ln.startswith("#")]
     if not lines:
         raise BootstrapError("err.bootstrap.hostkey_unavailable", host=host, port=port)
     return "\n".join(lines) + "\n"

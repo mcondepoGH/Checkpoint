@@ -48,10 +48,10 @@ class WindowsTransport(Transport):
         try:
             _, berr = b.communicate(timeout=1800)
             _, aerr = a.communicate(timeout=60)
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired as e:
             a.kill()
             b.kill()
-            raise TransportError("err.transport.timeout")
+            raise TransportError("err.transport.timeout") from e
         if a.returncode != 0 or b.returncode != 0:
             raise TransportError(
                 "err.transport.tar_pull_failed", detail=(aerr or berr).decode("utf-8", "replace")[-300:]
@@ -81,10 +81,10 @@ class WindowsTransport(Transport):
         try:
             _, berr = b.communicate(timeout=1800)
             _, aerr = a.communicate(timeout=60)
-        except subprocess.TimeoutExpired:
+        except subprocess.TimeoutExpired as e:
             a.kill()
             b.kill()
-            raise TransportError("err.transport.timeout")
+            raise TransportError("err.transport.timeout") from e
         if a.returncode != 0 or b.returncode != 0:
             raise TransportError(
                 "err.transport.tar_push_failed", detail=(berr or aerr).decode("utf-8", "replace")[-300:]

@@ -14,7 +14,7 @@ def resolve_game_id(cfg: Config, ref: str) -> str:
         gid = resolve_ref(cfg.games, ref)
     except ConfigError as e:
         api_log.debug("juego %r ambiguo (409)", ref)
-        raise ApiError(409, "err.main.game_ambiguous", cause=e.body())
+        raise ApiError(409, "err.main.game_ambiguous", cause=e.body()) from e
     if gid is None:
         api_log.debug("juego %r desconocido (404)", ref)
         raise ApiError(404, "err.main.game_unknown")
