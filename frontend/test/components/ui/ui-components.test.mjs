@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { bundle, SRC } from '../../helpers/bundle.mjs';
+import { readFlat } from '../../helpers/source.mjs';
 
 const { mod, skip } = await bundle(
   `import React from 'react';
@@ -26,13 +27,13 @@ test('Button: clases por variante, type=button por defecto y submit explícito',
 });
 
 test('Button iconOnly: .btn-icon va anidada en .btn (partial del botón), no suelta antes de ella', () => {
-  const scss = fs.readFileSync(path.join(SRC, 'components', 'ui', '_button.scss'), 'utf8');
+  const scss = readFlat(path.join(SRC, 'components', 'ui', '_button.scss'));
   assert.match(scss, /&\.btn-icon\s*\{[^}]*padding: 0/);
   assert.ok(!/^\.btn-icon/m.test(fs.readFileSync(path.join(SRC, 'styles', '_components.scss'), 'utf8')));
 });
 
 test('Button iconOnly: borde transparente en reposo, cuadro en hover/focus-visible/active, icono a $icon-btn (1.25rem)', () => {
-  const scss = fs.readFileSync(path.join(SRC, 'components', 'ui', '_button.scss'), 'utf8');
+  const scss = readFlat(path.join(SRC, 'components', 'ui', '_button.scss'));
   const block = scss.slice(scss.indexOf('&.btn-icon'));
   assert.match(block, /border-color: transparent; background: transparent/);
   assert.match(block, /&:focus-visible/);

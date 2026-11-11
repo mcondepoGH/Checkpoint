@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { bundle, SRC } from './helpers/bundle.mjs';
+import { readFlat } from './helpers/source.mjs';
 
 const { mod: m, skip } = await bundle(
   `import React from 'react';
@@ -166,7 +167,7 @@ test('login limpio: sin selector de idioma ni de tema', { skip }, () => {
 });
 
 test('cabecera de la app (con sesión): idioma, tema y salir viven en el perfil, no en la barra', () => {
-  const app = fs.readFileSync(path.join(SRC, 'App.jsx'), 'utf8');
+  const app = readFlat(path.join(SRC, 'App.jsx'));
   const login = fs.readFileSync(path.join(SRC, 'pages', 'Login.jsx'), 'utf8');
   const header = app.slice(app.indexOf('<header'), app.indexOf('</header>'));
   assert.match(header, /<AppIcon className="brand-logo" \/>/);
@@ -174,7 +175,7 @@ test('cabecera de la app (con sesión): idioma, tema y salir viven en el perfil,
   assert.doesNotMatch(header, /LanguageSelect|<Icon |tool-label/);
   // El perfil es lo último de la barra (extremo derecho).
   assert.ok(header.lastIndexOf('<ProfileMenu') > header.lastIndexOf('<UpdateBadge'));
-  const css = fs.readFileSync(path.join(SRC, 'styles', '_layout.scss'), 'utf8');
+  const css = readFlat(path.join(SRC, 'styles', '_layout.scss'));
   // Pestañas: etiqueta corta oculta en escritorio. Sin restos de los controles movidos.
   assert.match(css, /\.tab \.short \{ display: none; \}/);
   assert.doesNotMatch(css, /tool-label|lang-select|lang-code/);
@@ -184,7 +185,7 @@ test('cabecera de la app (con sesión): idioma, tema y salir viven en el perfil,
   const vars = fs.readFileSync(path.join(SRC, 'styles', '_variables.scss'), 'utf8');
   assert.match(vars, /\$bp-xxs: 340px/);
   const narrow = css.slice(css.indexOf('@media (max-width: v.$bp-xxs)'));
-  assert.match(narrow, /\.tab \{ padding: 0 \.15rem; \}/);
+  assert.match(narrow, /\.tab \{ padding: 0 0?\.15rem; \}/);
   assert.doesNotMatch(narrow, /overflow|display: none|font-size/);
   assert.doesNotMatch(login, /LanguageSelect|cycleTheme|ProfileMenu/);
 });

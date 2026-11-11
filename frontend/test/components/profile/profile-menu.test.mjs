@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { bundle, SRC } from '../../helpers/bundle.mjs';
+import { readFlat } from '../../helpers/source.mjs';
 
 const { mod: m, skip } = await bundle(
   `import React from 'react';
@@ -36,6 +37,7 @@ const at = (h, s) => {
   return i;
 };
 const read = (...p) => fs.readFileSync(path.join(SRC, ...p), 'utf8');
+const readScss = (...p) => readFlat(path.join(SRC, ...p));
 
 test('orden: identidad, actualización, Preferencias, Integración, Cuenta (salir)', { skip }, () => {
   const h = menu({ updates: UPD });
@@ -138,18 +140,18 @@ test('paridad es/en: claves nuevas presentes y en inglés sin español', { skip 
 });
 
 test('estilos: filas de 44 px, anchos y chip compacto sin tamaños sueltos', () => {
-  const prof = read('components', 'profile', '_profile.scss');
+  const prof = readScss('components', 'profile', '_profile.scss');
   assert.match(prof, /\$touch-profile: 44px/);
   assert.match(prof, /\.profile-group \{[^}]*margin-top: 10px; margin-bottom: 10px;/);
   assert.match(prof, /\.apikey-body \{[^}]*&\[hidden\] \{ display: none; \}/);
   assert.doesNotMatch(prof, /font-size: \d/);
-  assert.match(read('styles', '_variables.scss'), /\$bp-xs-tabs: 400px/);
-  assert.match(read('styles', '_layout.scss'), /@media \(max-width: v\.\$bp-xs-tabs\) \{\s*\.tab \{ padding: 0 \.3rem; \}/);
+  assert.match(readScss('styles', '_variables.scss'), /\$bp-xs-tabs: 400px/);
+  assert.match(readScss('styles', '_layout.scss'), /@media \(max-width: v\.\$bp-xs-tabs\) \{\s*\.tab \{ padding: 0 0?\.3rem; \}/);
   assert.match(
-    read('components', 'ui', '_watch.scss'),
-    /@media \(max-width: v\.\$bp-xxs\) \{\s*\.watch-summary \.watch-toggle \{ padding: 0 \.3rem; gap: \.2rem; \}/,
+    readScss('components', 'ui', '_watch.scss'),
+    /@media \(max-width: v\.\$bp-xxs\) \{\s*\.watch-summary \.watch-toggle \{ padding: 0 0?\.3rem; gap: 0?\.2rem; \}/,
   );
-  assert.match(read('components', 'ui', '_watch.scss'), /min-height: \$touch-watch/); // el alto de 44 px del chip se mantiene
+  assert.match(readScss('components', 'ui', '_watch.scss'), /min-height: \$touch-watch/); // el alto de 44 px del chip se mantiene
 });
 
 test('Esc devuelve el foco al botón y fuera cierra (contrato en el código)', () => {

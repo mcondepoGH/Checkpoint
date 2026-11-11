@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { bundle, SRC } from '../../helpers/bundle.mjs';
+import { readFlat } from '../../helpers/source.mjs';
 
 const { mod: m, skip } = await bundle(
   `import React from 'react';
@@ -149,7 +150,7 @@ test('cadenas de vigilancia y de actualización del perfil resueltas en es y en 
 });
 
 test('SCSS: puntos y anillo del pulso son cuadrados explícitos (círculo, no óvalo) y el pulso respeta reduced-motion', () => {
-  const watch = fs.readFileSync(path.join(SRC, 'components/ui/_watch.scss'), 'utf8');
+  const watch = readFlat(path.join(SRC, 'components/ui/_watch.scss'));
   const rule = (sel) => new RegExp(`${sel.replace(/[.]/g, '\\.')} \\{([^}]*)\\}`).exec(watch)?.[1] || '';
   for (const sel of ['.watch-mark', '.watch-dot', '.watch-chip-dot']) {
     const r = rule(sel);
@@ -163,21 +164,14 @@ test('SCSS: puntos y anillo del pulso son cuadrados explícitos (círculo, no ó
     assert.ok(w && w === h, `${sel} ${w} x ${h}`);
     assert.ok(!/overflow/.test(r), sel);
   }
-  assert.ok(
-    /aspect-ratio: 1; border-radius: 50%/.test(
-      fs
-        .readFileSync(path.join(SRC, 'components/profile/_profile.scss'), 'utf8')
-        .split('\n')
-        .find((l) => l.startsWith('.upd-dot')),
-    ),
-  );
+  assert.ok(/\.upd-dot \{[^}]*aspect-ratio: 1;[^}]*border-radius: 50%/.test(readFlat(path.join(SRC, 'components/profile/_profile.scss'))));
   const pulse = /@keyframes watch-pulse \{([^@]*)\}\s*@keyframes/.exec(watch)?.[1] || '';
   assert.ok(pulse.includes('box-shadow') && !/transform|width|height|scale/.test(pulse));
   assert.ok(/prefers-reduced-motion: reduce\) \{[^}]*\.watch-mark[^}]*\.watch-chip-dot[^}]*animation: none/.test(watch));
 });
 
 test('SCSS: icono de la franja centrado por geometría y alineado con la primera línea', () => {
-  const watch = fs.readFileSync(path.join(SRC, 'components', 'ui/_watch.scss'), 'utf8');
+  const watch = readFlat(path.join(SRC, 'components', 'ui/_watch.scss'));
   const rule = (sel) => new RegExp(`${sel.replace(/[.]/g, '\\.')} \\{([^}]*)\\}`).exec(watch)?.[1] || '';
   const ico = rule('.watch-ico'),
     mark = rule('.watch-mark');

@@ -2,6 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { readFlat } from '../../helpers/source.mjs';
 import { baseKeyOf, fromConfig, isDirty, toConfig } from '#src/components/config/draft.js';
 import { labelOf } from '#src/lib/names.js';
 
@@ -129,8 +130,8 @@ test('labelOf muestra el nombre, nunca el id', () => {
 });
 
 test('las pantallas no pintan ids de juego como título', () => {
-  const src = (f) => fs.readFileSync(new URL(`../../../src/${f}`, import.meta.url), 'utf8');
-  assert.match(src('pages/Sync.jsx'), /<h3 title=.*><span className="game-name">\{gameName\(g\)\}<\/span>/);
+  const src = (f) => readFlat(new URL(`../../../src/${f}`, import.meta.url));
+  assert.match(src('pages/Sync.jsx'), /<h3 title=.*> ?<span className="game-name">\{gameName\(g\)\}<\/span>/);
   assert.match(src('pages/Versions.jsx'), /labelOf\(config\.games, g\)/);
 });
 
