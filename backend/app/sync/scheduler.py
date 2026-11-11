@@ -13,6 +13,8 @@ from typing import Callable, Optional
 
 from starlette.concurrency import run_in_threadpool
 
+# Excepción documentada a la regla de capas (sync no debería importar de users): el scheduler escribe el historial de
+# ejecuciones. Se resolverá con el test de arquitectura (p. ej. inyectando el registro del historial).
 from ..users import history
 from ..core import settings
 from ..core.errors import describe_code, error_body
