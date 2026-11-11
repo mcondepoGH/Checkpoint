@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { bundle } from './helpers/bundle.mjs';
+import { bundle } from '../../helpers/bundle.mjs';
 
 const { mod: m, skip } = await bundle(`import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
@@ -358,7 +358,7 @@ test('Registro: entrada antigua (solo message, sin device ni code) y tipo descon
 
 test('Registro: SCSS del registro sin font-size suelto y con rejilla colapsable en móvil', { skip }, async () => {
   const fs = await import('node:fs');
-  const scss = fs.readFileSync(new URL('../src/components/autosync/_autosync.scss', import.meta.url), 'utf8');
+  const scss = fs.readFileSync(new URL('../../../src/components/autosync/_autosync.scss', import.meta.url), 'utf8');
   const log = scss.slice(scss.indexOf('.autosync-log'));
   assert.doesNotMatch(log, /font-size: *[\d.]/);
   assert.match(log, /font-size: v\.\$fs-/);

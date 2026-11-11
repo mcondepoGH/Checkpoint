@@ -3,7 +3,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { en, es, flat } from './helpers/locales.mjs';
+import { en, es, flat } from '../../helpers/locales.mjs';
 import { LAUNCHERS } from '#src/components/launchers/launchers.js';
 
 const read = (rel) => fs.readFileSync(new URL(rel, import.meta.url), 'utf8');
@@ -29,11 +29,11 @@ test('ningún texto de Heroic en los locales (pestaña, dónde pegarlo, cualquie
 });
 
 test('la fuente de los lanzadores no marca Heroic como no verificado', () => {
-  for (const f of ['../src/launchers.js', '../src/components/LauncherBlock.jsx']) assert.ok(!UNVERIFIED.test(read(f)), f);
+  for (const f of ['../../../src/components/launchers/launchers.js', '../../../src/components/launchers/LauncherBlock.jsx']) assert.ok(!UNVERIFIED.test(read(f)), f);
 });
 
 test('README: ni Heroic ni Windows/Playnite ni la nota de Proton/Wine dicen «sin verificar»', () => {
-  const readme = read('../../README.md');
+  const readme = read('../../../../README.md');
   const line = (re) => readme.split('\n').find((x) => re.test(x));
   const heroic = line(/^- \*\*Heroic\*\*/);
   assert.ok(heroic, 'falta la entrada de Heroic en el README');

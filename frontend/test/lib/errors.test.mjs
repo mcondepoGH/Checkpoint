@@ -2,7 +2,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { es } from './helpers/locales.mjs';
+import { es } from '../helpers/locales.mjs';
 import { ApiError, api } from '#src/lib/api.js';
 import { errorText, fieldErrorText } from '#src/lib/errors.js';
 import { createI18n } from '#src/lib/i18n.js';
@@ -38,7 +38,7 @@ test('errorText: sin code usa el texto; code sin traducción usa reason o el cod
 
 // Código de la capa web: main.py, los routers/dependencias de api/ y la lógica de services/.
 function apiSources() {
-  const root = new URL('../../backend/app/', import.meta.url);
+  const root = new URL('../../../backend/app/', import.meta.url);
   const files = ['main.py'];
   for (const d of ['api', 'services']) {
     for (const f of fs.readdirSync(new URL(`${d}/`, root), { recursive: true })) if (f.endsWith('.py')) files.push(`${d}/${f}`);
@@ -72,14 +72,14 @@ test('fieldErrorText: string tal cual, {code,params} traducido, vacío -> undefi
 });
 
 test('todos los err.config.* y err.configstore.* que emite el backend existen en es.json', () => {
-  const src = ['config/models.py', 'config/store.py'].map((f) => fs.readFileSync(new URL(`../../backend/app/${f}`, import.meta.url), 'utf8')).join('');
+  const src = ['config/models.py', 'config/store.py'].map((f) => fs.readFileSync(new URL(`../../../backend/app/${f}`, import.meta.url), 'utf8')).join('');
   const codes = [...new Set([...src.matchAll(/"(err\.config(?:store)?\.[a-z_]+)"/g)].map((m) => m[1]))];
   assert.ok(codes.length >= 50, `solo ${codes.length} códigos`);
   for (const c of codes) assert.notEqual(t(c, { reason: 'r', max: 1 }), c, `falta ${c}`);
 });
 
 test('todas las claves err.sync/transport/bootstrap que emite el backend existen en es.json', () => {
-  const dir = new URL('../../backend/app/', import.meta.url);
+  const dir = new URL('../../../backend/app/', import.meta.url);
   const syncFiles = fs.readdirSync(new URL('sync/', dir), { recursive: true }).filter((f) => f.endsWith('.py')).map((f) => `sync/${f}`);
   const src = [...syncFiles, 'core/bootstrap.py'].map((f) => fs.readFileSync(new URL(f, dir), 'utf8')).join('\n') + apiSources();
   const codes = [...new Set([...src.matchAll(/"(err\.(?:sync|transport|bootstrap)\.[a-z_]+)"/g)].map((m) => m[1]))]

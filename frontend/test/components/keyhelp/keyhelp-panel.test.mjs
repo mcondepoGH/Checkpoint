@@ -6,7 +6,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { osSteps } from '#src/components/keyhelp/keyhelpSteps.js';
-import { bundle, SRC } from './helpers/bundle.mjs';
+import { bundle, SRC } from '../../helpers/bundle.mjs';
 
 // Los botones de `ui` se sustituyen por un stub que registra sus props; el resto de `ui` es el real.
 const stubButtons = {

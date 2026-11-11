@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { initialState, isInsecure, reduce, run } from '#src/lib/apikey.js';
 import { ApiError } from '#src/lib/api.js';
-import { bundle } from './helpers/bundle.mjs';
+import { bundle } from '../../helpers/bundle.mjs';
 
 const KEY = 'ck_' + 'A'.repeat(43);
 

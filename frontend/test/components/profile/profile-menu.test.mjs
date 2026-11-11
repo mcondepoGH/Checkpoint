@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { bundle, SRC } from './helpers/bundle.mjs';
+import { bundle, SRC } from '../../helpers/bundle.mjs';
 
 const { mod: m, skip } = await bundle(`import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
@@ -104,7 +104,7 @@ test('estilos: filas de 44 px, anchos y chip compacto sin tamaños sueltos', () 
 });
 
 test('Esc devuelve el foco al botón y fuera cierra (contrato en el código)', () => {
-  const src = read('components', 'ProfileMenu.jsx');
+  const src = read('components', 'profile', 'ProfileMenu.jsx');
   assert.match(src, /e\.key === 'Escape'[^}]*btn\.current\?\.focus\(\)/);
   assert.match(src, /addEventListener\('pointerdown', outside\)/);
   assert.match(src, /aria-haspopup="dialog"/);

@@ -4,7 +4,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { bundle, SRC } from './helpers/bundle.mjs';
+import { bundle, SRC } from '../../helpers/bundle.mjs';
 
 const { mod, skip } = await bundle(`import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';

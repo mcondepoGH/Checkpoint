@@ -4,11 +4,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { en, es } from './helpers/locales.mjs';
+import { FRONTEND, SRC } from '../helpers/bundle.mjs';
+import { en, es } from '../helpers/locales.mjs';
 
-const HERE = path.dirname(fileURLToPath(import.meta.url));
-const SRC = path.join(HERE, '..', 'src');
 const PLURAL = new Set(['zero', 'one', 'two', 'few', 'many', 'other']);
 const isPlural = (v) => v && typeof v === 'object' && 'other' in v && Object.keys(v).every((k) => PLURAL.has(k));
 
@@ -56,7 +54,7 @@ test('ninguna traducción vacía y las de en no son copia literal del español (
 });
 
 test('los códigos err.* del backend existen en el catálogo (y en inglés)', () => {
-  const dir = path.join(HERE, '..', '..', 'backend', 'app');
+  const dir = path.join(FRONTEND, '..', 'backend', 'app');
   const used = new Set();
   for (const f of fs.readdirSync(dir, { recursive: true }).filter((x) => x.endsWith('.py'))) {
     for (const m of fs.readFileSync(path.join(dir, f), 'utf8').matchAll(/["'](err\.[a-z_]+\.[a-z_.]+)["']/g)) used.add(m[1]);

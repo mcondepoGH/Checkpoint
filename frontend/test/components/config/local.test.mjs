@@ -1,7 +1,7 @@
 // «Este equipo» (dispositivo local): borrador <-> config, casilla, ids estables y sin cambios fantasma.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { es } from './helpers/locales.mjs';
+import { es } from '../../helpers/locales.mjs';
 import { createI18n } from '#src/lib/i18n.js';
 import { errorText } from '#src/lib/errors.js';
 import {

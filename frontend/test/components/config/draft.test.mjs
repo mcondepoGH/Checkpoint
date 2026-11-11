@@ -92,7 +92,7 @@ test('labelOf muestra el nombre, nunca el id', () => {
 });
 
 test('las pantallas no pintan ids de juego como título', () => {
-  const src = (f) => fs.readFileSync(new URL(`../src/${f}`, import.meta.url), 'utf8');
+  const src = (f) => fs.readFileSync(new URL(`../../../src/${f}`, import.meta.url), 'utf8');
   assert.match(src('pages/Sync.jsx'), /<h3 title=.*><span className=\"game-name\">\{gameName\(g\)\}<\/span>/);
   assert.match(src('pages/Versions.jsx'), /labelOf\(config\.games, g\)/);
 });
@@ -100,7 +100,7 @@ test('las pantallas no pintan ids de juego como título', () => {
 test('Configuración reinicia el borrador durante el render, no en un efecto', () => {
   // En un efecto, el primer render tras cargar compara el borrador vacío con la config nueva y marca
   // "Cambios sin guardar" (y avisa a App con onDirty(true)) sin que el usuario toque nada.
-  const src = fs.readFileSync(new URL('../src/pages/Settings.jsx', import.meta.url), 'utf8');
+  const src = fs.readFileSync(new URL('../../../src/pages/Settings.jsx', import.meta.url), 'utf8');
   assert.doesNotMatch(src, /useEffect\(\(\) => \{ setDraft\(fromConfig/);
   assert.match(src, /if \(draftVersion !== loaded\.version\) \{/);
 });
@@ -167,7 +167,7 @@ test('isSoloCheckpoint: solo con un dispositivo en la config guardada', () => {
 });
 
 test('Settings pide al menos un dispositivo y Sync pinta la etiqueta Solo checkpoint', () => {
-  const src = (f) => fs.readFileSync(new URL(`../src/${f}`, import.meta.url), 'utf8');
+  const src = (f) => fs.readFileSync(new URL(`../../../src/${f}`, import.meta.url), 'utf8');
   const st = src('pages/Settings.jsx');
   assert.match(st, /needOne/);
   assert.doesNotMatch(st, /needTwo/);

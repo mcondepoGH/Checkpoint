@@ -1,11 +1,11 @@
 // Insignia de actualización y ajuste: lógica pura + render a HTML (esbuild, ya incluido con Vite; si no está, se salta).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { es } from './helpers/locales.mjs';
+import { es } from '../../helpers/locales.mjs';
 import { updatesApplicable, showBadge, safeUrl, updateSummary, channelOf, isPrerelease, installedVersion, CHANNEL_OPTIONS } from '#src/lib/updates.js';
 
 import { createI18n } from '#src/lib/i18n.js';
-import { bundle } from './helpers/bundle.mjs';
+import { bundle } from '../../helpers/bundle.mjs';
 const t = createI18n({ catalogs: { es }, storage: null, languages: ['es'] }).t;
 
 const NEW = { actual: '0.4.2', ultima: '0.5.0', hay_actualizacion: true, habilitado: true, notas: 'Novedades <b>x</b>', url: 'https://github.com/o/r/releases/tag/v0.5.0', comprobado_en: '2026-01-01T10:00:00+00:00', error: null, canal: 'stable', prerelease: false };

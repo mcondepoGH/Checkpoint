@@ -2,7 +2,7 @@
 // Usa esbuild (viene con Vite); si no está disponible el test se salta.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { bundle } from './helpers/bundle.mjs';
+import { bundle } from '../helpers/bundle.mjs';
 
 const { mod: m, skip } = await bundle(`import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';

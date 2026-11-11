@@ -1,7 +1,7 @@
 // Infraestructura i18n: lookup jerárquico, parámetros, plurales con Intl.PluralRules, detección y persistencia del idioma.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { es as realEs } from './helpers/locales.mjs';
+import { es as realEs } from '../helpers/locales.mjs';
 import { createI18n, pickLocale, STORAGE_KEY } from '#src/lib/i18n.js';
 
 const es = { app: { name: 'Checkpoint' }, hello: 'Hola {name}', files: { one: '{count} fichero', other: '{count} ficheros' }, solo: 'solo es' };
