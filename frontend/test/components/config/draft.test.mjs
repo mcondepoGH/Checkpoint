@@ -100,7 +100,7 @@ test('las pantallas no pintan ids de juego como título', () => {
 test('Configuración reinicia el borrador durante el render, no en un efecto', () => {
   // En un efecto, el primer render tras cargar compara el borrador vacío con la config nueva y marca
   // "Cambios sin guardar" (y avisa a App con onDirty(true)) sin que el usuario toque nada.
-  const src = fs.readFileSync(new URL('../../../src/pages/Settings.jsx', import.meta.url), 'utf8');
+  const src = fs.readFileSync(new URL('../../../src/components/config/useConfigDraft.js', import.meta.url), 'utf8');
   assert.doesNotMatch(src, /useEffect\(\(\) => \{ setDraft\(fromConfig/);
   assert.match(src, /if \(draftVersion !== loaded\.version\) \{/);
 });

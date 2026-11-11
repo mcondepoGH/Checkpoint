@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { diffConfig, testDevice as testDeviceApi, validateConfig } from '#src/lib/api/config.js';
+import React, { useMemo, useRef, useState } from 'react';
+import { diffConfig, testDevice as testDeviceApi } from '#src/lib/api/config.js';
 import {
-  MAX_VERSIONS_LIMIT, VERSIONS_HINT, blankDevice, blankGame, canOfferLocal, deviceId, baseKeyOf, errorsFor, fromConfig, gamesUsing, hasChanges, idOf, localErrors, nameOf, pathsOf, removeDevice, renamed, toConfig,
+  MAX_VERSIONS_LIMIT, VERSIONS_HINT, blankDevice, blankGame, canOfferLocal, deviceId, errorsFor, fromConfig, gamesUsing, idOf, nameOf, pathsOf, removeDevice, renamed,
 } from '#src/components/config/draft.js';
+import useConfigDraft from '#src/components/config/useConfigDraft.js';
 import Field from '#src/components/ui/Field.jsx';
 import DeviceCard from '#src/components/config/DeviceCard.jsx';
 import GameCard from '#src/components/config/GameCard.jsx';
@@ -27,29 +28,18 @@ import { Alert, Button, Input } from '#src/components/ui/index.js';
 export default function Settings({ loaded, stale, configError, runtime, platform, onApplied, onReload, onDirty, updates, onUpdates }) {
   const { t } = useI18n(); // re-renderiza al cambiar de idioma: errores y mensajes se guardan sin traducir y se traducen al pintar
   const fe = (v) => fieldErrorText(v, t);
-  const [draft, setDraft] = useState(() => fromConfig(loaded.config));
-  const [errors, setErrors] = useState({});
-  const [validating, setValidating] = useState(false);
   const [tests, setTests] = useState({});
   const [dialog, setDialog] = useState(null); // {kind:'save'|'yaml'|'backups', ...}
   const [msg, setMsg] = useState(null); // {ok?, body}: `body` es un error de la API o un mensaje {code} (se traduce al pintar)
   const [busy, setBusy] = useState(false);
   const [staleDiff, setStaleDiff] = useState(null);
+  const { draft, setDraft, errors, validating, local, hasLocal, payload, payloadKey, dirty, patch } = useConfigDraft({
+    loaded, runtime, onDirty, onVersionChange: () => setStaleDiff(null),
+  });
   const [launchersOpen, setLaunchersOpen] = useState(false); // sección «Lanzadores»: plegada por defecto
   const [launcherGame, setLauncherGame] = useState(() => { try { return loadGameSel(window.localStorage); } catch { return ''; } });
   const chooseLauncherGame = (sel) => { setLauncherGame(sel); try { saveGameSel(window.localStorage, sel); } catch { /* sin almacenamiento */ } };
 
-  // Cada versión nueva cargada (inicio, guardado, recarga) reinicia el borrador. Se hace durante el render
-  // (no en un efecto): así nunca se compara un borrador viejo (p. ej. el vacío previo a la carga) con la
-  // config nueva, lo que marcaba "Cambios sin guardar" sin tocar nada.
-  const [draftVersion, setDraftVersion] = useState(loaded.version);
-  if (draftVersion !== loaded.version) {
-    setDraftVersion(loaded.version);
-    setDraft(fromConfig(loaded.config));
-    setStaleDiff(null);
-  }
-
-  const local = useMemo(() => localErrors(draft, runtime), [draft, runtime]);
   // Juegos para el panel de lanzadores: dispositivos con nombre e id (los que el lanzador puede indicar en ?device=).
   const launcherGames = useMemo(() => draft.games.map((g) => ({
     sel: g.id || g.key, id: g.id, name: g.name, process: g.process, enabled: g.enabled !== false,
@@ -60,38 +50,6 @@ export default function Settings({ loaded, stale, configError, runtime, platform
     setLaunchersOpen(true);
     setTimeout(() => document.getElementById('launchers-section')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 0);
   };
-  const payload = useMemo(() => toConfig(draft), [draft]);
-  const payloadKey = JSON.stringify(payload);
-  const baseKey = useMemo(() => baseKeyOf(loaded.config), [loaded.config]);
-  const dirty = hasChanges(payloadKey, baseKey, local);
-  const hasLocal = Object.keys(local).length > 0;
-
-  const dirtyRef = useRef(dirty);
-  useEffect(() => { dirtyRef.current = dirty; onDirty(dirty); }, [dirty]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    const h = (e) => { if (dirtyRef.current) { e.preventDefault(); e.returnValue = ''; } };
-    window.addEventListener('beforeunload', h);
-    return () => window.removeEventListener('beforeunload', h);
-  }, []);
-
-  // Validación en vivo (con retardo) contra el mismo validador del backend.
-  const seq = useRef(0);
-  useEffect(() => {
-    const n = ++seq.current;
-    setValidating(true);
-    const timer = setTimeout(async () => {
-      try {
-        const r = await validateConfig(JSON.parse(payloadKey));
-        if (n === seq.current) { setErrors(r.errors); setValidating(false); }
-      } catch (e) {
-        if (n === seq.current) { setErrors({ '': e }); setValidating(false); }
-      }
-    }, 300);
-    return () => clearTimeout(timer);
-  }, [payloadKey]);
-
-  const patch = (list, key, p) => setDraft((d) => ({ ...d, [list]: d[list].map((x) => (x.key === key ? { ...x, ...p } : x)) }));
-
   const delDevice = (dev) => {
     const used = gamesUsing(draft, dev.key);
     if (used.length && !window.confirm(
