@@ -1,31 +1,126 @@
 @use 'variables' as v;
 
-* { box-sizing: border-box; }
-html { background: var(--bg); -webkit-text-size-adjust: 100%; }
-// Márgenes seguros (muescas, barras de gestos); 0 en pantallas sin ellos. Requiere viewport-fit=cover.
-:root { --sl: env(safe-area-inset-left, 0px); --sr: env(safe-area-inset-right, 0px); --sb: env(safe-area-inset-bottom, 0px); --st: env(safe-area-inset-top, 0px);
-  --pad-l: max(#{v.$gap}, var(--sl)); --pad-r: max(#{v.$gap}, var(--sr)); }
-body {
-  margin: 0; min-height: 100vh; min-height: 100dvh; color: var(--text); font: 500 #{v.$fs-body}/1.45 v.$font;
-  background: var(--page-bg), var(--bg); background-attachment: fixed;
+* {
+  box-sizing: border-box;
 }
-h1, h2, h3 { margin: 0 0 .5rem; font-family: v.$display; letter-spacing: .04em; }
-h2 { font-size: v.$fs-title; text-transform: uppercase;
-  background: linear-gradient(90deg, var(--accent), var(--primary), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-h3 { font-size: v.$fs-subtitle; }
-code, pre { font-family: v.$mono; }
-code { font-size: .85em; word-break: break-all; }
-.muted { color: var(--muted); margin: .25rem 0; }
-.spacer { flex: 1; }
-.center { min-height: 100vh; min-height: 100dvh; display: grid; place-items: center; padding: v.$gap; }
-::selection { background: var(--primary); color: var(--primary-text); }
-body { overflow-x: hidden; }
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
-::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+html {
+  background: var(--bg);
+  -webkit-text-size-adjust: 100%;
+}
+// Márgenes seguros (muescas, barras de gestos); 0 en pantallas sin ellos. Requiere viewport-fit=cover.
+:root {
+  --sl: env(safe-area-inset-left, 0px);
+  --sr: env(safe-area-inset-right, 0px);
+  --sb: env(safe-area-inset-bottom, 0px);
+  --st: env(safe-area-inset-top, 0px);
+  --pad-l: max(#{v.$gap}, var(--sl));
+  --pad-r: max(#{v.$gap}, var(--sr));
+}
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
+  color: var(--text);
+  font: 500 #{v.$fs-body}/ 1.45 v.$font;
+  background: var(--page-bg), var(--bg);
+  background-attachment: fixed;
+}
+h1,
+h2,
+h3 {
+  margin: 0 0 0.5rem;
+  font-family: v.$display;
+  letter-spacing: 0.04em;
+}
+h2 {
+  font-size: v.$fs-title;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, var(--accent), var(--primary), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+h3 {
+  font-size: v.$fs-subtitle;
+}
+code,
+pre {
+  font-family: v.$mono;
+}
+code {
+  font-size: 0.85em;
+  word-break: break-all;
+}
+.muted {
+  color: var(--muted);
+  margin: 0.25rem 0;
+}
+.spacer {
+  flex: 1;
+}
+.center {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: v.$gap;
+}
+::selection {
+  background: var(--primary);
+  color: var(--primary-text);
+}
+body {
+  overflow-x: hidden;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
 
-@keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 0 0 var(--glow); } 50% { box-shadow: 0 0 18px 2px var(--glow); } }
-@keyframes slide { from { background-position: 0 0; } to { background-position: 40px 0; } }
-@keyframes blink { 50% { opacity: .35; } }
-@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 var(--glow);
+  }
+  50% {
+    box-shadow: 0 0 18px 2px var(--glow);
+  }
+}
+@keyframes slide {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 40px 0;
+  }
+}
+@keyframes blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}

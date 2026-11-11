@@ -8,7 +8,21 @@
 }
 
 // Sin preferencia explícita el tema por defecto es el oscuro gaming.
-:root { @include emit(dark); color-scheme: dark; }
-@media (prefers-color-scheme: light) { :root:not([data-theme='dark']):not([data-theme='light']) { @include emit(light); color-scheme: light; } }
-:root[data-theme='dark'] { @include emit(dark); color-scheme: dark; }
-:root[data-theme='light'] { @include emit(light); color-scheme: light; }
+:root {
+  @include emit(dark);
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']):not([data-theme='light']) {
+    @include emit(light);
+    color-scheme: light;
+  }
+}
+:root[data-theme='dark'] {
+  @include emit(dark);
+  color-scheme: dark;
+}
+:root[data-theme='light'] {
+  @include emit(light);
+  color-scheme: light;
+}

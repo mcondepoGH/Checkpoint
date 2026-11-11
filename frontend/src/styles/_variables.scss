@@ -7,33 +7,75 @@ $bp-xs-tabs: 400px; // hasta aquí las pestañas usan el relleno compacto (390 p
 $bp-xxs: 340px; // móviles mínimos (320 px): cabecera con aviso de actualización
 $icon-btn: 1.25rem; // 20 px: icono dentro de Button iconOnly (único sitio que lo controla)
 $touch: 40px; // objetivo táctil mínimo
-$font: 'Rajdhani', 'Orbitron', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+$font:
+  'Rajdhani',
+  'Orbitron',
+  'Segoe UI',
+  system-ui,
+  -apple-system,
+  Roboto,
+  sans-serif;
 $display: 'Orbitron', 'Rajdhani', 'Segoe UI', system-ui, sans-serif;
 $mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
 // Tema gaming: oscuro con acentos neón (cian / magenta / violeta). Sin fuentes externas: pila de sistema.
 $themes: (
-  light: (bg: #eef0fb, surface: #ffffff, surface-2: #f4f1ff, text: #1a1535, muted: #5d5a85, border: #cfc9f0,
-          primary: #6d28d9, primary-text: #ffffff, accent: #0891b2, accent-2: #c026d3,
-          danger: #d11a4a, ok: #0f9d58, warn: #b45309, glow: rgba(109, 40, 217, .28),
-          log-bg: #120d2b, log-text: #5eead4,
-          page-bg: (radial-gradient(900px 500px at 10% -10%, rgba(109, 40, 217, .14), transparent 60%), radial-gradient(800px 500px at 100% 0%, rgba(8, 145, 178, .14), transparent 60%))),
-  dark: (bg: #07061a, surface: #11102b, surface-2: #181640, text: #e9e7ff, muted: #9c98c9, border: #2c2a63,
-         primary: #8b5cf6, primary-text: #ffffff, accent: #22d3ee, accent-2: #f43f9e,
-         danger: #ff4d79, ok: #34f5a0, warn: #ffc247, glow: rgba(139, 92, 246, .45),
-         log-bg: #03020d, log-text: #4ff5c4,
-         page-bg: (radial-gradient(900px 500px at 8% -10%, rgba(139, 92, 246, .22), transparent 60%), radial-gradient(800px 500px at 100% 0%, rgba(34, 211, 238, .14), transparent 60%), radial-gradient(700px 600px at 50% 120%, rgba(244, 63, 158, .12), transparent 60%))),
+  light: (
+    bg: #eef0fb,
+    surface: #ffffff,
+    surface-2: #f4f1ff,
+    text: #1a1535,
+    muted: #5d5a85,
+    border: #cfc9f0,
+    primary: #6d28d9,
+    primary-text: #ffffff,
+    accent: #0891b2,
+    accent-2: #c026d3,
+    danger: #d11a4a,
+    ok: #0f9d58,
+    warn: #b45309,
+    glow: rgba(109, 40, 217, 0.28),
+    log-bg: #120d2b,
+    log-text: #5eead4,
+    page-bg: (
+      radial-gradient(900px 500px at 10% -10%, rgba(109, 40, 217, 0.14), transparent 60%),
+      radial-gradient(800px 500px at 100% 0%, rgba(8, 145, 178, 0.14), transparent 60%),
+    ),
+  ),
+  dark: (
+    bg: #07061a,
+    surface: #11102b,
+    surface-2: #181640,
+    text: #e9e7ff,
+    muted: #9c98c9,
+    border: #2c2a63,
+    primary: #8b5cf6,
+    primary-text: #ffffff,
+    accent: #22d3ee,
+    accent-2: #f43f9e,
+    danger: #ff4d79,
+    ok: #34f5a0,
+    warn: #ffc247,
+    glow: rgba(139, 92, 246, 0.45),
+    log-bg: #03020d,
+    log-text: #4ff5c4,
+    page-bg: (
+      radial-gradient(900px 500px at 8% -10%, rgba(139, 92, 246, 0.22), transparent 60%),
+      radial-gradient(800px 500px at 100% 0%, rgba(34, 211, 238, 0.14), transparent 60%),
+      radial-gradient(700px 600px at 50% 120%, rgba(244, 63, 158, 0.12), transparent 60%),
+    ),
+  ),
 );
 
 // Escala tipográfica (html base 16 px: rem = px/16). Usar siempre estos tokens, nunca tamaños sueltos.
-$fs-label: .75rem;     // 12 px: badges, etiquetas en mayúsculas, pie, encabezados de lista
-$fs-hint: .8125rem;    // 13 px: ayudas, texto secundario/meta, código, logs, pestañas de escritorio
-$fs-body: .9375rem;    // 15 px: texto normal, botones, etiquetas de campo, avisos
+$fs-label: 0.75rem; // 12 px: badges, etiquetas en mayúsculas, pie, encabezados de lista
+$fs-hint: 0.8125rem; // 13 px: ayudas, texto secundario/meta, código, logs, pestañas de escritorio
+$fs-body: 0.9375rem; // 15 px: texto normal, botones, etiquetas de campo, avisos
 $fs-subtitle: 1.0625rem; // 17 px: h3, título de tarjeta, valores destacados
-$fs-title: 1.25rem;    // 20 px: h2, títulos de sección/estado vacío
-$fs-page: 1.75rem;     // 28 px: h1 (login)
-$fs-icon: 2.25rem;     // 36 px: icono de estado vacío compacto
+$fs-title: 1.25rem; // 20 px: h2, títulos de sección/estado vacío
+$fs-page: 1.75rem; // 28 px: h1 (login)
+$fs-icon: 2.25rem; // 36 px: icono de estado vacío compacto
 $fs-hero: clamp(3rem, 12vw, 4.5rem); // icono de estado vacío
 $fs-input-mobile: 1rem; // campos en móvil: >=16 px (1rem) evita el zoom de iOS
-$fs-tab-mobile: .74rem;  // pestañas móvil (<=640 px): ajustadas para que la barra quepa sin scroll lateral
-$fs-tab-narrow: .7rem;   // pestañas en móviles estrechos (<=380 px)
+$fs-tab-mobile: 0.74rem; // pestañas móvil (<=640 px): ajustadas para que la barra quepa sin scroll lateral
+$fs-tab-narrow: 0.7rem; // pestañas en móviles estrechos (<=380 px)

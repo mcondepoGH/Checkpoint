@@ -2,26 +2,102 @@
 
 // Botón (componente Button): base + variantes primary, danger y ghost. Aquí se cambia el aspecto de todos los botones.
 .btn {
-  font: inherit; font-weight: 700; letter-spacing: .04em; cursor: pointer; padding: .5rem 1rem; border-radius: 10px;
-  border: 1px solid var(--border); background: var(--surface-2); color: var(--text);
-  transition: transform .12s, box-shadow .2s, border-color .2s, filter .2s;
-  &:hover:not(:disabled) { border-color: var(--accent); box-shadow: 0 0 14px -2px var(--accent); transform: translateY(-1px); }
-  &:active:not(:disabled) { transform: translateY(1px); }
-  &:disabled { opacity: .55; cursor: not-allowed; }
-  &.primary { background: linear-gradient(135deg, var(--primary), var(--accent-2)); color: var(--primary-text); border-color: transparent; text-transform: uppercase; font-size: v.$fs-body;
-    &:hover:not(:disabled) { box-shadow: 0 0 22px -2px var(--accent-2); filter: brightness(1.1); }
-    &:disabled { animation: pulse-glow 1.4s infinite; opacity: .85; } }
-  &.danger { color: var(--danger); border-color: var(--danger); &:hover:not(:disabled) { border-color: var(--danger); box-shadow: 0 0 14px -2px var(--danger); } }
-  &.ghost { background: transparent; border-color: transparent; color: var(--muted); &:hover:not(:disabled) { color: var(--text); box-shadow: none; border-color: var(--border); } }
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  transition:
+    transform 0.12s,
+    box-shadow 0.2s,
+    border-color 0.2s,
+    filter 0.2s;
+  &:hover:not(:disabled) {
+    border-color: var(--accent);
+    box-shadow: 0 0 14px -2px var(--accent);
+    transform: translateY(-1px);
+  }
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  &.primary {
+    background: linear-gradient(135deg, var(--primary), var(--accent-2));
+    color: var(--primary-text);
+    border-color: transparent;
+    text-transform: uppercase;
+    font-size: v.$fs-body;
+    &:hover:not(:disabled) {
+      box-shadow: 0 0 22px -2px var(--accent-2);
+      filter: brightness(1.1);
+    }
+    &:disabled {
+      animation: pulse-glow 1.4s infinite;
+      opacity: 0.85;
+    }
+  }
+  &.danger {
+    color: var(--danger);
+    border-color: var(--danger);
+    &:hover:not(:disabled) {
+      border-color: var(--danger);
+      box-shadow: 0 0 14px -2px var(--danger);
+    }
+  }
+  &.ghost {
+    background: transparent;
+    border-color: transparent;
+    color: var(--muted);
+    &:hover:not(:disabled) {
+      color: var(--text);
+      box-shadow: none;
+      border-color: var(--border);
+    }
+  }
   // Solo icono (Button iconOnly): cuadrado de v.$touch, sin texto visible, mismo tamaño en todos los viewports. Va DESPUÉS de la base y de las variantes:
   // con la misma especificidad gana el orden, y `.btn` (padding .5rem 1rem) dejaba ~6 px de contenido y encogía el svg.
   // Icono de v.$icon-btn (solo aquí; el resto de Icon conserva su tamaño). El cuadro (borde + fondo) aparece solo en hover, :focus-visible y :active; en reposo, borde transparente y sin fondo.
-  &.btn-icon { flex: none; width: v.$touch; min-width: v.$touch; height: v.$touch; padding: 0; display: inline-flex; align-items: center; justify-content: center; border-color: transparent; background: transparent;
-    svg { flex: none; width: v.$icon-btn; height: v.$icon-btn; }
-    &:focus-visible, &:active:not(:disabled) { border-color: var(--border); background: var(--surface-2); color: var(--text); }
-    @media (hover: hover) { &:hover:not(:disabled) { border-color: var(--border); background: var(--surface-2); color: var(--text); } } }
+  &.btn-icon {
+    flex: none;
+    width: v.$touch;
+    min-width: v.$touch;
+    height: v.$touch;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-color: transparent;
+    background: transparent;
+    svg {
+      flex: none;
+      width: v.$icon-btn;
+      height: v.$icon-btn;
+    }
+    &:focus-visible,
+    &:active:not(:disabled) {
+      border-color: var(--border);
+      background: var(--surface-2);
+      color: var(--text);
+    }
+    @media (hover: hover) {
+      &:hover:not(:disabled) {
+        border-color: var(--border);
+        background: var(--surface-2);
+        color: var(--text);
+      }
+    }
+  }
 }
 
 @media (max-width: v.$bp-sm) {
-  .btn { min-height: v.$touch; }
+  .btn {
+    min-height: v.$touch;
+  }
 }

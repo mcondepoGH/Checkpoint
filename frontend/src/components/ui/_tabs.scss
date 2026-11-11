@@ -1,12 +1,50 @@
 @use '../../styles/variables' as v;
 
 // Pestañas (componente Tabs): fila que ajusta a varias líneas si no caben, la activa resaltada; el panel queda unido debajo.
-.uitabs { display: flex; flex-direction: column; gap: .5rem; min-width: 0; }
-.uitabs-list { display: flex; flex-wrap: wrap; gap: .25rem; min-width: 0; }
-.uitab { font: inherit; font-size: v.$fs-hint; font-weight: 700; min-height: v.$touch; padding: 0 .75rem; border-radius: 10px; cursor: pointer; color: var(--muted);
-  background: none; border: 1px solid var(--border);
-  &:hover { color: var(--text); }
-  &.active { color: var(--text); background: var(--surface-2); border-color: var(--accent); }
-  &:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(34, 211, 238, .22); } }
-.uitabs-panel { display: flex; flex-direction: column; gap: .5rem; min-width: 0;
-  &:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(34, 211, 238, .22); border-radius: 10px; } }
+.uitabs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.uitabs-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.uitab {
+  font: inherit;
+  font-size: v.$fs-hint;
+  font-weight: 700;
+  min-height: v.$touch;
+  padding: 0 0.75rem;
+  border-radius: 10px;
+  cursor: pointer;
+  color: var(--muted);
+  background: none;
+  border: 1px solid var(--border);
+  &:hover {
+    color: var(--text);
+  }
+  &.active {
+    color: var(--text);
+    background: var(--surface-2);
+    border-color: var(--accent);
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.22);
+  }
+}
+.uitabs-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  &:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.22);
+    border-radius: 10px;
+  }
+}

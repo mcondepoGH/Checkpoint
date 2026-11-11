@@ -1,72 +1,281 @@
 @use 'variables' as v;
 
 .topbar {
-  display: flex; align-items: center; gap: .5rem; padding: .6rem var(--pad-r) .6rem var(--pad-l); flex-wrap: wrap;
-  background: color-mix(in srgb, var(--surface) 85%, transparent); backdrop-filter: blur(10px);
-  border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 5;
-  &::after { content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 1px;
-    background: linear-gradient(90deg, transparent, var(--accent), var(--accent-2), transparent); opacity: .8; }
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem var(--pad-r) 0.6rem var(--pad-l);
+  flex-wrap: wrap;
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), var(--accent-2), transparent);
+    opacity: 0.8;
+  }
 }
-.brand { margin-right: .75rem; font-family: v.$display; font-size: v.$fs-subtitle; letter-spacing: .12em; text-transform: uppercase;
-  background: linear-gradient(90deg, var(--accent), var(--accent-2)); -webkit-background-clip: text; background-clip: text; color: transparent;
-  display: inline-flex; align-items: center; gap: .5rem; }
-.brand-logo { width: 32px; height: 32px; flex: none; }
-.tabs { display: flex; gap: .25rem; flex-wrap: wrap; }
-.tab .short { display: none; }
-.tab { font: inherit; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; font-size: v.$fs-hint; background: none; border: 1px solid transparent;
-  padding: .4rem .8rem; border-radius: 10px; color: var(--muted); cursor: pointer; transition: all .15s;
-  &:hover { color: var(--text); border-color: var(--border); }
-  &.active { background: var(--bg); color: var(--accent); border-color: var(--accent); box-shadow: 0 0 14px -3px var(--accent); } }
-.update-badge { color: var(--accent-2); border-color: var(--accent-2); font-weight: 700; flex: none; white-space: nowrap; }
-.pre-tag { display: inline-block; margin-left: .4rem; padding: 0 .45rem; border: 1px solid var(--warn); border-radius: 999px; color: var(--warn);
-  font-size: v.$fs-label; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; vertical-align: middle; white-space: nowrap; }
-.update-channel { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; margin: .75rem 0 .25rem; label { font-weight: 600; }
-  select { width: auto; min-width: 9rem; max-width: 100%; } }
-.update-versions { display: flex; gap: 1.5rem; margin: 0 0 1rem; div { min-width: 0; } dt { font-size: v.$fs-label; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
-  dd { margin: 0; font-size: v.$fs-title; font-weight: 700; overflow-wrap: anywhere; } }
-.update-notes { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 40vh; overflow-y: auto; padding: .6rem .75rem; margin-bottom: 1rem;
-  border: 1px solid var(--border); border-radius: 10px; background: var(--bg); font-size: v.$fs-body; }
-.app { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
-.content { max-width: 1000px; width: 100%; box-sizing: border-box; margin: 0 auto; padding: v.$gap var(--pad-r) v.$gap var(--pad-l); flex: 1; display: flex; flex-direction: column; }
-.app-footer { text-align: center; font-size: v.$fs-label; padding: .5rem var(--pad-r) .75rem var(--pad-l); }
-.content > section.fill { flex: 1; display: flex; flex-direction: column; }
+.brand {
+  margin-right: 0.75rem;
+  font-family: v.$display;
+  font-size: v.$fs-subtitle;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.brand-logo {
+  width: 32px;
+  height: 32px;
+  flex: none;
+}
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+.tab .short {
+  display: none;
+}
+.tab {
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-size: v.$fs-hint;
+  background: none;
+  border: 1px solid transparent;
+  padding: 0.4rem 0.8rem;
+  border-radius: 10px;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  &:hover {
+    color: var(--text);
+    border-color: var(--border);
+  }
+  &.active {
+    background: var(--bg);
+    color: var(--accent);
+    border-color: var(--accent);
+    box-shadow: 0 0 14px -3px var(--accent);
+  }
+}
+.update-badge {
+  color: var(--accent-2);
+  border-color: var(--accent-2);
+  font-weight: 700;
+  flex: none;
+  white-space: nowrap;
+}
+.pre-tag {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0 0.45rem;
+  border: 1px solid var(--warn);
+  border-radius: 999px;
+  color: var(--warn);
+  font-size: v.$fs-label;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.update-channel {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  margin: 0.75rem 0 0.25rem;
+  label {
+    font-weight: 600;
+  }
+  select {
+    width: auto;
+    min-width: 9rem;
+    max-width: 100%;
+  }
+}
+.update-versions {
+  display: flex;
+  gap: 1.5rem;
+  margin: 0 0 1rem;
+  div {
+    min-width: 0;
+  }
+  dt {
+    font-size: v.$fs-label;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+  }
+  dd {
+    margin: 0;
+    font-size: v.$fs-title;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+}
+.update-notes {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 40vh;
+  overflow-y: auto;
+  padding: 0.6rem 0.75rem;
+  margin-bottom: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  font-size: v.$fs-body;
+}
+.app {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+.content {
+  max-width: 1000px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 auto;
+  padding: v.$gap var(--pad-r) v.$gap var(--pad-l);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.app-footer {
+  text-align: center;
+  font-size: v.$fs-label;
+  padding: 0.5rem var(--pad-r) 0.75rem var(--pad-l);
+}
+.content > section.fill {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
 
 // Móvil: cabecera de una sola fila (~52 px): icono de la app a la izquierda, pestañas con etiqueta corta y perfil a la derecha.
 @media (max-width: v.$bp-sm) {
-  .two { grid-template-columns: 1fr; }
-  .topbar { flex-wrap: nowrap; gap: .25rem; min-height: 52px; padding-top: calc(.25rem + var(--st)); padding-bottom: .25rem; }
-  .spacer { display: none; }
-  .brand { margin: 0 .25rem 0 0; flex: none; }
-  .brand-logo { width: 30px; height: 30px; }
-  .brand-name { display: none; }
-  .tabs { flex: 1 1 auto; min-width: 0; flex-wrap: nowrap; gap: .1rem; }
-  .tab { flex: none; min-height: v.$touch; padding: 0 .45rem; font-size: v.$fs-tab-mobile; letter-spacing: .03em; white-space: nowrap; display: inline-flex; align-items: center; }
-  .tab .full, .tool .lbl { display: none; }
-  .tab .short { display: inline; }
-  .tool { flex: none; width: v.$touch; min-width: v.$touch; height: v.$touch; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
-  .content { padding-top: .75rem; padding-bottom: .75rem; }
+  .two {
+    grid-template-columns: 1fr;
+  }
+  .topbar {
+    flex-wrap: nowrap;
+    gap: 0.25rem;
+    min-height: 52px;
+    padding-top: calc(0.25rem + var(--st));
+    padding-bottom: 0.25rem;
+  }
+  .spacer {
+    display: none;
+  }
+  .brand {
+    margin: 0 0.25rem 0 0;
+    flex: none;
+  }
+  .brand-logo {
+    width: 30px;
+    height: 30px;
+  }
+  .brand-name {
+    display: none;
+  }
+  .tabs {
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-wrap: nowrap;
+    gap: 0.1rem;
+  }
+  .tab {
+    flex: none;
+    min-height: v.$touch;
+    padding: 0 0.45rem;
+    font-size: v.$fs-tab-mobile;
+    letter-spacing: 0.03em;
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+  }
+  .tab .full,
+  .tool .lbl {
+    display: none;
+  }
+  .tab .short {
+    display: inline;
+  }
+  .tool {
+    flex: none;
+    width: v.$touch;
+    min-width: v.$touch;
+    height: v.$touch;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .content {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
 }
 // Móvil ancho (< 480 px): el aviso de actualización sale de la cabecera (cabe en el menú de perfil, el avatar lleva un punto).
-@media (max-width: v.$bp-upd - .02px) {
-  .update-badge { display: none; }
+@media (max-width: v.$bp-upd - 0.02px) {
+  .update-badge {
+    display: none;
+  }
 }
 // Hasta 400 px (390 px reales): solo el relleno compacto de las pestañas; el resto de ajustes de <= 380 px no cambia.
 @media (max-width: v.$bp-xs-tabs) {
-  .tab { padding: 0 .3rem; }
+  .tab {
+    padding: 0 0.3rem;
+  }
 }
 // Pantallas muy estrechas (<= 380 px): el icono de la app se queda, pero con menos aire para que quepan las pestañas.
 @media (max-width: v.$bp-xs) {
-  .brand-logo { width: 24px; height: 24px; }
-  .topbar { padding-left: max(.5rem, var(--sl)); padding-right: max(.5rem, var(--sr)); }
-  .tab { padding: 0 .3rem; font-size: v.$fs-tab-narrow; letter-spacing: .02em; }
-  .profile-btn.btn { margin-left: 0; }
+  .brand-logo {
+    width: 24px;
+    height: 24px;
+  }
+  .topbar {
+    padding-left: max(0.5rem, var(--sl));
+    padding-right: max(0.5rem, var(--sr));
+  }
+  .tab {
+    padding: 0 0.3rem;
+    font-size: v.$fs-tab-narrow;
+    letter-spacing: 0.02em;
+  }
+  .profile-btn.btn {
+    margin-left: 0;
+  }
 }
 // Mínimo (<= 340 px, 320 px reales). Cálculo histórico con el aviso en la barra (ya no sale en <480 px; ahora ocupa su sitio el chip de vigilancia, si lo hay). Cálculo (px, rem = 16 px):
 //   disponible = 320 - 2 x 8 (padding topbar .5rem) = 304; fijo = icono 24 + margen .25rem (4) + aviso 40 + perfil 40 + 3 gaps x 4 = 124
 //   => pestañas disponibles = 180; necesarias a .3rem de padding ~ 194 (3 x (2 x 4.8 + 2 borde) + 2 x 1.6 gap + texto ~157): faltan ~14.
 //   Ahorro: padding de pestaña .3rem -> .15rem (6 x 2.4 = 14.4) + gap de barra .25rem -> .2rem (3 x 0.8 = 2.4) + gap de pestañas .1rem -> .05rem (2 x 0.8 = 1.6) = 18.4 px (holgura ~4 px).
 @media (max-width: v.$bp-xxs) {
-  .topbar { gap: .2rem; }
-  .tabs { gap: .05rem; }
-  .tab { padding: 0 .15rem; }
+  .topbar {
+    gap: 0.2rem;
+  }
+  .tabs {
+    gap: 0.05rem;
+  }
+  .tab {
+    padding: 0 0.15rem;
+  }
 }

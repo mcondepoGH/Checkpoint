@@ -1,48 +1,211 @@
 @use '../../styles/variables' as v;
 
 // Tarjeta de sincronización automática (pantalla de Configuración).
-.autosync { margin-top: v.$gap; gap: .75rem; max-width: 640px;
-  h3 { margin: 0; }
-  p { margin: 0; }
-  .block { display: block; margin-top: .25rem; }
-  .alert.inline { display: inline-block; margin: 0; }
-  .autosync-grid { display: grid; gap: .75rem; grid-template-columns: minmax(0, 14rem) 1fr; align-items: end; }
-  .presets { display: flex; flex-wrap: wrap; gap: .4rem; }
-  .preset { padding: .4rem .8rem; border-radius: 99px;
-    &[aria-pressed='true'] { border-color: var(--accent); color: var(--accent); box-shadow: 0 0 12px -3px var(--accent); } }
-  .autosync-status { color: var(--muted); font-size: v.$fs-body; line-height: 1.7; }
-  @media (max-width: v.$bp-sm) { .autosync-grid { grid-template-columns: 1fr; } .preset { min-height: v.$touch; } }
+.autosync {
+  margin-top: v.$gap;
+  gap: 0.75rem;
+  max-width: 640px;
+  h3 {
+    margin: 0;
+  }
+  p {
+    margin: 0;
+  }
+  .block {
+    display: block;
+    margin-top: 0.25rem;
+  }
+  .alert.inline {
+    display: inline-block;
+    margin: 0;
+  }
+  .autosync-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: minmax(0, 14rem) 1fr;
+    align-items: end;
+  }
+  .presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+  .preset {
+    padding: 0.4rem 0.8rem;
+    border-radius: 99px;
+    &[aria-pressed='true'] {
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 12px -3px var(--accent);
+    }
+  }
+  .autosync-status {
+    color: var(--muted);
+    font-size: v.$fs-body;
+    line-height: 1.7;
+  }
+  @media (max-width: v.$bp-sm) {
+    .autosync-grid {
+      grid-template-columns: 1fr;
+    }
+    .preset {
+      min-height: v.$touch;
+    }
+  }
 }
 
 // Registro de ejecuciones: lista con altura acotada; cada entrada = cabecera en rejilla (columnas fijas, alineadas entre entradas) + detalle.
-.autosync-log { gap: .6rem;
-  .runlog { list-style: none; margin: 0; padding: 0; max-height: 22rem; overflow-y: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--bg);
-    > li + li { border-top: 1px solid var(--border); } }
-  .run { padding: .5rem .75rem .6rem; display: grid; gap: .3rem; }
-  .run-head { display: grid; grid-template-columns: minmax(11.5rem, max-content) minmax(0, 1fr) minmax(4rem, max-content) minmax(7rem, max-content); gap: .6rem; align-items: center; font-size: v.$fs-body;
-    .when { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-    .trig { color: var(--muted); overflow-wrap: anywhere; }
-    .dur { color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; }
-    .badge { justify-self: start; } }
+.autosync-log {
+  gap: 0.6rem;
+  .runlog {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 22rem;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    > li + li {
+      border-top: 1px solid var(--border);
+    }
+  }
+  .run {
+    padding: 0.5rem 0.75rem 0.6rem;
+    display: grid;
+    gap: 0.3rem;
+  }
+  .run-head {
+    display: grid;
+    grid-template-columns: minmax(11.5rem, max-content) minmax(0, 1fr) minmax(4rem, max-content) minmax(7rem, max-content);
+    gap: 0.6rem;
+    align-items: center;
+    font-size: v.$fs-body;
+    .when {
+      font-variant-numeric: tabular-nums;
+      overflow-wrap: anywhere;
+    }
+    .trig {
+      color: var(--muted);
+      overflow-wrap: anywhere;
+    }
+    .dur {
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+    .badge {
+      justify-self: start;
+    }
+  }
   // Detalle bajo la cabecera, con sangría; la línea del juego va en color de apoyo.
-  .detail { display: grid; gap: .3rem; padding-left: .75rem; min-width: 0; }
-  .games { list-style: none; margin: 0; padding: 0; display: grid; gap: .4rem; > li { display: grid; gap: .15rem; min-width: 0; } }
-  .game-line { display: flex; flex-wrap: wrap; align-items: center; gap: .1rem .5rem; font-size: v.$fs-hint; color: var(--muted);
-    .game { font-weight: 600; }
-    .dev::before { content: '· '; } }
-  .msg { margin: 0; font-size: v.$fs-body; overflow-wrap: anywhere; &.is-error { color: var(--danger); }
-    &.has-icon { display: flex; align-items: flex-start; gap: .4rem; .ico { flex: none; width: 1.1em; height: 1.1em; margin-top: .15em; } } }
-  .games .msg { padding-left: .75rem; }
+  .detail {
+    display: grid;
+    gap: 0.3rem;
+    padding-left: 0.75rem;
+    min-width: 0;
+  }
+  .games {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.4rem;
+    > li {
+      display: grid;
+      gap: 0.15rem;
+      min-width: 0;
+    }
+  }
+  .game-line {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.1rem 0.5rem;
+    font-size: v.$fs-hint;
+    color: var(--muted);
+    .game {
+      font-weight: 600;
+    }
+    .dev::before {
+      content: '· ';
+    }
+  }
+  .msg {
+    margin: 0;
+    font-size: v.$fs-body;
+    overflow-wrap: anywhere;
+    &.is-error {
+      color: var(--danger);
+    }
+    &.has-icon {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.4rem;
+      .ico {
+        flex: none;
+        width: 1.1em;
+        height: 1.1em;
+        margin-top: 0.15em;
+      }
+    }
+  }
+  .games .msg {
+    padding-left: 0.75rem;
+  }
   // Botón-resumen de las entradas con más de 3 juegos (los correctos van plegados); el chevron gira al abrir.
-  .fold { display: inline-flex; align-items: center; gap: .4rem; justify-self: start; max-width: 100%; padding: .15rem .4rem .15rem 0; border: 0; background: none; color: var(--muted);
-    font: inherit; font-size: v.$fs-hint; text-align: left; cursor: pointer; overflow-wrap: anywhere;
-    .ico { flex: none; width: 1.1em; height: 1.1em; }
-    &[aria-expanded='true'] .ico { transform: rotate(180deg); } }
-  .muted { font-size: v.$fs-hint; }
+  .fold {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    justify-self: start;
+    max-width: 100%;
+    padding: 0.15rem 0.4rem 0.15rem 0;
+    border: 0;
+    background: none;
+    color: var(--muted);
+    font: inherit;
+    font-size: v.$fs-hint;
+    text-align: left;
+    cursor: pointer;
+    overflow-wrap: anywhere;
+    .ico {
+      flex: none;
+      width: 1.1em;
+      height: 1.1em;
+    }
+    &[aria-expanded='true'] .ico {
+      transform: rotate(180deg);
+    }
+  }
+  .muted {
+    font-size: v.$fs-hint;
+  }
   @media (max-width: v.$bp-sm) {
-    .fold { min-height: v.$touch; }
-    .run-head { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'when trig' 'dur badge'; row-gap: .25rem;
-      .when { grid-area: when; } .trig { grid-area: trig; text-align: right; font-size: v.$fs-hint; }
-      .dur { grid-area: dur; text-align: left; font-size: v.$fs-hint; } .badge { grid-area: badge; justify-self: end; } }
+    .fold {
+      min-height: v.$touch;
+    }
+    .run-head {
+      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-areas: 'when trig' 'dur badge';
+      row-gap: 0.25rem;
+      .when {
+        grid-area: when;
+      }
+      .trig {
+        grid-area: trig;
+        text-align: right;
+        font-size: v.$fs-hint;
+      }
+      .dur {
+        grid-area: dur;
+        text-align: left;
+        font-size: v.$fs-hint;
+      }
+      .badge {
+        grid-area: badge;
+        justify-self: end;
+      }
+    }
   }
 }

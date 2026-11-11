@@ -1,56 +1,255 @@
 @use '../../styles/variables' as v;
 
 // Perfil de la cabecera (ProfileMenu + Avatar): botón circular y popover anclado debajo.
-.avatar { display: inline-flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 50%; color: var(--muted);
-  img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  &.avatar-lg { width: 6rem; height: 6rem; border: 2px solid var(--border); background: var(--bg);
-    svg { width: 3.25rem; height: 3.25rem; } } }
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 50%;
+  color: var(--muted);
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  &.avatar-lg {
+    width: 6rem;
+    height: 6rem;
+    border: 2px solid var(--border);
+    background: var(--bg);
+    svg {
+      width: 3.25rem;
+      height: 3.25rem;
+    }
+  }
+}
 // Botón de la cabecera: 40 px (v.$touch, de Button iconOnly), redondo; la foto lo llena.
-.profile-btn.btn { position: relative; border-radius: 50%; margin-left: .25rem; // sin overflow: el punto de aviso sobresale; el avatar ya recorta la foto
-  .avatar { width: 100%; height: 100%; }
-  &[aria-expanded='true'] { border-color: var(--accent); box-shadow: 0 0 12px -3px var(--accent); } }
-
-// Punto de aviso de actualización (solo <480 px, donde el aviso sale de la cabecera); el texto accesible va en su aria-label.
-.upd-dot { display: none; position: absolute; top: 0; right: 0; width: .7rem; height: .7rem; aspect-ratio: 1; border-radius: 50%; background: var(--accent-2); border: 2px solid var(--surface); box-sizing: border-box; }
-// Entrada «Actualizar a vX.Y.Z» del menú: solo <480 px (en pantallas anchas el aviso sigue en la cabecera).
-.profile-update.btn { display: none; color: var(--accent-2); border-color: color-mix(in srgb, var(--accent-2) 55%, var(--border)); background: color-mix(in srgb, var(--accent-2) 12%, var(--surface-2)); font-weight: 700; }
-@media (max-width: v.$bp-upd - .02px) {
-  .upd-dot { display: block; }
-  .profile-update.btn { display: flex; }
+.profile-btn.btn {
+  position: relative;
+  border-radius: 50%;
+  margin-left: 0.25rem; // sin overflow: el punto de aviso sobresale; el avatar ya recorta la foto
+  .avatar {
+    width: 100%;
+    height: 100%;
+  }
+  &[aria-expanded='true'] {
+    border-color: var(--accent);
+    box-shadow: 0 0 12px -3px var(--accent);
+  }
 }
 
-.profile { position: relative; flex: none; }
-.profile-pop { position: absolute; z-index: 6; top: calc(100% + .5rem); right: 0; width: min(20rem, calc(100vw - 2rem)); max-height: calc(100dvh - 5rem); overflow-y: auto;
-  display: flex; flex-direction: column; gap: .5rem; padding: v.$gap; border-radius: v.$radius; border: 1px solid var(--border);
-  background: linear-gradient(160deg, var(--surface-2), var(--surface) 55%); box-shadow: 0 12px 36px -8px var(--glow);
-  animation: profile-in .15s ease-out both;
-  &:focus { outline: none; } }
-.profile-head { display: flex; flex-direction: column; align-items: center; gap: .5rem; text-align: center; min-width: 0; }
-.profile-name { font-size: v.$fs-subtitle; max-width: 100%; overflow-wrap: anywhere; }
-.profile-photo-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem; }
+// Punto de aviso de actualización (solo <480 px, donde el aviso sale de la cabecera); el texto accesible va en su aria-label.
+.upd-dot {
+  display: none;
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0.7rem;
+  height: 0.7rem;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--accent-2);
+  border: 2px solid var(--surface);
+  box-sizing: border-box;
+}
+// Entrada «Actualizar a vX.Y.Z» del menú: solo <480 px (en pantallas anchas el aviso sigue en la cabecera).
+.profile-update.btn {
+  display: none;
+  color: var(--accent-2);
+  border-color: color-mix(in srgb, var(--accent-2) 55%, var(--border));
+  background: color-mix(in srgb, var(--accent-2) 12%, var(--surface-2));
+  font-weight: 700;
+}
+@media (max-width: v.$bp-upd - 0.02px) {
+  .upd-dot {
+    display: block;
+  }
+  .profile-update.btn {
+    display: flex;
+  }
+}
+
+.profile {
+  position: relative;
+  flex: none;
+}
+.profile-pop {
+  position: absolute;
+  z-index: 6;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  width: min(20rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 5rem);
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: v.$gap;
+  border-radius: v.$radius;
+  border: 1px solid var(--border);
+  background: linear-gradient(160deg, var(--surface-2), var(--surface) 55%);
+  box-shadow: 0 12px 36px -8px var(--glow);
+  animation: profile-in 0.15s ease-out both;
+  &:focus {
+    outline: none;
+  }
+}
+.profile-head {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  text-align: center;
+  min-width: 0;
+}
+.profile-name {
+  font-size: v.$fs-subtitle;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+.profile-photo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
 // Grupos del menú (Preferencias, Integración, Cuenta): separador fino arriba y rótulo discreto (h3 con role=group + aria-labelledby).
-.profile-group { display: flex; flex-direction: column; gap: .25rem; min-width: 0; padding-top: .5rem; margin-top: 10px; margin-bottom: 10px; border-top: 1px solid var(--border); }
-.profile-group-title { margin: 0; padding-inline: .25rem; font-size: v.$fs-label; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.profile-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  padding-top: 0.5rem;
+  margin-top: 10px;
+  margin-bottom: 10px;
+  border-top: 1px solid var(--border);
+}
+.profile-group-title {
+  margin: 0;
+  padding-inline: 0.25rem;
+  font-size: v.$fs-label;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
 // Fila del menú (idioma, tema, actualizar, API key, salir): mismo patrón icono + etiqueta + valor a la derecha, misma altura (44 px, valor local; no cambia $touch).
 $touch-profile: 44px;
-.profile-row.btn, .profile-pref { display: flex; align-items: center; justify-content: flex-start; gap: .75rem; width: 100%; min-height: $touch-profile; box-sizing: border-box; text-align: left; }
-.profile-row.btn:is(a) { text-decoration: none; } // enlace con aspecto de fila (Documentación de la API)
-.profile-pref { padding: .5rem 1rem; font-size: v.$fs-body; .ico { flex: none; } }
-.profile-pref.btn { font-weight: inherit; }
-.profile-row-label { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
-.profile-row-value { flex: none; max-width: 55%; color: var(--muted); font-size: v.$fs-body; font-weight: 400; text-align: right; }
-select.profile-row-value { width: auto; min-height: 0; padding: .35rem .5rem; font-size: v.$fs-body; color: var(--text); }
+.profile-row.btn,
+.profile-pref {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: $touch-profile;
+  box-sizing: border-box;
+  text-align: left;
+}
+.profile-row.btn:is(a) {
+  text-decoration: none;
+} // enlace con aspecto de fila (Documentación de la API)
+.profile-pref {
+  padding: 0.5rem 1rem;
+  font-size: v.$fs-body;
+  .ico {
+    flex: none;
+  }
+}
+.profile-pref.btn {
+  font-weight: inherit;
+}
+.profile-row-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.profile-row-value {
+  flex: none;
+  max-width: 55%;
+  color: var(--muted);
+  font-size: v.$fs-body;
+  font-weight: 400;
+  text-align: right;
+}
+select.profile-row-value {
+  width: auto;
+  min-height: 0;
+  padding: 0.35rem 0.5rem;
+  font-size: v.$fs-body;
+  color: var(--text);
+}
 // Bloque «API key»: tarjeta plegable (cerrada por defecto; el contenido sigue montado, solo oculto).
-.apikey { min-width: 0; border: 1px solid var(--border); border-radius: v.$radius; background: var(--surface-2); }
-.apikey-title { margin: 0; font-size: v.$fs-body; .ico { color: var(--accent); } }
-.apikey-toggle.btn { color: var(--text); font-weight: 700; padding-inline: .75rem;
-  .ico:last-child { color: var(--muted); transition: transform .2s; }
-  &[aria-expanded='true'] .ico:last-child { transform: rotate(180deg); } }
-.apikey-body { display: flex; flex-direction: column; gap: .5rem; min-width: 0; padding: 0 .75rem .75rem; &[hidden] { display: none; } }
-.apikey-none { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.apikey {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: v.$radius;
+  background: var(--surface-2);
+}
+.apikey-title {
+  margin: 0;
+  font-size: v.$fs-body;
+  .ico {
+    color: var(--accent);
+  }
+}
+.apikey-toggle.btn {
+  color: var(--text);
+  font-weight: 700;
+  padding-inline: 0.75rem;
+  .ico:last-child {
+    color: var(--muted);
+    transition: transform 0.2s;
+  }
+  &[aria-expanded='true'] .ico:last-child {
+    transform: rotate(180deg);
+  }
+}
+.apikey-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0 0.75rem 0.75rem;
+  &[hidden] {
+    display: none;
+  }
+}
+.apikey-none {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
 // Regenerar y Revocar: mismo ancho; solo bajan a otra fila si no caben (min-width).
-.apikey-actions { display: flex; flex-wrap: wrap; gap: .5rem;
-  .btn { flex: 1 1 6rem; min-width: 0; padding-inline: .5rem; } }
-.apikey-confirm { margin: 0 0 .5rem; overflow-wrap: anywhere; }
-@media (prefers-reduced-motion: reduce) { .apikey-toggle.btn .ico:last-child { transition: none; } }
-@keyframes profile-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.apikey-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  .btn {
+    flex: 1 1 6rem;
+    min-width: 0;
+    padding-inline: 0.5rem;
+  }
+}
+.apikey-confirm {
+  margin: 0 0 0.5rem;
+  overflow-wrap: anywhere;
+}
+@media (prefers-reduced-motion: reduce) {
+  .apikey-toggle.btn .ico:last-child {
+    transition: none;
+  }
+}
+@keyframes profile-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
