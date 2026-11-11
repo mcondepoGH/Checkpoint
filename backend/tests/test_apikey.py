@@ -146,11 +146,11 @@ def test_hostile_usernames_stay_inside_profile(tmp_path, monkeypatch, name):
 def test_current_user_is_the_single_point(logged, monkeypatch):
     """La gestión de la key resuelve el usuario por `current_user`: sustituirlo cambia de qué usuario es la key."""
     import inspect
-    from app import main
     from app.api import deps
+    from app.api.routers import profile
     src = inspect.getsource(deps)
     assert "auth.user" in src and src.count("def current_user") == 1
-    assert "Depends(current_user)" in inspect.getsource(main).split("def get_apikey")[1].split("\n")[0]
+    assert "Depends(current_user)" in inspect.getsource(profile).split("def get_apikey")[1].split("\n")[0]
     key = logged.post("/api/profile/apikey").json()["key"]
     assert apikey.get("admin") == key and apikey.get("otro") is None
 
