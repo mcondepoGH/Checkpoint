@@ -4,23 +4,22 @@ import logging
 from contextlib import asynccontextmanager
 from typing import Optional
 
-from fastapi import APIRouter, Depends, FastAPI, Path, Query, Request
+from fastapi import APIRouter, Depends, FastAPI, Path, Query
 from fastapi.responses import FileResponse
 from starlette.concurrency import run_in_threadpool
 
 from .api import docs
-from .api.routers import config, profile, session, sync
+from .api.routers import config, profile, session, sync, versions
 from .api.routers import scheduler as scheduler_router
 from .api.routers import updates as updates_router
 from .users import avatar
 from .core import settings
 from .core import bootstrap
 from .core import updates
-from .core.errors import ApiError, describe_code
+from .core.errors import ApiError
 from .api.auth import Auth
-from .api.deps import body_json, hook_user, require
+from .api.deps import hook_user, require
 from .api.middleware import RequestDebugLog
-from .sync.engine import SyncAbort, count_versions, list_versions, restore_version
 from .services.context import AppContext
 
 api_log = logging.getLogger("checkpoint.api")  # DEBUG: una línea por petición /api y detalle por endpoint (sin secretos)
@@ -55,6 +54,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     app.include_router(scheduler_router.router)
     app.include_router(updates_router.router)
     app.include_router(sync.router)
+    app.include_router(versions.router)
 
     # Todo lo de /api/hook/* cuelga de este router y de su dependencia (aquí irá `POST /api/hook/{game}/opened`).
     hook = APIRouter(prefix="/api/hook", tags=[docs.TAG], dependencies=[Depends(hook_user)],
@@ -87,39 +87,6 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         return await ctx.hooks.opened(cfg, game, device)
 
     app.include_router(hook)
-
-    # ---- versiones ----
-    @app.get("/api/versions/{game}", dependencies=[Depends(require)])
-    def versions(game: str):
-        cfg = ctx.cfg()
-        game = ctx.game_id(game)
-        res = list_versions(settings.DATA_DIR, game, {k: d.name for k, d in cfg.devices.items()})
-        api_log.debug("versions: juego=%s entradas=%d", game, len(res) if hasattr(res, "__len__") else -1)
-        return res
-
-    @app.get("/api/versions/{game}/limit", dependencies=[Depends(require)])
-    def versions_limit(game: str):
-        cfg = ctx.cfg()
-        game = ctx.game_id(game)
-        out = {"max": cfg.versions_limit(game), "count": count_versions(settings.DATA_DIR, game),
-               "override": cfg.games[game].keep_versions is not None}
-        api_log.debug("versions limit: juego=%s %s", game, out)
-        return out
-
-    @app.post("/api/versions/{game}/restore", dependencies=[Depends(require)])
-    async def restore(game: str, request: Request):
-        body = await body_json(request)
-        cfg = ctx.cfg()
-        try:
-            res = restore_version(cfg, game, str(body.get("version", "")), str(body.get("source", "")),
-                                  settings.DATA_DIR)
-        except SyncAbort as e:
-            api_log.debug("restaurar versión: juego=%s versión=%r origen=%r falló código=%s", game, body.get("version"),
-                          body.get("source"), e.code)
-            raise ApiError(400, "err.main.restore_failed", cause=e.body())
-        api_log.debug("restaurar versión: juego=%s versión=%r origen=%r correcto", game, body.get("version"),
-                      body.get("source"))
-        return {"ok": True, "message": describe_code(res["code"], res["params"]), **res}
 
     # ---- documentación OpenAPI (solo la API de la API key; con sesión). Antes del catch-all SPA. ----
     docs.install(app, require)

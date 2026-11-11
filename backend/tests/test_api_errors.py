@@ -202,7 +202,7 @@ def test_restaurar_version_falla_400(client, monkeypatch):
 
     def boom(*a, **k):
         raise SyncAbort("err.sync.version_unknown")
-    monkeypatch.setattr("app.main.restore_version", boom)
+    monkeypatch.setattr("app.services.versions.restore_version", boom)
     r = client.post("/api/versions/g/restore", json={"version": "v", "source": "a"})
     assert r.status_code == 400
     assert det(r) == ("err.main.restore_failed", {"cause": {"code": "err.sync.version_unknown", "params": {}}})
