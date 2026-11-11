@@ -1,5 +1,5 @@
 import React, { useId } from 'react';
-import { useI18n } from '#src/useI18n.js';
+import { useI18n } from '#src/hooks/useI18n.js';
 import Icon from './Icon.jsx';
 import LauncherBlock from './LauncherBlock.jsx';
 import { Button } from '#src/components/ui/index.js';

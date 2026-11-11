@@ -1,7 +1,7 @@
 import React from 'react';
 import Icon from './Icon.jsx';
 import { showBadge, isPrerelease } from '#src/lib/updates.js';
-import { useI18n } from '#src/useI18n.js';
+import { useI18n } from '#src/hooks/useI18n.js';
 import { Button } from '#src/components/ui/index.js';
 
 // Botón de la cabecera: solo existe si hay una versión nueva. En móvil se queda en el icono.

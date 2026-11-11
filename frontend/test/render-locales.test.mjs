@@ -9,7 +9,7 @@ import { bundle, SRC } from './helpers/bundle.mjs';
 
 const { mod: m, skip } = await bundle(`import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
-  import { i18n, initDefaultLang } from '#src/useI18n.js';
+  import { i18n, initDefaultLang } from '#src/hooks/useI18n.js';
   import Login from '#src/pages/Login.jsx';
   import LanguageSelect from '#src/components/LanguageSelect.jsx';
   import DeviceCard from '#src/components/DeviceCard.jsx';

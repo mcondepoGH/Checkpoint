@@ -3,7 +3,7 @@ import { api } from '#src/lib/api.js';
 import { ui } from '#src/lib/errors.js';
 import { PHOTO_ACCEPT, photoUrl, prepareAvatar, validatePhotoFile } from '#src/photo.js';
 import { showBadge } from '#src/lib/updates.js';
-import { errText, useI18n } from '#src/useI18n.js';
+import { errText, useI18n } from '#src/hooks/useI18n.js';
 import ApiKeySection from './ApiKeySection.jsx';
 import Avatar from './Avatar.jsx';
 import Icon from './Icon.jsx';

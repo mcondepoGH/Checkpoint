@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useId, useState } from 'react';
 import { api } from '#src/lib/api.js';
 import EmptyState from './EmptyState.jsx';
 import { fmtDateTime, fmtDuration, RESULT_CLASS, resultText } from '#src/lib/format.js';
-import { errText, useI18n } from '#src/useI18n.js';
+import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { recordText } from '#src/lib/errors.js';
 import { Alert, Badge, Button } from '#src/components/ui/index.js';
 import Icon from './Icon.jsx';

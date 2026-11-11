@@ -27,7 +27,7 @@ const stubButtons = {
 };
 const { mod: m, skip } = await bundle(`import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
-  import { i18n } from '#src/useI18n.js';
+  import { i18n } from '#src/hooks/useI18n.js';
   import { KeyHelp } from '#src/components/PublicKey.jsx';
   export { React, renderToStaticMarkup, i18n, KeyHelp };`, { plugins: [stubButtons], tag: 'ckpt-keyhelp' });
 

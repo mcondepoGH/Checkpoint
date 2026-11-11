@@ -3,7 +3,7 @@ import { api } from '#src/lib/api.js';
 import Field from './Field.jsx';
 import AutoSyncLog from './AutoSyncLog.jsx';
 import { fmtDateTime, ON_CONFLICT_OPTIONS } from '#src/lib/format.js';
-import { errText, useI18n } from '#src/useI18n.js';
+import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { ui } from '#src/lib/errors.js';
 import { Alert, Badge, Button, Checkbox, Input, Select, Switch } from '#src/components/ui/index.js';
 

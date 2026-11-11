@@ -7,7 +7,7 @@ import { bundle, SRC } from './helpers/bundle.mjs';
 
 const { mod: m, skip } = await bundle(`import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
-  import { i18n } from '#src/useI18n.js';
+  import { i18n } from '#src/hooks/useI18n.js';
   import ProfileMenu from '#src/components/ProfileMenu.jsx';
   import ApiKeySection from '#src/components/ApiKeySection.jsx';
   export { React, renderToStaticMarkup, i18n, ProfileMenu, ApiKeySection };`, { navigator: true, tag: 'ckpt-profmenu' });

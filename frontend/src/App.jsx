@@ -4,41 +4,19 @@ import AppIcon from '#src/components/AppIcon.jsx';
 import UpdateBadge from '#src/components/UpdateBadge.jsx';
 import ProfileMenu from '#src/components/ProfileMenu.jsx';
 import WatchSummary from '#src/components/WatchSummary.jsx';
-import { useWatches } from './useWatches.js';
+import { useWatches } from '#src/hooks/useWatches.js';
 import UpdateDialog from '#src/components/UpdateDialog.jsx';
 import { installedVersion, updatesApplicable } from '#src/lib/updates.js';
 import Login from '#src/pages/Login.jsx';
 import Settings from '#src/pages/Settings.jsx';
 import Sync from '#src/pages/Sync.jsx';
 import Versions from '#src/pages/Versions.jsx';
-import { errText, initDefaultLang, useI18n } from './useI18n.js';
+import { errText, initDefaultLang, useI18n } from '#src/hooks/useI18n.js';
 import { Alert } from '#src/components/ui/index.js';
+import { useTheme } from '#src/hooks/useTheme.js';
 
 // Pestañas: el id es estable; las etiquetas (completa y corta, para móvil) son claves `app.tab.<id>.full|short`.
 const TABS = ['sync', 'versions', 'settings'];
-
-function useTheme() {
-  const [theme, setTheme] = useState(() => {
-    try { return localStorage.getItem('theme') || 'auto'; } catch { return 'auto'; }
-  });
-  useEffect(() => {
-    if (theme === 'auto') document.documentElement.removeAttribute('data-theme');
-    else document.documentElement.setAttribute('data-theme', theme);
-    try { localStorage.setItem('theme', theme); } catch { /* ignorar */ }
-  }, [theme]);
-  // Tema efectivo (para el icono): en «auto» manda la preferencia del sistema.
-  const [systemDark, setSystemDark] = useState(() => { try { return window.matchMedia('(prefers-color-scheme: dark)').matches; } catch { return false; } });
-  useEffect(() => {
-    let mq = null;
-    try { mq = window.matchMedia('(prefers-color-scheme: dark)'); } catch { return undefined; }
-    const on = (e) => setSystemDark(e.matches);
-    mq.addEventListener('change', on);
-    return () => mq.removeEventListener('change', on);
-  }, []);
-  const next = { auto: 'light', light: 'dark', dark: 'auto' }[theme];
-  const effective = theme === 'auto' ? (systemDark ? 'dark' : 'light') : theme;
-  return [theme, () => setTheme(next), effective];
-}
 
 export default function App() {
   const { t, locale } = useI18n(); // re-renderiza al cambiar de idioma

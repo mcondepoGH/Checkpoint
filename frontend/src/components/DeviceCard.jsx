@@ -3,7 +3,7 @@ import Field from './Field.jsx';
 import { LOCAL_DOCKER_MSG, LOCAL_HELP, LOCAL_LABEL, NAME_HINT, NAME_MAX, OS_OPTIONS, localPatch } from '#src/draft.js';
 import IdNote from './IdNote.jsx';
 import { fieldErrorText } from '#src/lib/errors.js';
-import { errText, useI18n } from '#src/useI18n.js';
+import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { Alert, Button, Checkbox, Input, Select } from '#src/components/ui/index.js';
 
 // `runtime` ('docker' | 'native') y `platform` vienen de /api/config. «Este equipo» solo se ofrece en modo nativo.

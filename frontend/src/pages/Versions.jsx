@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { api } from '#src/lib/api.js';
 import { labelOf } from '#src/lib/names.js';
 import EmptyState from '#src/components/EmptyState.jsx';
-import { errText, useI18n } from '#src/useI18n.js';
+import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { Alert, Button, Select } from '#src/components/ui/index.js';
 
 export default function Versions({ config, onGoSettings }) {

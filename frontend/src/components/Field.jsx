@@ -1,5 +1,5 @@
 import React, { useId } from 'react';
-import { useI18n } from '#src/useI18n.js';
+import { useI18n } from '#src/hooks/useI18n.js';
 import { fieldErrorText } from '#src/lib/errors.js';
 
 // Etiqueta + control + error asociado (aria-describedby / aria-invalid). `children` recibe los props a esparcir en el control.

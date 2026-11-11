@@ -3,7 +3,7 @@ import { api as realApi } from '#src/lib/api.js';
 import { isInsecure } from '#src/lib/apikey.js';
 import { RESULT_TEXT, resultText } from '#src/lib/format.js';
 import { LAUNCHERS, ago, commandsFor, loadHubUrl, normalizeHubUrl, saveHubUrl } from '#src/launchers.js';
-import { errText, rich, useI18n } from '#src/useI18n.js';
+import { errText, rich, useI18n } from '#src/hooks/useI18n.js';
 import Field from './Field.jsx';
 import Icon from './Icon.jsx';
 import { Alert, CopyBox, Input, Select, Tabs } from '#src/components/ui/index.js';

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { api } from '#src/lib/api.js';
 import { copyText } from '#src/lib/clipboard.js';
-import { errText, useI18n } from '#src/useI18n.js';
+import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { Alert, Button } from '#src/components/ui/index.js';
 import { osSteps } from '#src/keyhelpSteps.js';
 

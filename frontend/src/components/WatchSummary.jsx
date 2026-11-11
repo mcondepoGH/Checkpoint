@@ -1,6 +1,6 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
 import { labelOf } from '#src/lib/names.js';
-import { useI18n } from '#src/useI18n.js';
+import { useI18n } from '#src/hooks/useI18n.js';
 import { chipCount, groupByGame, watchHealth } from '#src/watch.js';
 import { WatchStatus } from '#src/components/ui/index.js';
 

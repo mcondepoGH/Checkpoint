@@ -1,7 +1,7 @@
 import React, { useEffect, useId, useReducer, useRef, useState } from 'react';
 import { api as realApi } from '#src/lib/api.js';
 import { initialState, isInsecure, reduce, run } from '#src/lib/apikey.js';
-import { errText, useI18n } from '#src/useI18n.js';
+import { errText, useI18n } from '#src/hooks/useI18n.js';
 import Icon from './Icon.jsx';
 import { Alert, Button, CopyBox } from '#src/components/ui/index.js';
 

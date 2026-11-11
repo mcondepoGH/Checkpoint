@@ -3,7 +3,7 @@ import Field from './Field.jsx';
 import { MAX_VERSIONS_LIMIT, NAME_HINT, NAME_MAX, VERSIONS_HINT } from '#src/draft.js';
 import IdNote from './IdNote.jsx';
 import { ON_CONFLICT_OPTIONS } from '#src/lib/format.js';
-import { useI18n } from '#src/useI18n.js';
+import { useI18n } from '#src/hooks/useI18n.js';
 import { Alert, Button, Input, Select, Switch } from '#src/components/ui/index.js';
 
 export default function GameCard({ game, devices, errors, localError, keepError, globalMax, nameA, nameB, idA, idB, idText, renamed, onChange, onRemove, onShowLaunchers }) {

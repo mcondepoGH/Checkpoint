@@ -1,5 +1,5 @@
 import React, { useId } from 'react';
-import { useI18n } from '#src/useI18n.js';
+import { useI18n } from '#src/hooks/useI18n.js';
 import Field from './Field.jsx';
 import Icon from './Icon.jsx';
 import { Select } from '#src/components/ui/index.js';

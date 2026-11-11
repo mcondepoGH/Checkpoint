@@ -18,7 +18,7 @@ import BackupsDialog from '#src/components/BackupsDialog.jsx';
 import Icon from '#src/components/Icon.jsx';
 import EmptyState from '#src/components/EmptyState.jsx';
 import DiffView from '#src/components/DiffView.jsx';
-import { errText, useI18n } from '#src/useI18n.js';
+import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { errorText, fieldErrorText, ui } from '#src/lib/errors.js';
 import { Alert, Button, Input } from '#src/components/ui/index.js';
 

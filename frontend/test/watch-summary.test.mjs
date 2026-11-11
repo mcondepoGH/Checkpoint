@@ -7,10 +7,10 @@ import { bundle, SRC } from './helpers/bundle.mjs';
 
 const { mod: m, skip } = await bundle(`import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
-  import { i18n } from '#src/useI18n.js';
+  import { i18n } from '#src/hooks/useI18n.js';
   import WatchSummary from '#src/components/WatchSummary.jsx';
   import ProfileMenu from '#src/components/ProfileMenu.jsx';
-  import { watchState, NO_WATCHES } from '#src/useWatches.js';
+  import { watchState, NO_WATCHES } from '#src/hooks/useWatches.js';
   export { React, renderToStaticMarkup, i18n, WatchSummary, ProfileMenu, watchState, NO_WATCHES };`, { navigator: true, tag: 'ckpt-watchsum' });
 const has = (h, s) => h.includes(s);
 const NOW = '2026-01-01T12:00:00Z';
