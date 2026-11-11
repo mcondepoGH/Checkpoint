@@ -185,7 +185,7 @@ def test_ejecucion_en_curso_409(client, monkeypatch):
     cfg = {**CFG, "games": {"g": GAME("G")}}
     assert put_cfg(client, cfg).status_code == 200
     gate = threading.Event()
-    monkeypatch.setattr("app.main.run_sync", lambda *a, **k: gate.wait(5) or {"result": "ok"})
+    monkeypatch.setattr("app.services.runs.run_sync", lambda *a, **k: gate.wait(5) or {"result": "ok"})
     try:
         assert client.post("/api/sync/g", json={}).status_code == 200
         r = client.post("/api/sync/g", json={})

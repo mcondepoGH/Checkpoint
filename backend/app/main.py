@@ -4,9 +4,8 @@ import json
 import logging
 import threading
 import time
-import uuid
 from contextlib import asynccontextmanager
-from typing import Dict, List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, FastAPI, Path, Query, Request, Response
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
@@ -29,7 +28,8 @@ from .config.store import Conflict, ConfigStore, InvalidConfig, parse_text, conf
 from .core.redact import redact
 from .sync.scheduler import Scheduler, iso, utcnow
 from .sync.watcher import Watcher, _log_note
-from .sync.engine import SyncAbort, count_versions, list_versions, restore_version, run_sync, valid_resolution
+from .sync.engine import SyncAbort, count_versions, list_versions, restore_version
+from .services.runs import RunRegistry, game_busy, start_manual_sync
 from .sync.transport import TransportError, get_transport, local_folder_status
 
 api_log = logging.getLogger("checkpoint.api")  # DEBUG: una línea por petición /api y detalle por endpoint (sin secretos)
@@ -69,16 +69,6 @@ class RequestDebugLog:
                        status[0], (time.monotonic() - t0) * 1000)
 
 
-class Run:
-    def __init__(self, game, dry_run, name=None):
-        self.id = uuid.uuid4().hex[:12]
-        self.game, self.dry_run = game, dry_run  # `game` es el id interno del juego
-        self.name = name or game
-        self.lines: List[str] = []
-        self.done = False
-        self.status: Optional[dict] = None
-
-
 def create_app(auth: Optional[Auth] = None) -> FastAPI:
     holder: dict = {}
 
@@ -99,7 +89,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     app.add_middleware(RequestDebugLog, logger=api_log)
     if auth is None:
         auth = Auth.from_env()
-    runs: Dict[str, Run] = {}
+    runs = RunRegistry()
     store = ConfigStore()
 
     def client_ip(request: Request) -> str:
@@ -485,7 +475,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     def _auto_cfg() -> Config:
         return _config(lambda cause: RuntimeError(f"config.yaml inválido: {describe(cause)}"))
 
-    scheduler = Scheduler(_auto_cfg, lambda g: any(r.game == g and not r.done for r in runs.values()))
+    scheduler = Scheduler(_auto_cfg, runs.active)
     holder["scheduler"] = scheduler
 
     @app.get("/api/scheduler", dependencies=[Depends(require)])
@@ -563,47 +553,11 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     async def start_sync(game: str, request: Request):
         cfg = _cfg()
         game = game_id(game)
-        if not cfg.games[game].enabled:  # también con dry_run: para sincronizarlo hay que reactivarlo
-            api_log.debug("sync %s: juego desactivado (409)", game)
-            raise ApiError(409, "err.sync.game_disabled")
         try:
             body = await request.json()
         except Exception:
             body = {}
-        if not isinstance(body, dict):
-            body = {}
-        dry = bool(body.get("dry_run", False))
-        resolution = body.get("resolution")
-        if resolution is not None and not valid_resolution(resolution):
-            raise ApiError(422, "err.main.resolution_invalid")
-        expect = body.get("expect")
-        if expect is not None and not (isinstance(expect, dict) and all(
-                isinstance(k, str) and (v is None or isinstance(v, str)) for k, v in expect.items())):
-            raise ApiError(422, "err.main.expect_invalid")
-        if scheduler.current == game or any(r.game == game and not r.done for r in runs.values()):
-            api_log.debug("sync %s: ya hay una ejecución en curso (409)", game)
-            raise ApiError(409, "err.main.run_in_progress")
-        run = Run(game, dry, cfg.games[game].name)
-        runs[run.id] = run
-        api_log.debug("sync %s: run=%s dry_run=%s resolution=%s expect=%s", game, run.id, dry, resolution,
-                      sorted(expect) if expect else None)
-        for old in [k for k, v in runs.items() if v.done][:-20]:
-            runs.pop(old, None)
-
-        def work():
-            try:
-                run.status = run_sync(cfg, game, dry, log=run.lines.append, resolution=resolution, expect=expect)
-            except SyncAbort as e:
-                run.lines.append(redact(f"ABORTADO: {e}"))
-                run.status = {"result": "aborted", "code": e.code, "params": e.params, "message": str(e),
-                              "game": game, "name": cfg.games[game].name}
-            finally:
-                run.done = True
-                st = run.status if isinstance(run.status, dict) else {}
-                api_log.debug("sync %s: run=%s terminado resultado=%s código=%s", game, run.id, st.get("result"),
-                              st.get("code"))
-
-        threading.Thread(target=work, daemon=True).start()
+        run = start_manual_sync(runs, scheduler, cfg, game, body)
         return {"run_id": run.id}
 
     # ---- aviso de apertura / cierre automático ----
@@ -611,8 +565,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         """Lanza en un hilo el checkpoint de un juego para el hook (`opened`: trigger `hook`; cierre: `hook_closed`):
         política de conflictos siempre `skip`, deja su entrada en el historial. Devuelve (run, finished, box)."""
         g = cfg.games[game]
-        run = Run(game, False, g.name)
-        runs[run.id] = run
+        run = runs.create(game, False, g.name)
         finished = threading.Event()
         started, t0 = scheduler.clock(), time.monotonic()
         box: dict = {}
@@ -653,12 +606,8 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
                 finished.set()
 
         threading.Thread(target=work, daemon=True).start()
-        for old in [k for k, v in runs.items() if v.done][:-20]:
-            runs.pop(old, None)
+        runs.prune()
         return run, finished, box
-
-    def game_busy(game: str) -> bool:
-        return scheduler.current == game or any(r.game == game and not r.done for r in runs.values())
 
     def record_hook_event(game: str, device: str, result: str, code: str, params: Optional[dict] = None,
                           name: Optional[str] = None):
@@ -709,7 +658,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             hook_log.debug("hook hook_closed juego=%s dispositivo=%s: juego desactivado, se omite", game, device)
             record_hook_event(game, device, "skipped", "err.sync.game_disabled", name=cfg.games[game].name)
             return
-        if game_busy(game):
+        if game_busy(scheduler, runs, game):
             hook_log.info("hook hook_closed juego=%s omitido: ejecución en curso, sin reintento", cfg.games[game].name)
             hook_log.debug("hook hook_closed juego=%s dispositivo=%s: game_busy, sin reintento", game, device)
             record_hook_event(game, device, "skipped", "err.hook.busy", name=cfg.games[game].name)
@@ -764,7 +713,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
                 hook_log.warning("hook hook juego=%s: no se pudo guardar en el historial (%s)", g.name, type(e).__name__)
             return {"ok": False, "outcome": "skipped", "game": game, "device": dev, "code": code, "params": {},
                     "watching": False, "watch_reason": "disabled"}
-        if game_busy(game):
+        if game_busy(scheduler, runs, game):
             api_log.debug("hook opened: juego=%s dispositivo=%s ejecución en curso (409)", g.name, dev)
             raise ApiError(409, "err.main.run_in_progress")
         t0 = time.monotonic()

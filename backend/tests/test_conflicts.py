@@ -480,7 +480,7 @@ def test_api_resolution_passthrough_and_validation(tmp_path, monkeypatch):
         seen.update(kw, dry=dry)
         return {"result": "conflict", "message": "x", "conflict": {"sides": []}}
 
-    monkeypatch.setattr(M, "run_sync", fake)
+    monkeypatch.setattr("app.services.runs.run_sync", fake)
     c = TestClient(M.create_app(Auth("admin", "pw", 1, rounds=4)))
     assert c.post("/api/login", json={"user": "admin", "password": "pw"}).status_code == 200
     for bad in ("oldest", "device:", 5):

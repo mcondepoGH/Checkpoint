@@ -84,7 +84,7 @@ def test_never_seen_one_entry_and_hook_status_last(cl, sim):
 
 # ---- b. ocupado ----
 def test_closed_while_run_in_progress_is_skipped_busy_and_run_untouched(cl, sim, monkeypatch):
-    import app.main as m
+    import app.services.runs as m
     seen_running(cl)  # `opened` con 409 si ya hay un run: primero se arma la vigilancia y luego arranca el run manual
     session(cl)
     gate, entered, calls = threading.Event(), threading.Event(), []
@@ -144,7 +144,7 @@ def test_game_removed_from_config_logs_game_removed(cl, sim):
 
 # ---- d. fallo del checkpoint ----
 def test_checkpoint_exception_logs_only_the_type_never_the_message(cl, sim, monkeypatch, caplog):
-    import app.main as m
+    import app.services.runs as m
     seen_running(cl)
 
     def boom(*a, **k):

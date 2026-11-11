@@ -160,7 +160,7 @@ def test_run_in_progress_409(client):
 def test_run_in_progress_with_manual_run(client):
     client.env.seed()
     gate = threading.Event()
-    import app.main as m
+    import app.services.runs as m
     real = m.run_sync
     m.run_sync = lambda *a, **k: (gate.wait(5), real(*a, **k))[1]
     try:
