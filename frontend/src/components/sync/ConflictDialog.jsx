@@ -43,6 +43,7 @@ export default function ConflictDialog({ game, conflict, busy, onCancel, onResol
         <fieldset className="conflict-pick">
           <legend>{t('conflict.pick')}</legend>
           {sides.map((s) => (
+            // eslint-disable-next-line jsx-a11y/label-has-associated-control -- el texto accesible está en el span anidado (label(s) devuelve texto)
             <label key={sid(s)} className={`conflict-opt${pick === value(s) ? ' on' : ''}`}>
               <input type="radio" name="conflict-winner" value={value(s)} checked={pick === value(s)} onChange={() => setPick(value(s))} />
               <span>

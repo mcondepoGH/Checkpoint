@@ -31,12 +31,14 @@ export default function Modal({ title, onClose, children, wide }) {
     }
   };
   return (
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- clic en el fondo cierra; Escape ya cierra por teclado
     <div
       className="modal"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- el diálogo gestiona Tab para atrapar el foco */}
       <div
         className={wide ? 'card dialog wide' : 'card dialog'}
         role="dialog"

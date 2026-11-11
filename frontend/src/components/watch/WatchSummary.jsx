@@ -52,6 +52,7 @@ export default function WatchSummary({ watch, config, open: initialOpen = false 
   };
 
   return (
+    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- delegación de teclado (Escape/Tab) de los controles hijos
     <div className="watch-summary" ref={wrap} onKeyDown={onKeyDown} onBlur={onBlur}>
       <button
         ref={btn}

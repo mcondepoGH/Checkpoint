@@ -32,6 +32,7 @@ export default function UpdateDialog({ info, onClose }) {
       {info.notas ? (
         <>
           <h4>{t('updates.dialog.notesTitle')}</h4>
+          {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- zona con scroll: debe ser enfocable para desplazarla con el teclado */}
           <div className="update-notes" tabIndex={0}>
             {info.notas}
           </div>

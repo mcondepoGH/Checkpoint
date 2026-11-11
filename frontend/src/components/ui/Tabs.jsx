@@ -21,6 +21,7 @@ export default function Tabs({ tabs, value, onChange, label, children }) {
   };
   return (
     <div className="uitabs">
+      {/* eslint-disable-next-line jsx-a11y/interactive-supports-focus -- tabindex itinerante: el foco lo llevan los tabs hijos */}
       <div className="uitabs-list" role="tablist" aria-label={label} onKeyDown={onKeyDown}>
         {tabs.map((x) => (
           <button
