@@ -134,6 +134,8 @@ def test_every_api_route_is_public_tag_or_hidden(app):
             public.add(path)
     assert public == HOOK_PATHS
     assert len([r for r in apidocs.iter_api_routes(app.routes) if r.path.startswith("/api/")]) > 30  # el recorrido no se queda corto
-    spa = [r for r in app.routes if getattr(r, "path", "") == "/{path:path}"]
+    # Los routers van anidados (`include_router`): el catch-all SPA es la última de todas las rutas aplanadas, y oculta.
+    flat = list(apidocs.iter_api_routes(app.routes))
+    spa = [r for r in flat if r.path == "/{path:path}"]
     assert spa and not spa[0].include_in_schema
-    assert app.routes.index(spa[0]) > max(i for i, r in enumerate(app.routes) if getattr(r, "path", "").startswith("/api/"))
+    assert flat[-1] is spa[0]
