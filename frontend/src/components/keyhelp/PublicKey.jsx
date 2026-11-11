@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { copyText } from '#src/lib/clipboard.js';
+import { nextTabIndex } from '#src/lib/tabs.js';
 import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { Alert, Button } from '#src/components/ui/index.js';
 import { osSteps } from './keyhelpSteps.js';
@@ -21,17 +22,13 @@ function CodeBlock({ text }) {
   );
 }
 
-// Pestañas accesibles: flechas, Inicio y Fin; tabindex itinerante.
+// Pestañas accesibles: flechas, Inicio y Fin (lógica de teclado compartida en lib/tabs.js); tabindex itinerante.
+// No usa ui/Tabs: aquí el panel va aparte y las pestañas tienen su propio estilo (keytabs).
 function Tabs({ label, idBase, items, value, onChange, small }) {
   const refs = useRef({});
   const onKey = (e) => {
-    const i = items.indexOf(value);
-    let n = -1;
-    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') n = (i + 1) % items.length;
-    else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') n = (i - 1 + items.length) % items.length;
-    else if (e.key === 'Home') n = 0;
-    else if (e.key === 'End') n = items.length - 1;
-    if (n < 0) return;
+    const n = nextTabIndex(items.length, items.indexOf(value), e.key);
+    if (n === null) return;
     e.preventDefault();
     onChange(items[n]);
     refs.current[items[n]]?.focus();
