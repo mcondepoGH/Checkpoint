@@ -105,8 +105,8 @@ export default function ProfileMenu({
   };
 
   return (
-    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- delegación de teclado (Escape/Tab) de los controles hijos
-    <div className="profile" ref={wrap} onKeyDown={onKeyDown} onBlur={onBlur}>
+    // role=presentation: el contenedor no tiene semántica, solo recoge el Escape y el blur de sus controles hijos.
+    <div className="profile" role="presentation" ref={wrap} onKeyDown={onKeyDown} onBlur={onBlur}>
       <Button
         ref={btn}
         variant="ghost"

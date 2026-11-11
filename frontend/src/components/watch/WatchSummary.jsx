@@ -52,8 +52,8 @@ export default function WatchSummary({ watch, config, open: initialOpen = false 
   };
 
   return (
-    // eslint-disable-next-line jsx-a11y/no-static-element-interactions -- delegación de teclado (Escape/Tab) de los controles hijos
-    <div className="watch-summary" ref={wrap} onKeyDown={onKeyDown} onBlur={onBlur}>
+    // role=presentation: el contenedor no tiene semántica, solo recoge el Escape y el blur de sus controles hijos.
+    <div className="watch-summary" role="presentation" ref={wrap} onKeyDown={onKeyDown} onBlur={onBlur}>
       <button
         ref={btn}
         type="button"
