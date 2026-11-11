@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import AppIcon from '#src/components/ui/AppIcon.jsx';
 import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { Alert, Button } from '#src/components/ui/index.js';
@@ -10,6 +10,11 @@ export default function Login({ onDone }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null); // error de la API (se traduce al pintar)
   const [busy, setBusy] = useState(false);
+  const userRef = useRef(null);
+  // Foco inicial en el usuario al abrir la pantalla de acceso (gestionado aquí, sin el atributo autoFocus).
+  useEffect(() => {
+    userRef.current?.focus();
+  }, []);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -35,8 +40,7 @@ export default function Login({ onDone }) {
         </h1>
         <label>
           {t('login.user')}
-          {/* eslint-disable-next-line jsx-a11y/no-autofocus -- pantalla de acceso: el foco inicial va al usuario */}
-          <input value={user} onChange={(e) => setUser(e.target.value)} autoComplete="username" autoFocus required />
+          <input ref={userRef} value={user} onChange={(e) => setUser(e.target.value)} autoComplete="username" required />
         </label>
         <label>
           {t('login.password')}
