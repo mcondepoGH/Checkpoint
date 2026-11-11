@@ -5,6 +5,8 @@ on:
     branches: ["**"]
   pull_request:
     branches: [main]
+  schedule:
+    - cron: "37 5 * * 1"   # semanal: el job audit detecta CVEs nuevas sin cambios de código
 
 permissions:
   contents: read
@@ -40,3 +42,21 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm test
       - run: npm run build
+
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: npm audit (solo producción)
+        working-directory: frontend
+        run: npm audit --omit=dev
+      - name: pip-audit
+        run: |
+          pip install pip-audit
+          pip-audit -r backend/requirements.txt
