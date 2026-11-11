@@ -163,7 +163,7 @@ def test_juego_ambiguo(client, monkeypatch):
 
     def amb(items, ref):
         raise ConfigError("err.config.ref_ambiguous", ref="Dup", matches="a, b")
-    monkeypatch.setattr("app.main.resolve_ref", amb)
+    monkeypatch.setattr("app.services.games.resolve_ref", amb)
     r = client.get("/api/versions/Dup")
     assert r.status_code == 409 and det(r) == ("err.main.game_ambiguous", {"cause": {"code": "err.config.ref_ambiguous", "params": {"ref": "Dup", "matches": "a, b"}}})
 

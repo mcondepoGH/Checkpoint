@@ -135,7 +135,7 @@ def test_test_local_sin_ruta(client):
 def test_test_local_no_toca_ssh(client, monkeypatch):
     def boom(*a, **k):
         raise AssertionError("no debe usar SSH")
-    monkeypatch.setattr("app.main.get_transport", boom)
+    monkeypatch.setattr("app.services.devices.get_transport", boom)
     monkeypatch.setattr("app.core.bootstrap.ensure_host_key", boom)
     monkeypatch.setattr("app.sync.transport._run", boom)
     r = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"},
@@ -205,7 +205,7 @@ def test_test_remoto_sigue_igual(client, monkeypatch):
 
         def check(self):
             return None
-    monkeypatch.setattr("app.main.get_transport", lambda d: T(d))
+    monkeypatch.setattr("app.services.devices.get_transport", lambda d: T(d))
     r = client.post("/api/devices/test", json={"device": {"host": "192.0.2.1", "user": "u", "os": "linux"}}).json()
     assert r["ok"] and r["code"] == "err.transport.connection_ok" and r["first_use"] is False
 

@@ -96,14 +96,14 @@ def test_local_path_and_folder_status_codes(tmp_path):
 def test_test_connection_codes(client, monkeypatch):
     login(client)
     body = {"device": {"name": "E", "host": "10.0.0.5", "user": "u", "os": "linux"}}
-    monkeypatch.setattr("app.main.bootstrap.ensure_host_key", lambda h, p: True)
-    monkeypatch.setattr("app.main.get_transport", lambda d: type("T", (), {"check": lambda s: None})())
+    monkeypatch.setattr("app.core.bootstrap.ensure_host_key", lambda h, p: True)
+    monkeypatch.setattr("app.services.devices.get_transport", lambda d: type("T", (), {"check": lambda s: None})())
     r = client.post("/api/devices/test", json=body).json()
     assert (r["ok"], r["code"], r["params"], r["first_use"]) == (True, "err.transport.connection_ok", {}, True)
 
     def bad():
         raise TransportError("err.transport.ssh_failed", detail="password=hunter22 denied")
-    monkeypatch.setattr("app.main.get_transport", lambda d: type("T", (), {"check": lambda s: bad()})())
+    monkeypatch.setattr("app.services.devices.get_transport", lambda d: type("T", (), {"check": lambda s: bad()})())
     r = client.post("/api/devices/test", json=body).json()
     assert (r["ok"], r["code"], r["first_use"]) == (False, "err.transport.ssh_failed", True)
     assert "hunter22" not in json.dumps(r)
