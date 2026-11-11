@@ -8,7 +8,7 @@ from typing import Dict, Optional, Tuple
 
 import bcrypt
 
-from .core import settings
+from ..core import settings
 
 
 FAIL_FORGET = 3600  # s sin fallos (tras el fin del bloqueo) para olvidar los de una IP

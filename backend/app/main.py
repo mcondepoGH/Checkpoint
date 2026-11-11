@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
-from . import apidocs
+from .api import apidocs
 from .users import apikey
 from .users import avatar
 from .core import settings
@@ -23,7 +23,7 @@ from .core import runtime
 from .sync import engine as sync_mod
 from .core import updates
 from .apierror import ApiError, describe_code, error_body, error_response
-from .auth import Auth
+from .api.auth import Auth
 from .config.models import Config, ConfigError, Device, pyd_body, describe, normalize_path, resolve_ref, validate_config
 from .config.store import Conflict, ConfigStore, InvalidConfig, parse_text, config_events_gen, diff_configs, render_yaml
 from .core.redact import redact

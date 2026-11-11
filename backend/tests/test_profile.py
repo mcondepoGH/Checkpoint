@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 from app.users import avatar
 from app.core import settings
 from app.users.avatar import user_dir
-from app.auth import Auth
+from app.api.auth import Auth
 from app.main import create_app
 
 PW = "correct horse"

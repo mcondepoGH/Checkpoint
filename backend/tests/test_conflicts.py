@@ -464,7 +464,7 @@ def test_scheduler_newest_resolves_and_game_override_wins(env, monkeypatch):
 def test_api_resolution_passthrough_and_validation(tmp_path, monkeypatch):
     from fastapi.testclient import TestClient
     import app.main as M
-    from app.auth import Auth
+    from app.api.auth import Auth
     monkeypatch.setattr(settings, "CONFIG_PATH", tmp_path / "config" / "config.yaml")
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path / "data")
     monkeypatch.setattr(settings, "STATIC_DIR", tmp_path / "static")

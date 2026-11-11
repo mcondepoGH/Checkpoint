@@ -7,7 +7,7 @@ import yaml
 from fastapi.testclient import TestClient
 
 from app.core import settings
-from app.auth import Auth
+from app.api.auth import Auth
 from app.main import create_app
 from app.sync.transport import LocalDeviceTransport
 from fakes import LocalTransport

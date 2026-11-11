@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.users import history
 from app.core import settings
-from app.auth import Auth
+from app.api.auth import Auth
 from app.main import create_app
 from app.sync.scheduler import Scheduler
 from app.sync.engine import fingerprint, save_baseline

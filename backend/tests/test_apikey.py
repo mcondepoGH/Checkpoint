@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 
 from app.users import apikey, avatar
 from app.core import settings
-from app.auth import Auth
+from app.api.auth import Auth
 from app.main import create_app
 
 PW = "correct horse"
@@ -410,7 +410,7 @@ def test_rate_limit_http_other_ip_is_not_blocked_without_proxy(tmp_path, monkeyp
 
 def test_rate_limit_http_forget_inactive_ips_after_one_hour(tmp_path, monkeypatch):
     """Los fallos de una IP sin actividad desde 1 h tras acabar su bloqueo se olvidan (FAIL_FORGET) al registrar otro fallo."""
-    from app import auth as auth_mod
+    from app.api import auth as auth_mod
     anon, auth, clock, key = _limited(tmp_path, monkeypatch, trust=True)
     for _ in range(3):
         _ping(anon, apikey.new_key(), **xff("10.0.0.5"))

@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from app.users import history
 from app.sync import locking
 from app.core import settings
-from app.auth import Auth
+from app.api.auth import Auth
 from app.main import create_app
 from test_hook_opened import Env, PW, code
 
