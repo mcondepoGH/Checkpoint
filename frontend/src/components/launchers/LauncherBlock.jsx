@@ -1,5 +1,7 @@
 import React, { useEffect, useId, useState } from 'react';
 import { api as realApi } from '#src/lib/api.js';
+import { getApiKey } from '#src/lib/api/profile.js';
+import { hookStatus } from '#src/lib/api/sync.js';
 import { isInsecure } from '#src/lib/apikey.js';
 import { RESULT_TEXT, resultText } from '#src/lib/format.js';
 import { LAUNCHERS, ago, commandsFor, loadHubUrl, normalizeHubUrl, saveHubUrl } from './launchers.js';
@@ -35,7 +37,7 @@ export default function LauncherBlock({ games, selected, onSelect, active, initi
   useEffect(() => {
     if (!active || initial) return undefined;
     let alive = true;
-    api('/api/profile/apikey').then((r) => alive && setKeyState({ loaded: true, key: r.exists ? r.key : null, error: null }))
+    getApiKey(api).then((r) => alive && setKeyState({ loaded: true, key: r.exists ? r.key : null, error: null }))
       .catch((error) => alive && setKeyState({ loaded: true, key: null, error }));
     return () => { alive = false; };
   }, [active]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -45,7 +47,7 @@ export default function LauncherBlock({ games, selected, onSelect, active, initi
     let alive = true;
     const load = () => {
       if (typeof document !== 'undefined' && document.hidden) return;
-      api(`/api/games/${encodeURIComponent(gameId)}/hook-status`).then((r) => alive && setStatus(r)).catch(() => alive && setStatus(null));
+      hookStatus(gameId, api).then((r) => alive && setStatus(r)).catch(() => alive && setStatus(null));
     };
     load();
     const timer = setInterval(load, POLL_MS);

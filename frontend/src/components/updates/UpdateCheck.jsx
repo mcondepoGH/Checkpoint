@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { api } from '#src/lib/api.js';
 import { updatesApplicable, updateSummary, channelOf, CHANNEL_OPTIONS, CHANNEL_HELP } from '#src/lib/updates.js';
 import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { ui } from '#src/lib/errors.js';
 import { Alert, Button, Select, Switch } from '#src/components/ui/index.js';
+import { putUpdates, refreshUpdates } from '#src/lib/api/updates.js';
 
 // Tarjeta de Configuración: activar/desactivar la comprobación de versiones nuevas y forzarla a mano.
 export default function UpdateCheck({ info, onInfo }) {
@@ -18,11 +18,11 @@ export default function UpdateCheck({ info, onInfo }) {
     setBusy(true); setMsg(null);
     try { await fn(); } catch (e) { setMsg(e); } finally { setBusy(false); }
   };
-  const put = (body) => act(async () => onInfo(await api('/api/updates', { method: 'PUT', body })));
+  const put = (body) => act(async () => onInfo(await putUpdates(body)));
   const toggle = (value) => put({ enabled: value });
   const setChannel = (value) => put({ channel: value });
   const refresh = () => act(async () => {
-    const r = await api('/api/updates?refresh=true');
+    const r = await refreshUpdates();
     onInfo(r);
     if (r.limitado) setMsg(ui('updates.check.limited'));
   });

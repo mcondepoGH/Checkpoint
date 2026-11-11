@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { api } from '#src/lib/api.js';
 import { copyText } from '#src/lib/clipboard.js';
 import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { Alert, Button } from '#src/components/ui/index.js';
 import { osSteps } from './keyhelpSteps.js';
+import { getPublicKey } from '#src/lib/api/config.js';
 
 function CodeBlock({ text }) {
   const { t } = useI18n();
@@ -128,7 +128,7 @@ export default function PublicKey() {
   const area = useRef(null);
 
   useEffect(() => {
-    api('/api/ssh/public-key').then((r) => setKey(r.public_key)).catch((e) => setErr(e));
+    getPublicKey().then((r) => setKey(r.public_key)).catch((e) => setErr(e));
   }, []);
 
   const copy = async () => {

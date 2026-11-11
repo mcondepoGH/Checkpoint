@@ -3,7 +3,7 @@ import React, { useSyncExternalStore } from 'react';
 import { createI18n } from '#src/lib/i18n.js';
 import { catalogs } from '#src/locales/index.js';
 import { errorText } from '#src/lib/errors.js';
-import { api } from '#src/lib/api.js';
+import { getPublic } from '#src/lib/api/session.js';
 
 const safeStorage = () => { try { return window.localStorage; } catch { return null; } };
 
@@ -27,7 +27,7 @@ export function rich(text) {
 }
 
 // Idioma por defecto del servidor (CHECKPOINT_LANG), público: se pide antes de pintar el login. Nunca falla.
-export const initDefaultLang = () => api('/api/public')
+export const initDefaultLang = () => getPublic()
   .then((r) => { if (r && typeof r.default_lang === 'string') i18n.setDefaultLocale(r.default_lang); })
   .catch(() => {});
 

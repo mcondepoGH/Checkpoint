@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { api, ApiError } from '#src/lib/api.js';
+import { ApiError } from '#src/lib/api.js';
 import EmptyState from '#src/components/ui/EmptyState.jsx';
 import Modal from '#src/components/ui/Modal.jsx';
 import DiffView from './DiffView.jsx';
 import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { ui } from '#src/lib/errors.js';
 import { Alert, Button } from '#src/components/ui/index.js';
+import { diffConfig, listBackups, restoreBackup } from '#src/lib/api/config.js';
 
 const when = (iso) => iso.replace('T', ' ');
 const kb = (n) => `${Math.max(1, Math.round(n / 1024))} KB`;
@@ -17,18 +18,18 @@ export default function BackupsDialog({ baseVersion, dirty, onRestored, onClose 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null); // error de la API o mensaje {code} (se traduce al pintar)
 
-  useEffect(() => { api('/api/config/backups').then(setList).catch((e) => setError(e)); }, []);
+  useEffect(() => { listBackups().then(setList).catch((e) => setError(e)); }, []);
 
   const preview = async (name) => {
     setError(null);
-    try { setPick({ name, diff: (await api('/api/config/diff', { method: 'POST', body: { backup: name } })).diff }); }
+    try { setPick({ name, diff: (await diffConfig({ backup: name })).diff }); }
     catch (e) { setError(e); }
   };
 
   const restore = async () => {
     setBusy(true);
     setError(null);
-    try { onRestored(await api('/api/config/restore', { method: 'POST', body: { name: pick.name, base_version: baseVersion } })); }
+    try { onRestored(await restoreBackup(pick.name, baseVersion)); }
     catch (e) {
       setError(e instanceof ApiError && e.status === 409 ? ui('backups.stale') : e);
     } finally { setBusy(false); }

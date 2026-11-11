@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { api } from '#src/lib/api.js';
 import Modal from '#src/components/ui/Modal.jsx';
 import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { ui } from '#src/lib/errors.js';
 import { Alert, Button } from '#src/components/ui/index.js';
+import { configYaml } from '#src/lib/api/config.js';
 
 // Solo lectura: el YAML tal como se escribiría (conserva los comentarios del fichero actual).
 export default function YamlDialog({ config, onClose }) {
@@ -11,7 +11,7 @@ export default function YamlDialog({ config, onClose }) {
   const [text, setText] = useState(null);
   const [err, setErr] = useState(null); // error de la API o mensaje {code} (se traduce al pintar)
   useEffect(() => {
-    api('/api/config/yaml', { method: 'POST', body: { config } })
+    configYaml(config)
       .then((r) => setText(r.yaml))
       .catch((e) => setErr(e.data?.errors ? ui('yaml.invalid') : e));
   }, [config]);

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import AppIcon from '#src/components/ui/AppIcon.jsx';
-import { api } from '#src/lib/api.js';
 import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { Alert, Button } from '#src/components/ui/index.js';
+import { login } from '#src/lib/api/session.js';
 
 export default function Login({ onDone }) {
   const { t } = useI18n();
@@ -14,7 +14,7 @@ export default function Login({ onDone }) {
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true); setError(null);
-    try { await api('/api/login', { method: 'POST', body: { user, password } }); onDone(); }
+    try { await login(user, password); onDone(); }
     catch (err) { setError(err); }
     finally { setBusy(false); setPassword(''); }
   };

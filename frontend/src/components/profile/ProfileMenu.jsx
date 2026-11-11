@@ -1,5 +1,4 @@
 import React, { useEffect, useId, useRef, useState } from 'react';
-import { api } from '#src/lib/api.js';
 import { ui } from '#src/lib/errors.js';
 import { PHOTO_ACCEPT, photoUrl, prepareAvatar, validatePhotoFile } from './photo.js';
 import { showBadge } from '#src/lib/updates.js';
@@ -9,6 +8,7 @@ import Avatar from './Avatar.jsx';
 import Icon from '#src/components/ui/Icon.jsx';
 import LanguageSelect from './LanguageSelect.jsx';
 import { Alert, Button } from '#src/components/ui/index.js';
+import { deletePhoto, putPhoto } from '#src/lib/api/profile.js';
 
 // Perfil en la cabecera: botón circular con la foto (o la silueta) y un popover anclado debajo, por grupos con separador y rótulo:
 // identidad (foto), actualización (solo móvil), Preferencias (idioma, tema), Integración (API key plegable y enlace a la documentación de la API) y Cuenta (salir). Con una actualización disponible, en móvil (<480 px, por CSS) el aviso sale de la cabecera: el avatar lleva un punto
@@ -50,13 +50,13 @@ export default function ProfileMenu({ profile, theme, effectiveTheme, onCycleThe
     try {
       let blob;
       try { blob = await prepareAvatar(f); } catch { throw ui('profile.photo.failed'); }
-      const r = await api('/api/profile/photo', { method: 'PUT', body: blob });
+      const r = await putPhoto(blob);
       onPhoto(r.photo);
     } catch (err) { setError(err); } finally { setBusy(false); }
   };
   const remove = async () => {
     setBusy(true); setError(null);
-    try { const r = await api('/api/profile/photo', { method: 'DELETE' }); onPhoto(r.photo); }
+    try { const r = await deletePhoto(); onPhoto(r.photo); }
     catch (err) { setError(err); } finally { setBusy(false); }
   };
 

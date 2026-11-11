@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { api } from '#src/lib/api.js';
 import EmptyState from '#src/components/ui/EmptyState.jsx';
 import { labelOf } from '#src/lib/names.js';
 import { parseRun } from '#src/lib/format.js';
@@ -10,6 +9,7 @@ import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { NO_WATCHES } from '#src/hooks/useWatches.js';
 import { clock, groupByGame, watchCardClass, watchHealth, worstHealth } from '#src/components/watch/watch.js';
 import { Alert, Badge, Button, Checkbox, Pill, WatchBar } from '#src/components/ui/index.js';
+import { getStatus, runSync } from '#src/lib/api/sync.js';
 
 
 // Estados con texto propio en el distintivo: clave `sync.state.<resultado>`; otro resultado se muestra tal cual.
@@ -71,7 +71,7 @@ export default function Sync({ config, watch = NO_WATCHES, onGoSettings }) {
   const esRef = useRef(null);
   const logRef = useRef(null);
 
-  const loadStatus = () => api('/api/status').then(setStatus).catch(() => {});
+  const loadStatus = () => getStatus().then(setStatus).catch(() => {});
   useEffect(() => { loadStatus(); return () => esRef.current?.close(); }, []);
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight; }, [active?.lines.length]);
 
@@ -81,7 +81,7 @@ export default function Sync({ config, watch = NO_WATCHES, onGoSettings }) {
     try {
       const body = { dry_run: !!dry[game] };
       if (resolution) { body.resolution = resolution; body.expect = expect; }
-      const { run_id } = await api(`/api/sync/${encodeURIComponent(game)}`, { method: 'POST', body });
+      const { run_id } = await runSync(game, body);
       setActive({ game, lines: [], done: false });
       esRef.current?.close();
       const es = new EventSource(`/api/runs/${run_id}/stream`);

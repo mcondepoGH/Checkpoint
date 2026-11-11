@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { api } from '#src/lib/api.js';
 import { labelOf } from '#src/lib/names.js';
 import EmptyState from '#src/components/ui/EmptyState.jsx';
 import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { Alert, Button, Select } from '#src/components/ui/index.js';
+import { getVersionsLimit, listVersions, restoreVersion } from '#src/lib/api/versions.js';
 
 export default function Versions({ config, onGoSettings }) {
   const { t } = useI18n();
@@ -13,14 +13,14 @@ export default function Versions({ config, onGoSettings }) {
   const [msg, setMsg] = useState(null); // {error?, body}: `body` es un error o respuesta con {code, params} (se traduce al pintar)
   const [limit, setLimit] = useState(null);
 
-  const load = (g) => g ? api(`/api/versions/${encodeURIComponent(g)}`).then(setList).catch((e) => setMsg({ error: true, body: e })) : setList([]);
-  const loadLimit = (g) => (g ? api(`/api/versions/${encodeURIComponent(g)}/limit`).then(setLimit).catch(() => setLimit(null)) : setLimit(null));
+  const load = (g) => g ? listVersions(g).then(setList).catch((e) => setMsg({ error: true, body: e })) : setList([]);
+  const loadLimit = (g) => (g ? getVersionsLimit(g).then(setLimit).catch(() => setLimit(null)) : setLimit(null));
   useEffect(() => { load(game); loadLimit(game); }, [game, config]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const restore = async (version, source, sourceName) => {
     if (!window.confirm(t('versions.confirm', { version, source: sourceName }))) return;
     try {
-      const r = await api(`/api/versions/${encodeURIComponent(game)}/restore`, { method: 'POST', body: { version, source } });
+      const r = await restoreVersion(game, version, source);
       setMsg({ body: r }); load(game); loadLimit(game);
     } catch (e) { setMsg({ error: true, body: e }); }
   };

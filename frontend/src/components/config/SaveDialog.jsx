@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { api, ApiError } from '#src/lib/api.js';
+import { ApiError } from '#src/lib/api.js';
 import Modal from '#src/components/ui/Modal.jsx';
 import DiffView from './DiffView.jsx';
 import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { ui } from '#src/lib/errors.js';
 import { Alert, Button } from '#src/components/ui/index.js';
+import { diffConfig, saveConfig } from '#src/lib/api/config.js';
 
 // Vista previa + confirmación de guardado. Ante 409 (config.yaml cambió por fuera) vuelve a calcular
 // el diff contra la versión nueva del fichero y deja confirmar o recargar.
@@ -20,12 +21,12 @@ export default function SaveDialog({ config, diff: initial, baseVersion, onSaved
     setBusy(true);
     setError(null);
     try {
-      const r = await api('/api/config', { method: 'PUT', body: { config, base_version: base } });
+      const r = await saveConfig(config, base);
       onSaved(r);
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) {
         try {
-          const d = await api('/api/config/diff', { method: 'POST', body: { config } });
+          const d = await diffConfig({ config });
           setDiff(d.diff);
           setBase(d.version);
           setConflict(true);

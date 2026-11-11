@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { api } from '#src/lib/api.js';
+import { getWatches } from '#src/lib/api/sync.js';
 
 export const WATCH_POLL_MS = 5000; // el backend no emite eventos de vigilancia: se consulta /api/watches (los SSE existentes son de config y de ejecuciones)
 export const NO_WATCHES = { now: null, watches: [] };
@@ -17,7 +17,7 @@ export function useWatches(enabled = true) {
     let alive = true;
     const load = () => {
       if (typeof document !== 'undefined' && document.hidden) return;
-      api('/api/watches').then((r) => alive && setWatch(watchState(r))).catch(() => {});
+      getWatches().then((r) => alive && setWatch(watchState(r))).catch(() => {});
     };
     load();
     const timer = setInterval(load, WATCH_POLL_MS);

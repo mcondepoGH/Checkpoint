@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { api } from '#src/lib/api.js';
 import Field from '#src/components/ui/Field.jsx';
 import AutoSyncLog from './AutoSyncLog.jsx';
 import { fmtDateTime, ON_CONFLICT_OPTIONS } from '#src/lib/format.js';
 import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { ui } from '#src/lib/errors.js';
 import { Alert, Badge, Button, Checkbox, Input, Select, Switch } from '#src/components/ui/index.js';
+import { getScheduler, putScheduler } from '#src/lib/api/sync.js';
 
 const PRESETS = [1, 6, 12, 24];
 const ON_CONFLICT_HELP = { skip: 'autosync.help.skip', newest: 'autosync.help.newest' }; // claves del catálogo
@@ -32,14 +32,14 @@ export default function AutoSync() {
   };
 
   const load = useCallback(async () => {
-    try { apply(await api('/api/scheduler')); } catch (e) { setMsg({ kind: 'error', body: e }); }
+    try { apply(await getScheduler()); } catch (e) { setMsg({ kind: 'error', body: e }); }
   }, []);
   useEffect(() => { load(); }, [load]);
 
   // Refresca estado (próxima ejecución) sin pisar lo que se esté editando.
   useEffect(() => {
     const timer = setInterval(async () => {
-      try { setSaved(await api('/api/scheduler')); } catch { /* sin red: se reintenta */ }
+      try { setSaved(await getScheduler()); } catch { /* sin red: se reintenta */ }
     }, 30000);
     return () => clearInterval(timer);
   }, []);
@@ -54,7 +54,7 @@ export default function AutoSync() {
   const save = async () => {
     setBusy(true); setMsg(null); setServerErr('');
     try {
-      apply(await api('/api/scheduler', { method: 'PUT', body: { enabled, interval_hours: num, run_on_start: runOnStart, on_conflict: onConflict } }));
+      apply(await putScheduler({ enabled, interval_hours: num, run_on_start: runOnStart, on_conflict: onConflict }));
       setMsg({ kind: 'ok', body: ui('autosync.saved') });
     } catch (e) {
       setServerErr(e.data?.errors?.interval_hours || e.data?.errors?.on_conflict || ''); // {code, params} o texto: Field lo traduce

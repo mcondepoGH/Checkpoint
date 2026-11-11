@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { api } from '#src/lib/api.js';
+import { diffConfig, testDevice as testDeviceApi, validateConfig } from '#src/lib/api/config.js';
 import {
   MAX_VERSIONS_LIMIT, VERSIONS_HINT, blankDevice, blankGame, canOfferLocal, deviceId, baseKeyOf, errorsFor, fromConfig, gamesUsing, hasChanges, idOf, localErrors, nameOf, pathsOf, removeDevice, renamed, toConfig,
 } from '#src/components/config/draft.js';
@@ -81,7 +81,7 @@ export default function Settings({ loaded, stale, configError, runtime, platform
     setValidating(true);
     const timer = setTimeout(async () => {
       try {
-        const r = await api('/api/config/validate', { method: 'POST', body: { config: JSON.parse(payloadKey) } });
+        const r = await validateConfig(JSON.parse(payloadKey));
         if (n === seq.current) { setErrors(r.errors); setValidating(false); }
       } catch (e) {
         if (n === seq.current) { setErrors({ '': e }); setValidating(false); }
@@ -103,13 +103,10 @@ export default function Settings({ loaded, stale, configError, runtime, platform
     setTests((prev) => ({ ...prev, [dev.key]: { busy: true } }));
     let r;
     try {
-      r = await api('/api/devices/test', {
-        method: 'POST',
-        // «Este equipo»: sin SSH; se comprueban las carpetas de saves de los juegos que lo usan.
-        body: dev.local
-          ? { device: { name: dev.name || 'prueba', local: true, os: dev.os }, paths: pathsOf(draft, dev.key) }
-          : { device: { name: dev.name || 'prueba', host: dev.host, user: dev.user, os: dev.os, port: Number(dev.port) || dev.port } },
-      });
+      // «Este equipo»: sin SSH; se comprueban las carpetas de saves de los juegos que lo usan.
+      r = await testDeviceApi(dev.local
+        ? { device: { name: dev.name || 'prueba', local: true, os: dev.os }, paths: pathsOf(draft, dev.key) }
+        : { device: { name: dev.name || 'prueba', host: dev.host, user: dev.user, os: dev.os, port: Number(dev.port) || dev.port } });
     } catch (e) { r = { ok: false, code: e.code, params: e.params, message: e.message }; }
     setTests((prev) => ({ ...prev, [dev.key]: r }));
   };
@@ -121,7 +118,7 @@ export default function Settings({ loaded, stale, configError, runtime, platform
     setBusy(true);
     setMsg(null);
     try {
-      const r = await api('/api/config/diff', { method: 'POST', body: { config: payload } });
+      const r = await diffConfig({ config: payload });
       setDialog({ kind: 'save', diff: r.diff, version: r.version, config: payload });
     } catch (e) { setMsg({ body: e }); } finally { setBusy(false); }
   };
@@ -133,7 +130,7 @@ export default function Settings({ loaded, stale, configError, runtime, platform
   };
 
   const showStaleDiff = async () => {
-    try { setStaleDiff((await api('/api/config/diff', { method: 'POST', body: { config: payload } })).diff); }
+    try { setStaleDiff((await diffConfig({ config: payload })).diff); }
     catch (e) { setMsg({ body: e }); }
   };
 

@@ -1,5 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { api, ApiError } from '#src/lib/api.js';
+import { ApiError } from '#src/lib/api.js';
+import { getConfig } from '#src/lib/api/config.js';
+import { getProfile } from '#src/lib/api/profile.js';
+import { getSession, logout as apiLogout } from '#src/lib/api/session.js';
+import { getUpdates } from '#src/lib/api/updates.js';
 import AppIcon from '#src/components/ui/AppIcon.jsx';
 import UpdateBadge from '#src/components/updates/UpdateBadge.jsx';
 import ProfileMenu from '#src/components/profile/ProfileMenu.jsx';
@@ -36,7 +40,7 @@ export default function App() {
 
   const loadConfig = useCallback(async (first = false) => {
     try {
-      const r = await api('/api/config');
+      const r = await getConfig();
       setLoaded(r);
       setError(null);
       if (first && Object.keys(r.config.devices).length === 0) setTab('settings');
@@ -49,7 +53,7 @@ export default function App() {
   useEffect(() => {
     // El idioma por defecto del servidor se pide en paralelo y se espera antes de pintar (evita parpadeo es -> en).
     const pub = initDefaultLang();
-    api('/api/session').then(async (s) => {
+    getSession().then(async (s) => {
       await pub;
       setAuthed(s.authenticated);
       if (s.authenticated) loadConfig(true);
@@ -62,7 +66,7 @@ export default function App() {
     const es = new EventSource('/api/config/events');
     es.addEventListener('config', (ev) => { try { setLatest(JSON.parse(ev.data).version); } catch { /* ignorar */ } });
     es.onerror = () => {
-      api('/api/session').then((s) => { if (!s.authenticated) { es.close(); setAuthed(false); } }).catch(() => {});
+      getSession().then((s) => { if (!s.authenticated) { es.close(); setAuthed(false); } }).catch(() => {});
     };
     return () => es.close();
   }, [authed]);
@@ -71,7 +75,7 @@ export default function App() {
   useEffect(() => {
     if (!authed) return undefined;
     let timer = null;
-    const check = () => api('/api/updates').then((r) => {
+    const check = () => getUpdates().then((r) => {
       setUpdates(r);
       if (r && r.aplicable === false && timer) { clearInterval(timer); timer = null; } // no aplica (Docker): sin más consultas
     }).catch(() => {});
@@ -81,14 +85,14 @@ export default function App() {
   }, [authed]);
 
   useEffect(() => {
-    if (authed) api('/api/profile').then(setProfile).catch(() => {});
+    if (authed) getProfile().then(setProfile).catch(() => {});
   }, [authed]);
 
   const stale = latest !== null && latest !== loaded.version;
   // Sin borrador pendiente se recarga solo; con borrador, Configuración avisa y no pisa nada.
   useEffect(() => { if (stale && !dirty) loadConfig(); }, [stale, dirty, loadConfig]);
 
-  const logout = async () => { await api('/api/logout', { method: 'POST' }); setAuthed(false); };
+  const logout = async () => { await apiLogout(); setAuthed(false); };
 
   if (authed === null) return <div className="center muted">{t('common.loading')}</div>;
   if (!authed) {
