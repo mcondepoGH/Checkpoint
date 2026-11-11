@@ -2,14 +2,10 @@
 // El render usa esbuild (viene con Vite); si no está disponible esos tests se saltan.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
 import { initialState, isInsecure, reduce, run } from '../src/apikey.js';
 import { ApiError } from '../src/api.js';
+import { bundle } from './helpers/bundle.mjs';
 
-const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src');
 const KEY = 'ck_' + 'A'.repeat(43);
 
 // ---- lógica ----
@@ -72,36 +68,13 @@ test('aviso de HTTP en claro solo fuera de localhost', () => {
 });
 
 // ---- render ----
-let m = null;
-let skip = false;
-try {
-  const { build } = await import('esbuild');
-  const out = await build({
-    stdin: {
-      contents: `import React from 'react';
-        import { renderToStaticMarkup } from 'react-dom/server';
-        import { i18n } from './useI18n.js';
-        import ApiKeySection from './components/ApiKeySection.jsx';
-        import ProfileMenu from './components/ProfileMenu.jsx';
-        import { copyText } from './clipboard.js';
-        export { React, renderToStaticMarkup, i18n, ApiKeySection, ProfileMenu, copyText };`,
-      resolveDir: SRC, loader: 'jsx',
-    },
-    bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'transform',
-    define: { 'process.env.NODE_ENV': '"production"' },
-    loader: { '.svg': 'dataurl' },
-    banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
-    logLevel: 'silent',
-  });
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ckpt-apikey-'));
-  const file = path.join(dir, 'bundle.mjs');
-  fs.writeFileSync(file, out.outputFiles[0].text);
-  globalThis.navigator ??= { languages: ['es'], language: 'es' };
-  m = await import(pathToFileURL(file).href);
-  fs.rmSync(dir, { recursive: true, force: true });
-} catch (e) {
-  skip = `esbuild no disponible: ${e.message}`;
-}
+const { mod: m, skip } = await bundle(`import React from 'react';
+  import { renderToStaticMarkup } from 'react-dom/server';
+  import { i18n } from './useI18n.js';
+  import ApiKeySection from './components/ApiKeySection.jsx';
+  import ProfileMenu from './components/ProfileMenu.jsx';
+  import { copyText } from './clipboard.js';
+  export { React, renderToStaticMarkup, i18n, ApiKeySection, ProfileMenu, copyText };`, { navigator: true, tag: 'ckpt-apikey' });
 const section = (initial, lang = 'es', props = {}) => {
   m.i18n.setLocale(lang);
   return m.renderToStaticMarkup(m.React.createElement(m.ApiKeySection, { initial, ...props }));

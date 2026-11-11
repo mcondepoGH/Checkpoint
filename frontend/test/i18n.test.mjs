@@ -1,7 +1,7 @@
 // Infraestructura i18n: lookup jerárquico, parámetros, plurales con Intl.PluralRules, detección y persistencia del idioma.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import { es as realEs } from './helpers/locales.mjs';
 import { createI18n, pickLocale, STORAGE_KEY } from '../src/i18n.js';
 
 const es = { app: { name: 'Checkpoint' }, hello: 'Hola {name}', files: { one: '{count} fichero', other: '{count} ficheros' }, solo: 'solo es' };
@@ -108,8 +108,7 @@ test('suscriptores se avisan al cambiar de idioma', () => {
 });
 
 test('locales/es.json es JSON válido con claves de prueba', async () => {
-  const es = JSON.parse(fs.readFileSync(new URL('../src/locales/es.json', import.meta.url), 'utf8'));
-  const i = createI18n({ catalogs: { es }, storage: mem(), languages: ['es'] });
+  const i = createI18n({ catalogs: { es: realEs }, storage: mem(), languages: ['es'] });
   assert.equal(i.t('lang.label'), 'Idioma');
   assert.equal(i.t('lang.auto'), 'Automático');
 });

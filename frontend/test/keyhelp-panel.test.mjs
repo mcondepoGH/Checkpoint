@@ -4,57 +4,32 @@
 // con un portapapeles falso. Usa esbuild (viene con Vite); si no está disponible el test se salta.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
 import { osSteps } from '../src/keyhelpSteps.js';
+import { bundle, SRC } from './helpers/bundle.mjs';
 
-const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src');
-let m = null;
-let skip = false;
-try {
-  const { build } = await import('esbuild');
-  const stubButtons = {
-    name: 'stub-buttons',
-    setup(b) {
-      b.onResolve({ filter: /ui\/index\.js$/ }, () => ({ path: 'ui', namespace: 'stub' }));
-      b.onLoad({ filter: /.*/, namespace: 'stub' }, () => ({
-        resolveDir: SRC,
-        loader: 'jsx',
-        contents: `import React, { forwardRef } from 'react';
-          export { default as Alert } from './components/ui/Alert.jsx';
-          export const Button = forwardRef(function Button({ variant, className, iconOnly, children, ...rest }, ref) {
-            (globalThis.__buttons ||= []).push({ ...rest, className, children });
-            return <button type="button" className={className} {...rest}>{children}</button>;
-          });`,
-      }));
-    },
-  };
-  const out = await build({
-    stdin: {
-      contents: `import React from 'react';
-        import { renderToStaticMarkup } from 'react-dom/server';
-        import { i18n } from './useI18n.js';
-        import { KeyHelp } from './components/PublicKey.jsx';
-        export { React, renderToStaticMarkup, i18n, KeyHelp };`,
-      resolveDir: SRC, loader: 'jsx',
-    },
-    plugins: [stubButtons],
-    bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'transform',
-    define: { 'process.env.NODE_ENV': '"production"' },
-    loader: { '.svg': 'dataurl' },
-    banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
-    logLevel: 'silent',
-  });
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ckpt-keyhelp-'));
-  const file = path.join(dir, 'bundle.mjs');
-  fs.writeFileSync(file, out.outputFiles[0].text);
-  m = await import(pathToFileURL(file).href);
-  fs.rmSync(dir, { recursive: true, force: true });
-} catch (e) {
-  skip = `esbuild no disponible: ${e.message}`;
-}
+// Los botones de `ui` se sustituyen por un stub que registra sus props; el resto de `ui` es el real.
+const stubButtons = {
+  name: 'stub-buttons',
+  setup(b) {
+    b.onResolve({ filter: /ui\/index\.js$/ }, () => ({ path: 'ui', namespace: 'stub' }));
+    b.onLoad({ filter: /.*/, namespace: 'stub' }, () => ({
+      resolveDir: SRC,
+      loader: 'jsx',
+      contents: `import React, { forwardRef } from 'react';
+        export { default as Alert } from '#src/components/ui/Alert.jsx';
+        export const Button = forwardRef(function Button({ variant, className, iconOnly, children, ...rest }, ref) {
+          (globalThis.__buttons ||= []).push({ ...rest, className, children });
+          return <button type="button" className={className} {...rest}>{children}</button>;
+        });`,
+    }));
+  },
+};
+const { mod: m, skip } = await bundle(`import React from 'react';
+  import { renderToStaticMarkup } from 'react-dom/server';
+  import { i18n } from './useI18n.js';
+  import { KeyHelp } from './components/PublicKey.jsx';
+  export { React, renderToStaticMarkup, i18n, KeyHelp };`, { plugins: [stubButtons], tag: 'ckpt-keyhelp' });
 
 const KEY = 'ssh-ed25519 AAAATESTKEY checkpoint';
 const ONE_LINE_EXAMPLE = 'ssh-ed25519 AAAAC3Nza...XXXX checkpoint';

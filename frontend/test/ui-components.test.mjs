@@ -3,36 +3,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { bundle, SRC } from './helpers/bundle.mjs';
 
-const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src');
-let mod = null;
-let skip = false;
-try {
-  const { build } = await import('esbuild');
-  const out = await build({
-    stdin: {
-      contents: `import React from 'react';
-        import { renderToStaticMarkup } from 'react-dom/server';
-        import * as ui from './components/ui/index.js';
-        export { React, renderToStaticMarkup, ui };`,
-      resolveDir: SRC, loader: 'jsx',
-    },
-    bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'transform',
-    define: { 'process.env.NODE_ENV': '"production"' },
-    banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
-    logLevel: 'silent',
-  });
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ckpt-ui-'));
-  const file = path.join(dir, 'bundle.mjs');
-  fs.writeFileSync(file, out.outputFiles[0].text);
-  mod = await import(pathToFileURL(file).href);
-  fs.rmSync(dir, { recursive: true, force: true });
-} catch (e) {
-  skip = `esbuild no disponible: ${e.message}`;
-}
+const { mod, skip } = await bundle(`import React from 'react';
+  import { renderToStaticMarkup } from 'react-dom/server';
+  import * as ui from './components/ui/index.js';
+  export { React, renderToStaticMarkup, ui };`, { tag: 'ckpt-ui' });
 
 const r = (C, props, ...kids) => mod.renderToStaticMarkup(mod.React.createElement(mod.ui[C], props, ...kids));
 

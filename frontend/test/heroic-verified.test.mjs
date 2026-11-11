@@ -3,12 +3,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { en, es, flat } from './helpers/locales.mjs';
 import { LAUNCHERS } from '../src/launchers.js';
 
 const read = (rel) => fs.readFileSync(new URL(rel, import.meta.url), 'utf8');
 const UNVERIFIED = /sin verificar|unverified|not verified|no verificad/i;
-const flat = (o, p = '') => Object.entries(o).flatMap(([k, v]) => (v && typeof v === 'object' ? flat(v, `${p}${k}.`) : [[`${p}${k}`, v]]));
-const locale = (l) => Object.fromEntries(flat(JSON.parse(read(`../src/locales/${l}.json`))));
+const locale = (l) => Object.fromEntries(flat({ es, en }[l]));
 
 test('Heroic está entre los lanzadores y su pestaña se llama «Heroic» a secas (es y en)', () => {
   assert.ok(LAUNCHERS.includes('heroic'));

@@ -2,40 +2,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { bundle, SRC } from './helpers/bundle.mjs';
 
-const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src');
-let m = null;
-let skip = false;
-try {
-  const { build } = await import('esbuild');
-  const out = await build({
-    stdin: {
-      contents: `import React from 'react';
-        import { renderToStaticMarkup } from 'react-dom/server';
-        import { i18n } from './useI18n.js';
-        import ProfileMenu from './components/ProfileMenu.jsx';
-        import ApiKeySection from './components/ApiKeySection.jsx';
-        export { React, renderToStaticMarkup, i18n, ProfileMenu, ApiKeySection };`,
-      resolveDir: SRC, loader: 'jsx',
-    },
-    bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'transform',
-    define: { 'process.env.NODE_ENV': '"production"' },
-    loader: { '.svg': 'dataurl' },
-    banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
-    logLevel: 'silent',
-  });
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ckpt-profmenu-'));
-  const file = path.join(dir, 'bundle.mjs');
-  fs.writeFileSync(file, out.outputFiles[0].text);
-  globalThis.navigator ??= { languages: ['es'], language: 'es' };
-  m = await import(pathToFileURL(file).href);
-  fs.rmSync(dir, { recursive: true, force: true });
-} catch (e) {
-  skip = `esbuild no disponible: ${e.message}`;
-}
+const { mod: m, skip } = await bundle(`import React from 'react';
+  import { renderToStaticMarkup } from 'react-dom/server';
+  import { i18n } from './useI18n.js';
+  import ProfileMenu from './components/ProfileMenu.jsx';
+  import ApiKeySection from './components/ApiKeySection.jsx';
+  export { React, renderToStaticMarkup, i18n, ProfileMenu, ApiKeySection };`, { navigator: true, tag: 'ckpt-profmenu' });
 const UPD = { actual: '1.0.0', ultima: '1.1.0', hay_actualizacion: true, habilitado: true, aplicable: true };
 const menu = (o = {}, lang = 'es') => {
   m.i18n.setLocale(lang);

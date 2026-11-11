@@ -5,48 +5,25 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { bundle, SRC } from './helpers/bundle.mjs';
 
-const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src');
-let m = null;
-let skip = false;
-try {
-  const { build } = await import('esbuild');
-  const out = await build({
-    stdin: {
-      contents: `import React from 'react';
-        import { renderToStaticMarkup } from 'react-dom/server';
-        import { i18n, initDefaultLang } from './useI18n.js';
-        import Login from './pages/Login.jsx';
-        import LanguageSelect from './components/LanguageSelect.jsx';
-        import DeviceCard from './components/DeviceCard.jsx';
-        import GameCard from './components/GameCard.jsx';
-        import ConflictDialog from './components/ConflictDialog.jsx';
-        import DiffView from './components/DiffView.jsx';
-        import UpdateDialog from './components/UpdateDialog.jsx';
-        import UpdateBadge from './components/UpdateBadge.jsx';
-        import PublicKey from './components/PublicKey.jsx';
-        import ProfileMenu from './components/ProfileMenu.jsx';
-        import Avatar from './components/Avatar.jsx';
-        import Sync from './pages/Sync.jsx';
-        import Versions from './pages/Versions.jsx';
-        export { React, renderToStaticMarkup, i18n, initDefaultLang, Login, LanguageSelect, DeviceCard, GameCard, ConflictDialog, DiffView, UpdateDialog, UpdateBadge, PublicKey, ProfileMenu, Avatar, Sync, Versions };`,
-      resolveDir: SRC, loader: 'jsx',
-    },
-    bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'transform',
-    define: { 'process.env.NODE_ENV': '"production"' },
-    loader: { '.svg': 'dataurl' },
-    banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
-    logLevel: 'silent',
-  });
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ckpt-render-'));
-  const file = path.join(dir, 'bundle.mjs');
-  fs.writeFileSync(file, out.outputFiles[0].text);
-  m = await import(pathToFileURL(file).href);
-  fs.rmSync(dir, { recursive: true, force: true });
-} catch (e) {
-  skip = `esbuild no disponible: ${e.message}`;
-}
+const { mod: m, skip } = await bundle(`import React from 'react';
+  import { renderToStaticMarkup } from 'react-dom/server';
+  import { i18n, initDefaultLang } from './useI18n.js';
+  import Login from './pages/Login.jsx';
+  import LanguageSelect from './components/LanguageSelect.jsx';
+  import DeviceCard from './components/DeviceCard.jsx';
+  import GameCard from './components/GameCard.jsx';
+  import ConflictDialog from './components/ConflictDialog.jsx';
+  import DiffView from './components/DiffView.jsx';
+  import UpdateDialog from './components/UpdateDialog.jsx';
+  import UpdateBadge from './components/UpdateBadge.jsx';
+  import PublicKey from './components/PublicKey.jsx';
+  import ProfileMenu from './components/ProfileMenu.jsx';
+  import Avatar from './components/Avatar.jsx';
+  import Sync from './pages/Sync.jsx';
+  import Versions from './pages/Versions.jsx';
+  export { React, renderToStaticMarkup, i18n, initDefaultLang, Login, LanguageSelect, DeviceCard, GameCard, ConflictDialog, DiffView, UpdateDialog, UpdateBadge, PublicKey, ProfileMenu, Avatar, Sync, Versions };`, { tag: 'ckpt-render' });
 
 const h = (C, props) => m.renderToStaticMarkup(m.React.createElement(C, props));
 const dev = { key: 'k1', id: 'pc-1', name: 'PC', orig: 'PC', local: false, host: 'h', port: '22', user: 'u', os: 'linux' };

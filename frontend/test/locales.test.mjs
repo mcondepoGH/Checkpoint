@@ -5,16 +5,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { en, es } from './helpers/locales.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SRC = path.join(HERE, '..', 'src');
-const load = (n) => JSON.parse(fs.readFileSync(path.join(SRC, 'locales', `${n}.json`), 'utf8'));
-const es = load('es');
-const en = load('en');
 const PLURAL = new Set(['zero', 'one', 'two', 'few', 'many', 'other']);
 const isPlural = (v) => v && typeof v === 'object' && 'other' in v && Object.keys(v).every((k) => PLURAL.has(k));
 
-// Hojas {clave plana -> cadena | objeto plural}
+// Hojas (a diferencia de `flat` de helpers/locales.mjs, trata los plurales como hoja) {clave plana -> cadena | objeto plural}
 function flat(o, p = '') {
   const out = {};
   for (const [k, v] of Object.entries(o)) {

@@ -1,7 +1,7 @@
 // «Este equipo» (dispositivo local): borrador <-> config, casilla, ids estables y sin cambios fantasma.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import { es } from './helpers/locales.mjs';
 import { createI18n } from '../src/i18n.js';
 import { errorText } from '../src/errors.js';
 import {
@@ -9,7 +9,6 @@ import {
   localOs, localPatch, pathsOf, removeDevice, toConfig,
 } from '../src/draft.js';
 
-const es = JSON.parse(fs.readFileSync(new URL('../src/locales/es.json', import.meta.url), 'utf8'));
 const t = createI18n({ catalogs: { es }, storage: null, languages: ['es'] }).t;
 
 const CFG = {

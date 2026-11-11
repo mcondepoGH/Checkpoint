@@ -1,12 +1,11 @@
 // Ayuda de la clave pública: un comando por card, alternativas con etiqueta, sin comentarios dentro de los comandos.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
+import { en, es, flat } from './helpers/locales.mjs';
 import { osSteps } from '../src/keyhelpSteps.js';
 
 const K = 'ssh-ed25519 AAAATESTKEY checkpoint';
-const flat = (o, p = '') => Object.entries(o).flatMap(([k, v]) => (v && typeof v === 'object' ? flat(v, `${p}${k}.`) : [[`${p}${k}`, v]]));
-const load = (l) => Object.fromEntries(flat(JSON.parse(fs.readFileSync(new URL(`../src/locales/${l}.json`, import.meta.url), 'utf8'))));
+const load = (l) => Object.fromEntries(flat({ es, en }[l]));
 const ES = load('es');
 const EN = load('en');
 const texts = (st) => st.map((s) => s.cmds.map((c) => c.text));

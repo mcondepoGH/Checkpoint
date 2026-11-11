@@ -1,17 +1,13 @@
 // Insignia de actualización y ajuste: lógica pura + render a HTML (esbuild, ya incluido con Vite; si no está, se salta).
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { es } from './helpers/locales.mjs';
 import { updatesApplicable, showBadge, safeUrl, updateSummary, channelOf, isPrerelease, installedVersion, CHANNEL_OPTIONS } from '../src/updates.js';
 
 import { createI18n } from '../src/i18n.js';
-const es = JSON.parse(fs.readFileSync(new URL('../src/locales/es.json', import.meta.url), 'utf8'));
+import { bundle } from './helpers/bundle.mjs';
 const t = createI18n({ catalogs: { es }, storage: null, languages: ['es'] }).t;
 
-const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src');
 const NEW = { actual: '0.4.2', ultima: '0.5.0', hay_actualizacion: true, habilitado: true, notas: 'Novedades <b>x</b>', url: 'https://github.com/o/r/releases/tag/v0.5.0', comprobado_en: '2026-01-01T10:00:00+00:00', error: null, canal: 'stable', prerelease: false };
 const PRE = { ...NEW, canal: 'beta', ultima: '0.6.0-rc.1', prerelease: true };
 
@@ -58,33 +54,12 @@ test('canal y marca preliminar: lógica pura', () => {
   assert.match(updateSummary(PRE, t), /preliminar/); assert.ok(!/preliminar/.test(updateSummary(NEW, t)));
 });
 
-let mod = null;
-let skip = false;
-try {
-  const { build } = await import('esbuild');
-  const out = await build({
-    stdin: {
-      contents: `import React from 'react';
-        import { renderToStaticMarkup } from 'react-dom/server';
-        import UpdateBadge from './components/UpdateBadge.jsx';
-        import UpdateDialog from './components/UpdateDialog.jsx';
-        import UpdateCheck from './components/UpdateCheck.jsx';
-        export { React, renderToStaticMarkup, UpdateBadge, UpdateDialog, UpdateCheck };`,
-      resolveDir: SRC, loader: 'jsx',
-    },
-    bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'transform',
-    define: { 'process.env.NODE_ENV': '"production"' },
-    banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
-    logLevel: 'silent',
-  });
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ckpt-upd-'));
-  const file = path.join(dir, 'bundle.mjs');
-  fs.writeFileSync(file, out.outputFiles[0].text);
-  mod = await import(pathToFileURL(file).href);
-  fs.rmSync(dir, { recursive: true, force: true });
-} catch (e) {
-  skip = `esbuild no disponible: ${e.message}`;
-}
+const { mod, skip } = await bundle(`import React from 'react';
+  import { renderToStaticMarkup } from 'react-dom/server';
+  import UpdateBadge from './components/UpdateBadge.jsx';
+  import UpdateDialog from './components/UpdateDialog.jsx';
+  import UpdateCheck from './components/UpdateCheck.jsx';
+  export { React, renderToStaticMarkup, UpdateBadge, UpdateDialog, UpdateCheck };`, { tag: 'ckpt-upd' });
 const r = (C, props) => mod.renderToStaticMarkup(mod.React.createElement(C, props));
 
 test('UpdateBadge visible con actualización', { skip }, () => {

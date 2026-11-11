@@ -2,37 +2,14 @@
 // si no está disponible (p. ej. instalación solo de producción) el test se salta.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { bundle } from './helpers/bundle.mjs';
 
-const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src');
-let mod = null;
-let skip = false;
-try {
-  const { build } = await import('esbuild');
-  const out = await build({
-    stdin: {
-      contents: `import React from 'react';
-        import { renderToStaticMarkup } from 'react-dom/server';
-        import DeviceCard from './components/DeviceCard.jsx';
-        export { React, renderToStaticMarkup, DeviceCard };`,
-      resolveDir: SRC, loader: 'jsx',
-    },
-    bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'transform',
-    define: { 'process.env.NODE_ENV': '"production"' },
-    banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
-    logLevel: 'silent',
-  });
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ckpt-render-'));
-  const file = path.join(dir, 'bundle.mjs');
-  fs.writeFileSync(file, out.outputFiles[0].text);
-  mod = await import(pathToFileURL(file).href);
-  fs.rmSync(dir, { recursive: true, force: true });
-} catch (e) {
-  skip = `esbuild no disponible: ${e.message}`;
-}
+const { mod, skip } = await bundle(`import React from 'react';
+  import { renderToStaticMarkup } from 'react-dom/server';
+  import DeviceCard from './components/DeviceCard.jsx';
+  export { React, renderToStaticMarkup, DeviceCard };`, { tag: 'ckpt-render' });
 
 const dev = (o = {}) => ({ key: 'k1', id: 'pc-1a2b3c4d', name: 'PC', orig: 'PC', local: false, host: '192.0.2.5', port: '22', user: 'usuario', os: 'linux', ...o });
 const render = (props) => mod.renderToStaticMarkup(mod.React.createElement(mod.DeviceCard, {

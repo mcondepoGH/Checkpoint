@@ -2,43 +2,18 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
-import { fileURLToPath, pathToFileURL } from 'node:url';
+import { bundle } from './helpers/bundle.mjs';
 
-const SRC = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src');
-let m = null;
-let skip = false;
-try {
-  const { build } = await import('esbuild');
-  const out = await build({
-    stdin: {
-      contents: `import React from 'react';
-        import { renderToStaticMarkup } from 'react-dom/server';
-        import { i18n } from './useI18n.js';
-        import LauncherBlock from './components/LauncherBlock.jsx';
-        import LaunchersPanel from './components/LaunchersPanel.jsx';
-        import GameCard from './components/GameCard.jsx';
-        import { Tabs, CopyBox } from './components/ui/index.js';
-        import { EntryMessage, EntryDetail, RunEntry } from './components/AutoSyncLog.jsx';
-        export { React, renderToStaticMarkup, i18n, LauncherBlock, LaunchersPanel, GameCard, Tabs, CopyBox, EntryMessage, EntryDetail, RunEntry };`,
-      resolveDir: SRC, loader: 'jsx',
-    },
-    bundle: true, write: false, format: 'esm', platform: 'node', jsx: 'transform',
-    define: { 'process.env.NODE_ENV': '"production"' },
-    loader: { '.svg': 'dataurl' },
-    banner: { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" },
-    logLevel: 'silent',
-  });
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ckpt-launcher-'));
-  const file = path.join(dir, 'bundle.mjs');
-  fs.writeFileSync(file, out.outputFiles[0].text);
-  globalThis.navigator ??= { languages: ['es'], language: 'es' };
-  m = await import(pathToFileURL(file).href);
-  fs.rmSync(dir, { recursive: true, force: true });
-} catch (e) {
-  skip = `esbuild no disponible: ${e.message}`;
-}
+const { mod: m, skip } = await bundle(`import React from 'react';
+  import { renderToStaticMarkup } from 'react-dom/server';
+  import { i18n } from './useI18n.js';
+  import LauncherBlock from './components/LauncherBlock.jsx';
+  import LaunchersPanel from './components/LaunchersPanel.jsx';
+  import GameCard from './components/GameCard.jsx';
+  import { Tabs, CopyBox } from './components/ui/index.js';
+  import { EntryMessage, EntryDetail, RunEntry } from './components/AutoSyncLog.jsx';
+  export { React, renderToStaticMarkup, i18n, LauncherBlock, LaunchersPanel, GameCard, Tabs, CopyBox, EntryMessage, EntryDetail, RunEntry };`, { navigator: true, tag: 'ckpt-launcher' });
 const KEY = 'ck_AbC123xyz';
 const has = (h, s) => h.includes(s);
 const R = (C, props, lang = 'es') => { m.i18n.setLocale(lang); return m.renderToStaticMarkup(m.React.createElement(m[C], props)); };

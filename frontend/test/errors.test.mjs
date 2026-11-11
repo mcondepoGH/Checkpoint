@@ -2,11 +2,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { es } from './helpers/locales.mjs';
 import { ApiError, api } from '../src/api.js';
 import { errorText, fieldErrorText } from '../src/errors.js';
 import { createI18n } from '../src/i18n.js';
 
-const es = JSON.parse(fs.readFileSync(new URL('../src/locales/es.json', import.meta.url), 'utf8'));
 const { t } = createI18n({ catalogs: { es }, storage: null, languages: ['es'] });
 
 const fakeFetch = (status, data) => async () => ({ ok: status < 400, status, statusText: 'x', json: async () => data });
@@ -80,7 +80,8 @@ test('todos los err.config.* y err.configstore.* que emite el backend existen en
 
 test('todas las claves err.sync/transport/bootstrap que emite el backend existen en es.json', () => {
   const dir = new URL('../../backend/app/', import.meta.url);
-  const src = ['sync/engine.py', 'sync/transport.py', 'core/bootstrap.py'].map((f) => fs.readFileSync(new URL(f, dir), 'utf8')).join('\n') + apiSources();
+  const syncFiles = fs.readdirSync(new URL('sync/', dir), { recursive: true }).filter((f) => f.endsWith('.py')).map((f) => `sync/${f}`);
+  const src = [...syncFiles, 'core/bootstrap.py'].map((f) => fs.readFileSync(new URL(f, dir), 'utf8')).join('\n') + apiSources();
   const codes = [...new Set([...src.matchAll(/"(err\.(?:sync|transport|bootstrap)\.[a-z_]+)"/g)].map((m) => m[1]))]
     .filter((c) => !c.endsWith('_'));
   for (const r of ['indeterminate', 'stale', 'no_baseline', 'inconsistent', 'both_changed']) codes.push(`err.sync.conflict_${r}`);
