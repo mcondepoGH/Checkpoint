@@ -1,0 +1,16 @@
+target-version = "py312"
+line-length = 120
+extend-exclude = ["**/__pycache__"]
+
+[lint]
+# E4 imports, E7 sentencias, E9 errores de sintaxis/E902, F pyflakes, B bugbear: solo errores, sin estilo (E501 y W fuera).
+select = ["E4", "E7", "E9", "F", "B"]
+ignore = ["B905"]  # zip(strict=) es estilo, no error
+
+[lint.flake8-bugbear]
+extend-immutable-calls = ["fastapi.Depends", "fastapi.Query", "fastapi.Path"]  # evita B008 en FastAPI
+
+[lint.per-file-ignores]
+"tests/**" = ["F811", "B017"]  # F811: fixtures importadas de conftest/otros tests; B017: pytest.raises(Exception)
+
+[format]
