@@ -36,8 +36,7 @@ function Tabs({ label, idBase, items, value, onChange, small }) {
     refs.current[items[n]]?.focus();
   };
   return (
-    // eslint-disable-next-line jsx-a11y/interactive-supports-focus -- tabindex itinerante: el foco lo llevan los tabs hijos
-    <div role="tablist" aria-label={label} className={'keytabs' + (small ? ' sub' : '')} onKeyDown={onKey}>
+    <div role="tablist" aria-label={label} className={'keytabs' + (small ? ' sub' : '')}>
       {items.map((o) => (
         <Button
           key={o}
@@ -51,6 +50,7 @@ function Tabs({ label, idBase, items, value, onChange, small }) {
           tabIndex={value === o ? 0 : -1}
           className={'tab' + (value === o ? ' active' : '')}
           onClick={() => onChange(o)}
+          onKeyDown={onKey}
         >
           {o}
         </Button>

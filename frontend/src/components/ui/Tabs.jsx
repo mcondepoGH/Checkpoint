@@ -21,8 +21,7 @@ export default function Tabs({ tabs, value, onChange, label, children }) {
   };
   return (
     <div className="uitabs">
-      {/* eslint-disable-next-line jsx-a11y/interactive-supports-focus -- tabindex itinerante: el foco lo llevan los tabs hijos */}
-      <div className="uitabs-list" role="tablist" aria-label={label} onKeyDown={onKeyDown}>
+      <div className="uitabs-list" role="tablist" aria-label={label}>
         {tabs.map((x) => (
           <button
             key={x.id}
@@ -37,6 +36,7 @@ export default function Tabs({ tabs, value, onChange, label, children }) {
             aria-controls={panelId(x.id)}
             tabIndex={x.id === value ? 0 : -1}
             onClick={() => onChange(x.id)}
+            onKeyDown={onKeyDown}
           >
             {x.label}
           </button>
