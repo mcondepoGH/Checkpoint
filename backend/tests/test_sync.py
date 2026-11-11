@@ -441,3 +441,24 @@ def test_free_names_use_id_paths_only(tmp_path):
     assert (data / "hub" / slug / "s.sav").read_text() == "old"
     with pytest.raises(SyncAbort):
         restore_version(cfg, g, v[0]["version"], "../x", data)
+
+
+def test_nueva_version_en_el_mismo_segundo_tras_podar_sigue_siendo_la_mas_reciente(env, monkeypatch):
+    """Con el reloj fijo y poda de la más antigua, la nueva no reutiliza un nombre anterior a las existentes."""
+    import app.sync.versions as versions
+    from app.sync.engine import prune_versions
+
+    class _Reloj:
+        @staticmethod
+        def now():
+            from datetime import datetime
+
+            return datetime(2026, 1, 1, 10, 0, 0)
+
+    monkeypatch.setattr(versions, "datetime", _Reloj)
+    for i in range(6):
+        nueva = versions._new_version_dir(env.data, "g")
+        prune_versions(env.data, "g", 2, protect=nueva.name)
+        nombres = _names(env)
+        assert len(nombres) == min(i + 1, 2), nombres
+        assert nueva.name == max(nombres, key=versions._version_key), (nueva.name, nombres)

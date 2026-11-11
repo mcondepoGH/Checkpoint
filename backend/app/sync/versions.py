@@ -92,7 +92,16 @@ def _new_version_dir(data_dir: Path, game: str) -> Path:
     base = Path(data_dir) / "versions" / game
     base.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-    d, i = base / stamp, 0
+    # El nombre nuevo debe ordenar DESPUÉS de todas las existentes: si la poda borró `stamp` pero quedan
+    # `stamp-1`... (mismo segundo), reutilizarlo lo dejaría como la más antigua (y protegida de la poda).
+    last = max(
+        (_version_key(x.name) for x in base.iterdir() if x.is_dir() and VERSION_RE.match(x.name)),
+        default=None,
+    )
+    i = 0
+    if last and last[0] >= stamp:
+        stamp, i = last[0], last[1] + 1
+    d = base / (stamp if i == 0 else f"{stamp}-{i}")
     while d.exists():
         i += 1
         d = base / f"{stamp}-{i}"
