@@ -20,64 +20,31 @@ from .core import runtime
 from .core import updates
 from .core.errors import ApiError, describe_code, error_body, error_response
 from .api.auth import Auth
-from .config.models import Config, describe, validate_config
-from .config.store import Conflict, ConfigStore, InvalidConfig, parse_text, config_events_gen, diff_configs, render_yaml
-from .sync.scheduler import Scheduler, iso, utcnow
+from .api.deps import COOKIE, body_json, client_ip, current_user, hook_user, require
+from .api.middleware import RequestDebugLog
+from .config.models import validate_config
+from .config.store import Conflict, InvalidConfig, parse_text, config_events_gen, diff_configs, render_yaml
+from .sync.scheduler import iso, utcnow
 from .sync.engine import SyncAbort, count_versions, list_versions, restore_version
 from .services.devices import check_device
-from .services.games import resolve_game_id
-from .services.hooks import HookService
-from .services.runs import RunRegistry, start_manual_sync
+from .services.context import AppContext
+from .services.runs import start_manual_sync
 
 api_log = logging.getLogger("checkpoint.api")  # DEBUG: una línea por petición /api y detalle por endpoint (sin secretos)
-COOKIE = "checkpoint_session"
 # index.html nunca se cachea: así un despliegue nuevo se ve al recargar (los assets con hash sí se cachean).
 NO_CACHE = {"Cache-Control": "no-cache"}
 
 
-class RequestDebugLog:
-    """Middleware ASGI: a nivel DEBUG, una línea por petición /api (método, ruta, nombres de los parámetros de la
-    query, estado, duración e IP del socket). Nunca mira cabeceras, cookies, cuerpo ni valores de la query, así que
-    no puede filtrar la API key, la sesión ni contraseñas. Con otro nivel no hace nada."""
-
-    def __init__(self, app, logger):
-        self.app, self.log = app, logger
-
-    async def __call__(self, scope, receive, send):
-        if scope["type"] != "http" or not scope["path"].startswith("/api/") or not self.log.isEnabledFor(logging.DEBUG):
-            return await self.app(scope, receive, send)
-        t0, status = time.monotonic(), [0]
-
-        async def _send(message):
-            if message["type"] == "http.response.start":
-                status[0] = message["status"]
-            await send(message)
-
-        qs = scope.get("query_string", b"").decode("latin-1")
-        params = ",".join(sorted({kv.split("=", 1)[0] for kv in qs.split("&") if kv}))
-        ip = scope["client"][0] if scope.get("client") else "?"
-        try:
-            await self.app(scope, receive, _send)
-        except Exception as e:
-            self.log.debug("%s %s query=[%s] ip=%s excepción %s tras %.0f ms", scope["method"], scope["path"], params,
-                           ip, type(e).__name__, (time.monotonic() - t0) * 1000)
-            raise
-        self.log.debug("%s %s query=[%s] ip=%s -> %s en %.0f ms", scope["method"], scope["path"], params, ip,
-                       status[0], (time.monotonic() - t0) * 1000)
-
-
 def create_app(auth: Optional[Auth] = None) -> FastAPI:
-    holder: dict = {}
-
     @asynccontextmanager
     async def lifespan(_app):
-        await run_in_threadpool(avatar.migrate_legacy, auth.user)
-        task = asyncio.create_task(holder["scheduler"].loop())
+        await run_in_threadpool(avatar.migrate_legacy, ctx.auth.user)
+        task = asyncio.create_task(ctx.scheduler.loop())
         try:
             yield
         finally:
             task.cancel()
-            await holder["watcher"].cancel_all()
+            await ctx.watcher.cancel_all()
 
     # La documentación (/api/docs, /api/openapi.json) la monta `docs.install` con la dependencia de sesión.
     app = FastAPI(title=docs.TITLE, version=updates.installed_version(), description=docs.DESCRIPTION,
@@ -86,36 +53,10 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     app.add_middleware(RequestDebugLog, logger=api_log)
     if auth is None:
         auth = Auth.from_env()
-    runs = RunRegistry()
-    store = ConfigStore()
-
-    def client_ip(request: Request) -> str:
-        if settings.TRUST_PROXY:
-            xff = request.headers.get("x-forwarded-for")
-            if xff:
-                return xff.split(",")[-1].strip()
-        return request.client.host if request.client else "?"
-
-    def require(request: Request):
-        if not auth.valid(request.cookies.get(COOKIE)):
-            api_log.debug("%s %s: sin sesión válida (401)", request.method, request.url.path)
-            raise ApiError(401, "err.main.session_required")
-        if request.method not in ("GET", "HEAD"):
-            origin = request.headers.get("origin")
-            host = request.headers.get("host")
-            if origin and host and origin.split("://", 1)[-1] != host:
-                api_log.debug("%s %s: Origin %r no coincide con Host %r (403)", request.method, request.url.path,
-                              origin, host)
-                raise ApiError(403, "err.main.origin_forbidden")
-
-    async def body_json(request: Request) -> dict:
-        try:
-            body = await request.json()
-        except Exception:
-            raise ApiError(400, "err.main.json_body_required")
-        if not isinstance(body, dict):
-            raise ApiError(400, "err.main.json_body_required")
-        return body
+    ctx = AppContext(auth)
+    app.state.ctx = ctx
+    app.state.watcher = ctx.watcher
+    store, runs, scheduler, checker, hooks = ctx.store, ctx.runs, ctx.scheduler, ctx.checker, ctx.hooks
 
     # ---- sesión ----
     @app.post("/api/login")
@@ -157,13 +98,6 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     # ---- perfil (nombre y foto) ----
     PHOTO_HEADERS = {"Cache-Control": "private, no-cache", "X-Content-Type-Options": "nosniff",
                      "Content-Security-Policy": "default-src 'none'; sandbox"}
-
-    def current_user(request: Request, _s=Depends(require)) -> str:
-        """ÚNICO punto que dice quién es el usuario de la sesión. Hoy hay un solo usuario (CHECKPOINT_USER);
-        con registro de usuarios se sustituye por la búsqueda del usuario ligado al token de sesión."""
-        user = auth.user
-        avatar.migrate_legacy(user)  # foto de antes de las carpetas por usuario, si queda alguna
-        return user
 
     @app.get("/api/profile", dependencies=[Depends(require)])
     def profile(user: str = Depends(current_user)):
@@ -239,31 +173,6 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         api_log.debug("API key: revocada usuario=%s", user)
         return {"exists": False, "key": None}
 
-    # ---- rutas /api/hook/*: autenticación Bearer con la API key, sin cookie ni Origin ----
-    def hook_user(request: Request) -> str:
-        """Usuario dueño de la API key `Authorization: Bearer ck_...`. Es la contraparte de `current_user` para las
-        rutas /api/hook/*: ignora la cookie de sesión y no comprueba Origin (lo llaman curl, lanzadores y plugins).
-        Todo fallo (sin cabecera, mal formada, inválida, revocada, regenerada) es el mismo 401; los fallos cuentan
-        por IP y, pasado el umbral, 429 (mismo mecanismo que el login, con contador propio). Con registro de
-        usuarios, aquí se buscaría el dueño de la key en lugar de comparar con el único usuario."""
-        ip = client_ip(request)
-        wait = auth.hook_wait(ip)
-        if wait > 0:
-            api_log.debug("hook auth: ip=%s bloqueada %ss (429)", ip, wait)
-            raise ApiError(429, "err.main.too_many_attempts", headers={"Retry-After": str(wait)}, seconds=wait)
-        parts = request.headers.get("authorization", "").split()
-        token = parts[1] if len(parts) == 2 and parts[0].lower() == "bearer" else ""
-        user = auth.user
-        if apikey.is_well_formed(token) and apikey.verify(user, token):
-            auth.hook_ok(ip)
-            api_log.debug("hook auth: ip=%s correcta usuario=%s", ip, user)
-            return user
-        apikey.verify(user, token)  # mismo trabajo con entrada mal formada: sin diferencias de tiempo
-        auth.hook_fail(ip)
-        # Solo se registra el motivo grueso, nunca el token recibido.
-        api_log.debug("hook auth: ip=%s fallo (%s) (401)", ip, "sin Bearer o mal formada" if not apikey.is_well_formed(token) else "key no válida")
-        raise ApiError(401, "err.apikey.invalid", headers={"WWW-Authenticate": "Bearer"})
-
     # Todo lo de /api/hook/* cuelga de este router y de su dependencia (aquí irá `POST /api/hook/{game}/opened`).
     hook = APIRouter(prefix="/api/hook", tags=[docs.TAG], dependencies=[Depends(hook_user)],
                      responses={401: docs.R401, 429: docs.R429})
@@ -276,7 +185,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     @hook.get("/watches", **docs.WATCHES)
     def hook_watches():
         """Vigilancias de cierre activas (en memoria): [{game, device, state: waiting|running|settling, since}]. Sin los juegos desactivados."""
-        cfg = _cfg()
+        cfg = ctx.cfg()
         w = hooks.active_watches(cfg)
         api_log.debug("hook watches: %d vigilancias activas", len(w))
         return w
@@ -401,22 +310,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             raise ApiError(404, "err.main.ssh_key_missing")
         return {"public_key": pub}
 
-    def _config(error) -> Config:
-        snap = store.snapshot()  # recarga si el fichero cambió; cada ejecución conserva la Config con la que empezó
-        if snap.error:
-            raise error(snap.error)
-        return snap.cfg
-
-    def _cfg() -> Config:
-        return _config(lambda cause: ApiError(500, "err.main.config_file_invalid", cause=cause))
-
     # ---- sync automática ----
-    def _auto_cfg() -> Config:
-        return _config(lambda cause: RuntimeError(f"config.yaml inválido: {describe(cause)}"))
-
-    scheduler = Scheduler(_auto_cfg, runs.active)
-    holder["scheduler"] = scheduler
-
     @app.get("/api/scheduler", dependencies=[Depends(require)])
     def get_scheduler():
         st = scheduler.state()
@@ -435,8 +329,6 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
             return error_response(422, "err.main.settings_invalid", extra={"errors": e.args[0]})
 
     # ---- versión y actualizaciones (solo detección) ----
-    checker = updates.UpdateChecker()
-
     @app.get("/api/updates", dependencies=[Depends(require)])
     def get_updates(refresh: bool = False):
         api_log.debug("updates: refresh=%s", refresh)
@@ -473,27 +365,17 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         api_log.debug("scheduler history: limit=%d devueltas=%d", limit, len(entries))
         return {"entries": entries}
 
-    def game_id(ref: str) -> str:
-        """Id del juego a partir de la ruta (id o nombre). 404 si no existe, 409 si es ambiguo."""
-        return resolve_game_id(_cfg(), ref)
-
     # ---- sync ----
     @app.post("/api/sync/{game}", dependencies=[Depends(require)])
     async def start_sync(game: str, request: Request):
-        cfg = _cfg()
-        game = game_id(game)
+        cfg = ctx.cfg()
+        game = ctx.game_id(game)
         try:
             body = await request.json()
         except Exception:
             body = {}
         run = start_manual_sync(runs, scheduler, cfg, game, body)
         return {"run_id": run.id}
-
-    # ---- aviso de apertura / cierre automático (la lógica vive en services/hooks) ----
-    hooks = HookService(scheduler, runs, _auto_cfg)
-    watcher = hooks.watcher
-    holder["watcher"] = watcher
-    app.state.watcher = watcher
 
     @hook.post("/{game}/opened", **docs.OPENED)
     async def hook_opened(game: str = Path(description="Id o nombre del juego.", examples=["Mi Juego"]),
@@ -502,8 +384,8 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
                                                         "más de un dispositivo.", examples=["PC uno"])):
         """Aviso «se va a abrir el juego»: sync previo bloqueante con política de conflictos siempre `skip` (ignora la del juego y la del scheduler).
         Tras el aviso (salvo 400/401/404/409) arma la vigilancia de cierre si el juego tiene `process` (`watching`). Un fallo de la sync no es un 5xx: 200 con `outcome` descriptivo."""
-        cfg = _cfg()
-        game = game_id(game)  # el 401 ya lo dio hook_user: no se revela si el juego existe
+        cfg = ctx.cfg()
+        game = ctx.game_id(game)  # el 401 ya lo dio hook_user: no se revela si el juego existe
         return await hooks.opened(cfg, game, device)
 
     app.include_router(hook)
@@ -512,7 +394,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     def watches_view():
         """Vigilancias de cierre activas para la UI (sesión): {now, watches: [{game, device, state, since, last_poll, poll}]}.
         `now` es la hora del servidor (UTC) para que el cliente mida el latido sin depender de su reloj. Sin datos sensibles."""
-        cfg = _cfg()
+        cfg = ctx.cfg()
         w = hooks.active_watches(cfg)
         api_log.debug("watches: %d vigilancias activas", len(w))
         return {"now": iso(utcnow()), "watches": w}
@@ -521,8 +403,8 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     def hook_status(game: str):
         """Por dispositivo del juego: último evento de hook (`opened` = hook, cierre = hook_closed) y vigilancia activa.
         {devices: [{device, last: {trigger, at, outcome} | null, watching: {state, since} | null}]}. Solo lectura, sin datos sensibles."""
-        cfg = _cfg()
-        game = game_id(game)
+        cfg = ctx.cfg()
+        game = ctx.game_id(game)
         return hooks.status(cfg, game)
 
     @app.get("/api/runs/{run_id}/stream", dependencies=[Depends(require)])
@@ -575,16 +457,16 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     # ---- versiones ----
     @app.get("/api/versions/{game}", dependencies=[Depends(require)])
     def versions(game: str):
-        cfg = _cfg()
-        game = game_id(game)
+        cfg = ctx.cfg()
+        game = ctx.game_id(game)
         res = list_versions(settings.DATA_DIR, game, {k: d.name for k, d in cfg.devices.items()})
         api_log.debug("versions: juego=%s entradas=%d", game, len(res) if hasattr(res, "__len__") else -1)
         return res
 
     @app.get("/api/versions/{game}/limit", dependencies=[Depends(require)])
     def versions_limit(game: str):
-        cfg = _cfg()
-        game = game_id(game)
+        cfg = ctx.cfg()
+        game = ctx.game_id(game)
         out = {"max": cfg.versions_limit(game), "count": count_versions(settings.DATA_DIR, game),
                "override": cfg.games[game].keep_versions is not None}
         api_log.debug("versions limit: juego=%s %s", game, out)
@@ -593,7 +475,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     @app.post("/api/versions/{game}/restore", dependencies=[Depends(require)])
     async def restore(game: str, request: Request):
         body = await body_json(request)
-        cfg = _cfg()
+        cfg = ctx.cfg()
         try:
             res = restore_version(cfg, game, str(body.get("version", "")), str(body.get("source", "")),
                                   settings.DATA_DIR)

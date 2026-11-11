@@ -36,8 +36,18 @@ test('errorText: sin code usa el texto; code sin traducción usa reason o el cod
   assert.equal(errorText({ code: 'err.zz.nueva', params: {} }, t), 'err.zz.nueva');
 });
 
+// Código de la capa web: main.py, los routers/dependencias de api/ y la lógica de services/.
+function apiSources() {
+  const root = new URL('../../backend/app/', import.meta.url);
+  const files = ['main.py'];
+  for (const d of ['api', 'services']) {
+    for (const f of fs.readdirSync(new URL(`${d}/`, root), { recursive: true })) if (f.endsWith('.py')) files.push(`${d}/${f}`);
+  }
+  return files.map((f) => fs.readFileSync(new URL(f, root), 'utf8')).join('\n');
+}
+
 test('todas las claves err.main.* que emite el backend existen en es.json', () => {
-  const src = fs.readFileSync(new URL('../../backend/app/main.py', import.meta.url), 'utf8');
+  const src = apiSources();
   const codes = [...new Set([...src.matchAll(/"(err\.main\.[a-z_.]+)"/g)].map((m) => m[1]))];
   assert.ok(codes.length >= 25, `solo ${codes.length} códigos`);
   for (const c of codes) assert.notEqual(t(c, { reason: 'r', seconds: 1, max: 1 }), c, `falta ${c}`);
@@ -70,7 +80,7 @@ test('todos los err.config.* y err.configstore.* que emite el backend existen en
 
 test('todas las claves err.sync/transport/bootstrap que emite el backend existen en es.json', () => {
   const dir = new URL('../../backend/app/', import.meta.url);
-  const src = ['sync/engine.py', 'sync/transport.py', 'core/bootstrap.py', 'main.py'].map((f) => fs.readFileSync(new URL(f, dir), 'utf8')).join('\n');
+  const src = ['sync/engine.py', 'sync/transport.py', 'core/bootstrap.py'].map((f) => fs.readFileSync(new URL(f, dir), 'utf8')).join('\n') + apiSources();
   const codes = [...new Set([...src.matchAll(/"(err\.(?:sync|transport|bootstrap)\.[a-z_]+)"/g)].map((m) => m[1]))]
     .filter((c) => !c.endsWith('_'));
   for (const r of ['indeterminate', 'stale', 'no_baseline', 'inconsistent', 'both_changed']) codes.push(`err.sync.conflict_${r}`);
