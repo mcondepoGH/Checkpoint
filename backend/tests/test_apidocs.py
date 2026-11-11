@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from app.api import apidocs
+from app.api import docs as apidocs
 from app.core import settings
 from app.api.auth import Auth
 from app.main import create_app
