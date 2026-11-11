@@ -27,7 +27,7 @@ jobs:
       - run: pip install -r requirements.txt -r requirements-dev.txt
       - run: ruff check .
       - run: ruff format --check .
-      - run: pytest
+      - run: pytest --cov=app --cov-fail-under=90
 
   frontend:
     runs-on: ubuntu-latest
@@ -44,8 +44,9 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm run lint
       - run: npm run format:check
-      - run: npm test
+      - run: npm run test:coverage   # node --test + umbral de cobertura (líneas 90, ramas 88)
       - run: npm run build
+      - run: npm run check:size      # presupuesto de tamaño del bundle
 
   audit:
     runs-on: ubuntu-latest
