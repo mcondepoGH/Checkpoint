@@ -137,7 +137,7 @@ def test_test_local_no_toca_ssh(client, monkeypatch):
         raise AssertionError("no debe usar SSH")
     monkeypatch.setattr("app.services.devices.get_transport", boom)
     monkeypatch.setattr("app.core.bootstrap.ensure_host_key", boom)
-    monkeypatch.setattr("app.sync.transport._run", boom)
+    monkeypatch.setattr("app.sync.transport.base._run", boom)
     r = client.post("/api/devices/test", json={"device": {"local": True, "os": "linux"},
                                                 "paths": [str(client.tmp)]}).json()
     assert r["ok"]

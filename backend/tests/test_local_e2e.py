@@ -527,7 +527,7 @@ def test_limite_de_versiones_y_poda_con_local(tmp_path):
     assert count_versions(e.data, "g") == 2
     names = sorted(p.name for p in (e.data / "versions" / "g").iterdir())
     assert len(names) == 2
-    from app.sync.engine import _version_key
+    from app.sync.versions import _version_key
     assert list_versions(e.data, "g")[0]["version"] == max(names, key=_version_key)
 
 

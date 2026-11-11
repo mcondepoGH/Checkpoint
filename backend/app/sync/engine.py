@@ -1,154 +1,35 @@
 """Lógica de sincronización de un juego entre dos dispositivos y el hub."""
-import hashlib
 import json
 import logging
 import os
-import re
 import shutil
 import tempfile
 import time
 from contextlib import contextmanager
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, Optional
 
 from . import locking
 from ..core import settings
 from ..core.errors import describe_code, error_body
 from ..config.models import ON_CONFLICT, Config, ConfigError, resolve_ref
 from ..core.redact import redact
+# Reexportados (API pública de sync.engine): baseline, decide, fingerprint y versions viven en sus módulos.
+from .baseline import load_baseline, save_baseline
+from .decide import CLOCK_TOLERANCE, decide, pick_resolution, valid_resolution
+from .errors import SyncAbort
+from .fingerprint import Fingerprint, fingerprint, relfiles
 from .transport import Transport, TransportError, get_transport
+from .versions import VERSION_RE, _fmt, _new_version_dir, _replace_dir, count_versions, list_versions, prune_versions
 
 slog = logging.getLogger("checkpoint.sync")  # DEBUG: trazas de run_sync (rutas y nº de ficheros, nunca contenidos ni secretos)
-
-VERSION_RE = re.compile(r"^\d{4}-\d{2}-\d{2}_\d{6}(-\d+)?$")
-
-
-class SyncAbort(Exception):
-    """Fin controlado sin tocar nada (o error ya reportado). Contrato i18n: `code` (`err.sync.<causa>`) +
-    `params`; sin texto en español (la UI traduce). `str(e)` es técnico, para logs y CLI."""
-
-    def __init__(self, code: str, **params):
-        super().__init__(describe_code(code, params))
-        self.code, self.params = code, params
-
-    def body(self) -> dict:
-        return error_body(self.code, **self.params)
 
 
 def _set(status: dict, result: str, code: str, **params):
     """Resultado con mensaje estructurado: `code`/`params` (la UI los traduce). `message` es solo el respaldo
     técnico que leen scheduler, historial y CLI (code + params, no traducido)."""
     status.update(result=result, code=code, params=params, message=describe_code(code, params))
-
-
-@dataclass
-class Fingerprint:
-    hash: Optional[str]
-    mtime: int
-    files: int
-    size: int = 0
-
-    @property
-    def empty(self) -> bool:
-        return self.files == 0
-
-
-def fingerprint(root: Path) -> Fingerprint:
-    root = Path(root)
-    if not root.is_dir():
-        return Fingerprint(None, 0, 0)
-    entries = []
-    mt = size = 0
-    for p in sorted(root.rglob("*")):
-        if p.is_symlink() or not p.is_file():
-            continue
-        h = hashlib.sha256()
-        with open(p, "rb") as f:
-            for chunk in iter(lambda: f.read(1 << 20), b""):
-                h.update(chunk)
-        entries.append(f"{p.relative_to(root).as_posix()}\0{h.hexdigest()}")
-        st = p.stat()
-        mt = max(mt, int(st.st_mtime))
-        size += st.st_size
-    if not entries:
-        return Fingerprint(None, 0, 0)
-    return Fingerprint(hashlib.sha256("\n".join(entries).encode()).hexdigest(), mt, len(entries), size)
-
-
-def relfiles(root: Path) -> set:
-    root = Path(root)
-    if not root.is_dir():
-        return set()
-    return {p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file() and not p.is_symlink()}
-
-
-def _fmt(ts: int) -> str:
-    return datetime.fromtimestamp(ts).strftime("%Y-%m-%d %H:%M:%S") if ts else "-"
-
-
-def _version_key(name: str):
-    """Orden cronológico por el nombre (AAAA-MM-DD_HHMMSS[-n]); el sufijo -n se compara como número."""
-    stamp, _, n = name[:17], name[17:18], name[18:]
-    return (stamp, int(n) if n.isdigit() else 0)
-
-
-def list_versions(data_dir: Path, game: str, names: Optional[Dict[str, str]] = None) -> List[dict]:
-    """Versiones guardadas de `game` (id). `names` ({id de origen: nombre}) añade el nombre visible a cada origen."""
-    names = names or {}
-    base = Path(data_dir) / "versions" / game
-    out = []
-    if base.is_dir():
-        for d in sorted(base.iterdir(), key=lambda d: _version_key(d.name), reverse=True):
-            if d.is_dir() and VERSION_RE.match(d.name):
-                sources = []
-                for s in sorted(d.iterdir()):
-                    if s.is_dir():
-                        fp = fingerprint(s)
-                        sources.append({"source": s.name, "name": names.get(s.name, s.name),
-                                        "files": fp.files, "mtime": _fmt(fp.mtime)})
-                out.append({"version": d.name, "sources": sources})
-    return out
-
-
-def count_versions(data_dir: Path, game: str) -> int:
-    base = Path(data_dir) / "versions" / game
-    if not base.is_dir():
-        return 0
-    return sum(1 for d in base.iterdir() if d.is_dir() and not d.is_symlink() and VERSION_RE.match(d.name))
-
-
-def prune_versions(data_dir: Path, game: str, keep: int, log=lambda m: None, protect: Optional[str] = None) -> List[str]:
-    """Borra las versiones MÁS ANTIGUAS de `game` hasta dejar `keep` (0 = sin límite: no borra nada).
-
-    Orden por el nombre de la versión (no por mtime). Nunca borra `protect` (la recién creada) ni deja
-    menos de 1. Solo toca directorios reales dentro de data/versions/<slug>/ (symlinks se ignoran).
-    Devuelve los nombres borrados. El llamador debe tener el lock del juego.
-    """
-    if keep <= 0:
-        return []
-    base = Path(data_dir) / "versions" / game
-    root = (Path(data_dir) / "versions").resolve()
-    if base.is_symlink() or not base.is_dir() or base.resolve().parent != root:
-        return []
-    base = base.resolve()
-    dirs = sorted((d for d in base.iterdir()
-                   if d.is_dir() and not d.is_symlink() and VERSION_RE.match(d.name)),
-                  key=lambda d: _version_key(d.name))
-    done: List[str] = []
-    for d in dirs[: max(0, len(dirs) - keep)]:
-        if d.name == protect or d.resolve().parent != base:
-            continue
-        try:
-            shutil.rmtree(d)
-        except OSError as e:
-            log(f"no se pudo eliminar la versión {d.name}: {e}")
-            continue
-        done.append(d.name)
-    if done:
-        log(f"poda (máx. {keep}): eliminadas {len(done)} versiones antiguas: {', '.join(done)}")
-    return done
 
 
 @contextmanager
@@ -159,140 +40,6 @@ def _game_lock(data_dir: Path, gs: str):
             yield
     except locking.LockBusy:
         raise SyncAbort("err.sync.op_in_progress")
-
-
-def _new_version_dir(data_dir: Path, game: str) -> Path:
-    base = Path(data_dir) / "versions" / game
-    base.mkdir(parents=True, exist_ok=True)
-    stamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
-    d, i = base / stamp, 0
-    while d.exists():
-        i += 1
-        d = base / f"{stamp}-{i}"
-    d.mkdir()
-    return d
-
-
-def _replace_dir(src: Path, dst: Path):
-    """Sustituye dst por copia de src de forma casi atómica."""
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    new = dst.with_name(dst.name + ".new")
-    old = dst.with_name(dst.name + ".old")
-    for t in (new, old):
-        if t.exists():
-            shutil.rmtree(t)
-    shutil.copytree(src, new)
-    if dst.exists():
-        os.rename(dst, old)
-    os.rename(new, dst)
-    if old.exists():
-        shutil.rmtree(old)
-
-
-# Diferencia de mtime por debajo de la cual no se puede decir cuál es "el más reciente" (deriva de reloj).
-CLOCK_TOLERANCE = 2
-
-
-# ---- baseline: huella que cada participante tenía tras la última sync completa ----
-def _state_path(data_dir: Path, game: str) -> Path:
-    return Path(data_dir) / "state" / f"{game}.json"
-
-
-def load_baseline(data_dir: Path, game: str) -> Dict[str, Optional[str]]:
-    """{origen: hash|None}. None = estaba vacío. Sin fichero o ilegible = sin baseline (comportamiento seguro)."""
-    try:
-        raw = json.loads(_state_path(data_dir, game).read_text())
-        base = raw["base"]
-        if isinstance(base, dict) and all(v is None or isinstance(v, str) for v in base.values()):
-            return dict(base)
-    except (OSError, ValueError, KeyError, TypeError):
-        pass
-    return {}
-
-
-def save_baseline(data_dir: Path, game: str, updates: Dict[str, Optional[str]]) -> None:
-    """Fusiona `updates` (origen -> hash) en el baseline. Escritura atómica."""
-    p = _state_path(data_dir, game)
-    p.parent.mkdir(parents=True, exist_ok=True)
-    base = load_baseline(data_dir, game)
-    base.update(updates)
-    tmp = p.with_name(f".{p.name}.tmp")
-    tmp.write_text(json.dumps({"base": base, "updated": datetime.now().isoformat(timespec="seconds")}))
-    os.replace(tmp, p)
-
-
-def _prefer_device(keys: List[str]) -> str:
-    """Entre contenidos idénticos, el origen real es un dispositivo antes que el hub."""
-    return next((k for k in keys if k != "hub"), keys[0])
-
-
-def decide(fps: Dict[str, Fingerprint], base: Dict[str, Optional[str]]) -> dict:
-    """Decide qué participantes (dispositivos en línea + 'hub') mandan. Función pura.
-
-    Devuelve {"kind": "same"|"winner"|"conflict", "winner": clave, "sides": [claves], "reason": str}.
-    `base[d]` = lo que el dispositivo d tenía (y el hub, igual) en su última sync; `base["hub"]` = lo que el hub
-    tenía tras la última escritura. Con baseline completo:
-    - un dispositivo cambió si su hash actual != su baseline; el hub cambió por fuera (p. ej. restaurar una
-      versión) si hash != base["hub"];
-    - un dispositivo que cambió sobre una base que el hub ya superó compite con el hub (conflicto);
-    - si compite un único contenido, gana; si compiten varios distintos, conflicto; si nadie cambió, el hub
-      (estado más reciente sincronizado) actualiza a los dispositivos rezagados.
-    Sin baseline y contenidos distintos con datos -> conflicto (nunca se decide por mtime). Un lado vacío nunca
-    gana a uno con datos (se rellena). Sin baseline y los dos dispositivos coinciden: el hub está desfasado.
-    """
-    if len({fp.hash for fp in fps.values()}) == 1:
-        return {"kind": "same"}
-    nonempty = [k for k, fp in fps.items() if not fp.empty]
-    if len({fps[k].hash for k in nonempty}) == 1:
-        return {"kind": "winner", "winner": _prefer_device(nonempty)}
-    if all(k in base for k in fps):
-        devs = [k for k in fps if k != "hub"]
-        hub_h = fps["hub"].hash
-        changed = [k for k in devs if not fps[k].empty and fps[k].hash != base[k]]
-        holders = list(changed)
-        stale_base = any(hub_h is not None and fps[k].hash != hub_h and base[k] != hub_h for k in changed)
-        if not fps["hub"].empty and (stale_base or hub_h != base["hub"]):
-            holders.append("hub")
-        if holders:
-            if len({fps[k].hash for k in holders}) == 1:
-                return {"kind": "winner", "winner": _prefer_device(holders)}
-            return {"kind": "conflict", "sides": holders, "reason": "both-changed"}
-        if not fps["hub"].empty:  # nadie cambió: los dispositivos van por detrás del hub
-            return {"kind": "winner", "winner": "hub"}
-        return {"kind": "conflict", "sides": nonempty, "reason": "inconsistent"}
-    devs = [k for k in nonempty if k != "hub"]
-    if len(devs) > 1 and len({fps[k].hash for k in devs}) == 1:
-        return {"kind": "winner", "winner": devs[0]}
-    return {"kind": "conflict", "sides": nonempty, "reason": "no-baseline"}
-
-
-def pick_resolution(resolution: str, sides: List[str], fps: Dict[str, Fingerprint],
-                    dn: Callable[[str], str] = lambda k: k) -> Optional[str]:
-    """Elige ganador para un conflicto. None = indeterminado (relojes demasiado parecidos).
-    Lanza SyncAbort si `resolution` no es válida."""
-    if resolution == "newest":
-        ranked = sorted(sides, key=lambda k: fps[k].mtime, reverse=True)
-        top = ranked[0]
-        for k in ranked[1:]:
-            if fps[k].hash != fps[top].hash and fps[top].mtime - fps[k].mtime < CLOCK_TOLERANCE:
-                return None
-        return _prefer_device([k for k in ranked if fps[k].hash == fps[top].hash])
-    if resolution == "hub":
-        name = "hub"
-    elif resolution.startswith("device:"):
-        name = resolution[len("device:"):]
-    else:
-        raise SyncAbort("err.sync.resolution_invalid", value=resolution)
-    if name not in fps:
-        raise SyncAbort("err.sync.side_unavailable", name=dn(name))
-    if fps[name].empty:
-        raise SyncAbort("err.sync.side_empty", name=dn(name))
-    return name
-
-
-def valid_resolution(value) -> bool:
-    return isinstance(value, str) and (value in ("newest", "hub") or
-                                       (value.startswith("device:") and len(value) > 7))
 
 
 def _side(k: str, fp: Fingerprint, name: Optional[str] = None) -> dict:
