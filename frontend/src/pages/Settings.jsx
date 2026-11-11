@@ -9,7 +9,7 @@ import GameCard from '#src/components/config/GameCard.jsx';
 import LaunchersPanel from '#src/components/LaunchersPanel.jsx';
 import { loadGameSel, saveGameSel } from '#src/launchers.js';
 import PublicKey from '#src/components/PublicKey.jsx';
-import AutoSync from '#src/components/AutoSync.jsx';
+import AutoSync from '#src/components/autosync/AutoSync.jsx';
 import UpdateCheck from '#src/components/updates/UpdateCheck.jsx';
 import { updatesApplicable } from '#src/lib/updates.js';
 import SaveDialog from '#src/components/config/SaveDialog.jsx';

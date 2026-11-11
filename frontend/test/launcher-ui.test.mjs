@@ -12,7 +12,7 @@ const { mod: m, skip } = await bundle(`import React from 'react';
   import LaunchersPanel from '#src/components/LaunchersPanel.jsx';
   import GameCard from '#src/components/config/GameCard.jsx';
   import { Tabs, CopyBox } from '#src/components/ui/index.js';
-  import { EntryMessage, EntryDetail, RunEntry } from '#src/components/AutoSyncLog.jsx';
+  import { EntryMessage, EntryDetail, RunEntry } from '#src/components/autosync/AutoSyncLog.jsx';
   export { React, renderToStaticMarkup, i18n, LauncherBlock, LaunchersPanel, GameCard, Tabs, CopyBox, EntryMessage, EntryDetail, RunEntry };`, { navigator: true, tag: 'ckpt-launcher' });
 const KEY = 'ck_AbC123xyz';
 const has = (h, s) => h.includes(s);
@@ -358,7 +358,7 @@ test('Registro: entrada antigua (solo message, sin device ni code) y tipo descon
 
 test('Registro: SCSS del registro sin font-size suelto y con rejilla colapsable en móvil', { skip }, async () => {
   const fs = await import('node:fs');
-  const scss = fs.readFileSync(new URL('../src/styles/_autosync.scss', import.meta.url), 'utf8');
+  const scss = fs.readFileSync(new URL('../src/components/autosync/_autosync.scss', import.meta.url), 'utf8');
   const log = scss.slice(scss.indexOf('.autosync-log'));
   assert.doesNotMatch(log, /font-size: *[\d.]/);
   assert.match(log, /font-size: v\.\$fs-/);

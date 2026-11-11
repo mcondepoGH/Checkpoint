@@ -1,4 +1,4 @@
-@use 'variables' as v;
+@use '../../styles/variables' as v;
 
 // Tarjeta de sincronización automática (pantalla de Configuración).
 .autosync { margin-top: v.$gap; gap: .75rem; max-width: 640px;
