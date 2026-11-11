@@ -450,10 +450,12 @@ npm test                                         # pruebas de node (borrador, fo
 npm run build                                    # producción
 ```
 
-### Formato y lint
+### Formato, lint y auditorías
 
 - Frontend: `npm run lint` (ESLint), `npm run format` y `npm run format:check` (Prettier, incluye los SCSS; los JSON de `src/locales` quedan fuera).
 - Backend: `ruff check .` y `ruff format .` (o `--check`) desde `backend/`; configuración en `backend/ruff.toml`.
+- Cobertura: `pytest --cov=app --cov-fail-under=90` (backend) y `npm run test:coverage` (frontend: líneas ≥ 90 %, ramas ≥ 88 % sobre `src/**`). Tamaño del bundle: `npm run build && npm run check:size` (umbrales en `frontend/scripts/check-bundle-size.mjs`).
+- CI además ejecuta `npm audit --omit=dev` y `pip-audit` (también cada semana), gitleaks y CodeQL; Dependabot abre PRs semanales agrupados que se revisan a mano.
 - Los commits de formato masivo están listados en `.git-blame-ignore-revs`. GitHub lo respeta solo; para que `git blame` también los ignore en local:
 
 ```bash
