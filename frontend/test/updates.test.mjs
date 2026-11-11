@@ -56,9 +56,9 @@ test('canal y marca preliminar: lógica pura', () => {
 
 const { mod, skip } = await bundle(`import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
-  import UpdateBadge from '#src/components/UpdateBadge.jsx';
-  import UpdateDialog from '#src/components/UpdateDialog.jsx';
-  import UpdateCheck from '#src/components/UpdateCheck.jsx';
+  import UpdateBadge from '#src/components/updates/UpdateBadge.jsx';
+  import UpdateDialog from '#src/components/updates/UpdateDialog.jsx';
+  import UpdateCheck from '#src/components/updates/UpdateCheck.jsx';
   export { React, renderToStaticMarkup, UpdateBadge, UpdateDialog, UpdateCheck };`, { tag: 'ckpt-upd' });
 const r = (C, props) => mod.renderToStaticMarkup(mod.React.createElement(C, props));
 

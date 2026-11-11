@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { api, ApiError } from '#src/lib/api.js';
 import AppIcon from '#src/components/ui/AppIcon.jsx';
-import UpdateBadge from '#src/components/UpdateBadge.jsx';
+import UpdateBadge from '#src/components/updates/UpdateBadge.jsx';
 import ProfileMenu from '#src/components/profile/ProfileMenu.jsx';
 import WatchSummary from '#src/components/WatchSummary.jsx';
 import { useWatches } from '#src/hooks/useWatches.js';
-import UpdateDialog from '#src/components/UpdateDialog.jsx';
+import UpdateDialog from '#src/components/updates/UpdateDialog.jsx';
 import { installedVersion, updatesApplicable } from '#src/lib/updates.js';
 import Login from '#src/pages/Login.jsx';
 import Settings from '#src/pages/Settings.jsx';

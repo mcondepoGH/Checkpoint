@@ -10,7 +10,7 @@ import LaunchersPanel from '#src/components/LaunchersPanel.jsx';
 import { loadGameSel, saveGameSel } from '#src/launchers.js';
 import PublicKey from '#src/components/PublicKey.jsx';
 import AutoSync from '#src/components/AutoSync.jsx';
-import UpdateCheck from '#src/components/UpdateCheck.jsx';
+import UpdateCheck from '#src/components/updates/UpdateCheck.jsx';
 import { updatesApplicable } from '#src/lib/updates.js';
 import SaveDialog from '#src/components/SaveDialog.jsx';
 import YamlDialog from '#src/components/YamlDialog.jsx';
