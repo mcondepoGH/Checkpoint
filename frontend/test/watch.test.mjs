@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { chipCount, clock, groupByGame, watchCardClass, watchHealth, worstHealth } from '#src/watch.js';
+import { chipCount, clock, groupByGame, watchCardClass, watchHealth, worstHealth } from '#src/components/watch/watch.js';
 
 const NOW = '2026-01-01T12:00:00Z';
 const w = (o = {}) => ({ game: 'g', device: 'd', state: 'running', since: '2026-01-01T11:00:00Z', last_poll: '2026-01-01T11:59:55Z', poll: 15, ...o });

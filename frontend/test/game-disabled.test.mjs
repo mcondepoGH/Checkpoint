@@ -9,7 +9,7 @@ const { mod: m, skip } = await bundle(`import React from 'react';
   import { i18n } from '#src/hooks/useI18n.js';
   import Sync from '#src/pages/Sync.jsx';
   import Versions from '#src/pages/Versions.jsx';
-  import WatchSummary from '#src/components/WatchSummary.jsx';
+  import WatchSummary from '#src/components/watch/WatchSummary.jsx';
   import LauncherBlock from '#src/components/LauncherBlock.jsx';
   export { React, renderToStaticMarkup, i18n, Sync, Versions, WatchSummary, LauncherBlock };`, { navigator: true, tag: 'ckpt-disabled' });
 

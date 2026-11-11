@@ -8,7 +8,7 @@ import { isSoloCheckpoint } from '#src/draft.js';
 import ConflictDialog from '#src/components/ConflictDialog.jsx';
 import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { NO_WATCHES } from '#src/hooks/useWatches.js';
-import { clock, groupByGame, watchCardClass, watchHealth, worstHealth } from '#src/watch.js';
+import { clock, groupByGame, watchCardClass, watchHealth, worstHealth } from '#src/components/watch/watch.js';
 import { Alert, Badge, Button, Checkbox, Pill, WatchBar } from '#src/components/ui/index.js';
 
 

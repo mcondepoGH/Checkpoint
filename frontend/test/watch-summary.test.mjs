@@ -8,7 +8,7 @@ import { bundle, SRC } from './helpers/bundle.mjs';
 const { mod: m, skip } = await bundle(`import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
   import { i18n } from '#src/hooks/useI18n.js';
-  import WatchSummary from '#src/components/WatchSummary.jsx';
+  import WatchSummary from '#src/components/watch/WatchSummary.jsx';
   import ProfileMenu from '#src/components/profile/ProfileMenu.jsx';
   import { watchState, NO_WATCHES } from '#src/hooks/useWatches.js';
   export { React, renderToStaticMarkup, i18n, WatchSummary, ProfileMenu, watchState, NO_WATCHES };`, { navigator: true, tag: 'ckpt-watchsum' });
