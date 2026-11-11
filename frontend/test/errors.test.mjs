@@ -62,7 +62,7 @@ test('fieldErrorText: string tal cual, {code,params} traducido, vacío -> undefi
 });
 
 test('todos los err.config.* y err.configstore.* que emite el backend existen en es.json', () => {
-  const src = ['config.py', 'configstore.py'].map((f) => fs.readFileSync(new URL(`../../backend/app/${f}`, import.meta.url), 'utf8')).join('');
+  const src = ['config/models.py', 'config/store.py'].map((f) => fs.readFileSync(new URL(`../../backend/app/${f}`, import.meta.url), 'utf8')).join('');
   const codes = [...new Set([...src.matchAll(/"(err\.config(?:store)?\.[a-z_]+)"/g)].map((m) => m[1]))];
   assert.ok(codes.length >= 50, `solo ${codes.length} códigos`);
   for (const c of codes) assert.notEqual(t(c, { reason: 'r', max: 1 }), c, `falta ${c}`);
@@ -70,7 +70,7 @@ test('todos los err.config.* y err.configstore.* que emite el backend existen en
 
 test('todas las claves err.sync/transport/bootstrap que emite el backend existen en es.json', () => {
   const dir = new URL('../../backend/app/', import.meta.url);
-  const src = ['sync.py', 'transport.py', 'bootstrap.py', 'main.py'].map((f) => fs.readFileSync(new URL(f, dir), 'utf8')).join('\n');
+  const src = ['sync/engine.py', 'sync/transport.py', 'core/bootstrap.py', 'main.py'].map((f) => fs.readFileSync(new URL(f, dir), 'utf8')).join('\n');
   const codes = [...new Set([...src.matchAll(/"(err\.(?:sync|transport|bootstrap)\.[a-z_]+)"/g)].map((m) => m[1]))]
     .filter((c) => !c.endsWith('_'));
   for (const r of ['indeterminate', 'stale', 'no_baseline', 'inconsistent', 'both_changed']) codes.push(`err.sync.conflict_${r}`);

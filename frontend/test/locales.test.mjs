@@ -60,7 +60,7 @@ test('ninguna traducción vacía y las de en no son copia literal del español (
 test('los códigos err.* del backend existen en el catálogo (y en inglés)', () => {
   const dir = path.join(HERE, '..', '..', 'backend', 'app');
   const used = new Set();
-  for (const f of fs.readdirSync(dir).filter((x) => x.endsWith('.py'))) {
+  for (const f of fs.readdirSync(dir, { recursive: true }).filter((x) => x.endsWith('.py'))) {
     for (const m of fs.readFileSync(path.join(dir, f), 'utf8').matchAll(/["'](err\.[a-z_]+\.[a-z_.]+)["']/g)) used.add(m[1]);
   }
   assert.ok(used.size > 100);
