@@ -5,7 +5,7 @@ import { labelOf } from '#src/lib/names.js';
 import { parseRun } from '#src/lib/format.js';
 import Icon from '#src/components/ui/Icon.jsx';
 import { isSoloCheckpoint } from '#src/components/config/draft.js';
-import ConflictDialog from '#src/components/ConflictDialog.jsx';
+import ConflictDialog from '#src/components/sync/ConflictDialog.jsx';
 import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { NO_WATCHES } from '#src/hooks/useWatches.js';
 import { clock, groupByGame, watchCardClass, watchHealth, worstHealth } from '#src/components/watch/watch.js';

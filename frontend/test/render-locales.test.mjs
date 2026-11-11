@@ -14,7 +14,7 @@ const { mod: m, skip } = await bundle(`import React from 'react';
   import LanguageSelect from '#src/components/profile/LanguageSelect.jsx';
   import DeviceCard from '#src/components/config/DeviceCard.jsx';
   import GameCard from '#src/components/config/GameCard.jsx';
-  import ConflictDialog from '#src/components/ConflictDialog.jsx';
+  import ConflictDialog from '#src/components/sync/ConflictDialog.jsx';
   import DiffView from '#src/components/config/DiffView.jsx';
   import UpdateDialog from '#src/components/updates/UpdateDialog.jsx';
   import UpdateBadge from '#src/components/updates/UpdateBadge.jsx';
