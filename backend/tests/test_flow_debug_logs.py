@@ -5,7 +5,7 @@ import re
 
 import pytest
 
-from app import history
+from app.users import history
 from test_hook_close import cl, hist, hopen, mk, wait_for, watches  # noqa: F401 (fixtures)
 
 FLOW = ("checkpoint.watcher", "checkpoint.hook", "checkpoint.sync", "checkpoint.transport")

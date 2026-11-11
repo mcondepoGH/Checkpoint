@@ -112,7 +112,7 @@ def test_scheduler_endpoints(client):
 
 def test_scheduler_history_endpoint(client):
     from datetime import datetime, timezone
-    from app import history
+    from app.users import history
     assert client.get("/api/scheduler/history").status_code == 401
     login(client)
     assert client.get("/api/scheduler/history").json() == {"entries": []}

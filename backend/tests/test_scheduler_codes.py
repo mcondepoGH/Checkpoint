@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from app import history
+from app.users import history
 from app.core import settings
 from app.scheduler import Scheduler, validate_settings
 from app.sync import SyncAbort
@@ -27,7 +27,7 @@ def has(code):
 
 
 def test_codes_in_es_json():
-    src = (APP / "scheduler.py").read_text() + (APP / "history.py").read_text()
+    src = (APP / "scheduler.py").read_text() + (APP / "users/history.py").read_text()
     codes = set(re.findall(r'"(err\.scheduler\.[a-z_]+)"', src))
     assert len(codes) >= 6, codes
     assert not sorted(c for c in codes if not has(c))

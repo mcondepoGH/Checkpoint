@@ -5,9 +5,9 @@ import struct
 import pytest
 from fastapi.testclient import TestClient
 
-from app import avatar
+from app.users import avatar
 from app.core import settings
-from app.avatar import user_dir
+from app.users.avatar import user_dir
 from app.auth import Auth
 from app.main import create_app
 

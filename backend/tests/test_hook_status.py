@@ -1,7 +1,7 @@
 """`GET /api/games/{game}/hook-status` (sesión) y campo `device` en el historial de hook / hook_closed."""
 from datetime import datetime, timezone
 
-from app import history
+from app.users import history
 from test_hook_close import cl, hist, hopen, mk, wait_for, watches  # noqa: F401 (fixtures)
 from test_hook_opened import PW
 

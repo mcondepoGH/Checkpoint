@@ -13,7 +13,7 @@ from typing import Callable, Optional
 
 from starlette.concurrency import run_in_threadpool
 
-from . import history
+from .users import history
 from .core import settings
 from .apierror import describe_code, error_body
 from .config.models import ON_CONFLICT

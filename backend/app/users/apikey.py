@@ -22,7 +22,7 @@ from typing import Optional
 
 from cryptography.fernet import Fernet, InvalidToken
 
-from .core import settings
+from ..core import settings
 from .avatar import user_dir, user_id
 
 PREFIX = "ck_"

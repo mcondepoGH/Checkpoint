@@ -5,7 +5,7 @@ import json
 import pytest
 import yaml
 
-from app import history
+from app.users import history
 from app.core import settings
 from app.config.models import parse_config, validate_config
 from app.scheduler import Scheduler, validate_settings

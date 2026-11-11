@@ -14,11 +14,11 @@ from pydantic import ValidationError
 from starlette.concurrency import run_in_threadpool
 
 from . import apidocs
-from . import apikey
-from . import avatar
+from .users import apikey
+from .users import avatar
 from .core import settings
 from .core import bootstrap
-from . import history
+from .users import history
 from .core import runtime
 from . import sync as sync_mod
 from .core import updates

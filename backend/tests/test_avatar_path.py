@@ -3,7 +3,7 @@ import re
 
 import pytest
 
-from app import avatar
+from app.users import avatar
 from app.core import settings
 
 HOSTILE = ["../../etc/passwd", "..", ".", "a/b", "a\\b", "/abs", "..\\..", "ñandú", "管理员", "A\x00B", "x" * 5000,

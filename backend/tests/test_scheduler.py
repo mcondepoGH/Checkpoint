@@ -89,7 +89,7 @@ def test_defaults_lose_to_saved(tmp_path, monkeypatch):
 # ---- registro de ejecuciones ----
 import json  # noqa: E402
 
-from app import history  # noqa: E402
+from app.users import history  # noqa: E402
 
 
 def _entry(i, started=NOW, result="ok"):
@@ -181,7 +181,7 @@ def test_history_failure_does_not_break_cycle(sched, monkeypatch):
 
 def test_cycle_omits_disabled_silently(tmp_path, monkeypatch):
     """Un juego desactivado no llega al runner, ni a `busy`, ni al resumen/historial (ciclo programado y arranque)."""
-    from app import history
+    from app.users import history
     monkeypatch.setattr(settings, "DATA_DIR", tmp_path)
     calls, busy_q = [], []
 
