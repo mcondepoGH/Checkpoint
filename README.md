@@ -450,6 +450,16 @@ npm test                                         # pruebas de node (borrador, fo
 npm run build                                    # producción
 ```
 
+### Formato y lint
+
+- Frontend: `npm run lint` (ESLint), `npm run format` y `npm run format:check` (Prettier, incluye los SCSS; los JSON de `src/locales` quedan fuera).
+- Backend: `ruff check .` y `ruff format .` (o `--check`) desde `backend/`; configuración en `backend/ruff.toml`.
+- Los commits de formato masivo están listados en `.git-blame-ignore-revs`. GitHub lo respeta solo; para que `git blame` también los ignore en local:
+
+```bash
+git config blame.ignoreRevsFile .git-blame-ignore-revs
+```
+
 ### Estructura del código
 
 El detalle (árbol, reglas de dependencia y cómo añadir un módulo) está en [`docs/structure.md`](docs/structure.md). Resumen:

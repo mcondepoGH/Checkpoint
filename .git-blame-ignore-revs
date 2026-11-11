@@ -1,0 +1,8 @@
+# Commits de formato masivo (solo formato). Uso local:
+#   git config blame.ignoreRevsFile .git-blame-ignore-revs
+# Prettier sobre JS, JSX y MJS del frontend
+c48fab0c41bc691a835689797ddbca5451c91055
+# Prettier sobre los SCSS
+8253015017ae297ec51e29ff15ecfaa628d82c7d
+# ruff format sobre el backend
+786f106d720f02f4003bfc6e04768d2f642c8373
