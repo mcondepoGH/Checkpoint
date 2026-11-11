@@ -8,5 +8,5 @@
 @use 'config';
 @use 'autosync';
 @use 'layout';
-@use 'profile';
+@use '../components/profile/profile';
 @use '../components/ui/empty-state';

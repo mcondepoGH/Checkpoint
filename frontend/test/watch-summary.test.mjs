@@ -9,7 +9,7 @@ const { mod: m, skip } = await bundle(`import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
   import { i18n } from '#src/hooks/useI18n.js';
   import WatchSummary from '#src/components/WatchSummary.jsx';
-  import ProfileMenu from '#src/components/ProfileMenu.jsx';
+  import ProfileMenu from '#src/components/profile/ProfileMenu.jsx';
   import { watchState, NO_WATCHES } from '#src/hooks/useWatches.js';
   export { React, renderToStaticMarkup, i18n, WatchSummary, ProfileMenu, watchState, NO_WATCHES };`, { navigator: true, tag: 'ckpt-watchsum' });
 const has = (h, s) => h.includes(s);
@@ -111,7 +111,7 @@ test('cadenas de vigilancia y de actualización del perfil resueltas en es y en 
 
 test('SCSS: puntos y anillo del pulso son cuadrados explícitos (círculo, no óvalo) y el pulso respeta reduced-motion', () => {
   const css = (f) => fs.readFileSync(path.join(SRC, 'styles', f), 'utf8');
-  const watch = css('ui/_watch.scss');
+  const watch = fs.readFileSync(path.join(SRC, 'components/ui/_watch.scss'), 'utf8');
   const rule = (sel) => new RegExp(`${sel.replace(/[.]/g, '\\.')} \\{([^}]*)\\}`).exec(watch)?.[1] || '';
   for (const sel of ['.watch-mark', '.watch-dot', '.watch-chip-dot']) {
     const r = rule(sel);
@@ -120,7 +120,7 @@ test('SCSS: puntos y anillo del pulso son cuadrados explícitos (círculo, no ó
     assert.ok(w && w === h, `${sel} ${w} x ${h}`);
     assert.ok(!/overflow/.test(r), sel);
   }
-  assert.ok(/aspect-ratio: 1; border-radius: 50%/.test(css('_profile.scss').split('\n').find((l) => l.startsWith('.upd-dot'))));
+  assert.ok(/aspect-ratio: 1; border-radius: 50%/.test(fs.readFileSync(path.join(SRC, 'components/profile/_profile.scss'), 'utf8').split('\n').find((l) => l.startsWith('.upd-dot'))));
   const pulse = /@keyframes watch-pulse \{([^@]*)\}\s*@keyframes/.exec(watch)?.[1] || '';
   assert.ok(pulse.includes('box-shadow') && !/transform|width|height|scale/.test(pulse));
   assert.ok(/prefers-reduced-motion: reduce\) \{[^}]*\.watch-mark[^}]*\.watch-chip-dot[^}]*animation: none/.test(watch));

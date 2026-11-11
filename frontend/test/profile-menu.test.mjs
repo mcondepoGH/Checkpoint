@@ -8,8 +8,8 @@ import { bundle, SRC } from './helpers/bundle.mjs';
 const { mod: m, skip } = await bundle(`import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
   import { i18n } from '#src/hooks/useI18n.js';
-  import ProfileMenu from '#src/components/ProfileMenu.jsx';
-  import ApiKeySection from '#src/components/ApiKeySection.jsx';
+  import ProfileMenu from '#src/components/profile/ProfileMenu.jsx';
+  import ApiKeySection from '#src/components/profile/ApiKeySection.jsx';
   export { React, renderToStaticMarkup, i18n, ProfileMenu, ApiKeySection };`, { navigator: true, tag: 'ckpt-profmenu' });
 const UPD = { actual: '1.0.0', ultima: '1.1.0', hay_actualizacion: true, habilitado: true, aplicable: true };
 const menu = (o = {}, lang = 'es') => {
@@ -92,7 +92,7 @@ test('paridad es/en: claves nuevas presentes y en inglés sin español', { skip 
 });
 
 test('estilos: filas de 44 px, anchos y chip compacto sin tamaños sueltos', () => {
-  const prof = read('styles', '_profile.scss');
+  const prof = read('components', 'profile', '_profile.scss');
   assert.match(prof, /\$touch-profile: 44px/);
   assert.match(prof, /\.profile-group \{[^}]*margin-top: 10px; margin-bottom: 10px;/);
   assert.match(prof, /\.apikey-body \{[^}]*&\[hidden\] \{ display: none; \}/);

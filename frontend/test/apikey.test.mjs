@@ -71,8 +71,8 @@ test('aviso de HTTP en claro solo fuera de localhost', () => {
 const { mod: m, skip } = await bundle(`import React from 'react';
   import { renderToStaticMarkup } from 'react-dom/server';
   import { i18n } from '#src/hooks/useI18n.js';
-  import ApiKeySection from '#src/components/ApiKeySection.jsx';
-  import ProfileMenu from '#src/components/ProfileMenu.jsx';
+  import ApiKeySection from '#src/components/profile/ApiKeySection.jsx';
+  import ProfileMenu from '#src/components/profile/ProfileMenu.jsx';
   import { copyText } from '#src/lib/clipboard.js';
   export { React, renderToStaticMarkup, i18n, ApiKeySection, ProfileMenu, copyText };`, { navigator: true, tag: 'ckpt-apikey' });
 const section = (initial, lang = 'es', props = {}) => {
