@@ -113,7 +113,7 @@ test('sin key: botón «Generar» y sin campo ni copiar', { skip }, () => {
 
 test('con key: la key completa se renderiza sin truncar en un cuadro monoespaciado', { skip }, () => {
   const h = section(WITH);
-  assert.ok(has(h, `>${KEY}</code>`) && has(h, 'class="copybox-field"') && has(h, 'aria-label="API key (solo lectura)"'), h);
+  assert.ok(has(h, `>${KEY}</div>`) && has(h, 'class="copybox-field"') && has(h, 'aria-label="API key (solo lectura)"'), h);
   assert.ok(!has(h, '<input') && !has(h, '…'));
 });
 
