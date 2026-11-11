@@ -1,17 +1,15 @@
 """API FastAPI. Motivo de FastAPI: pydantic ya valida la config y SSE/streaming vienen incluidos."""
 import asyncio
-import json
 import logging
-import time
 from contextlib import asynccontextmanager
 from typing import Optional
 
 from fastapi import APIRouter, Depends, FastAPI, Path, Query, Request
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse
 from starlette.concurrency import run_in_threadpool
 
 from .api import docs
-from .api.routers import config, profile, session
+from .api.routers import config, profile, session, sync
 from .api.routers import scheduler as scheduler_router
 from .api.routers import updates as updates_router
 from .users import avatar
@@ -22,10 +20,8 @@ from .core.errors import ApiError, describe_code
 from .api.auth import Auth
 from .api.deps import body_json, hook_user, require
 from .api.middleware import RequestDebugLog
-from .sync.scheduler import iso, utcnow
 from .sync.engine import SyncAbort, count_versions, list_versions, restore_version
 from .services.context import AppContext
-from .services.runs import start_manual_sync
 
 api_log = logging.getLogger("checkpoint.api")  # DEBUG: una línea por petición /api y detalle por endpoint (sin secretos)
 # index.html nunca se cachea: así un despliegue nuevo se ve al recargar (los assets con hash sí se cachean).
@@ -53,12 +49,12 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     ctx = AppContext(auth)
     app.state.ctx = ctx
     app.state.watcher = ctx.watcher
-    store, runs, scheduler, hooks = ctx.store, ctx.runs, ctx.scheduler, ctx.hooks
     app.include_router(session.router)
     app.include_router(profile.router)
     app.include_router(config.router)
     app.include_router(scheduler_router.router)
     app.include_router(updates_router.router)
+    app.include_router(sync.router)
 
     # Todo lo de /api/hook/* cuelga de este router y de su dependencia (aquí irá `POST /api/hook/{game}/opened`).
     hook = APIRouter(prefix="/api/hook", tags=[docs.TAG], dependencies=[Depends(hook_user)],
@@ -73,23 +69,11 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     def hook_watches():
         """Vigilancias de cierre activas (en memoria): [{game, device, state: waiting|running|settling, since}]. Sin los juegos desactivados."""
         cfg = ctx.cfg()
-        w = hooks.active_watches(cfg)
+        w = ctx.hooks.active_watches(cfg)
         api_log.debug("hook watches: %d vigilancias activas", len(w))
         return w
 
     # (el router se incluye tras definir `opened`, más abajo)
-
-    # ---- sync ----
-    @app.post("/api/sync/{game}", dependencies=[Depends(require)])
-    async def start_sync(game: str, request: Request):
-        cfg = ctx.cfg()
-        game = ctx.game_id(game)
-        try:
-            body = await request.json()
-        except Exception:
-            body = {}
-        run = start_manual_sync(runs, scheduler, cfg, game, body)
-        return {"run_id": run.id}
 
     @hook.post("/{game}/opened", **docs.OPENED)
     async def hook_opened(game: str = Path(description="Id o nombre del juego.", examples=["Mi Juego"]),
@@ -100,73 +84,9 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         Tras el aviso (salvo 400/401/404/409) arma la vigilancia de cierre si el juego tiene `process` (`watching`). Un fallo de la sync no es un 5xx: 200 con `outcome` descriptivo."""
         cfg = ctx.cfg()
         game = ctx.game_id(game)  # el 401 ya lo dio hook_user: no se revela si el juego existe
-        return await hooks.opened(cfg, game, device)
+        return await ctx.hooks.opened(cfg, game, device)
 
     app.include_router(hook)
-
-    @app.get("/api/watches", dependencies=[Depends(require)])
-    def watches_view():
-        """Vigilancias de cierre activas para la UI (sesión): {now, watches: [{game, device, state, since, last_poll, poll}]}.
-        `now` es la hora del servidor (UTC) para que el cliente mida el latido sin depender de su reloj. Sin datos sensibles."""
-        cfg = ctx.cfg()
-        w = hooks.active_watches(cfg)
-        api_log.debug("watches: %d vigilancias activas", len(w))
-        return {"now": iso(utcnow()), "watches": w}
-
-    @app.get("/api/games/{game}/hook-status", dependencies=[Depends(require)])
-    def hook_status(game: str):
-        """Por dispositivo del juego: último evento de hook (`opened` = hook, cierre = hook_closed) y vigilancia activa.
-        {devices: [{device, last: {trigger, at, outcome} | null, watching: {state, since} | null}]}. Solo lectura, sin datos sensibles."""
-        cfg = ctx.cfg()
-        game = ctx.game_id(game)
-        return hooks.status(cfg, game)
-
-    @app.get("/api/runs/{run_id}/stream", dependencies=[Depends(require)])
-    def stream(run_id: str):
-        run = runs.get(run_id)
-        if not run:
-            api_log.debug("stream: run %s desconocido (404)", run_id)
-            raise ApiError(404, "err.main.run_unknown")
-        api_log.debug("stream: run=%s juego=%s líneas ya disponibles=%d hecho=%s", run_id, run.game, len(run.lines),
-                      run.done)
-
-        def gen():
-            i = 0
-            while True:
-                while i < len(run.lines):
-                    yield f"data: {json.dumps(run.lines[i])}\n\n"
-                    i += 1
-                if run.done and i >= len(run.lines):
-                    api_log.debug("stream: run=%s cerrado tras %d líneas", run_id, i)
-                    yield f"event: done\ndata: {json.dumps(run.status)}\n\n"
-                    return
-                time.sleep(0.3)
-
-        return StreamingResponse(gen(), media_type="text/event-stream",
-                                 headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
-
-    @app.get("/api/status", dependencies=[Depends(require)])
-    def status():
-        out = {}
-        cfg = store.snapshot().cfg
-        games = cfg.games if cfg else {}
-        sd = settings.DATA_DIR / "status"
-        if sd.is_dir():
-            for f in sd.glob("*.json"):
-                try:
-                    st = json.loads(f.read_text())
-                    # El fichero se llama como el id del juego: esa es la clave y el valor de "game".
-                    st["game"] = f.stem
-                    # La UI pinta `name`: siempre el nombre actual de la config (nunca el id).
-                    if f.stem in games and games[f.stem].name:
-                        st["name"] = games[f.stem].name
-                    elif st.get("name") in (None, "", f.stem):
-                        st.pop("name", None)
-                    out[f.stem] = st
-                except Exception as e:
-                    api_log.debug("status: no se pudo leer %s: %s", f.name, type(e).__name__)
-        api_log.debug("status: %d juegos con estado", len(out))
-        return out
 
     # ---- versiones ----
     @app.get("/api/versions/{game}", dependencies=[Depends(require)])
