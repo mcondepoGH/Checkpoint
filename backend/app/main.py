@@ -11,22 +11,18 @@ from fastapi.responses import FileResponse, StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
 from .api import docs
-from .api.routers import profile, session
+from .api.routers import config, profile, session
 from .users import avatar
 from .core import settings
 from .core import bootstrap
 from .users import history
-from .core import runtime
 from .core import updates
 from .core.errors import ApiError, describe_code, error_body, error_response
 from .api.auth import Auth
 from .api.deps import body_json, hook_user, require
 from .api.middleware import RequestDebugLog
-from .config.models import validate_config
-from .config.store import Conflict, InvalidConfig, parse_text, config_events_gen, diff_configs, render_yaml
 from .sync.scheduler import iso, utcnow
 from .sync.engine import SyncAbort, count_versions, list_versions, restore_version
-from .services.devices import check_device
 from .services.context import AppContext
 from .services.runs import start_manual_sync
 
@@ -59,6 +55,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     store, runs, scheduler, checker, hooks = ctx.store, ctx.runs, ctx.scheduler, ctx.checker, ctx.hooks
     app.include_router(session.router)
     app.include_router(profile.router)
+    app.include_router(config.router)
 
     # Todo lo de /api/hook/* cuelga de este router y de su dependencia (aquí irá `POST /api/hook/{game}/opened`).
     hook = APIRouter(prefix="/api/hook", tags=[docs.TAG], dependencies=[Depends(hook_user)],
@@ -78,124 +75,6 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         return w
 
     # (el router se incluye tras definir `opened`, más abajo)
-
-    # ---- config ----
-    def draft(body: dict):
-        """Valida el borrador {config: ...}; devuelve Config o responde 422 con errores por campo."""
-        cfg, errors = validate_config(body.get("config"))
-        if errors:
-            raise InvalidConfig(errors)
-        return cfg
-
-    def invalid_response(e: InvalidConfig):
-        return error_response(422, "err.main.config_invalid", extra={"errors": e.errors})
-
-    def conflict_response(e: Conflict):
-        return error_response(409, "err.main.config_changed", extra={"current_version": e.current_version})
-
-    @app.get("/api/config", dependencies=[Depends(require)])
-    def get_config():
-        snap = store.snapshot()
-        api_log.debug("config: versión=%s error=%s", snap.version, bool(snap.error))
-        # `runtime` (docker|native) y `platform` (linux|windows|macos): lo único del sistema que se expone.
-        return {"version": snap.version, "config": snap.as_dict(), "error": snap.error, **runtime.info()}
-
-    @app.get("/api/config/events", dependencies=[Depends(require)])
-    def config_events():
-        return StreamingResponse(config_events_gen(store), media_type="text/event-stream",
-                                 headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
-
-    @app.post("/api/config/validate", dependencies=[Depends(require)])
-    async def validate(request: Request):
-        cfg, errors = validate_config((await body_json(request)).get("config"))
-        api_log.debug("config validate: ok=%s errores=%d", not errors, len(errors))
-        return {"ok": not errors, "errors": errors}
-
-    @app.post("/api/config/diff", dependencies=[Depends(require)])
-    async def diff(request: Request):
-        body = await body_json(request)
-        snap = store.snapshot()
-        if "backup" in body:
-            try:
-                text = store.read_backup(str(body["backup"]))
-            except FileNotFoundError:
-                raise ApiError(404, "err.main.backup_unknown")
-            cfg, err = parse_text(text)
-            if err:
-                raise ApiError(422, "err.main.backup_invalid", cause=err)
-        else:
-            try:
-                cfg = draft(body)
-            except InvalidConfig as e:
-                return invalid_response(e)
-        d = diff_configs(snap.as_dict(), cfg.model_dump(exclude_none=True))
-        api_log.debug("config diff: origen=%s versión=%s", "backup" if "backup" in body else "borrador", snap.version)
-        return {"diff": d, "version": snap.version}
-
-    @app.post("/api/config/yaml", dependencies=[Depends(require)])
-    async def yaml_view(request: Request):
-        try:
-            cfg = draft(await body_json(request))
-        except InvalidConfig as e:
-            return invalid_response(e)
-        return {"yaml": render_yaml(store.snapshot().text, cfg)}
-
-    @app.put("/api/config", dependencies=[Depends(require)])
-    async def put_config(request: Request):
-        body = await body_json(request)
-        base = body.get("base_version")
-        if not isinstance(base, str) or not base:
-            raise ApiError(428, "err.main.base_version_required")
-        try:
-            cfg = draft(body)
-            res = store.save(base, cfg)
-        except InvalidConfig as e:
-            api_log.debug("config guardar: inválida (%d errores)", len(e.errors))
-            return invalid_response(e)
-        except Conflict as e:
-            api_log.debug("config guardar: conflicto base=%s actual=%s", base, e.current_version)
-            return conflict_response(e)
-        api_log.debug("config guardada: base=%s", base)
-        return {**res, "config": store.snapshot().as_dict()}
-
-    @app.get("/api/config/backups", dependencies=[Depends(require)])
-    def backups():
-        b = store.list_backups()
-        api_log.debug("config backups: %d", len(b))
-        return b
-
-    @app.post("/api/config/restore", dependencies=[Depends(require)])
-    async def restore_config(request: Request):
-        body = await body_json(request)
-        base = body.get("base_version")
-        if not isinstance(base, str) or not base:
-            raise ApiError(428, "err.main.base_version_required")
-        try:
-            res = store.restore(base, str(body.get("name", "")))
-        except FileNotFoundError:
-            api_log.debug("config restaurar: backup %r desconocido (404)", body.get("name"))
-            raise ApiError(404, "err.main.backup_unknown")
-        except InvalidConfig as e:
-            api_log.debug("config restaurar: backup inválido (%d errores)", len(e.errors))
-            return invalid_response(e)
-        except Conflict as e:
-            api_log.debug("config restaurar: conflicto base=%s actual=%s", base, e.current_version)
-            return conflict_response(e)
-        api_log.debug("config restaurada: backup=%r base=%s", body.get("name"), base)
-        return {**res, "config": store.snapshot().as_dict()}
-
-    @app.post("/api/devices/test", dependencies=[Depends(require)])
-    async def test_device(request: Request):
-        """Prueba la conexión con los datos del formulario (aunque aún no estén guardados)."""
-        return await check_device(await body_json(request))
-
-    @app.get("/api/ssh/public-key", dependencies=[Depends(require)])
-    def ssh_public_key():
-        pub = bootstrap.public_key()
-        api_log.debug("ssh public-key: disponible=%s", bool(pub))
-        if not pub:
-            raise ApiError(404, "err.main.ssh_key_missing")
-        return {"public_key": pub}
 
     # ---- sync automática ----
     @app.get("/api/scheduler", dependencies=[Depends(require)])
