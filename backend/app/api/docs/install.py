@@ -1,7 +1,7 @@
 """Documentación OpenAPI de la API externa (la de la API key, `/api/hook/*`). SOLO documenta; no valida nada.
 
 Alcance: únicamente las rutas del tag `TAG`. Todo lo demás de `/api/*` (login, perfil, config, sync...) es interno de
-la web, queda fuera del esquema (`include_in_schema=False`, ver `install`) y no aparece en la documentación.
+la web, queda fuera del esquema (`include_in_schema=False` por router, ver `api/deps.py`) y no aparece en la documentación.
 Acceso: `/api/openapi.json` y `/api/docs` exigen sesión web (misma dependencia que las rutas internas); la API key sola
 no los abre. Los textos están en español; los códigos `err.*` van sin traducir (son el contrato)."""
 from typing import Callable
@@ -67,13 +67,10 @@ def patch_schema(schema: dict) -> None:
 
 def install(app: FastAPI, require: Callable) -> None:
     """Llamar DESPUÉS de registrar todas las rutas de la API y ANTES del catch-all SPA.
-    1. Oculta del esquema toda ruta que no sea del tag público (por defecto, una ruta nueva queda oculta).
-    2. Sirve `/api/openapi.json`, `/api/docs` y los assets de Swagger UI (empaquetada: sin CDN, sin internet) solo con
-    sesión. Sin sesión, el 401 de `require`, como el resto de rutas protegidas."""
-    for r in iter_api_routes(app.routes):
-        if TAG not in (r.tags or []):
-            r.include_in_schema = False
-
+    Sirve `/api/openapi.json`, `/api/docs` y los assets de Swagger UI (empaquetada: sin CDN, sin internet) solo con
+    sesión. Sin sesión, el 401 de `require`, como el resto de rutas protegidas.
+    NO oculta nada: cada router interno nace con `include_in_schema=False` (`deps.internal_router`/`public_router`) y
+    solo el router `hook` se publica, así que una ruta o router nuevo sale oculto por defecto."""
     def openapi() -> dict:
         if app.openapi_schema is None:
             patch_schema(FastAPI.openapi(app))

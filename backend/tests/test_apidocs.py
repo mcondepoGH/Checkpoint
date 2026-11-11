@@ -139,3 +139,16 @@ def test_every_api_route_is_public_tag_or_hidden(app):
     spa = [r for r in flat if r.path == "/{path:path}"]
     assert spa and not spa[0].include_in_schema
     assert flat[-1] is spa[0]
+
+
+def test_new_internal_router_endpoint_is_hidden_by_default():
+    """Los routers nuevos (`internal_router`/`public_router`) nacen ocultos del Swagger sin hacer nada más."""
+    from app.api.deps import internal_router, public_router
+    for make in (internal_router, public_router):
+        router = make()
+
+        @router.get("/api/nuevo")
+        def nuevo():
+            return {}
+
+        assert [r.include_in_schema for r in router.routes] == [False]
