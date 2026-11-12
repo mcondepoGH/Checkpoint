@@ -20,7 +20,7 @@ from typing import Callable, Optional
 
 from . import runtime, settings
 
-REPO = "mcondepoGH/Checkpoint"
+REPO = "mcondepoGH/checkpoint"
 CACHE_TTL = 6 * 3600  # s de validez de una comprobación correcta
 UNKNOWN = "desconocida"
 TIMEOUT = 5  # s por petición

@@ -36,7 +36,7 @@ Requisitos: Docker y Docker Compose. Sin Docker, ver [Instalación sin Docker](#
 
 1. Clona el repositorio:
    ```bash
-   git clone https://github.com/mcondepoGH/Checkpoint.git && cd Checkpoint
+   git clone https://github.com/mcondepoGH/checkpoint.git && cd checkpoint
    ```
 2. Copia la plantilla y pon tu usuario y contraseña:
    ```bash
@@ -74,7 +74,7 @@ Modo «nativo»: Checkpoint corre directamente en un equipo. Es la única forma 
 **Requisitos**: Python 3.12, Node.js (solo para compilar la web) y, si vas a sincronizar dispositivos remotos, `rsync` y el cliente OpenSSH (`ssh`, `ssh-keygen`, `ssh-keyscan`) en el `PATH`. Con «Este equipo» como único tipo de dispositivo no hacen falta.
 
 ```bash
-git clone https://github.com/mcondepoGH/Checkpoint.git && cd Checkpoint
+git clone https://github.com/mcondepoGH/checkpoint.git && cd checkpoint
 python3 -m venv .venv && . .venv/bin/activate
 pip install -r backend/requirements.txt
 (cd frontend && npm ci && npm run build)            # genera frontend/dist, que se sirve solo
