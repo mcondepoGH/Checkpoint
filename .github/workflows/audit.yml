@@ -1,0 +1,130 @@
+name: Audit
+
+# Auditoría de dependencias: npm audit y pip-audit. Falla si hay hallazgos de gravedad alta o
+# superior en producción y deja el informe JSON como artefacto (`audit-reports-*`), que
+# security-issues convierte en issues con plazo. Los nombres de los informes son
+# `<herramienta>--<carpeta>.json` (`__` por `/`, `root` para la raíz): open-issues.sh los lee.
+# Semanal (cron no admite variables): detecta CVEs nuevas sin cambios de código. El primer día de
+# cada mes, y a mano, `audit-dev` revisa también las dependencias de desarrollo (solo informa).
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "29 5 * * 1"    # semanal, lunes 05:29 UTC
+    - cron: "11 6 1 * *"    # mensual, día 1 a las 06:11 UTC: lote de desarrollo
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  npm-audit:
+    if: ${{ github.event.schedule != '11 6 1 * *' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ vars.AUDIT_NODE_VERSION || '22' }}
+      - name: npm audit de producción en cada carpeta con package-lock.json
+        run: |
+          set -uo pipefail
+          mkdir -p audit-reports
+          status=0
+          found=0
+          while IFS= read -r lock; do
+            dir="$(dirname "$lock")"
+            dir="${dir#./}"
+            slug="${dir//\//__}"
+            if [ "$dir" = "." ]; then slug="root"; fi
+            found=1
+            (cd "$dir" && npm audit --omit=dev --json) > "audit-reports/npm-audit--${slug}.json" || true
+            (cd "$dir" && npm audit --omit=dev --audit-level=high) || status=1
+          done < <(find . -name package-lock.json -not -path '*/node_modules/*' -not -path './.git/*' | sort)
+          if [ "$found" -eq 0 ]; then echo "Sin package-lock.json: nada que auditar con npm."; fi
+          exit "$status"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ always() && hashFiles('audit-reports/*.json') != '' }}
+        with:
+          name: audit-reports-npm
+          path: audit-reports/*.json
+          retention-days: 14
+
+  pip-audit:
+    if: ${{ github.event.schedule != '11 6 1 * *' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ vars.AUDIT_PYTHON_VERSION || '3.12' }}
+      - name: pip-audit de cada requirements.txt
+        run: |
+          set -uo pipefail
+          python -m pip install --disable-pip-version-check "pip-audit==2.10.1"
+          mkdir -p audit-reports
+          status=0
+          found=0
+          while IFS= read -r req; do
+            dir="$(dirname "$req")"
+            dir="${dir#./}"
+            slug="${dir//\//__}"
+            if [ "$dir" = "." ]; then slug="root"; fi
+            found=1
+            pip-audit -r "$req" -f json -o "audit-reports/pip-audit--${slug}.json" || status=1
+          done < <(find . -name requirements.txt -not -path '*/node_modules/*' -not -path '*/.venv/*' -not -path './.git/*' | sort)
+          if [ "$found" -eq 0 ]; then echo "Sin requirements.txt: nada que auditar con pip-audit."; fi
+          exit "$status"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ always() && hashFiles('audit-reports/*.json') != '' }}
+        with:
+          name: audit-reports-pip
+          path: audit-reports/*.json
+          retention-days: 14
+
+  # Lote mensual: dependencias de desarrollo. No falla el workflow (informa); los informes
+  # `npm-audit-dev--*` y `pip-audit-dev--*` los trata security-issues como plazo mensual.
+  audit-dev:
+    if: ${{ github.event.schedule == '11 6 1 * *' || github.event_name == 'workflow_dispatch' }}
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: ${{ vars.AUDIT_NODE_VERSION || '22' }}
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: ${{ vars.AUDIT_PYTHON_VERSION || '3.12' }}
+      - name: Auditar dependencias de desarrollo
+        run: |
+          set -uo pipefail
+          python -m pip install --disable-pip-version-check "pip-audit==2.10.1"
+          mkdir -p audit-reports
+          while IFS= read -r lock; do
+            dir="$(dirname "$lock")"
+            dir="${dir#./}"
+            slug="${dir//\//__}"
+            if [ "$dir" = "." ]; then slug="root"; fi
+            (cd "$dir" && npm audit --json) > "audit-reports/npm-audit-dev--${slug}.json" || true
+          done < <(find . -name package-lock.json -not -path '*/node_modules/*' -not -path './.git/*' | sort)
+          while IFS= read -r req; do
+            dir="$(dirname "$req")"
+            dir="${dir#./}"
+            slug="${dir//\//__}"
+            if [ "$dir" = "." ]; then slug="root"; fi
+            pip-audit -r "$req" -f json -o "audit-reports/pip-audit-dev--${slug}.json" || true
+          done < <(find . -name 'requirements-dev.txt' -not -path '*/.venv/*' -not -path './.git/*' | sort)
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ always() && hashFiles('audit-reports/*.json') != '' }}
+        with:
+          name: audit-reports-dev
+          path: audit-reports/*.json
+          retention-days: 14

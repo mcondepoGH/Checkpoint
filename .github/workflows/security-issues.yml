@@ -1,0 +1,62 @@
+name: Security issues
+
+# Convierte los hallazgos de los otros workflows en issues con plazo, uno por hallazgo y sin
+# duplicar. Se dispara cuando terminan Audit, Gitleaks y Release (el que llama a trivy-release):
+# cambia la lista `workflows` si tus workflows se llaman de otra forma. Descarga los artefactos
+# de la ejecución que terminó (`audit-reports-*`, `gitleaks-report`, `trivy-report`) y pasa los
+# JSON a .github/scripts/open-issues.sh. Los plazos y el reparto están en la skill
+# security-remediation; se ajustan con las variables SLA_CRITICAL_HIGH_HOURS, SLA_MODERATE y
+# SLA_LOW del repositorio.
+#
+# Seguridad: workflow_run corre con permisos de escritura sobre el código de la rama por defecto
+# y los artefactos son datos no confiables. Por eso se ignoran las ejecuciones lanzadas por
+# pull_request (también las de forks) y el script limpia todo texto antes de escribir un issue.
+# CodeQL no pasa por aquí: sus alertas ya están en la pestaña Security.
+on:
+  workflow_run:
+    workflows: [Audit, Gitleaks, Release]
+    types: [completed]
+
+permissions:
+  contents: read
+
+jobs:
+  issues:
+    if: >-
+      ${{ github.event.workflow_run.event != 'pull_request'
+      && github.event.workflow_run.head_repository.full_name == github.repository
+      && (github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write     # crear issues, etiquetas y comentarios
+      actions: read     # descargar los artefactos de la otra ejecución
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+          path: reports
+          merge-multiple: true
+
+      - name: Abrir issues
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+          SLA_CRITICAL_HIGH_HOURS: ${{ vars.SLA_CRITICAL_HIGH_HOURS || '48' }}
+          SLA_MODERATE: ${{ vars.SLA_MODERATE || 'next-release' }}
+          SLA_LOW: ${{ vars.SLA_LOW || 'monthly' }}
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          reports=(reports/npm-audit*.json reports/pip-audit*.json reports/gitleaks*.json reports/trivy*.json)
+          if [ "${#reports[@]}" -eq 0 ]; then
+            echo "Sin informes de seguridad en esa ejecución: nada que hacer."
+            exit 0
+          fi
+          bash .github/scripts/open-issues.sh --repo "$GITHUB_REPOSITORY" --run-url "$RUN_URL" "${reports[@]}"

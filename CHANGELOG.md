@@ -4,6 +4,8 @@
 
 ### Cambios
 
+- Hallazgos de seguridad convertidos en issues con plazo: workflows nuevos `audit.yml` (npm audit y pip-audit semanal, en PR y push, con informes JSON como artefactos y un lote mensual de dependencias de desarrollo) y `security-issues.yml` (cuando terminan Audit, Gitleaks y Release, abre un issue por hallazgo sin duplicar, con plazo: 48 h para crítico y alto, siguiente versión para moderado, mensual para bajo y desarrollo, inmediato para un secreto) con `.github/scripts/open-issues.sh`. Los plazos se cambian con las variables del repositorio `SLA_CRITICAL_HIGH_HOURS`, `SLA_MODERATE` y `SLA_LOW`.
+- Gitleaks: en lugar de `gitleaks-action`, el binario oficial 8.30.1 con SHA-256 fijado (se actualiza a mano: versión y hash a la vez), historial completo en la ejecución semanal y manual y solo el rango nuevo en push y PR, e informe redactado como artefacto `gitleaks-report`.
 - Dependabot (github-actions): espera de 7 días tras publicarse cada versión (`cooldown`), `actions/upload-artifact` y `actions/download-artifact` suben juntos en el grupo `artifact-pair` (sus majors se suben a mano) y los majors y minors de `github/codeql-action` se revisan a mano.
 - CodeQL: acciones fijadas por SHA (con el comentario de versión), `persist-credentials: false`, `build-mode: none` y ejecución manual; misma matriz y mismos disparadores.
 
