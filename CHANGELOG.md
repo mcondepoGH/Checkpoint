@@ -2,6 +2,13 @@
 
 ## Sin publicar
 
+### Cambios
+
+- Configuración se divide en tres subpestañas (estado en memoria, sin URL ni almacenamiento): **General** (sincronización automática con su registro, y actualizaciones), **Biblioteca** (clave SSH, versiones guardadas, dispositivos y juegos) y **Lanzadores**. Abre en General, y en Biblioteca en el primer uso (sin dispositivos). La barra de guardar y el borrador son solo de Biblioteca; el borrador se conserva al cambiar de subpestaña y, con cambios sin guardar, Biblioteca muestra un punto de aviso accesible. En móvil (≤640 px) las etiquetas son cortas y la fila cabe a 320 px. La barra superior sigue con 3 pestañas.
+- `Tabs` admite `variant="subnav"` (subnavegación subrayada, distinta del filtro del registro), `keepMounted` con `panels` (paneles inactivos ocultos con `hidden`, sin desmontar), etiqueta corta por pestaña (`short`) y punto de aviso (`dot`). Los paneles viven en `pages/settings/` (`General`, `Library`, `Launchers`).
+- Lanzadores se muestra directamente en su subpestaña, sin plegado Mostrar/Ocultar, y solo se monta (y pide la key y el estado) al abrirla. Se quita el botón «Ver comandos de lanzador» de la tarjeta de cada juego.
+- Lanzadores: una fila por juego guardado, con los comandos de la plataforma elegida (Steam, Lutris, Heroic, Windows) y botón de copiar, URL del hub común y último aviso por dispositivo. Desaparece el selector de juego y su recuerdo en el navegador. Sin juegos, mensaje vacío.
+
 ## 1.11.0 (2026-11-12)
 
 ### Cambios

@@ -138,7 +138,9 @@ devices:
 
 ## Primeros pasos
 
-1. En **Configuración**, copia la **clave pública SSH** (botón Copiar). Solo hace falta si vas a usar dispositivos remotos.
+La pantalla **Configuración** tiene tres subpestañas (en memoria, sin URL ni almacenamiento): **General** (sincronización automática con su registro de ejecuciones, y comprobación de actualizaciones), **Biblioteca** (clave SSH, versiones guardadas, dispositivos y juegos) y **Lanzadores**. Abre en General, y en Biblioteca la primera vez, cuando aún no hay dispositivos. La barra de guardar y el borrador son solo de Biblioteca: al cambiar de subpestaña el borrador se conserva, y con cambios sin guardar la subpestaña Biblioteca muestra un punto de aviso (con texto para lectores de pantalla). En móvil las etiquetas son cortas (General, Biblioteca, Lanzadores).
+
+1. En **Configuración > Biblioteca**, copia la **clave pública SSH** (botón Copiar). Solo hace falta si vas a usar dispositivos remotos.
 2. Añádela a `authorized_keys` de cada dispositivo. El botón **?** junto a la clave muestra los comandos para Linux y Windows, incluida la activación del servidor SSH. Cada comando va en su propia card con su botón **Copiar**; si hay alternativas (p. ej. ufw o firewalld) se elige solo una, y si hay varios comandos en un paso se ejecutan en orden.
 3. Añade los **dispositivos** (nombre, host, puerto, usuario, sistema) y pulsa **Probar conexión**. La primera vez se guarda la huella del host. Sin Docker puedes marcar uno como **Este equipo** (sin SSH).
 4. Añade los **juegos**: elige uno o dos dispositivos (el segundo es opcional) y la carpeta de guardado en cada uno (ruta absoluta, por ejemplo `/home/usuario/.local/share/Juego/Saves` o `C:\Users\Usuario\AppData\Local\Juego\Saves`).
@@ -146,7 +148,7 @@ devices:
 
 ## Sincronización automática
 
-En **Configuración > Sincronización automática** activa la opción y elige cada cuántas horas se ejecuta (de 0.25 a 168). Cada ciclo sincroniza todos los juegos **activos** (los desactivados se omiten en silencio; ver «Desactivar un juego»); si uno falla, los demás continúan. Debajo se muestra el **Registro de ejecuciones** (las últimas 200, límite fijo; cada una con su origen en una etiqueta de color: Manual, Programado o Launcher; incluye las sincronizaciones manuales reales, no las simulaciones) con resultado por juego y detalle al hacer clic. Sin ajustes guardados, está desactivada y el intervalo es de 24 horas.
+En **Configuración > General > Sincronización automática** activa la opción y elige cada cuántas horas se ejecuta (de 0.25 a 168). Cada ciclo sincroniza todos los juegos **activos** (los desactivados se omiten en silencio; ver «Desactivar un juego»); si uno falla, los demás continúan. Debajo se muestra el **Registro de ejecuciones** (las últimas 200, límite fijo; cada una con su origen en una etiqueta de color: Manual, Programado o Launcher; incluye las sincronizaciones manuales reales, no las simulaciones) con resultado por juego y detalle al hacer clic. Sin ajustes guardados, está desactivada y el intervalo es de 24 horas.
 
 ## Nuevas versiones
 
@@ -156,8 +158,8 @@ Checkpoint comprueba si hay una versión nueva consultando las Releases pública
 
 - La versión instalada sale del fichero `VERSION` de la raíz del repositorio (la imagen lo incluye). Sin él, o en desarrollo, es «desconocida» y no se ofrece ninguna actualización. El repositorio consultado es siempre el de este proyecto.
 - El resultado se guarda en memoria y en `data/update_cache.json` durante 6 horas. Un fallo de red es silencioso: se conserva el último resultado y se reintenta pasados unos minutos.
-- Se desactiva en **Configuración > Comprobar actualizaciones** (viene activada). Desactivada, no se hace ninguna petición a internet. El botón **Comprobar ahora** fuerza la consulta (máximo una por minuto).
-- **Canal** (Configuración > Comprobar actualizaciones): **Estable** (por defecto) solo ofrece Releases normales; **Pruebas** (`beta`) ofrece también pre-releases (nunca borradores), que pueden fallar. En Pruebas se ofrece la versión más alta entre estables y preliminares, con el orden de semver: `1.0.0-rc.1` < `1.0.0-rc.2` < `1.0.0`. Un tag con sufijo (`-rc.1`) cuenta como preliminar aunque GitHub no lo marque. Cambiar de canal descarta el resultado guardado y vuelve a consultar. Nunca se ofrece bajar de versión: desde una preliminar en canal Estable solo se avisa cuando haya una estable mayor. La insignia y el diálogo marcan «preliminar» cuando procede.
+- Se desactiva en **Configuración > General > Comprobar actualizaciones** (viene activada). Desactivada, no se hace ninguna petición a internet. El botón **Comprobar ahora** fuerza la consulta (máximo una por minuto).
+- **Canal** (Configuración > General > Comprobar actualizaciones): **Estable** (por defecto) solo ofrece Releases normales; **Pruebas** (`beta`) ofrece también pre-releases (nunca borradores), que pueden fallar. En Pruebas se ofrece la versión más alta entre estables y preliminares, con el orden de semver: `1.0.0-rc.1` < `1.0.0-rc.2` < `1.0.0`. Un tag con sufijo (`-rc.1`) cuenta como preliminar aunque GitHub no lo marque. Cambiar de canal descarta el resultado guardado y vuelve a consultar. Nunca se ofrece bajar de versión: desde una preliminar en canal Estable solo se avisa cuando haya una estable mayor. La insignia y el diálogo marcan «preliminar» cuando procede.
 - La etiqueta de imagen `beta` la publica el workflow de release (ver «Publicación de versiones»); el canal solo cambia qué avisos se muestran, no la imagen que ejecutas.
 - API (requiere sesión): `GET /api/updates[?refresh=true]` (incluye `actual`, la versión instalada, `aplicable`, `canal` y `prerelease`, si la versión ofrecida es preliminar) y `PUT /api/updates` con `{"enabled": true|false, "channel": "stable"|"beta"}` (parcial: basta uno de los dos; valor no válido, 422). En Docker, `GET` devuelve `aplicable: false` con campos neutros (sin error, sin red) y `PUT` responde 409.
 
@@ -202,12 +204,12 @@ Un juego puede tener un único dispositivo (el dispositivo 2 es opcional en el f
 
 ## Desactivar un juego
 
-Un juego se puede desactivar sin borrarlo: en **Configuración**, el interruptor **Juego activo** del formulario del juego (visible sin pulsar «Mostrar más»); en `config.yaml`, `enabled: false` (sin el campo, el juego está activo). Un juego desactivado **no se sincroniza por ninguna vía**:
+Un juego se puede desactivar sin borrarlo: en **Configuración > Biblioteca**, el interruptor **Juego activo** del formulario del juego (visible sin pulsar «Mostrar más»); en `config.yaml`, `enabled: false` (sin el campo, el juego está activo). Un juego desactivado **no se sincroniza por ninguna vía**:
 
 - La sincronización automática (cada X horas y al arrancar) lo omite en silencio: ni entrada en el registro ni cuenta en los resúmenes.
 - `POST /api/sync/{juego}` responde `409` con `err.sync.game_disabled`, también con `dry_run: true`; la CLI (`checkpoint sync`) aborta con ese mismo código. Es una guarda central de la sincronización: para sincronizarlo hay que reactivarlo.
 - El aviso de apertura (`opened`) y el cierre automático lo omiten (ver «Hooks»).
-- En **Sincronizar** el juego sigue visible pero atenuado, con la etiqueta «Desactivado», sin botón «Sincronizar» ni «Simulación» y con un acceso a Configuración. En **Lanzadores** sigue en el selector con una nota («Desactivado: el aviso se omitirá»). `checkpoint list` lo marca «(desactivado)».
+- En **Sincronizar** el juego sigue visible pero atenuado, con la etiqueta «Desactivado», sin botón «Sincronizar» ni «Simulación» y con un acceso a Configuración. En **Lanzadores** sigue con su fila, con la etiqueta «Desactivado» y una nota («Desactivado: el aviso se omitirá»). `checkpoint list` lo marca «(desactivado)».
 - **Versiones:** se conservan y siguen visibles (con el sufijo «(desactivado)») y restaurables. Restaurar solo copia al hub: no se propaga a los dispositivos mientras el juego esté desactivado.
 
 Al guardar solo se escribe `enabled: false`; reactivarlo quita la línea.
@@ -216,7 +218,7 @@ Al guardar solo se escribe `enabled: false`; reactivarlo quita la línea.
 
 Hay conflicto cuando los dos dispositivos han cambiado desde la última sincronización y su contenido es distinto (o, en la primera sincronización, ya difiere). Checkpoint nunca lo decide por la fecha a ciegas.
 
-- **Sincronización automática**: `on_conflict` en Configuración > Sincronización automática. `skip` (por defecto) no guarda nada y marca el juego como «Conflicto»; `newest` hace ganar el save más reciente (si las fechas difieren menos de 2 s, se omite). Un juego puede sustituirlo con `on_conflict` en `config.yaml`.
+- **Sincronización automática**: `on_conflict` en Configuración > General > Sincronización automática. `skip` (por defecto) no guarda nada y marca el juego como «Conflicto»; `newest` hace ganar el save más reciente (si las fechas difieren menos de 2 s, se omite). Un juego puede sustituirlo con `on_conflict` en `config.yaml`.
 - **Sincronización manual**: siempre pregunta. Un popup ofrece cancelar, «Gana el más reciente» o elegir qué dispositivo gana, con fecha y tamaño de cada uno. En la CLI: `checkpoint sync JUEGO --resolve newest|device:DISPOSITIVO` (sale con código 3 si hay conflicto).
 
 En todos los casos la copia perdedora se guarda antes en versiones. En la primera sincronización de cada juego (aún sin estado guardado) el hub es la única referencia: si ambos lados difieren, se trata como conflicto.
@@ -345,7 +347,7 @@ Pon la URL **entre comillas**: el `?` lo interpretaría el shell como comodín.
 
 ### Lanzadores
 
-**Copiar los comandos de la web:** Configuración → sección **Lanzadores** (tarjeta propia tras la lista de juegos, plegada por defecto: botón Mostrar/Ocultar; también se abre con «Ver comandos de lanzador» en la tarjeta de cada juego guardado, que lo elige y baja hasta ella). Un único panel para todos los juegos: eliges el **juego** (se recuerda en el navegador) y su **dispositivo**, y en cada pestaña (Steam / Steam Deck, Lutris, Heroic, Windows con Playnite) tienes el comando completo con tu API key, el id del juego y el dispositivo ya codificados, listo para copiar (con una nota de dónde se pega). Necesita la API key del perfil (sin ella el panel pide generarla). La URL del hub se rellena con la de la página, se puede editar y se recuerda en el navegador; por HTTP fuera de localhost avisa de que la key viaja en claro. Si el juego no tiene `process`, avisa de que el hub no podrá vigilar el cierre; si está desactivado, lo indica («el aviso se omitirá»); un juego sin guardar pide guardarlo antes. Debajo, **Último aviso** por dispositivo del juego elegido: último `opened` / cierre recibido, hace cuánto, su resultado y, si hay vigilancia activa, su estado (la key y el estado solo se piden con el panel desplegado; el estado se refresca cada 15 s).
+**Copiar los comandos de la web:** Configuración → subpestaña **Lanzadores** (sin plegado: se ve al abrirla; la key y el estado solo se piden entonces). Una **fila por juego guardado** con su nombre y, para la plataforma elegida en las pestañas comunes (Steam / Steam Deck, Lutris, Heroic, Windows con Playnite), el comando completo con tu API key, el id del juego y el dispositivo ya codificados, listo para copiar (con una nota de dónde se pega). Si el juego tiene más de un dispositivo, la fila trae su selector de dispositivo. Necesita la API key del perfil (sin ella pide generarla). La URL del hub, común a todas las filas, se rellena con la de la página, se puede editar y se recuerda en el navegador; por HTTP fuera de localhost avisa de que la key viaja en claro. Si un juego no tiene `process`, su fila avisa de que el hub no podrá vigilar el cierre; si está desactivado, lo indica («el aviso se omitirá»); un juego sin guardar pide guardarlo antes; sin juegos, un mensaje vacío. En cada fila, **Último aviso** por dispositivo: último `opened` / cierre recibido, hace cuánto, su resultado y, si hay vigilancia activa, su estado (el estado se refresca cada 15 s).
 
 Los comandos de abajo son los mismos que genera la web.
 
@@ -517,7 +519,7 @@ Los elementos que se repiten viven en `frontend/src/components/ui/` (importa des
 | `Select` | `options` (`[{ value, label }]`), `placeholder` | `_control.scss` |
 | `Checkbox` | `label` + props del input | `_control.scss` |
 | `Switch` | `label` + props del input | `_switch.scss` |
-| `Tabs` | `tabs` (`[{ id, label }]`), `value`, `onChange`, `label`; los hijos son el panel activo. Roles `tablist`/`tab`/`tabpanel`, flechas, Inicio y Fin | `_tabs.scss` |
+| `Tabs` | `tabs` (`[{ id, label, short?, dot? }]`), `value`, `onChange`, `label`; los hijos son el panel activo. `variant="subnav"`: subnavegación subrayada (Configuración), distinta del filtro normal; `keepMounted` + `panels` (`{ id: nodo }`): todos los paneles, los inactivos con `hidden` sin desmontar (un valor null no se pinta); `short`: etiqueta corta en ≤640 px; `dot`: punto de aviso con ese texto para lectores de pantalla. Roles `tablist`/`tab`/`tabpanel`, flechas, Inicio y Fin | `_tabs.scss` |
 | `CopyBox` | `value`, `label`, `what` (qué se copia: el botón dice «Copiar {what}», p. ej. «Copiar comando de Steam» o «Copiar clave API»), `describedBy`; caja de código monoespaciada que ajusta líneas + botón copiar (`copy` → `check` 2 s, `clipboard.js` con fallback) | `_copybox.scss` |
 | `WatchBar` | `state` (`waiting`, `running`, `settling`, `stale`), `since` (opcional), hijos = texto; franja inferior de la tarjeta con icono decorativo + texto, color por estado (el icono se dibuja sin glifos de fuente: punto y anillo por CSS, `spinner` y `alert` de `Icon`; alineado con la primera línea del texto); la tarjeta lleva el borde con `watchCardClass(estado)` de `src/components/watch/watch.js` | `_watch.scss` |
 | `WatchStatus` | `state` (igual), hijos = texto; punto decorativo + texto en línea (filas de la lista de la cabecera), `running` pulsa | `_watch.scss` |
@@ -532,7 +534,7 @@ Aviso de actualización: en pantallas anchas (>=480 px) es el botón de la barra
 
 Menú del perfil (`ProfileMenu`), de arriba abajo, con separador fino y rótulo discreto por grupo (`role="group"` + `aria-labelledby`): identidad (foto, nombre, Cambiar/Quitar foto), entrada «Actualizar a vX.Y.Z» (solo <480 px y con actualización), **Preferencias** (Idioma y Tema con el mismo patrón de fila `.profile-row`: icono + etiqueta + valor actual a la derecha, 44 px; el idioma es el `Select` nativo como valor, `LanguageSelect row`), **Integración** (API key plegable, cerrada por defecto, `aria-expanded`/`aria-controls`; el contenido sigue montado y solo `hidden`) con, justo debajo, el enlace «Documentación de la API» (`/api/docs`, pestaña nueva con `rel="noopener"`; fila `.profile-row`) y **Cuenta** (Salir; la versión instalada solo se muestra en el pie de la app). Esc y clic fuera cierran; no es modal.
 
-El perfil usa estos componentes: la sección «API key» es un bloque con fondo `--surface-2` (encabezado con icono `key`), la key completa en un cuadro monoespaciado que ajusta en varias líneas, `CopyBox` para la key y para los comandos de la sección Lanzadores (copia con icono `copy` → `check` 2 s), `Button` y `Button variant="danger"` (Regenerar / Revocar, mismo ancho) y `Alert compact` para el aviso de HTTP.
+El perfil usa estos componentes: la sección «API key» es un bloque con fondo `--surface-2` (encabezado con icono `key`), la key completa en un cuadro monoespaciado que ajusta en varias líneas, `CopyBox` para la key y para los comandos de la subpestaña Lanzadores (copia con icono `copy` → `check` 2 s), `Button` y `Button variant="danger"` (Regenerar / Revocar, mismo ancho) y `Alert compact` para el aviso de HTTP.
 
 Los tests `frontend/test/components/ui/ui-components.test.mjs` fijan las clases y atributos que producen.
 
