@@ -3,8 +3,8 @@ import EmptyState from '#src/components/ui/EmptyState.jsx';
 import { fmtDateTime, fmtDuration, RESULT_CLASS, resultText } from '#src/lib/format.js';
 import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { recordText } from '#src/lib/errors.js';
-import { FOLD_AFTER, MSG_ICON, TRIGGERS, countSummary, detailModel, isHookNote } from './runLog.js';
-import { Alert, Badge, Button } from '#src/components/ui/index.js';
+import { FOLD_AFTER, MSG_ICON, countSummary, detailModel, isHookNote, originOf } from './runLog.js';
+import { Alert, Badge, Button, Pill } from '#src/components/ui/index.js';
 import Icon from '#src/components/ui/Icon.jsx';
 import { schedulerHistory } from '#src/lib/api/sync.js';
 
@@ -79,7 +79,8 @@ export function EntryDetail({ entry: e }) {
 // Duración vacía o 0 (avisos que no ejecutaron nada) se muestra «—».
 export function RunEntry({ entry: e }) {
   const { t, locale } = useI18n();
-  const trig = TRIGGERS.includes(e.trigger) ? t(`autolog.trigger.${e.trigger}`) : e.trigger || '—';
+  const origin = originOf(e.trigger);
+  const trig = origin ? <Pill tone={origin}>{t(`autolog.origin.${origin}`)}</Pill> : e.trigger || '—'; // desconocido: tal cual
   return (
     <li className="run">
       <div className="run-head">
@@ -103,7 +104,7 @@ export default function AutoSyncLog() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const d = await schedulerHistory(50);
+      const d = await schedulerHistory(200);
       setEntries(d.entries || []);
       setErr(null);
     } catch (e) {

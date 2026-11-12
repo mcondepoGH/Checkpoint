@@ -5,6 +5,7 @@
 ### Cambios
 
 - Las sincronizaciones manuales reales se guardan en el registro de ejecuciones con el origen `manual` (las simulaciones no). El registro conserva hasta 200 entradas (antes 50; el límite de antigüedad sigue en 30 días) y `GET /api/scheduler/history` admite `limit` hasta 200. Las entradas anteriores no se migran. Un fallo al escribir el registro no rompe la sincronización.
+- Registro de ejecuciones: el origen se muestra en 3 etiquetas de color con texto (Manual, Programado, Launcher / Manual, Scheduled, Launcher): `scheduled` y `startup` salen como Programado, `hook` y `hook_closed` como Launcher; el valor guardado no cambia. Es un tono nuevo de `Pill` (punto y borde de color, texto con el color normal para el contraste en claro y oscuro). El panel de Lanzadores mantiene «Aviso del juego» y «Cierre del juego».
 
 ## 1.10.6 (2026-11-12)
 

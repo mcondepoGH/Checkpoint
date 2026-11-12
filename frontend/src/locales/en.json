@@ -361,9 +361,12 @@
       "text": "No automatic sync has run yet. Runs will appear here."
     },
     "listAria": "Automatic runs, newest to oldest",
-    "trigger": {
+    "origin": {
+      "manual": "Manual",
       "scheduled": "Scheduled",
-      "startup": "Startup",
+      "launcher": "Launcher"
+    },
+    "trigger": {
       "hook": "Game opened",
       "hook_closed": "Game closed"
     },

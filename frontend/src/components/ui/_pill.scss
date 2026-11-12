@@ -30,4 +30,30 @@
     background: rgba(244, 63, 158, 0.08);
     box-shadow: 0 0 10px -3px var(--accent-2);
   }
+  // Origen de una ejecución (registro): el texto va en --text (contraste en claro y oscuro); el color solo
+  // acompaña (punto y borde), nunca es lo único que distingue un origen.
+  &.origin-manual,
+  &.origin-scheduled,
+  &.origin-launcher {
+    gap: 0.4rem;
+    font-size: v.$fs-label;
+    &::before {
+      content: '';
+      width: 0.5rem;
+      height: 0.5rem;
+      border-radius: 50%;
+      background: var(--tone);
+      flex: none;
+    }
+    border-color: var(--tone);
+  }
+  &.origin-manual {
+    --tone: var(--primary);
+  }
+  &.origin-scheduled {
+    --tone: var(--accent);
+  }
+  &.origin-launcher {
+    --tone: var(--accent-2);
+  }
 }

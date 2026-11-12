@@ -399,8 +399,8 @@ test('Registro: entrada correcta con mensaje de entrada y de juego distintos: un
 
 test('Registro: correcta de un juego = cabecera + línea de juego, UNA etiqueta, sin tercera línea (es/en)', { skip }, () => {
   for (const [trigger, es, en] of [
-    ['hook', 'Aviso del juego', 'Game opened'],
-    ['hook_closed', 'Cierre del juego', 'Game closed'],
+    ['hook', 'Launcher', 'Launcher'],
+    ['hook_closed', 'Launcher', 'Launcher'],
   ]) {
     const e = runEntry({ trigger, result: 'ok', device: 'mi-pc', games: { juego0: { name: 'Juego 0', result: 'ok', message: '' } } });
     for (const [lang, txt] of [
@@ -457,7 +457,7 @@ const abortedScheduled = (trigger = 'scheduled') =>
 test('Registro: programada correcta de un juego (es/en): una etiqueta, juego una vez, sin mensaje ni icono', { skip }, () => {
   const e = runEntry({ trigger: 'scheduled', result: 'ok', duration: 3.4, games: gm(1) });
   for (const [lang, txt, ok] of [
-    ['es', 'Programada', 'correcta'],
+    ['es', 'Programado', 'correcta'],
     ['en', 'Scheduled', 'ok'],
   ]) {
     const h = R('RunEntry', { entry: e }, lang);
@@ -510,9 +510,12 @@ test('Registro: programada con >3 juegos: plegada, resumen accesible y juegos no
   assert.ok(!has(R('RunEntry', { entry: runEntry({ result: 'ok', games: gm(3) }) }), 'class="fold"'));
 });
 
-test('Registro: arranque correcto (es/en)', { skip }, () => {
+test('Registro: arranque correcto (es/en), agrupado en Programado', { skip }, () => {
   const e = runEntry({ trigger: 'startup', result: 'ok', duration: 12, games: gm(2) });
-  assert.ok(has(R('RunEntry', { entry: e }), 'Arranque') && has(R('RunEntry', { entry: e }, 'en'), 'Startup'));
+  assert.ok(
+    has(R('RunEntry', { entry: e }), 'pill origin-scheduled">Programado') &&
+      has(R('RunEntry', { entry: e }, 'en'), 'pill origin-scheduled">Scheduled'),
+  );
   assert.equal(count(R('RunEntry', { entry: e }), 'class="badge '), 1);
 });
 
@@ -584,14 +587,14 @@ test('Registro: entrada antigua (solo message, sin device ni code) y tipo descon
     id: 'o1',
     started: '2026-01-02T03:04:05Z',
     duration: 4,
-    trigger: 'manual',
+    trigger: 'zzz',
     result: 'weird',
     message: 'Texto viejo',
     games: { g: { name: 'Viejo', result: 'weird', message: 'Texto viejo' } },
   };
   for (const lang of ['es', 'en']) {
     const h = R('RunEntry', { entry: old }, lang);
-    assert.ok(has(h, '>manual<') && has(h, '>weird<'), h);
+    assert.ok(has(h, '>zzz<') && has(h, '>weird<'), h);
     assert.equal(count(h, 'Texto viejo'), 1, h);
     assert.equal(count(h, 'class="badge'), 1, h);
     assert.ok(!has(h, 'class="dev"'), h);
@@ -625,3 +628,25 @@ test('Último aviso: el motivo del descarte se añade al resultado', { skip }, (
   const e = block({ ...WITH, status }, {}, 'en');
   assert.ok(has(e, 'Closing checkpoint skipped'), e);
 });
+
+test(
+  'Registro: origen en 3 etiquetas con color propio (manual, programado = scheduled + startup, launcher = hook + hook_closed)',
+  { skip },
+  () => {
+    const cases = [
+      ['manual', 'manual', 'Manual', 'Manual'],
+      ['scheduled', 'scheduled', 'Programado', 'Scheduled'],
+      ['startup', 'scheduled', 'Programado', 'Scheduled'],
+      ['hook', 'launcher', 'Launcher', 'Launcher'],
+      ['hook_closed', 'launcher', 'Launcher', 'Launcher'],
+    ];
+    for (const [trigger, tone, es, en] of cases)
+      for (const [lang, txt] of [
+        ['es', es],
+        ['en', en],
+      ]) {
+        const h = R('RunEntry', { entry: runEntry({ trigger, result: 'ok', games: gm(1) }) }, lang);
+        assert.ok(has(h, `<span class="trig"><span class="pill origin-${tone}">${txt}</span></span>`), h);
+      }
+  },
+);

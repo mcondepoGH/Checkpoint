@@ -361,9 +361,12 @@
       "text": "Todavía no se ha ejecutado ninguna sincronización automática. Las ejecuciones aparecerán aquí."
     },
     "listAria": "Ejecuciones automáticas, de más reciente a más antigua",
+    "origin": {
+      "manual": "Manual",
+      "scheduled": "Programado",
+      "launcher": "Launcher"
+    },
     "trigger": {
-      "scheduled": "Programada",
-      "startup": "Arranque",
       "hook": "Aviso del juego",
       "hook_closed": "Cierre del juego"
     },
