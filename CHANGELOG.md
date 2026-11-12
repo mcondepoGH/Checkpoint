@@ -2,6 +2,10 @@
 
 ## Sin publicar
 
+### Cambios
+
+- Las sincronizaciones manuales reales se guardan en el registro de ejecuciones con el origen `manual` (las simulaciones no). El registro conserva hasta 200 entradas (antes 50; el límite de antigüedad sigue en 30 días) y `GET /api/scheduler/history` admite `limit` hasta 200. Las entradas anteriores no se migran. Un fallo al escribir el registro no rompe la sincronización.
+
 ## 1.10.6 (2026-11-12)
 
 ### Cambios

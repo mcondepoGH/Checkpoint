@@ -1,7 +1,7 @@
 """Registro persistente de ciclos de la sincronización automática.
 
 Un fichero JSONL (DATA_DIR/scheduler-history.jsonl), una entrada por línea. Retención acotada por número
-(MAX_ENTRIES, fijo: nunca más de 50 en disco ni en la API) y por antigüedad (MAX_DAYS). Las líneas ilegibles se ignoran y se descartan al reescribir.
+(MAX_ENTRIES, fijo: nunca más de 200 en disco ni en la API) y por antigüedad (MAX_DAYS). Las líneas ilegibles se ignoran y se descartan al reescribir.
 Nunca guarda secretos: los mensajes pasan por redact() y se truncan."""
 
 import json
@@ -15,11 +15,11 @@ from ..core import settings
 from ..core.redact import redact
 
 FILE = "scheduler-history.jsonl"
-MAX_ENTRIES = 50
+MAX_ENTRIES = 200
 MAX_DAYS = 30
 MSG_LEN = 300
 RESULTS = {"ok", "error", "aborted", "skipped", "conflict", "partial"}
-TRIGGERS = {"scheduled", "startup", "hook", "hook_closed"}
+TRIGGERS = {"scheduled", "startup", "hook", "hook_closed", "manual"}
 
 _lock = threading.Lock()
 
@@ -168,11 +168,12 @@ def annotate(entries: List[dict], games: dict) -> List[dict]:
     return out
 
 
-def read(limit: int = 50) -> List[dict]:
+def read(limit: Optional[int] = None) -> List[dict]:
     """Más reciente primero, como mucho MAX_ENTRIES. Un fichero con más (de una versión anterior) se poda al leer."""
     with _lock:
         entries, _bad = _read_all()
         if len(entries) > MAX_ENTRIES:
             entries = entries[-MAX_ENTRIES:]
             _write(entries)
-    return list(reversed(entries))[: max(0, min(limit, MAX_ENTRIES))]
+    n = MAX_ENTRIES if limit is None else limit
+    return list(reversed(entries))[: max(0, min(n, MAX_ENTRIES))]

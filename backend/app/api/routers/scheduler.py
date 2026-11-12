@@ -39,7 +39,9 @@ async def put_scheduler(request: Request, ctx: AppContext = Depends(get_ctx)):
 
 
 @router.get("/api/scheduler/history")
-def get_scheduler_history(limit: int = Query(50, ge=1, le=50), ctx: AppContext = Depends(get_ctx)):
+def get_scheduler_history(
+    limit: int = Query(history.MAX_ENTRIES, ge=1, le=history.MAX_ENTRIES), ctx: AppContext = Depends(get_ctx)
+):
     snap = ctx.store.snapshot()
     games = snap.cfg.games if snap.cfg else {}
     entries = history.annotate(history.read(limit), games)
