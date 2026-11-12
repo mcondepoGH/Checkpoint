@@ -2,6 +2,11 @@
 
 ## Sin publicar
 
+### Cambios
+
+- Dependabot (github-actions): espera de 7 días tras publicarse cada versión (`cooldown`), `actions/upload-artifact` y `actions/download-artifact` suben juntos en el grupo `artifact-pair` (sus majors se suben a mano) y los majors y minors de `github/codeql-action` se revisan a mano.
+- CodeQL: acciones fijadas por SHA (con el comentario de versión), `persist-credentials: false`, `build-mode: none` y ejecución manual; misma matriz y mismos disparadores.
+
 ## 1.10.3 (2026-11-12)
 
 ### Cambios
