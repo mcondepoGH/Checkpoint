@@ -2,6 +2,10 @@
 
 ## Sin publicar
 
+### Cambios
+
+- Los issues de seguridad se agrupan por paquete y versión (un issue por paquete, con la lista de CVE y la solución; tope de 10 por ejecución). `open-issues.sh` viene de la plantilla de repo-warden. Los issues antiguos (uno por CVE, sin `v=` en la marca) no se cierran solos: el script avisa por stderr y se cierran a mano.
+
 ## 1.10.5 (2026-11-12)
 
 ### Arreglos
