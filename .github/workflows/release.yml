@@ -76,20 +76,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # Informativo: lista vulnerabilidades altas y críticas de la imagen publicada, pero no bloquea la release.
-      - name: Trivy (informativo)
-        continue-on-error: true
-        uses: aquasecurity/trivy-action@915b19bbe73b92a6cf82a1bc12b087c9a19a5fe2  # v0.28.0
-        env:
-          TRIVY_USERNAME: ${{ github.actor }}
-          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          image-ref: ${{ steps.v.outputs.image }}:${{ steps.v.outputs.version }}
-          severity: HIGH,CRITICAL
-          ignore-unfixed: true
-          exit-code: "0"
-          format: table
-
       - name: Crear la GitHub Release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
