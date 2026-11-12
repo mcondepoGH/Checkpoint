@@ -2,6 +2,8 @@
 
 ## Sin publicar
 
+- Dependabot: se ignoran los majors de `react` y `react-dom` por ahora, porque React 19 añade ~80 KB al bundle propio y hace fallar `check:size`.
+
 ## 1.10.2 (2026-11-12)
 
 ### Cambios
