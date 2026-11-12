@@ -2,6 +2,10 @@
 
 ## Sin publicar
 
+### Arreglos
+
+- Imagen Docker sin los CVE abiertos tras 1.10.4: `apk upgrade --no-cache` sube `krb5-libs` (1.22.3-r0, entra por `openssh-client`) y el resto de paquetes de la base, y `pip install --upgrade pip setuptools` sube `setuptools` (CVE-2025-47273, corregido en 78.1.1). El build de la release usa `pull: true` para no reutilizar una capa base cacheada obsoleta, y el escaneo de Trivy pasa `ignore-unfixed: true` para que los CVE sin corrección no abran issues.
+
 ## 1.10.4 (2026-11-12)
 
 ### Cambios
