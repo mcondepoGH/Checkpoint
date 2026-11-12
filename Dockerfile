@@ -8,8 +8,11 @@ RUN npm run build
 
 # --- 2) runtime ---
 FROM python:3.12-alpine
+# `apk upgrade` trae los paquetes de la base con sus correcciones de seguridad (p. ej. krb5-libs, que entra
+# por openssh-client); `setuptools` viene preinstalado en la imagen base y se sube a una versión corregida.
 RUN apk add --no-cache openssh-client rsync tar tzdata su-exec \
- && pip install --no-cache-dir --upgrade pip
+ && apk upgrade --no-cache \
+ && pip install --no-cache-dir --upgrade pip setuptools
 ARG PUID=1000
 ARG PGID=1000
 RUN addgroup -g ${PGID} checkpoint && adduser -D -u ${PUID} -G checkpoint -h /home/checkpoint checkpoint \

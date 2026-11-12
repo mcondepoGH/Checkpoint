@@ -70,6 +70,8 @@ jobs:
         with:
           context: .
           push: true
+          # Baja siempre la base actual: evita reutilizar una capa de python:3.12-alpine obsoleta (y con CVE ya corregidos).
+          pull: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           # Solo amd64. Para arm64 añade `docker/setup-qemu-action@v3` antes de buildx
@@ -101,3 +103,4 @@ jobs:
     with:
       scan-type: image
       scan-ref: ${{ needs.release.outputs.image-ref }}
+      ignore-unfixed: true   # los CVE sin corrección no abren issues
