@@ -1,4 +1,4 @@
-# npm y pip: mensual; las actualizaciones minor y patch van en un solo PR agrupado y cada major en su propio PR. docker y github-actions: semanales y agrupados. Todos los PRs se revisan y fusionan a mano (sin auto-merge).
+# npm y pip: mensual; las actualizaciones minor y patch van en un solo PR agrupado y cada major en su propio PR, salvo react con react-dom y vite con @vitejs/*, que llegan agrupados como majors porque son dependencias de pares acopladas (un PR suelto rompe `npm ci`). docker y github-actions: semanales y agrupados. Todos los PRs se revisan y fusionan a mano (sin auto-merge).
 version: 2
 updates:
   - package-ecosystem: npm
@@ -6,6 +6,12 @@ updates:
     schedule:
       interval: monthly
     groups:
+      react:
+        patterns: ["react", "react-dom"]
+        update-types: ["major"]
+      vite:
+        patterns: ["vite", "@vitejs/*"]
+        update-types: ["major"]
       minor-and-patch:
         patterns: ["*"]
         update-types: ["minor", "patch"]
