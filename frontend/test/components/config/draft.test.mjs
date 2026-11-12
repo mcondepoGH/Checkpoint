@@ -217,10 +217,11 @@ test('isSoloCheckpoint: solo con un dispositivo en la config guardada', () => {
 
 test('Settings pide al menos un dispositivo y Sync pinta la etiqueta Solo checkpoint', () => {
   const src = (f) => fs.readFileSync(new URL(`../../../src/${f}`, import.meta.url), 'utf8');
-  const st = src('pages/Settings.jsx');
+  const st = src('pages/settings/Library.jsx');
   assert.match(st, /needOne/);
   assert.doesNotMatch(st, /needTwo/);
-  assert.equal((st.match(/\.filter\(\(d\) => d\.name\)\.length < 1/g) || []).length, 2);
+  assert.equal((st.match(/\.filter\(\(d\) => d\.name\)\.length < 1/g) || []).length, 1);
+  assert.ok((st.match(/noNamed/g) || []).length >= 3, 'el aviso y el botón de añadir juego usan la misma condición');
   assert.match(src('pages/Sync.jsx'), /isSoloCheckpoint\(config\.games\[g\]\)[\s\S]*sync\.solo\.label/);
 });
 

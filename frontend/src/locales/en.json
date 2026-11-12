@@ -158,6 +158,13 @@
     "restore": "Restore"
   },
   "settings": {
+    "subtabs": {
+      "aria": "Settings sections",
+      "general": { "full": "General settings", "short": "General" },
+      "library": { "full": "Game library", "short": "Library" },
+      "launchers": { "full": "Launchers", "short": "Launchers" },
+      "dirty": "Unsaved changes in Library"
+    },
     "title": "Settings",
     "invalid": "config.yaml is not valid: {cause}. Fix it by hand or restore an earlier copy.",
     "stale": {
@@ -223,15 +230,11 @@
     "useGlobal": "Use the global setting",
     "deleteAria": "Delete game {title}",
     "showMore": "Show more",
-    "showLess": "Show less",
-    "launchers": "View launcher commands",
-    "launchersAria": "View launcher commands for {title}"
+    "showLess": "Show less"
   },
   "launcher": {
     "disabledNote": "Disabled: the notice will be skipped.",
     "title": "Launchers",
-    "show": "Show",
-    "hide": "Hide",
     "game": "Game",
     "noGames": "Add a game to get its commands.",
     "copyWhat": "{launcher} command",

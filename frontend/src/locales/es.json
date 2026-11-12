@@ -158,6 +158,13 @@
     "restore": "Restaurar"
   },
   "settings": {
+    "subtabs": {
+      "aria": "Subpestañas de Configuración",
+      "general": { "full": "Ajustes generales", "short": "General" },
+      "library": { "full": "Biblioteca de juegos", "short": "Biblioteca" },
+      "launchers": { "full": "Lanzadores", "short": "Lanzadores" },
+      "dirty": "Cambios sin guardar en Biblioteca"
+    },
     "title": "Configuración",
     "invalid": "config.yaml no es válido: {cause}. Corrígelo a mano o restaura una copia anterior.",
     "stale": {
@@ -223,15 +230,11 @@
     "useGlobal": "Usar el ajuste global",
     "deleteAria": "Eliminar juego {title}",
     "showMore": "Mostrar más",
-    "showLess": "Mostrar menos",
-    "launchers": "Ver comandos de lanzador",
-    "launchersAria": "Ver comandos de lanzador de {title}"
+    "showLess": "Mostrar menos"
   },
   "launcher": {
     "disabledNote": "Desactivado: el aviso se omitirá.",
     "title": "Lanzadores",
-    "show": "Mostrar",
-    "hide": "Ocultar",
     "game": "Juego",
     "noGames": "Añade un juego para obtener sus comandos.",
     "copyWhat": "comando de {launcher}",

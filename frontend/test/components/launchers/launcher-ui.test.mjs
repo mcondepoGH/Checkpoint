@@ -1,4 +1,4 @@
-// Tabs, CopyBox y la sección Lanzadores (panel único con selector de juego), renderizados a HTML (esbuild + react-dom/server).
+// Tabs, CopyBox y la subpestaña Lanzadores (panel único con selector de juego), renderizados a HTML (esbuild + react-dom/server).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { bundle } from '../../helpers/bundle.mjs';
@@ -8,11 +8,10 @@ const { mod: m, skip } = await bundle(
   import { renderToStaticMarkup } from 'react-dom/server';
   import { i18n } from '#src/hooks/useI18n.js';
   import LauncherBlock from '#src/components/launchers/LauncherBlock.jsx';
-  import LaunchersPanel from '#src/components/launchers/LaunchersPanel.jsx';
   import GameCard from '#src/components/config/GameCard.jsx';
   import { Tabs, CopyBox } from '#src/components/ui/index.js';
   import { EntryMessage, EntryDetail, RunEntry, RunLog } from '#src/components/autosync/AutoSyncLog.jsx';
-  export { React, renderToStaticMarkup, i18n, LauncherBlock, LaunchersPanel, GameCard, Tabs, CopyBox, EntryMessage, EntryDetail, RunEntry, RunLog };`,
+  export { React, renderToStaticMarkup, i18n, LauncherBlock, GameCard, Tabs, CopyBox, EntryMessage, EntryDetail, RunEntry, RunLog };`,
   { navigator: true, tag: 'ckpt-launcher' },
 );
 const KEY = 'ck_AbC123xyz';
@@ -238,36 +237,7 @@ test('Panel: sin juegos aviso; el último aviso es solo del juego elegido', { sk
   );
 });
 
-test('LaunchersPanel: tarjeta propia plegada por defecto (hidden, sin contenido) y desplegada con Ocultar', { skip }, () => {
-  const props = {
-    id: 'launchers-section',
-    games: [game()],
-    selected: 'juego-1a2b3c4d',
-    onSelect() {},
-    onToggle() {},
-    initial: WITH,
-    defaultHub: 'http://h:1',
-  };
-  const closed = R('LaunchersPanel', { ...props, open: false });
-  assert.ok(
-    has(closed, 'id="launchers-section"') &&
-      has(closed, '>Lanzadores</h3>') &&
-      has(closed, '>Mostrar</button>') &&
-      has(closed, 'aria-expanded="false"'),
-  );
-  assert.match(closed, /<div id="([^"]+)" class="launchers-body" hidden="">/);
-  assert.ok(!has(closed, 'curl') && !has(closed, 'class="launcher"'));
-  const id = /aria-controls="([^"]+)"/.exec(closed)[1];
-  assert.ok(has(closed, `id="${id}"`));
-  const open = R('LaunchersPanel', { ...props, open: true });
-  assert.ok(has(open, '>Ocultar</button>') && has(open, 'aria-expanded="true"') && has(open, 'curl') && !has(open, 'hidden=""'));
-  assert.ok(
-    has(R('LaunchersPanel', { ...props, open: false }, 'en'), '>Show</button>') &&
-      has(R('LaunchersPanel', { ...props, open: true }, 'en'), '>Hide</button>'),
-  );
-});
-
-test('GameCard: sin bloque Lanzador; enlace «Ver comandos de lanzador» solo con onShowLaunchers y juego guardado', { skip }, () => {
+test('GameCard: sin bloque Lanzador ni botón «Ver comandos de lanzador» (los comandos viven en la subpestaña Lanzadores)', { skip }, () => {
   m.i18n.setLocale('es');
   const g = {
     key: 'g1',
@@ -304,9 +274,7 @@ test('GameCard: sin bloque Lanzador; enlace «Ver comandos de lanzador» solo co
     );
   const h = render();
   assert.ok(!has(h, 'class="launcher"') && !has(h, 'Lanzador') && !has(h, 'Ver comandos'), h);
-  const l = render({ onShowLaunchers() {} });
-  assert.ok(has(l, '>Ver comandos de lanzador</button>') && has(l, 'aria-label="Ver comandos de lanzador de Juego"'), l);
-  assert.ok(!has(render({ onShowLaunchers() {} }, { ...g, id: '' }), 'Ver comandos'));
+  assert.ok(!has(render({ onShowLaunchers() {} }), 'Ver comandos') && !has(render({}, { ...g, id: '' }), 'lanzador'));
 });
 
 const NOTES = [

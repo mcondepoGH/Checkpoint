@@ -48,3 +48,73 @@
     border-radius: 10px;
   }
 }
+
+// Variante subnavegación (Tabs variant="subnav"): fila subrayada, sin cajas, para dividir una pantalla en secciones; no se confunde con
+// las pestañas normales (filtros). Un solo sitio de estilo; colores del tema. Si no cabe (último recurso), la fila hace scroll interno.
+.uitabs.subnav {
+  gap: v.$gap;
+  > .uitabs-list {
+    flex-wrap: nowrap;
+    gap: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-bottom: 1px solid var(--border);
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+  .uitab {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: v.$fs-body;
+    white-space: nowrap;
+    padding: 0 0.9rem;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    border-radius: 0;
+    margin-bottom: -1px;
+    &.active {
+      background: none;
+      color: var(--text);
+      border-bottom-color: var(--accent);
+    }
+    &:focus-visible {
+      box-shadow: inset 0 0 0 2px var(--accent);
+    }
+  }
+  > .uitabs-panel {
+    display: block;
+    &[hidden] {
+      display: none;
+    }
+  }
+}
+.uitab-dot {
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--warn);
+}
+.uitab-short {
+  display: none;
+}
+@media (max-width: v.$bp-sm) {
+  .uitabs.subnav .uitab {
+    font-size: v.$fs-hint;
+    padding: 0 0.6rem;
+  }
+  .uitab-full {
+    display: none;
+  }
+  .uitab-short {
+    display: inline;
+  }
+}
+@media (max-width: v.$bp-xs) {
+  .uitabs.subnav .uitab {
+    padding: 0 0.45rem;
+  }
+}

@@ -31,6 +31,7 @@ export default function App() {
   const [tab, setTab] = useState('sync');
   const [loaded, setLoaded] = useState({ version: '', config: { devices: {}, games: {} }, error: null });
   const [latest, setLatest] = useState(null); // última versión de config.yaml anunciada por el servidor (SSE)
+  const [firstUse, setFirstUse] = useState(false); // sin dispositivos al entrar: Configuración abre en Biblioteca
   const [dirty, setDirty] = useState(false); // borrador de Configuración con cambios sin guardar
   const [error, setError] = useState(null); // error de la API (se traduce al pintar)
   const [updates, setUpdates] = useState(null); // estado de /api/updates; un fallo aquí nunca molesta
@@ -45,7 +46,10 @@ export default function App() {
       const r = await getConfig();
       setLoaded(r);
       setError(null);
-      if (first && Object.keys(r.config.devices).length === 0) setTab('settings');
+      if (first && Object.keys(r.config.devices).length === 0) {
+        setTab('settings');
+        setFirstUse(true);
+      }
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) setAuthed(false);
       else setError(e);
@@ -202,6 +206,7 @@ export default function App() {
             onDirty={setDirty}
             updates={updates}
             onUpdates={setUpdates}
+            firstUse={firstUse}
           />
         </div>
         {tab === 'sync' && <Sync config={config} watch={watch} onGoSettings={() => setTab('settings')} />}
