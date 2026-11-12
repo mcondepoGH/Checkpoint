@@ -1,4 +1,4 @@
-# npm y pip: mensual; las actualizaciones minor y patch van en un solo PR agrupado y cada major en su propio PR, salvo react con react-dom y vite con @vitejs/*, que llegan agrupados como majors porque son dependencias de pares acopladas (un PR suelto rompe `npm ci`). docker y github-actions: semanales y agrupados. Todos los PRs se revisan y fusionan a mano (sin auto-merge).
+# npm y pip: mensual; las actualizaciones minor y patch van en un solo PR agrupado y cada major en su propio PR, salvo react con react-dom y vite con @vitejs/*, que llegan agrupados como majors porque son dependencias de pares acopladas (un PR suelto rompe `npm ci`). docker y github-actions: semanales y agrupados. Se ignoran los majors de eslint, @eslint/js, react y react-dom (ver `ignore`). Todos los PRs se revisan y fusionan a mano (sin auto-merge).
 version: 2
 updates:
   - package-ecosystem: npm
@@ -22,6 +22,13 @@ updates:
       - dependency-name: "eslint"
         update-types: ["version-update:semver-major"]
       - dependency-name: "@eslint/js"
+        update-types: ["version-update:semver-major"]
+      # React 19 añade ~80 KB al bundle propio y hace fallar `check:size` (presupuesto 363000 B, con
+      # React 19 ~410000 B). Al levantar esta regla hay que subir el presupuesto en
+      # `frontend/scripts/check-bundle-size.mjs` (y mirar los avisos de `npm audit` del grupo react).
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "react-dom"
         update-types: ["version-update:semver-major"]
   - package-ecosystem: pip
     directory: /backend
