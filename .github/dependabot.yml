@@ -1,20 +1,30 @@
-# Actualizaciones semanales y agrupadas. Todos los PRs se revisan y fusionan a mano (sin auto-merge).
+# npm y pip: mensual; las actualizaciones minor y patch van en un solo PR agrupado y cada major en su propio PR. docker y github-actions: semanales y agrupados. Todos los PRs se revisan y fusionan a mano (sin auto-merge).
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /frontend
     schedule:
-      interval: weekly
+      interval: monthly
     groups:
-      npm:
+      minor-and-patch:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
+    ignore:
+      # eslint-plugin-jsx-a11y y eslint-plugin-react solo admiten eslint hasta la 9 en sus peers
+      # (eslint 10 rompe `npm ci` con ERESOLVE). Revisar cuando ambos admitan eslint 10; al levantar
+      # esta regla hay que adaptar `src/lib/clipboard.js` (línea 19, regla `no-useless-assignment` de eslint 10).
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@eslint/js"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: pip
     directory: /backend
     schedule:
-      interval: weekly
+      interval: monthly
     groups:
-      pip:
+      minor-and-patch:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
   - package-ecosystem: docker
     directory: /
     schedule:
