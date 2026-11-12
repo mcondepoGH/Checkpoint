@@ -1,5 +1,5 @@
 # --- 1) build del frontend (React + SCSS con sass) ---
-FROM node:22-alpine AS web
+FROM node:25-alpine AS web
 WORKDIR /web
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --no-audit --no-fund
@@ -7,7 +7,7 @@ COPY frontend/ ./
 RUN npm run build
 
 # --- 2) runtime ---
-FROM python:3.12-alpine
+FROM python:3.15-alpine
 RUN apk add --no-cache openssh-client rsync tar tzdata su-exec \
  && pip install --no-cache-dir --upgrade pip
 ARG PUID=1000
