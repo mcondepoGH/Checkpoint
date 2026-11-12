@@ -1,0 +1,164 @@
+name: Trivy
+
+# Escaneo de vulnerabilidades con Trivy del directorio o de la imagen que publica un release.
+# Es un workflow reutilizable: se llama desde el release.yml de cada proyecto y NO bloquea el
+# release (exit-code 0, informativo). Deja un resumen en el job y el informe JSON como artefacto
+# `trivy-report`, que security-issues convierte en issues con plazo.
+#
+# Ejemplo de llamada (el job llamador debe dar al menos `contents: read`):
+#   trivy:
+#     needs: release
+#     permissions:
+#       contents: read
+#     uses: ./.github/workflows/trivy-release.yml
+#     with:
+#       scan-type: image
+#       scan-ref: ghcr.io/owner/app:v1.2.3   # la imagen debe estar ya publicada
+#
+# Imágenes privadas en GHCR: si `scan-ref` empieza por `ghcr.io/`, los pasos de imagen exportan
+# TRIVY_USERNAME (github.actor) y TRIVY_PASSWORD (github.token); sin ello Trivy falla con imágenes
+# privadas. El token solo se envía a ghcr.io, nunca a otro registro. El llamador debe dar además
+# `packages: read` en su job (un workflow reutilizable no puede ampliar permisos).
+#
+# Usa la acción oficial aquasecurity/trivy-action. Su etiqueta v0.36.0 existe y está fijada por
+# SHA; la acción instala Trivy con aquasecurity/setup-trivy v0.2.6 (la v0.2.1 ya no existe). La
+# versión de Trivy por defecto es v0.70.0 (existe, comprobada); cámbiala con la entrada
+# `trivy-version`. Con `sarif: true` se genera además un SARIF como artefacto; subirlo a
+# Code scanning exige `security-events: write` en el llamador y GitHub Advanced Security en repos
+# privados, por eso no se hace aquí.
+on:
+  workflow_call:
+    inputs:
+      scan-type:
+        description: "fs (directorio del repo) o image (imagen ya publicada)"
+        type: string
+        default: fs
+      scan-ref:
+        description: "Directorio (fs) o referencia de la imagen (image)"
+        type: string
+        default: "."
+      severity:
+        description: "Gravedades a informar, separadas por comas"
+        type: string
+        default: "CRITICAL,HIGH"
+      ignore-unfixed:
+        description: "Ignorar vulnerabilidades sin versión corregida"
+        type: boolean
+        default: false
+      sarif:
+        description: "Generar además un informe SARIF como artefacto"
+        type: boolean
+        default: false
+      trivy-version:
+        description: "Versión de Trivy; vacío usa v0.70.0"
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+  packages: read   # un workflow reutilizable solo puede reducir los permisos del llamador: sin esto, github.token no lee imágenes privadas de GHCR
+
+jobs:
+  trivy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: ${{ inputs.scan-type == 'fs' }}
+        with:
+          persist-credentials: false
+
+      - name: Trivy (directorio)
+        if: ${{ inputs.scan-type == 'fs' }}
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: ${{ inputs.scan-ref }}
+          scanners: vuln
+          format: json
+          output: trivy-report.json
+          severity: ${{ inputs.severity }}
+          ignore-unfixed: ${{ inputs.ignore-unfixed }}
+          exit-code: "0"
+          version: ${{ inputs.trivy-version != '' && inputs.trivy-version || 'v0.70.0' }}
+
+      - name: Trivy (imagen)
+        if: ${{ inputs.scan-type == 'image' }}
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TRIVY_USERNAME: ${{ startsWith(inputs.scan-ref, 'ghcr.io/') && github.actor || '' }}
+          TRIVY_PASSWORD: ${{ startsWith(inputs.scan-ref, 'ghcr.io/') && github.token || '' }}
+        with:
+          scan-type: image
+          image-ref: ${{ inputs.scan-ref }}
+          scanners: vuln
+          format: json
+          output: trivy-report.json
+          severity: ${{ inputs.severity }}
+          ignore-unfixed: ${{ inputs.ignore-unfixed }}
+          exit-code: "0"
+          version: ${{ inputs.trivy-version != '' && inputs.trivy-version || 'v0.70.0' }}
+
+      - name: Trivy SARIF (opcional)
+        if: ${{ inputs.sarif && inputs.scan-type == 'fs' }}
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: ${{ inputs.scan-ref }}
+          scanners: vuln
+          format: sarif
+          output: trivy.sarif
+          severity: ${{ inputs.severity }}
+          ignore-unfixed: ${{ inputs.ignore-unfixed }}
+          limit-severities-for-sarif: true
+          exit-code: "0"
+          version: ${{ inputs.trivy-version != '' && inputs.trivy-version || 'v0.70.0' }}
+
+      - name: Trivy SARIF de la imagen (opcional)
+        if: ${{ inputs.sarif && inputs.scan-type == 'image' }}
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        env:
+          TRIVY_USERNAME: ${{ startsWith(inputs.scan-ref, 'ghcr.io/') && github.actor || '' }}
+          TRIVY_PASSWORD: ${{ startsWith(inputs.scan-ref, 'ghcr.io/') && github.token || '' }}
+        with:
+          scan-type: image
+          image-ref: ${{ inputs.scan-ref }}
+          scanners: vuln
+          format: sarif
+          output: trivy.sarif
+          severity: ${{ inputs.severity }}
+          ignore-unfixed: ${{ inputs.ignore-unfixed }}
+          limit-severities-for-sarif: true
+          exit-code: "0"
+          version: ${{ inputs.trivy-version != '' && inputs.trivy-version || 'v0.70.0' }}
+
+      - name: Resumen
+        if: ${{ always() && hashFiles('trivy-report.json') != '' }}
+        run: |
+          set -uo pipefail
+          {
+            echo "## Trivy"
+            echo
+            total="$(jq '[.Results[]?.Vulnerabilities[]?] | length' trivy-report.json)"
+            echo "Vulnerabilidades encontradas: ${total}"
+            echo
+            if [ "${total}" -gt 0 ]; then
+              echo "| Gravedad | Paquete | Instalada | Corregida | ID |"
+              echo "|---|---|---|---|---|"
+              jq -r '[.Results[]?.Vulnerabilities[]?] | sort_by(.Severity) | .[0:50][]
+                | "| \(.Severity) | \(.PkgName) | \(.InstalledVersion) | \(.FixedVersion // "-") | \(.VulnerabilityID) |"' trivy-report.json
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ always() && hashFiles('trivy-report.json') != '' }}
+        with:
+          name: trivy-report
+          path: trivy-report.json
+          retention-days: 14
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ always() && hashFiles('trivy.sarif') != '' }}
+        with:
+          name: trivy-sarif
+          path: trivy.sarif
+          retention-days: 14

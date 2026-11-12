@@ -1,4 +1,4 @@
-# npm y pip: mensual; las actualizaciones minor y patch van en un solo PR agrupado y cada major en su propio PR, salvo react con react-dom y vite con @vitejs/*, que llegan agrupados como majors porque son dependencias de pares acopladas (un PR suelto rompe `npm ci`). docker y github-actions: semanales y agrupados. Se ignoran los majors de eslint, @eslint/js, react y react-dom (ver `ignore`). Todos los PRs se revisan y fusionan a mano (sin auto-merge).
+# npm y pip: mensual; las actualizaciones minor y patch van en un solo PR agrupado y cada major en su propio PR, salvo react con react-dom y vite con @vitejs/*, que llegan agrupados como majors porque son dependencias de pares acopladas (un PR suelto rompe `npm ci`). docker y github-actions: semanales y agrupados (en github-actions, con 7 días de espera tras publicarse cada versión, `upload-artifact` y `download-artifact` en su propio grupo y sin majors de ellos ni de `codeql-action`). Se ignoran los majors de eslint, @eslint/js, react y react-dom (ver `ignore`). Todos los PRs se revisan y fusionan a mano (sin auto-merge).
 version: 2
 updates:
   - package-ecosystem: npm
@@ -49,6 +49,30 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # Espera de 7 días tras publicarse una versión. Para github-actions solo vale default-days
+    # (las claves semver-*-days no se admiten en este ecosistema).
+    cooldown:
+      default-days: 7
     groups:
+      # El par de artefactos sube junto (minor y patch); va antes del grupo comodín.
+      artifact-pair:
+        patterns: ["actions/upload-artifact", "actions/download-artifact"]
+        update-types: ["minor", "patch"]
       github-actions:
         patterns: ["*"]
+        exclude-patterns: ["actions/upload-artifact", "actions/download-artifact"]
+    ignore:
+      # upload-artifact y download-artifact: los majors se suben a mano, juntos, tras probar
+      # que security-issues (workflow_run) sigue encontrando los artefactos.
+      - dependency-name: "actions/upload-artifact"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "actions/download-artifact"
+        update-types: ["version-update:semver-major"]
+      # trivy-action y codeql-action instalan o descargan binarios; solo entran los patch.
+      # revisión manual: una acción compuesta con acciones anidadas ya falló por una dependencia retirada
+      - dependency-name: "aquasecurity/trivy-action"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "aquasecurity/setup-trivy"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "github/codeql-action"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]

@@ -1,11 +1,20 @@
 name: Gitleaks
 
-# Busca secretos en todo el historial (no solo en el último commit).
+# Busca secretos con el binario oficial de gitleaks (sin gitleaks-action, que exige licencia en
+# organizaciones). El historial se descarga completo: la ejecución manual y la programada
+# escanean todo el historial; en PR y push solo el rango nuevo. Si hay un hallazgo, el job
+# falla: ROTA la credencial (limpiar el historial no basta). El informe va redactado (--redact)
+# y se sube como artefacto `gitleaks-report` para que security-issues abra el issue.
+# Para actualizar gitleaks cambia GITLEAKS_VERSION y GITLEAKS_SHA256 a la vez (Dependabot no
+# actualiza este binario): el hash está en gitleaks_<versión>_checksums.txt de la release.
 on:
   push:
     branches: ["**"]
   pull_request:
     branches: [main]
+  schedule:
+    - cron: "43 3 * * 1"   # semanal, lunes 03:43 UTC: todo el historial
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -13,10 +22,57 @@ permissions:
 jobs:
   gitleaks:
     runs-on: ubuntu-latest
+    env:
+      GITLEAKS_VERSION: "8.30.1"
+      GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"   # gitleaks_8.30.1_linux_x64.tar.gz
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v3
+          persist-credentials: false
+
+      - name: Instalar gitleaks (versión y hash fijados)
+        run: |
+          set -euo pipefail
+          file="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL --retry 3 -o "${RUNNER_TEMP}/${file}" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/${file}"
+          echo "${GITLEAKS_SHA256}  ${RUNNER_TEMP}/${file}" | sha256sum -c -
+          mkdir -p "${RUNNER_TEMP}/gitleaks-bin"
+          tar -xzf "${RUNNER_TEMP}/${file}" -C "${RUNNER_TEMP}/gitleaks-bin" gitleaks
+          echo "${RUNNER_TEMP}/gitleaks-bin" >> "$GITHUB_PATH"
+
+      - name: Escanear
+        id: scan
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+          PUSH_SHA: ${{ github.sha }}
+        run: |
+          set -uo pipefail
+          range=""
+          case "$EVENT" in
+            pull_request) range="${BASE_SHA}..${HEAD_SHA}" ;;
+            push)
+              if [ -n "$BEFORE_SHA" ] && ! grep -Eq '^0+$' <<<"$BEFORE_SHA" \
+                 && git cat-file -e "${BEFORE_SHA}^{commit}" 2>/dev/null; then
+                range="${BEFORE_SHA}..${PUSH_SHA}"
+              fi ;;
+          esac
+          args=(git --redact --no-banner --exit-code 1 --report-format json --report-path gitleaks-report.json)
+          if [ -n "$range" ]; then args+=(--log-opts "$range"); fi
+          status=0
+          gitleaks "${args[@]}" . || status=$?
+          if [ "$status" -ne 0 ]; then
+            echo "::error::gitleaks ha detectado secretos (o ha fallado, código ${status}). ROTA la credencial: quitarla del código no basta."
+          fi
+          exit "$status"
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ always() && hashFiles('gitleaks-report.json') != '' }}
+        with:
+          name: gitleaks-report
+          path: gitleaks-report.json
+          retention-days: 14
