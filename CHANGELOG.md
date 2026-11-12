@@ -2,11 +2,13 @@
 
 ## Sin publicar
 
+## 1.10.4 (2026-11-12)
+
 ### Cambios
 
 - Trivy vuelve al release, ahora como workflow reutilizable `trivy-release.yml` (de repo-warden): escanea la imagen ya publicada en GHCR con `aquasecurity/trivy-action` v0.36.0 fijada por SHA (instala `setup-trivy` v0.2.6, que existe; la v0.2.1 que rompió el release no se usa), se autentica en GHCR por si la imagen es privada y es informativo (no bloquea ni deshace la Release). El informe `trivy-report` lo recoge `security-issues`. Dependabot solo propone patch de las acciones de Trivy.
 - `ci.yml`: se quitan los jobs `audit` y `audit-issue`, que duplicaban a `audit.yml` (npm audit y pip-audit, con `--audit-level=high` en producción) y `security-issues.yml` (issue con plazo por hallazgo). Quedan solo `backend` y `frontend`.
-- Acciones de `ci.yml` y `release.yml` fijadas por SHA con el comentario de versión (última de la misma major: `checkout` v4.4.0, `setup-python` v5.6.0, `setup-node` v4.4.0 y las de `docker/*`).
+- Acciones de `ci.yml` y `release.yml` fijadas por SHA con el comentario de versión (las versiones que ya dejó Dependabot en main: `checkout` v7.0.1, `setup-python` y `setup-node` v7.1.0, `docker/setup-buildx-action` v4.4.1, `docker/login-action` v4.8.0, `docker/metadata-action` v6.2.0 y `docker/build-push-action` v7.4.0).
 - `release.yml`: la comprobación del formato del tag usa una here-string en lugar de `printf | grep -q`, que con `pipefail` puede fallar de forma intermitente por SIGPIPE.
 - Hallazgos de seguridad convertidos en issues con plazo: workflows nuevos `audit.yml` (npm audit y pip-audit semanal, en PR y push, con informes JSON como artefactos y un lote mensual de dependencias de desarrollo) y `security-issues.yml` (cuando terminan Audit, Gitleaks y Release, abre un issue por hallazgo sin duplicar, con plazo: 48 h para crítico y alto, siguiente versión para moderado, mensual para bajo y desarrollo, inmediato para un secreto) con `.github/scripts/open-issues.sh`. Los plazos se cambian con las variables del repositorio `SLA_CRITICAL_HIGH_HOURS`, `SLA_MODERATE` y `SLA_LOW`.
 - Gitleaks: en lugar de `gitleaks-action`, el binario oficial 8.30.1 con SHA-256 fijado (se actualiza a mano: versión y hash a la vez), historial completo en la ejecución semanal y manual y solo el rango nuevo en push y PR, e informe redactado como artefacto `gitleaks-report`.
