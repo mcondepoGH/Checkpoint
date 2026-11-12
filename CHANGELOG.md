@@ -10,7 +10,7 @@
 
 ### Arreglos
 
-- El workflow de release seguía fallando en `Set up job` porque la acción `aquasecurity/trivy-action` es compuesta y su acción anidada `aquasecurity/setup-trivy@v0.2.1` ya no existe. Se quita Trivy del release (volverá en un workflow aparte, para que un fallo suyo no bloquee publicar). Por eso la imagen en GHCR y la release de GitHub de la 1.10.1 y la 1.10.2 no se publicaron, y esta versión las publica.
+- El workflow de release seguía fallando en `Set up job` porque la acción `aquasecurity/trivy-action` es compuesta y su acción anidada `aquasecurity/setup-trivy@v0.2.1` ya no existe. Se quita Trivy del release y se retira del proyecto por ahora: no hay escaneo de la imagen en el release. Por eso la imagen en GHCR y la release de GitHub de la 1.10.1 y la 1.10.2 no se publicaron, y esta versión las publica.
 
 ## 1.10.2 (2026-11-12)
 
