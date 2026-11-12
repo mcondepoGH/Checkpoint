@@ -2,11 +2,17 @@
 
 ## Sin publicar
 
+## 1.10.1 (2026-11-12)
+
 ### Cambios
 
 - Reorganización interna del código, sin cambios visibles ni de comportamiento (API, `config.yaml`, CLI y pantallas iguales). Backend: `main.py` pasa a ser solo la fábrica de la app; el código se reparte en `api/` (routers y documentación), `services/`, `sync/` (con `engine` dividido en `decide`, `fingerprint`, `versions`, `baseline` y `errors`, y `transport/` en `base`, `posix`, `windows` y `local`), `config/`, `users/` y `core/`. Frontend: `src/` pasa a `lib/`, `hooks/`, `components/ui/`, `components/<zona>/` y `pages/`, con los parciales SCSS junto a cada componente, el cliente de la API en `lib/api/<recurso>.js`, el alias de imports `#src/`, `useTheme` y `useConfigDraft` extraídos y los tests en espejo de `src/`.
 - Documentación: nuevo `docs/structure.md` (estructura, reglas de dependencia y cómo añadir módulos) y mapa del código en el README; `docs/i18n-inventario.md` pasa a `docs/i18n-inventory.md`.
 - Tests: nuevos tests de arquitectura (`backend/tests/test_architecture.py`, `frontend/test/architecture.test.mjs`) y utilidades compartidas de los tests del frontend en `frontend/test/helpers/`.
+- Auditorías de código y dependencias en CI: Dependabot semanal y agrupado (npm, pip, docker y github-actions), job `audit` (`npm audit` y `pip-audit`, también semanal), CodeQL para Python y JavaScript (en PR y semanal), gitleaks sobre el historial completo, y una issue automática (sin duplicar) cuando falla el job `audit` en `main` o en la ejecución semanal. `release.yml` añade Trivy informativo sobre la imagen publicada (no bloquea).
+- Calidad de código: ruff (backend) y ESLint con react-hooks y jsx-a11y (frontend), Prettier con `.editorconfig` y scripts `lint`, `format` y `format:check`, todo ejecutado en CI; formato aplicado al código existente (solo formato, con `.git-blame-ignore-revs` para `git blame`). Cobertura con umbrales (backend con `--cov-fail-under=90`; frontend líneas 90 y ramas 88) y presupuesto de tamaño del bundle (`npm run check:size`) en CI.
+- Accesibilidad: arreglos de los avisos jsx-a11y en pestañas, Modal, perfil y vigilancia, CopyBox, notas de actualización y foco inicial del Login, con sus tests.
+- Arreglo: en Versiones, el nombre de una versión nueva ordena siempre después de las existentes (antes podía repetirse en el mismo segundo tras la poda).
 - Las carpetas `config/`, `data/` y `keys/` ya no vienen en el repositorio (se quitan los `.gitkeep`): se crean al arrancar, con Docker o sin él. README y `docker-compose.yml` explican el `mkdir -p config data keys` previo opcional.
 
 ## 1.10.0 (2026-11-10)
