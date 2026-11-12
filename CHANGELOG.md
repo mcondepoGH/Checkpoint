@@ -2,6 +2,8 @@
 
 ## Sin publicar
 
+- Dependabot reconfigurado: npm y pip pasan a mensual con un PR agrupado de minor y patch y un PR aparte por cada major; se ignoran los majors de `eslint` y `@eslint/js` (los plugins jsx-a11y y react solo admiten eslint 9).
+
 ## 1.10.1 (2026-11-12)
 
 ### Cambios
