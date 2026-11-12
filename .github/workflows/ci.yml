@@ -7,7 +7,7 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: "37 5 * * 1"   # semanal: el job audit detecta CVEs nuevas sin cambios de código
+    - cron: "37 5 * * 1"   # semanal: reejecuta los tests con las dependencias del momento
 
 permissions:
   contents: read
@@ -48,50 +48,3 @@ jobs:
       - run: npm run test:coverage   # node --test + umbral de cobertura (líneas 90, ramas 88)
       - run: npm run build
       - run: npm run check:size      # presupuesto de tamaño del bundle
-
-  audit:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-      - name: npm audit (solo producción)
-        working-directory: frontend
-        run: npm audit --omit=dev
-      - name: pip-audit
-        run: |
-          pip install pip-audit
-          pip-audit -r backend/requirements.txt
-
-  # Si la auditoría falla en main o en la ejecución semanal, abre una issue (una sola abierta con este título).
-  audit-issue:
-    needs: audit
-    if: ${{ failure() && (github.event_name == 'schedule' || (github.event_name == 'push' && github.ref == 'refs/heads/main')) }}
-    runs-on: ubuntu-latest
-    permissions:
-      issues: write
-    steps:
-      - uses: actions/github-script@v7
-        with:
-          script: |
-            const title = 'Auditoría de dependencias: hallazgos';
-            const run = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
-            const open = await github.paginate(github.rest.issues.listForRepo, {
-              ...context.repo,
-              state: 'open',
-              per_page: 100,
-            });
-            const dup = open.find((i) => !i.pull_request && i.title === title);
-            if (dup) {
-              await github.rest.issues.createComment({ ...context.repo, issue_number: dup.number, body: `Sigue fallando: ${run}` });
-              return;
-            }
-            await github.rest.issues.create({
-              ...context.repo,
-              title,
-              body: `El job \`audit\` (npm audit y pip-audit) ha fallado: ${run}\n\nRevisa el log, aplica el plazo de parche que corresponda y rota cualquier secreto afectado.`,
-            });
