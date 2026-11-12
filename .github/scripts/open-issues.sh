@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# open-issues.sh: convierte los informes de seguridad en issues de GitHub, uno por hallazgo.
+# open-issues.sh: convierte los informes de seguridad en issues de GitHub: uno por paquete+versión
+# (todos sus CVE juntos) y uno por secreto.
 #
 # Uso: open-issues.sh [--dry-run] [--repo OWNER/REPO] [--run-url URL] [--max-new N] <informe.json>...
 #
@@ -8,11 +9,16 @@
 # JSON de `npm audit` y `pip-audit`), trivy* (`trivy ... -f json`) y gitleaks* (informe JSON).
 # Requiere bash >= 4, jq y, sin --dry-run, gh (con GH_TOKEN) y permiso `issues: write`.
 #
-# Por hallazgo: título `[gravedad] paquete@versión: ID` (o `Secreto detectado: regla en fichero`),
-# etiquetas `security`, `sev:*` y `sla:*`, cuerpo con plazo y pasos. Una marca oculta con la huella
-# del hallazgo evita duplicados; si el issue abierto existe y el plazo nuevo es más estricto, sube
-# sus etiquetas; si el hallazgo ya no aparece en su informe, comenta una vez (NUNCA cierra: cerrar
-# lo decide una persona al publicar el arreglo). Los informes son datos no confiables: los textos
+# Por paquete+versión+objetivo: título `[gravedad máxima] paquete@versión: N CVE (corregido en X)`
+# (o `Secreto detectado: regla en fichero`), etiquetas `security`, `sev:*` y `sla:*` (plazo de la
+# gravedad máxima), cuerpo con la tabla de CVE, la solución y los pasos. Una marca oculta
+# `fp=<huella> src=<fuente> v=2 ids=<hash de los IDs>` evita duplicados: la huella NO incluye los IDs,
+# así los CVE nuevos del mismo paquete+versión no abren otro issue; cuando cambia la lista de IDs
+# se comenta una vez con los nuevos. Si el issue abierto existe y el plazo nuevo es más estricto,
+# sube sus etiquetas; si el paquete ya no aparece en su informe, comenta una vez (NUNCA cierra:
+# cerrar lo decide una persona al publicar el arreglo). Los issues antiguos (un issue por CVE,
+# marca sin `v=`) se tratan como legado: no reciben ese comentario y se avisa de que hay que
+# cerrarlos a mano. Los informes son datos no confiables: los textos
 # se limpian (sin saltos de línea, comillas invertidas ni etiquetas HTML) y el valor de un secreto
 # o su contexto no se leen nunca.
 # Entorno: SLA_CRITICAL_HIGH_HOURS (48), SLA_MODERATE (next-release), SLA_LOW (monthly),
@@ -38,7 +44,7 @@ fi
 DRY=0
 REPO="${GITHUB_REPOSITORY:-}"
 RUN_URL=""
-MAX_NEW=25
+MAX_NEW=10
 FILES=()
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -136,22 +142,59 @@ def raw:
       | {id: ((.url // "") | split("/") | last | if . == "" then (.source | tostring) else . end),
          package: .name, version: (.range // ""), severity: .severity, title: .title,
          fix: ($v.fixAvailable | if type == "object" then "\(.name)@\(.version)" elif . == true then "disponible (npm audit fix)" else "" end),
-         target: ""} ]
+         target: "", eco: "npm", kver: ""} ]
     | unique_by([.id, .package])
   elif $kind == "pip" then
     [ (if type == "array" then . else (.dependencies // []) end)[] | . as $d | ($d.vulns // [])[]
       | {id: .id, package: $d.name, version: $d.version, severity: "", title: (.description // ""),
-         fix: ((.fix_versions // []) | join(", ")), target: ""} ]
+         fix: ((.fix_versions // []) | join(", ")), target: "", eco: "pip", kver: $d.version} ]
   elif $kind == "trivy" then
-    [ (.Results // [])[] | (.Target // "") as $t | (.Vulnerabilities // [])[]
+    [ (.Results // [])[] | (.Target // "") as $t | (.Type // "") as $ty | (.Vulnerabilities // [])[]
       | {id: .VulnerabilityID, package: .PkgName, version: .InstalledVersion, severity: .Severity,
-         title: (.Title // ""), fix: (.FixedVersion // ""), target: $t} ]
+         title: (.Title // ""), fix: (.FixedVersion // ""), target: $t, eco: ($ty | ascii_downcase),
+         kver: .InstalledVersion} ]
   else
     [ .[] | {id: .RuleID, file: .File, line: (.StartLine // 0), commit: ((.Commit // "") | .[0:8]),
              fingerprint: (.Fingerprint // "\(.File):\(.RuleID):\(.StartLine)")} ]
   end;
 
-raw[] |
+def sevrank: {"critical": 0, "high": 1, "moderate": 2, "low": 3}[.];
+def vkey: split("[.+~:_-]"; "g") | map(tonumber? // .);
+# La versión corregida mayor de una lista (cada elemento puede ser "a, b").
+def maxfix: [.[] | split(", ")[] | select(. != "")] | unique | sort_by(vkey) | last // "";
+def cell: gsub("[|]"; "/");
+def pkgsafe: test("^[A-Za-z0-9._+@/-]+$");
+def versafe: test("^[A-Za-z0-9._+:~-]+$");
+def solution($eco; $pkg; $fix):
+  if $fix == "" then "sin solución conocida: documenta la mitigación y la fecha de revisión"
+  elif $eco == "npm" and ($fix | test("^[A-Za-z0-9._+@/-]+@[A-Za-z0-9._+~-]+$")) then
+    "actualizar a \($fix | code) (`npm install \($fix)`)"
+  elif $eco == "npm" then "actualizar a la versión que corrige (`npm audit fix`; revisa los cambios mayores)"
+  elif ($pkg | pkgsafe) and ($fix | versafe) then
+    "actualizar \($pkg | code) a >= \($fix | code)" +
+    (if $eco == "alpine" then " (`apk upgrade \($pkg)`, o reconstruye la imagen con una base más reciente)"
+     elif ($eco == "debian" or $eco == "ubuntu") then " (`apt-get install --only-upgrade \($pkg)`, o reconstruye la imagen con una base más reciente)"
+     elif ($eco == "pip" or $eco == "python-pkg" or $eco == "poetry" or $eco == "pipenv" or $eco == "uv") then " (`pip install -U '\($pkg)>=\($fix)'`)"
+     elif ($eco == "yarn" or $eco == "pnpm" or $eco == "node-pkg") then " (`npm install \($pkg)@\($fix)`)"
+     else " con el gestor de paquetes del ecosistema" end)
+  else "actualizar el paquete a la versión que corrige (\($fix | code))" end;
+
+# Agrupa por paquete + versión instalada + objetivo: un objeto por grupo con sus CVE ordenados
+# por gravedad (y luego por ID), la gravedad máxima y la versión corregida mayor.
+def groups:
+  raw
+  | map(. + {pkgc: (.package | clean(100)), verc: (.version | clean(60)), idc: (.id | clean(60)),
+             ns: (.severity | normsev), fixc: (.fix | clean(120)), kverc: (.kver | clean(60))})
+  | group_by([.pkgc, .kverc, .target])
+  | map(
+      (map({id: .idc, sev: .ns.sev, assumed: .ns.assumed, fix: .fixc, title: .title,
+            r: (.ns.sev | sevrank)}) | unique_by(.id) | sort_by([.r, .id])) as $c
+      | {pkg: .[0].pkgc, kver: .[0].kverc, target: .[0].target, eco: .[0].eco,
+         ver: ([.[].verc] | map(select(. != "")) | unique | join(", ")),
+         cves: $c, sev: $c[0].sev, assumed: ($c | all(.assumed)),
+         fix: ([$c[].fix] | maxfix), top: ($c[0].title | clean(300))});
+
+(if $kind == "gitleaks" then raw else groups end)[] |
   if $kind == "gitleaks" then
     (.id | clean(80)) as $rule | (.file | clean(200)) as $file
     | sla("critical"; "secret") as $s
@@ -175,26 +218,31 @@ raw[] |
          "5. Cierra este issue tras rotar."
        ] | join("\n"))}
   else
-    (.id | clean(60)) as $id | (.package | clean(100)) as $pkg | (.version | clean(60)) as $ver
-    | (.severity | normsev) as $ns
-    | sla($ns.sev; $scope) as $s
-    | {title: "[\($ns.sev)] \($pkg)\(if $ver != "" then "@\($ver)" else "" end): \($id)",
-       sev: $ns.sev, rank: $s.rank, slalabel: $s.label,
-       keyraw: "\($fam)|\($path)|\(.target)|\($id)|\($pkg)",
+    .pkg as $pkg | .ver as $ver | .sev as $sev | .fix as $fix | (.cves | length) as $n
+    | sla($sev; $scope) as $s
+    | {title: ("[\($sev)] \($pkg)\(if $ver != "" then "@\($ver)" else "" end): \($n) CVE\(if $fix != "" then " (corregido en \($fix))" else "" end)" | .[0:250]),
+       sev: $sev, rank: $s.rank, slalabel: $s.label,
+       ids: [.cves[].id],
+       cves: (.cves | map({id, sev, fix})),
+       keyraw: "\($fam)|\($path)|\(.target)|\($pkg)|\(.kver)",
        src: "\($srcname):\($path)",
        body: ([
          "## Hallazgo de seguridad", "",
          "- **Origen**: \($fam | code) (carpeta \($pathtext | code))",
          "- **Paquete**: \($pkg | code)",
          "- **Versión o rango afectado**: \(if $ver == "" then "no informada" else ($ver | code) end)",
-         "- **Identificador**: \($id | code)",
-         "- **Gravedad**: \($ns.sev)\(if $ns.assumed then " (la herramienta no informa la gravedad: se trata como moderate)" else "" end)",
+         "- **Vulnerabilidades**: \($n)",
+         "- **Gravedad máxima**: \($sev)\(if .assumed then " (la herramienta no informa la gravedad: se trata como moderate)" else "" end)",
          "- **Ámbito**: \(if $scope == "production" then "producción" else "desarrollo" end)",
-         "- **Plazo**: \($s.text)",
-         "- **Solución**: \(if (.fix | clean(120)) == "" then "sin solución conocida" else (.fix | clean(120) | code) end)"
-       ] + (if (.title | clean(300)) != "" then ["- **Descripción**: \(.title | clean(300) | code)"] else [] end)
+         "- **Plazo**: \($s.text) (según la gravedad máxima)",
+         "- **Solución**: \(solution(.eco; $pkg; $fix))"
+       ] + (if .top != "" then ["- **Descripción de la más grave**: \(.top | code)"] else [] end)
          + (if (.target | clean(200)) != "" then ["- **Objetivo analizado**: \(.target | clean(200) | code)"] else [] end)
          + (if $run != "" then ["- **Detectado en**: \($run)"] else [] end) + [
+         "", "## Vulnerabilidades", "",
+         "| ID | Gravedad | Corregido en |", "|---|---|---|"
+       ] + (.cves[0:100] | map("| \(.id | cell | code) | \(.sev) | \(if .fix == "" then "sin solución conocida" else (.fix | cell | code) end) |"))
+         + (if $n > 100 then ["", "(y \($n - 100) más; la lista completa está en el informe)"] else [] end) + [
          "", "## Pasos", "",
          "1. Actualiza la dependencia al mínimo parcheado; si no hay parche, documenta la mitigación y la fecha de revisión.",
          "2. Publica el arreglo con el flujo normal de versiones.",
@@ -225,8 +273,10 @@ CREATED=0
 EXISTING=0
 UPDATED=0
 RESOLVED=0
+NEWIDS=0
+LEGACY=0
 SKIPPED_LIMIT=0
-declare -A OPEN_NUM=() OPEN_LABELS=() OPEN_SRC=() CUR=() SRC_SEEN=() LABEL_DONE=()
+declare -A OPEN_NUM=() OPEN_LABELS=() OPEN_SRC=() OPEN_V=() OPEN_IDS=() CUR=() SRC_SEEN=() LABEL_DONE=()
 BODY_FILE="$(mktemp)"
 trap 'rm -f "$BODY_FILE"' EXIT
 
@@ -261,23 +311,56 @@ rank_of_label() { # etiqueta sla:* -> rango, o vacío si no se reconoce
 # --- issues abiertos ----------------------------------------------------------------------------------
 if [ "$DRY" -eq 0 ]; then
   if issues_json="$(ghc issue list --repo "$REPO" --state open --label security --limit 1000 --json number,body,labels)"; then
-    while IFS=$'\t' read -r num fp src labels; do
+    # Campos vacíos como "-" (el tabulador es espacio en blanco para read y colapsaría los vacíos).
+    while IFS=$'\t' read -r num fp src v ids labels; do
       [ -n "$fp" ] || continue
       OPEN_NUM[$fp]="$num"
       OPEN_SRC[$fp]="$src"
+      [ "$v" = "-" ] && v=""
+      [ "$ids" = "-" ] && ids=""
+      OPEN_V[$fp]="$v"
+      OPEN_IDS[$fp]="$ids"
       OPEN_LABELS[$fp]="$labels"
     done < <(printf '%s' "$issues_json" | jq -r '.[] | . as $i
-      | ($i.body // "" | [match("<!-- repo-warden:fp=([0-9a-f]{16}) src=([A-Za-z0-9._:/-]+) -->"; "g")] | last) as $m
+      | ($i.body // "" | [match("<!-- repo-warden:fp=([0-9a-f]{16}) src=([A-Za-z0-9._:/-]+)( v=([0-9]+))?( ids=([0-9a-f]{16}))? -->"; "g")] | last) as $m
       | select($m != null)
-      | [$i.number, $m.captures[0].string, $m.captures[1].string, ([$i.labels[]?.name] | join(","))] | @tsv' 2>/dev/null)
+      | [$i.number, $m.captures[0].string, $m.captures[1].string, ($m.captures[3].string // "-"), ($m.captures[5].string // "-"),
+         (([$i.labels[]?.name] | join(",")) | if . == "" then "-" else . end)] | @tsv' 2>/dev/null)
   else
     err "no se pudo listar los issues abiertos"
   fi
 fi
 
+# Comenta en un issue existente los CVE del hallazgo que ni su cuerpo ni sus comentarios mencionan
+# todavía (así cada cambio se comunica una sola vez). Nunca edita ni cierra.
+notify_new_ids() { # $1 = número, $2 = JSON del hallazgo
+  local num="$1" f="$2" view added
+  if ! view="$(ghc issue view "$num" --repo "$REPO" --json body,comments 2>/dev/null)"; then
+    warn "no se pudo leer el issue #$num para comprobar los CVE nuevos"
+    return 0
+  fi
+  added="$(jq -rn --argjson view "$view" --argjson f "$f" --arg run "$RUN_URL" '
+    ([$view.body // ""] + [$view.comments[]?.body // ""] | join("\n")
+      | [scan("[A-Za-z0-9_.:-]+") | sub("[.:-]+$"; "")]) as $seen
+    | [$f.cves[] | select(.id as $i | $seen | index($i) | not)] as $new
+    | if ($new | length) == 0 then empty else
+      ([ "Desde la última ejecución\(if $run != "" then " (\($run))" else "" end) aparecen \($new | length) CVE nuevos del mismo paquete y versión (no se edita el cuerpo del issue):", "",
+         "| ID | Gravedad | Corregido en |", "|---|---|---|" ]
+       + ($new[0:100] | map("| `\(.id | gsub("[|`]"; "/"))` | \(.sev) | \(if .fix == "" then "sin solución conocida" else "`\(.fix | gsub("[|`]"; "/"))`" end) |"))
+       + (if ($new | length) > 100 then ["", "(y \(($new | length) - 100) más)"] else [] end)
+       | join("\n")) end' 2>/dev/null)"
+  [ -n "$added" ] || return 0
+  printf '%s\n' "$added" >"$BODY_FILE"
+  if ghc issue comment "$num" --repo "$REPO" --body-file "$BODY_FILE" >/dev/null; then
+    NEWIDS=$((NEWIDS + 1))
+  else
+    err "no se pudo comentar el issue #$num"
+  fi
+}
+
 # --- procesar informes ------------------------------------------------------------------------------------
 process_finding() { # $1 = JSON del hallazgo
-  local f="$1" title body sev rank slalabel src keyraw fp labels
+  local f="$1" title body sev rank slalabel src keyraw fp labels idshash
   title="$(jq -r '.title' <<<"$f")"
   sev="$(jq -r '.sev' <<<"$f")"
   rank="$(jq -r '.rank' <<<"$f")"
@@ -286,6 +369,10 @@ process_finding() { # $1 = JSON del hallazgo
   keyraw="$(jq -r '.keyraw' <<<"$f")"
   body="$(jq -r '.body' <<<"$f")"
   fp="$(printf '%s' "$keyraw" | sha256sum | cut -c1-16)"
+  idshash=""
+  if [ "$(jq -r '(.ids // []) | length' <<<"$f")" -gt 0 ]; then
+    idshash="$(jq -r '.ids[]' <<<"$f" | LC_ALL=C sort -u | sha256sum | cut -c1-16)"
+  fi
   CUR[$fp]=1
   TOTAL=$((TOTAL + 1))
 
@@ -329,6 +416,9 @@ process_finding() { # $1 = JSON del hallazgo
         fi
       fi
     fi
+    if [ "$DRY" -eq 0 ] && [ -n "$idshash" ] && [ -n "${OPEN_IDS[$fp]:-}" ] && [ "${OPEN_IDS[$fp]}" != "$idshash" ]; then
+      notify_new_ids "$num" "$f"
+    fi
     return 0
   fi
 
@@ -344,7 +434,7 @@ process_finding() { # $1 = JSON del hallazgo
     OPEN_LABELS[$fp]="security,sev:$sev,$slalabel"
     return 0
   fi
-  printf '%s\n<!-- repo-warden:fp=%s src=%s -->\n' "$body" "$fp" "$src" >"$BODY_FILE"
+  printf '%s\n<!-- repo-warden:fp=%s src=%s v=2%s -->\n' "$body" "$fp" "$src" "${idshash:+ ids=$idshash}" >"$BODY_FILE"
   local l url
   for l in "${labels[@]}"; do ensure_label "$l"; done
   local -a cmd=(issue create --repo "$REPO" --title "$title" --body-file "$BODY_FILE")
@@ -416,6 +506,12 @@ if [ "$DRY" -eq 0 ]; then
     [ -n "${SRC_SEEN[${OPEN_SRC[$fp]}]:-}" ] || continue
     num="${OPEN_NUM[$fp]}"
     grep -Eq '^[0-9]+$' <<<"$num" || continue
+    # Formato antiguo (un issue por CVE, marca sin v=): su huella ya no se genera, así que "ya no
+    # aparece" sería engañoso. Los secretos conservan la huella y siguen el flujo normal.
+    if [ -z "${OPEN_V[$fp]:-}" ] && [ "${OPEN_SRC[$fp]%%:*}" != "gitleaks" ]; then
+      LEGACY=$((LEGACY + 1))
+      continue
+    fi
     if comments_json="$(ghc issue view "$num" --repo "$REPO" --json comments 2>/dev/null)" &&
       jq -e 'any(.comments[]?; (.body // "") | contains("<!-- repo-warden:resolved -->"))' <<<"$comments_json" >/dev/null 2>&1; then
       continue
@@ -435,6 +531,9 @@ fi
 if [ "$SKIPPED_LIMIT" -gt 0 ]; then
   warn "límite de $MAX_NEW issues nuevos por ejecución: $SKIPPED_LIMIT hallazgos sin crear (se crearán en las siguientes ejecuciones)."
 fi
-echo "Resumen: $TOTAL hallazgos, $CREATED creados, $EXISTING existentes, $UPDATED con plazo actualizado, $RESOLVED con aviso de resuelto, $SKIPPED_LIMIT sin crear por el límite."
+if [ "$LEGACY" -gt 0 ]; then
+  warn "$LEGACY issues abiertos con formato antiguo (uno por CVE, marca sin v=): no se comentan; ciérralos a mano cuando revises el informe nuevo (un issue por paquete+versión)."
+fi
+echo "Resumen: $TOTAL hallazgos, $CREATED creados, $EXISTING existentes, $UPDATED con plazo actualizado, $NEWIDS con CVE nuevos comentados, $RESOLVED con aviso de resuelto, $SKIPPED_LIMIT sin crear por el límite."
 [ "$ERRORS" -eq 0 ] || exit 1
 exit 0
