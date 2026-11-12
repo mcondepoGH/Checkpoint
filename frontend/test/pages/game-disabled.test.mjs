@@ -75,8 +75,6 @@ test('LauncherBlock: nota «Desactivado: el aviso se omitirá» solo con el jueg
   const g = (o = {}) => ({ sel: 'j-1', id: 'j-1', name: 'J', process: 'j.exe', devices: [{ id: 'pc', name: 'PC' }], ...o });
   const props = (game) => ({
     games: [game],
-    selected: 'j-1',
-    onSelect() {},
     active: true,
     defaultHub: 'http://h:1',
     initial: { loaded: true, key: 'ck_abc', status: null },

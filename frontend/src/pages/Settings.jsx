@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { diffConfig, testDevice as testDeviceApi } from '#src/lib/api/config.js';
 import { deviceId, errorsFor, fromConfig, gamesUsing, idOf, nameOf, pathsOf, removeDevice } from '#src/components/config/draft.js';
 import useConfigDraft from '#src/components/config/useConfigDraft.js';
-import { loadGameSel, saveGameSel } from '#src/components/launchers/launchers.js';
 import SaveDialog from '#src/components/config/SaveDialog.jsx';
 import YamlDialog from '#src/components/config/YamlDialog.jsx';
 import BackupsDialog from '#src/components/config/BackupsDialog.jsx';
@@ -50,23 +49,7 @@ export default function Settings({
   useEffect(() => {
     if (firstUse) setSub('library'); // el primer uso se conoce al cargar la configuración, con Settings ya montado
   }, [firstUse]);
-  const [launcherGame, setLauncherGame] = useState(() => {
-    try {
-      return loadGameSel(window.localStorage);
-    } catch {
-      return '';
-    }
-  });
-  const chooseLauncherGame = (sel) => {
-    setLauncherGame(sel);
-    try {
-      saveGameSel(window.localStorage, sel);
-    } catch {
-      /* sin almacenamiento */
-    }
-  };
-
-  // Juegos para el panel de lanzadores: dispositivos con nombre e id (los que el lanzador puede indicar en ?device=).
+  // Juegos para Lanzadores (una fila por juego): dispositivos con nombre e id (los que el lanzador puede indicar en ?device=).
   const launcherGames = useMemo(
     () =>
       draft.games.map((g) => ({
@@ -226,7 +209,7 @@ export default function Settings({
               }}
             />
           ),
-          launchers: sub === 'launchers' ? <Launchers games={launcherGames} selected={launcherGame} onSelect={chooseLauncherGame} /> : null,
+          launchers: sub === 'launchers' ? <Launchers games={launcherGames} /> : null,
         }}
       />
 

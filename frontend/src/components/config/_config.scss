@@ -464,19 +464,11 @@ button.ab-chip {
   }
 }
 
-// Sección «Lanzadores»: tarjeta propia y plegable; dentro, un solo panel con comandos listos para copiar y último aviso por dispositivo.
+// Subpestaña «Lanzadores»: tarjeta con la URL del hub, las plataformas y una fila por juego con comandos listos para copiar.
 .launchers-panel {
   margin-top: v.$gap;
   min-width: 0;
   scroll-margin-top: 1rem;
-}
-.launchers-body {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  &[hidden] {
-    display: none;
-  }
 }
 .launcher {
   display: flex;
@@ -554,4 +546,36 @@ button.ab-chip {
   font-size: v.$fs-label;
   letter-spacing: 0.04em;
   color: var(--muted);
+}
+
+// Lanzadores: una fila por juego (nombre, comandos de la plataforma elegida, último aviso).
+.launcher-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  min-width: 0;
+}
+.launcher-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+  .field {
+    margin: 0;
+  }
+}
+.launcher-row-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: v.$fs-body;
+  overflow-wrap: anywhere;
 }
