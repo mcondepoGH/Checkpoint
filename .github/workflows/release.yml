@@ -16,6 +16,8 @@ concurrency:
 jobs:
   release:
     runs-on: ubuntu-latest
+    outputs:
+      image-ref: ${{ steps.v.outputs.image }}:v${{ steps.v.outputs.version }}
     steps:
       - uses: actions/checkout@v4
 
@@ -32,7 +34,7 @@ jobs:
             echo "::error::VERSION ($file) no coincide con el tag $TAG (esperado $version). Actualiza VERSION, haz commit y vuelve a crear el tag."
             exit 1
           fi
-          if ! printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$'; then
+          if ! grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$' <<<"$version"; then
             echo "::error::El tag $TAG no tiene formato vX.Y.Z[-sufijo]."
             exit 1
           fi
@@ -86,3 +88,16 @@ jobs:
           flags=(--verify-tag --generate-notes --title "$TAG")
           if [ "$PRE" = "true" ]; then flags+=(--prerelease); else flags+=(--latest); fi
           gh release create "$TAG" "${flags[@]}"
+
+  # Escaneo informativo de la imagen ya publicada: no bloquea (exit-code 0) y deja el informe como
+  # artefacto `trivy-report`, que security-issues convierte en issues con plazo. Si el escaneo falla,
+  # la Release ya está creada (este job va después de `release`).
+  trivy:
+    needs: release
+    permissions:
+      contents: read
+      packages: read   # la imagen de GHCR puede ser privada
+    uses: ./.github/workflows/trivy-release.yml
+    with:
+      scan-type: image
+      scan-ref: ${{ needs.release.outputs.image-ref }}

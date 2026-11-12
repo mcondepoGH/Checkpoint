@@ -169,7 +169,7 @@ Al subir un tag `vX.Y.Z` el workflow `.github/workflows/release.yml` publica la 
 2. Crea un tag anotado con el mismo número: `git tag -a v1.0.0 -m "v1.0.0"`.
 3. Sube el commit y el tag: `git push origin main v1.0.0`.
 
-Si `VERSION` no coincide con el tag, el workflow falla antes de construir nada. Un tag con sufijo (`-rc.1`, `-beta.2`) se publica como pre-release.
+Tras publicar, el job `trivy` escanea la imagen (informativo, no bloquea ni deshace la Release) y deja el informe JSON como artefacto; si hay vulnerabilidades altas o críticas, `security-issues` abre un issue por hallazgo con plazo. Si `VERSION` no coincide con el tag, el workflow falla antes de construir nada. Un tag con sufijo (`-rc.1`, `-beta.2`) se publica como pre-release.
 
 Etiquetas de imagen (`ghcr.io/<owner>/checkpoint`, con `<owner>` en minúsculas):
 

@@ -68,7 +68,11 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "actions/download-artifact"
         update-types: ["version-update:semver-major"]
-      # codeql-action descarga binarios; solo entran los patch.
+      # trivy-action y codeql-action instalan o descargan binarios; solo entran los patch.
       # revisión manual: una acción compuesta con acciones anidadas ya falló por una dependencia retirada
+      - dependency-name: "aquasecurity/trivy-action"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "aquasecurity/setup-trivy"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
       - dependency-name: "github/codeql-action"
         update-types: ["version-update:semver-major", "version-update:semver-minor"]
