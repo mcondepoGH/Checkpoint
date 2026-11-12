@@ -3,8 +3,8 @@ import EmptyState from '#src/components/ui/EmptyState.jsx';
 import { fmtDateTime, fmtDuration, RESULT_CLASS, resultText } from '#src/lib/format.js';
 import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { recordText } from '#src/lib/errors.js';
-import { FOLD_AFTER, MSG_ICON, TRIGGERS, countSummary, detailModel, isHookNote } from './runLog.js';
-import { Alert, Badge, Button } from '#src/components/ui/index.js';
+import { FOLD_AFTER, MSG_ICON, FILTERS, countSummary, detailModel, filterEntries, isHookNote, originOf } from './runLog.js';
+import { Alert, Badge, Button, Pill, Tabs } from '#src/components/ui/index.js';
 import Icon from '#src/components/ui/Icon.jsx';
 import { schedulerHistory } from '#src/lib/api/sync.js';
 
@@ -79,7 +79,8 @@ export function EntryDetail({ entry: e }) {
 // Duración vacía o 0 (avisos que no ejecutaron nada) se muestra «—».
 export function RunEntry({ entry: e }) {
   const { t, locale } = useI18n();
-  const trig = TRIGGERS.includes(e.trigger) ? t(`autolog.trigger.${e.trigger}`) : e.trigger || '—';
+  const origin = originOf(e.trigger);
+  const trig = origin ? <Pill tone={origin}>{t(`autolog.origin.${origin}`)}</Pill> : e.trigger || '—'; // desconocido: tal cual
   return (
     <li className="run">
       <div className="run-head">
@@ -93,6 +94,28 @@ export function RunEntry({ entry: e }) {
   );
 }
 
+// Lista del registro con filtro por origen (Todos / Manual / Programado / Launcher): estado local, sin tocar el backend.
+// `initialFilter` solo sirve para probar el render inicial sin navegador.
+export function RunLog({ entries, initialFilter = 'all' }) {
+  const { t } = useI18n();
+  const [filter, setFilter] = useState(initialFilter);
+  const shown = filterEntries(entries, filter);
+  const tabs = FILTERS.map((id) => ({ id, label: id === 'all' ? t('autolog.filter.all') : t(`autolog.origin.${id}`) }));
+  return (
+    <Tabs tabs={tabs} value={filter} onChange={setFilter} label={t('autolog.filter.label')}>
+      {shown.length === 0 ? (
+        <p className="muted">{t('autolog.filter.none')}</p>
+      ) : (
+        <ul className="runlog" aria-label={t('autolog.listAria')}>
+          {shown.map((e) => (
+            <RunEntry key={e.id} entry={e} />
+          ))}
+        </ul>
+      )}
+    </Tabs>
+  );
+}
+
 // Registro de ejecuciones automáticas (endpoint /api/scheduler/history). Refresca cada 30 s.
 export default function AutoSyncLog() {
   const { t } = useI18n();
@@ -103,7 +126,7 @@ export default function AutoSyncLog() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const d = await schedulerHistory(50);
+      const d = await schedulerHistory(200);
       setEntries(d.entries || []);
       setErr(null);
     } catch (e) {
@@ -135,13 +158,7 @@ export default function AutoSyncLog() {
         )}
       </div>
       {entries && entries.length === 0 && !err && <EmptyState icon="📜" title={t('autolog.none.title')} text={t('autolog.none.text')} />}
-      {entries && entries.length > 0 && (
-        <ul className="runlog" aria-label={t('autolog.listAria')}>
-          {entries.map((e) => (
-            <RunEntry key={e.id} entry={e} />
-          ))}
-        </ul>
-      )}
+      {entries && entries.length > 0 && <RunLog entries={entries} />}
     </section>
   );
 }

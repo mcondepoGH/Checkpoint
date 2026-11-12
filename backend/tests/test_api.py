@@ -132,14 +132,16 @@ def test_scheduler_history_endpoint(client):
     assert client.get("/api/scheduler/history").json() == {"entries": []}
     now = datetime.now(timezone.utc)
     for i in range(205):
+        trig = "manual" if i == 204 else "scheduled"
         history.append(
-            history.make_entry(now, 0.5, "scheduled", "ok", {"g": {"result": "ok", "message": ""}}, f"e{i}"), now=now
+            history.make_entry(now, 0.5, trig, "ok", {"g": {"result": "ok", "message": ""}}, f"e{i}"), now=now
         )
-    assert len(client.get("/api/scheduler/history").json()["entries"]) == 50
-    r = client.get("/api/scheduler/history?limit=50").json()["entries"]
-    assert len(r) == 50 and r[0]["message"] == "e204"
+    assert len(client.get("/api/scheduler/history").json()["entries"]) == 200
+    r = client.get("/api/scheduler/history?limit=200").json()["entries"]
+    assert len(r) == 200 and r[0]["message"] == "e204" and r[0]["trigger"] == "manual"
+    assert r[1]["trigger"] == "scheduled"
     assert client.get("/api/scheduler/history?limit=3").json()["entries"][2]["message"] == "e202"
-    for bad in ("0", "51", "200", "-1", "abc"):
+    for bad in ("0", "201", "1000", "-1", "abc"):
         assert client.get(f"/api/scheduler/history?limit={bad}").status_code == 422, bad
 
 

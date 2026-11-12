@@ -146,7 +146,7 @@ devices:
 
 ## Sincronización automática
 
-En **Configuración > Sincronización automática** activa la opción y elige cada cuántas horas se ejecuta (de 0.25 a 168). Cada ciclo sincroniza todos los juegos **activos** (los desactivados se omiten en silencio; ver «Desactivar un juego»); si uno falla, los demás continúan. Debajo se muestra el **Registro de ejecuciones** (las últimas 50, límite fijo) con resultado por juego y detalle al hacer clic. Sin ajustes guardados, está desactivada y el intervalo es de 24 horas.
+En **Configuración > Sincronización automática** activa la opción y elige cada cuántas horas se ejecuta (de 0.25 a 168). Cada ciclo sincroniza todos los juegos **activos** (los desactivados se omiten en silencio; ver «Desactivar un juego»); si uno falla, los demás continúan. Debajo se muestra el **Registro de ejecuciones** (las últimas 200, límite fijo; cada una con su origen en una etiqueta de color: Manual, Programado o Launcher; incluye las sincronizaciones manuales reales, no las simulaciones) con resultado por juego y detalle al hacer clic. Sin ajustes guardados, está desactivada y el intervalo es de 24 horas.
 
 ## Nuevas versiones
 
@@ -513,7 +513,7 @@ Los elementos que se repiten viven en `frontend/src/components/ui/` (importa des
 | `Button` | `variant` (`primary`, `danger`, `ghost`), `className`, `type` (`button` por defecto) | `_button.scss` |
 | `Badge` | `status` (`ok`, `error`, `conflict`, `partial`, `aborted`, `dry-run`, `running`) | `_badge.scss` |
 | `Alert` | `variant` (`error`, `ok`, `warn`, `info`), `inline`, `compact` (sin márgenes, icono + texto en fila), `as` | `_alert.scss` |
-| `Pill` | `highlight` | `_pill.scss` |
+| `Pill` | `highlight`, `tone` (`info`, y `manual`, `scheduled`, `launcher` = origen en el registro) | `_pill.scss` |
 | `Select` | `options` (`[{ value, label }]`), `placeholder` | `_control.scss` |
 | `Checkbox` | `label` + props del input | `_control.scss` |
 | `Switch` | `label` + props del input | `_switch.scss` |
@@ -524,7 +524,7 @@ Los elementos que se repiten viven en `frontend/src/components/ui/` (importa des
 | `WatchSummary` (componente de la app, no genérico) | `watch` (`{now, watches}` de `useWatches`), `config`; chip «● Vigilando · N ▾» en la barra superior con lista desplegable (juego, dispositivo, estado con `WatchStatus`); oculto sin vigilancia; Esc, clic fuera y salir del foco lo cierran. En móvil (<=640 px) es punto + número («99+»; el texto completo va en `aria-label`) y la lista ocupa el ancho de la barra con 8 px de margen y scroll propio; chip y filas de 44 px (`$touch-watch`, local) | `_watch.scss` |
 | `Input` | props del input (texto sin autocompletar ni corrector por defecto); acepta `ref` | `_control.scss` |
 
-Registro de ejecuciones (`AutoSyncLog`): cada entrada es un `<li class="run">` con cabecera en rejilla (fecha y hora, tipo, duración —«—» si es 0 o falta— y una única `Badge` de estado) y, debajo, una línea por juego (nombre y dispositivo si consta) con su mensaje; solo se repite la `Badge` en una fila de juego si hay resultados distintos. Todo lo que no es correcto lleva icono además de texto, y el motivo sale una sola vez (el resumen de una entrada con `code` no se repite si su juego dice lo mismo). Con más de 3 juegos, los correctos van plegados tras un botón-resumen con `aria-expanded` («N juegos: 12 correctos, 1 error») y los omitidos, con error o abortados se ven siempre. Tipos y resultados desconocidos se muestran tal cual. El estilo vive solo en `_autosync.scss`; las columnas de la cabecera usan `minmax(..., max-content)` y en <=640 px pasa a dos líneas.
+Registro de ejecuciones (`AutoSyncLog`): cada entrada es un `<li class="run">` con cabecera en rejilla (fecha y hora, origen —etiqueta `Pill` de color con texto: Manual, Programado o Launcher; `startup` cuenta como Programado y `hook`/`hook_closed` como Launcher, el valor guardado no cambia—, duración —«—» si es 0 o falta— y una única `Badge` de estado) y, debajo, una línea por juego (nombre y dispositivo si consta) con su mensaje; solo se repite la `Badge` en una fila de juego si hay resultados distintos. Todo lo que no es correcto lleva icono además de texto, y el motivo sale una sola vez (el resumen de una entrada con `code` no se repite si su juego dice lo mismo). Con más de 3 juegos, los correctos van plegados tras un botón-resumen con `aria-expanded` («N juegos: 12 correctos, 1 error») y los omitidos, con error o abortados se ven siempre. Encima de la lista, un filtro por origen (`Tabs`: Todos, Manual, Programado, Launcher; estado local, sin llamar al servidor; los orígenes desconocidos solo salen en «Todos»). Tipos y resultados desconocidos se muestran tal cual. El estilo vive en `_autosync.scss` (la etiqueta de origen, en `_pill.scss`); las columnas de la cabecera usan `minmax(..., max-content)` y en <=640 px pasa a dos líneas.
 
 La consulta de `/api/watches` (cada 5 s, solo con la pestaña visible) vive en un único hook, `useWatches` (`src/hooks/useWatches.js`), llamado desde `App`: el contador de la barra y las tarjetas de Sincronizar reciben los mismos datos, sin peticiones duplicadas.
 

@@ -57,6 +57,22 @@ test('Alert: variante, inline, etiqueta y atributos', { skip }, () => {
 test('Pill: normal y resaltada', { skip }, () => {
   assert.equal(r('Pill', null, 'x'), '<span class="pill">x</span>');
   assert.equal(r('Pill', { highlight: true }, 'x'), '<span class="pill win">x</span>');
+  for (const tone of ['manual', 'scheduled', 'launcher'])
+    assert.equal(r('Pill', { tone }, 'x'), `<span class="pill origin-${tone}">x</span>`);
+});
+
+test('Pill de origen: misma estructura en los tres tonos y sin colisión con clases globales (.launcher de Configuración)', { skip }, () => {
+  const norm = (tone) => r('Pill', { tone }, 'x').replace(`origin-${tone}`, 'origin-TONE');
+  assert.equal(norm('manual'), norm('scheduled'));
+  assert.equal(norm('manual'), norm('launcher'));
+  // ninguna hoja define un selector de clase suelto igual al tono: `.launcher` (panel flex en columna) estiraba la píldora
+  const css = readFlat(path.join(SRC, 'components/config/_config.scss'));
+  const pill = fs.readFileSync(path.join(SRC, 'components/ui/_pill.scss'), 'utf8');
+  for (const tone of ['manual', 'scheduled', 'launcher']) {
+    assert.ok(pill.includes(`&.origin-${tone}`) && !new RegExp(`&\\.${tone}\\b`).test(pill), tone);
+    assert.ok(!r('Pill', { tone }, 'x').includes(`class="pill ${tone}"`), tone);
+  }
+  assert.match(css, /\.launcher\s*\{/, 'el choque que se evita sigue existiendo');
 });
 
 test('Select: opciones, placeholder vacío y props al select', { skip }, () => {

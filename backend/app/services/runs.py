@@ -2,6 +2,7 @@
 
 import logging
 import threading
+import time
 import uuid
 from typing import Dict, List, Optional
 
@@ -9,6 +10,7 @@ from ..config.models import Config
 from ..core.errors import ApiError
 from ..core.redact import redact
 from ..sync.engine import SyncAbort, run_sync, valid_resolution
+from ..users import history
 
 api_log = logging.getLogger("checkpoint.api")  # DEBUG: detalle por endpoint (sin secretos)
 KEEP_DONE = 20  # ejecuciones terminadas que se conservan (para ver su log); las demás se olvidan
@@ -50,6 +52,36 @@ def game_busy(scheduler, registry: RunRegistry, game: str) -> bool:
     return scheduler.current == game or registry.active(game)
 
 
+def record_manual(scheduler, game: str, name: str, status: dict, started, duration: float) -> bool:
+    """Deja en el historial (trigger `manual`) el resultado de una sync manual real, con el mismo formato que el resto.
+    Nunca lanza: un fallo al escribir el historial no rompe la sync. Devuelve si se guardó."""
+    try:
+        res = status.get("result") or "error"
+        c = {"code": status["code"], "params": status.get("params") or {}} if status.get("code") else None
+        m = status.get("message") or ""
+        if not c and m:
+            c = {"message": m}  # sin code: texto tal cual
+        item, det = scheduler.game_detail(name, res, m, c)
+        summary = scheduler.summarize({game: res}, [item] if item else [], {game: det})
+        history.append(
+            history.make_entry(
+                started,
+                duration,
+                "manual",
+                summary["result"],
+                {game: det},
+                summary["message"],
+                summary.get("code"),
+                summary.get("params"),
+            ),
+            now=scheduler.clock(),
+        )
+        return True
+    except Exception as e:  # el registro nunca rompe la sync
+        api_log.warning("sync %s: no se pudo guardar en el historial (%s)", game, type(e).__name__)
+        return False
+
+
 def start_manual_sync(registry: RunRegistry, scheduler, cfg: Config, game: str, body) -> Run:
     """Valida el cuerpo de `POST /api/sync/{juego}` y lanza la sync en un hilo. `game` ya es el id interno.
     Errores como ApiError: 409 juego desactivado / ejecución en curso, 422 resolución o `expect` inválidos."""
@@ -82,6 +114,8 @@ def start_manual_sync(registry: RunRegistry, scheduler, cfg: Config, game: str, 
     )
     registry.prune()
 
+    started, t0 = scheduler.clock(), time.monotonic()
+
     def work():
         try:
             run.status = run_sync(cfg, game, dry, log=run.lines.append, resolution=resolution, expect=expect)
@@ -95,9 +129,21 @@ def start_manual_sync(registry: RunRegistry, scheduler, cfg: Config, game: str, 
                 "game": game,
                 "name": cfg.games[game].name,
             }
+        except Exception as e:  # fallo inesperado: se registra igual (y el hilo no muere en silencio)
+            run.lines.append(redact(f"ERROR: {type(e).__name__}: {e}"))
+            run.status = {
+                "result": "error",
+                "code": "err.sync.unexpected",
+                "params": {"type": type(e).__name__, "detail": str(e)},
+                "message": f"{type(e).__name__}: {e}",
+                "game": game,
+                "name": cfg.games[game].name,
+            }
         finally:
-            run.done = True
             st = run.status if isinstance(run.status, dict) else {}
+            if not dry and st:  # las simulaciones no se registran
+                record_manual(scheduler, game, cfg.games[game].name, st, started, time.monotonic() - t0)
+            run.done = True
             api_log.debug(
                 "sync %s: run=%s terminado resultado=%s código=%s", game, run.id, st.get("result"), st.get("code")
             )

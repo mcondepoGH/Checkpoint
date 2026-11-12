@@ -7,4 +7,4 @@ export const runSync = (game, body) => api(`/api/sync/${encodeURIComponent(game)
 export const hookStatus = (gameId, call = api) => call(`/api/games/${encodeURIComponent(gameId)}/hook-status`);
 export const getScheduler = () => api('/api/scheduler');
 export const putScheduler = (body) => api('/api/scheduler', { method: 'PUT', body });
-export const schedulerHistory = (limit = 50) => api(`/api/scheduler/history?limit=${limit}`);
+export const schedulerHistory = (limit = 200) => api(`/api/scheduler/history?limit=${limit}`);
