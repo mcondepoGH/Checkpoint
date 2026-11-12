@@ -2,7 +2,15 @@
 
 ## Sin publicar
 
-- Dependabot reconfigurado: npm y pip pasan a mensual con un PR agrupado de minor y patch y un PR aparte por cada major; se ignoran los majors de `eslint` y `@eslint/js` (los plugins jsx-a11y y react solo admiten eslint 9).
+## 1.10.2 (2026-11-12)
+
+### Cambios
+
+- Dependabot: `react` con `react-dom` y `vite` con `@vitejs/*` llegan agrupados como majors, porque son dependencias de pares acopladas (un PR suelto rompe `npm ci`). Además, npm y pip pasan a mensual con un PR agrupado de minor y patch y un PR aparte por cada major; se ignoran los majors de `eslint` y `@eslint/js` (los plugins jsx-a11y y react solo admiten eslint 9).
+
+### Arreglos
+
+- El workflow de release fallaba en `Set up job` porque `aquasecurity/trivy-action@0.28.0` no existe como ref; ahora se fija por SHA (v0.28.0). Por eso la imagen en GHCR y la release de GitHub de la 1.10.1 no se publicaron, y esta versión las publica.
 
 ## 1.10.1 (2026-11-12)
 
