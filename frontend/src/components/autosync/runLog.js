@@ -9,6 +9,12 @@ export const ORIGINS = ['manual', 'scheduled', 'launcher'];
 const ORIGIN_OF = { manual: 'manual', scheduled: 'scheduled', startup: 'scheduled', hook: 'launcher', hook_closed: 'launcher' };
 export const originOf = (trigger) => ORIGIN_OF[trigger] || null; // null: disparador desconocido (se muestra tal cual)
 
+// Filtro por origen del registro: 'all' o uno de ORIGINS. Un valor desconocido no filtra. Las entradas de disparador
+// desconocido solo salen en «Todos».
+export const FILTERS = ['all', ...ORIGINS];
+export const filterEntries = (entries, filter) =>
+  ORIGINS.includes(filter) ? entries.filter((e) => originOf(e.trigger) === filter) : entries;
+
 // Entrada que explica por qué NO hubo checkpoint de cierre (códigos err.hook.*): omitida (`skipped`) o con error. Lleva icono además del texto.
 export const isHookNote = (e) =>
   typeof e?.code === 'string' && e.code.startsWith('err.hook.') && (e.result === 'skipped' || e.result === 'error');

@@ -11,8 +11,8 @@ const { mod: m, skip } = await bundle(
   import LaunchersPanel from '#src/components/launchers/LaunchersPanel.jsx';
   import GameCard from '#src/components/config/GameCard.jsx';
   import { Tabs, CopyBox } from '#src/components/ui/index.js';
-  import { EntryMessage, EntryDetail, RunEntry } from '#src/components/autosync/AutoSyncLog.jsx';
-  export { React, renderToStaticMarkup, i18n, LauncherBlock, LaunchersPanel, GameCard, Tabs, CopyBox, EntryMessage, EntryDetail, RunEntry };`,
+  import { EntryMessage, EntryDetail, RunEntry, RunLog } from '#src/components/autosync/AutoSyncLog.jsx';
+  export { React, renderToStaticMarkup, i18n, LauncherBlock, LaunchersPanel, GameCard, Tabs, CopyBox, EntryMessage, EntryDetail, RunEntry, RunLog };`,
   { navigator: true, tag: 'ckpt-launcher' },
 );
 const KEY = 'ck_AbC123xyz';
@@ -650,3 +650,53 @@ test(
       }
   },
 );
+
+const LOG = [
+  runEntry({ id: 'a', trigger: 'manual', result: 'ok', games: gm(1) }),
+  runEntry({ id: 'b', trigger: 'scheduled', result: 'ok', games: gm(1) }),
+  runEntry({ id: 'c', trigger: 'startup', result: 'ok', games: gm(1) }),
+  runEntry({ id: 'd', trigger: 'hook', result: 'ok', games: gm(1) }),
+  runEntry({ id: 'e', trigger: 'hook_closed', result: 'ok', games: gm(1) }),
+  runEntry({ id: 'f', trigger: 'zzz', result: 'ok', games: gm(1) }),
+];
+
+test('Filtro por origen: lógica pura (Programado = scheduled + startup, Launcher = hook + hook_closed, desconocido solo en Todos)', async () => {
+  const { filterEntries, FILTERS } = await import('../../../src/components/autosync/runLog.js');
+  assert.deepEqual(FILTERS, ['all', 'manual', 'scheduled', 'launcher']);
+  const ids = (f) =>
+    filterEntries(LOG, f)
+      .map((e) => e.id)
+      .join('');
+  assert.equal(ids('all'), 'abcdef');
+  assert.equal(ids('manual'), 'a');
+  assert.equal(ids('scheduled'), 'bc');
+  assert.equal(ids('launcher'), 'de');
+  assert.equal(ids('???'), 'abcdef');
+});
+
+test('Filtro por origen: control accesible (tablist con etiqueta, 4 opciones) y lista filtrada (es/en)', { skip }, () => {
+  for (const [lang, label, all, sch] of [
+    ['es', 'Filtrar por origen', 'Todos', 'Programado'],
+    ['en', 'Filter by origin', 'All', 'Scheduled'],
+  ]) {
+    const h = R('RunLog', { entries: LOG }, lang);
+    assert.ok(has(h, `role="tablist" aria-label="${label}"`), h);
+    assert.equal(count(h, 'role="tab"'), 4, h);
+    assert.ok(has(h, `>${all}</button>`) && has(h, `>${sch}</button>`) && has(h, 'aria-selected="true"'), h);
+    assert.equal(count(h, 'class="run"'), 6, h);
+    const f = R('RunLog', { entries: LOG, initialFilter: 'scheduled' }, lang);
+    assert.equal(count(f, 'class="run"'), 2, f);
+    assert.ok(!has(f, '>zzz<') && has(f, 'aria-selected="true"'), f);
+  }
+});
+
+test('Filtro por origen: sin entradas de ese origen, mensaje (es/en) y sin lista', { skip }, () => {
+  const only = [LOG[1]];
+  for (const [lang, txt] of [
+    ['es', 'Ninguna ejecución con este origen.'],
+    ['en', 'No runs with this origin.'],
+  ]) {
+    const h = R('RunLog', { entries: only, initialFilter: 'manual' }, lang);
+    assert.ok(has(h, txt) && !has(h, 'class="run"') && !has(h, 'class="runlog"'), h);
+  }
+});
