@@ -2,6 +2,12 @@
 
 ## Sin publicar
 
+## 1.15.0 (2026-11-13)
+
+### Cambios
+
+- Appid de Steam por juego (`steam_appid`): entero positivo opcional, sin duplicados entre juegos. Se edita en Configuración y `GET /api/games` lo devuelve, tanto con la key de usuario como con la de dispositivo (que solo lee). Base para el plugin de Steam Deck.
+
 ## 1.14.0 (2026-11-13)
 
 ### Cambios
