@@ -16,7 +16,8 @@
     "off": "Desactivada",
     "unnamed": "(sin nombre)",
     "goSettings": "Ir a Configuración",
-    "dryRun": "Simulación (dry-run)"
+    "dryRun": "Simulación (dry-run)",
+    "dryRunBadge": "Simulación"
   },
   "files": {
     "one": "{count} fichero",

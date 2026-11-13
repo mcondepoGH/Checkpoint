@@ -16,7 +16,8 @@
     "off": "Disabled",
     "unnamed": "(unnamed)",
     "goSettings": "Go to Settings",
-    "dryRun": "Dry run (simulation)"
+    "dryRun": "Dry run (simulation)",
+    "dryRunBadge": "Simulation"
   },
   "files": {
     "one": "{count} file",
