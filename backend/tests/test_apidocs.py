@@ -144,6 +144,12 @@ def test_openapi_security_scheme_and_errors(client):
     assert games["summary"] and "200" in games["responses"]
     ok = games["responses"]["200"]["content"]["application/json"]
     assert ok["schema"]["items"]["$ref"].endswith("/GameItem") and ok["examples"]["games"]["value"][0]["id"] == "g1"
+    ex = ok["examples"]["games"]["value"]
+    assert (
+        ex[0]["steam_appid"] == 1245620 and ex[1].get("steam_appid") is None
+    )  # con y sin appid (OpenAPI omite los null)
+    item = j["components"]["schemas"]["GameItem"]["properties"]["steam_appid"]
+    assert {"type": "integer"} in item["anyOf"] and {"type": "null"} in item["anyOf"] and item["description"]
     assert {"GameItem", "GameSyncStatus"} <= set(j["components"]["schemas"])
     opened = j["paths"]["/api/hook/{game}/opened"]["post"]
     assert {"200", "400", "404", "409"} <= set(opened["responses"])

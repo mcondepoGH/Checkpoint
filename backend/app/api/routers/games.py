@@ -22,7 +22,7 @@ STATUS_FIELDS = ("result", "code", "started", "finished")  # lista cerrada: sin 
 
 @router.get(docs.GAMES_PATH, **docs.GAMES)
 def list_games(p: Principal = Depends(hook_any), ctx: AppContext = Depends(get_ctx)):
-    """[{id, name, enabled, status: {result, code, started, finished} | null}]. Con key de usuario, todos los juegos
+    """[{id, name, enabled, steam_appid: int | null, status: {result, code, started, finished} | null}]. Con key de usuario, todos los juegos
     de la config; con key de dispositivo, solo los que tienen ese dispositivo en su lista."""
     cfg = ctx.cfg()
     statuses = read_statuses(cfg.games)
@@ -31,6 +31,7 @@ def list_games(p: Principal = Depends(hook_any), ctx: AppContext = Depends(get_c
             "id": gid,
             "name": g.name,
             "enabled": g.enabled,
+            "steam_appid": g.steam_appid,
             "status": {k: st[k] for k in STATUS_FIELDS if k in st} if (st := statuses.get(gid)) else None,
         }
         for gid, g in cfg.games.items()

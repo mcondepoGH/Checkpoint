@@ -230,6 +230,11 @@ class Device(BaseModel):
         return d
 
 
+def valid_appid(v) -> bool:
+    """¿Es un appid de Steam válido? Entero estricto (no bool, no float, no texto) y positivo."""
+    return isinstance(v, int) and not isinstance(v, bool) and v > 0
+
+
 class Game(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str = Field(None, validate_default=True)  # obligatorio: etiqueta visible y editable; la clave es el id
@@ -242,12 +247,22 @@ class Game(BaseModel):
     on_conflict: Optional[str] = None
     # Un juego desactivado no se sincroniza por ninguna vía (automática, manual, aviso de apertura/cierre).
     enabled: StrictBool = True
+    # Id de Steam del juego (dato del juego, igual en todos los dispositivos; lo lee el plugin de Steam Deck).
+    # Opcional: ausente o null = sin appid. Solo un entero positivo; ni 0, ni negativos, ni texto, ni booleanos.
+    steam_appid: Optional[int] = None
 
     @field_validator("name", mode="before")
     @classmethod
     def _name_required(cls, v):
         if v is None:
             raise _pyd("err.config.name_missing")
+        return v
+
+    @field_validator("steam_appid", mode="before")
+    @classmethod
+    def _appid(cls, v):
+        if v is not None and not valid_appid(v):
+            raise _pyd("err.config.steam_appid_invalid")
         return v
 
     @model_serializer(mode="wrap")
@@ -334,10 +349,19 @@ def semantic_errors(devices, games) -> List[Tuple[str, dict]]:
             continue
         if "http" in d and not isinstance(d["http"], bool):
             errs.append((f"devices.{i}.http", error_body("err.config.bool_required")))
+    seen_appid: Dict[int, str] = {}  # appid -> nombre del primer juego que lo usa (solo valores válidos)
     for gname, g in games.items():
         gp = f"games.{gname}"
         if not isinstance(g, dict):
             continue
+        appid = g.get("steam_appid")
+        if valid_appid(appid):
+            if appid in seen_appid:
+                errs.append(
+                    (f"{gp}.steam_appid", error_body("err.config.steam_appid_duplicate", other=seen_appid[appid]))
+                )
+            else:
+                seen_appid[appid] = g["name"] if isinstance(g.get("name"), str) else str(gname)
         if "enabled" in g and not isinstance(g["enabled"], bool):
             errs.append((f"{gp}.enabled", error_body("err.config.bool_required")))
         devs = g.get("devices")

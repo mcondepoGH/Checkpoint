@@ -79,6 +79,12 @@ class GameItem(BaseModel):
     id: str = Field(description="Id interno del juego (vale en las rutas `/api/hook/{game}/...`).")
     name: str = Field(description="Nombre visible del juego (también vale en las rutas).")
     enabled: bool = Field(description="`false` si el juego está desactivado: no se sincroniza por ninguna vía.")
+    steam_appid: Optional[int] = Field(
+        None,
+        description="Appid de Steam del juego (entero positivo), o `null` si no tiene. Es un dato del juego, igual "
+        "para todos los dispositivos; solo se edita desde la configuración del hub.",
+        examples=[1245620],
+    )
     status: Optional[GameSyncStatus] = Field(
         None, description="Última sincronización del juego, o `null` si aún no hay ninguna."
     )
