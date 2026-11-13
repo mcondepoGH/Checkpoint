@@ -735,7 +735,7 @@ GAMES = dict(
     summary="Listar los juegos y su estado",
     description="Con la key de **usuario**, todos los juegos de la configuración; con la de **dispositivo**, solo los "
     "que tienen ese dispositivo en su lista. Con el resultado de su última sincronización, para consultarlo "
-    "desde un dispositivo sin SSH. `status` es `null` si el juego aún no se ha sincronizado. Solo lectura: no "
+    "desde un dispositivo sin SSH. `steam_appid` es el id de Steam del juego (entero) o `null` si no tiene; el mismo para todos los dispositivos. `status` es `null` si el juego aún no se ha sincronizado. Solo lectura: no "
     "sincroniza nada y no devuelve rutas, dispositivos ni ajustes.",
     responses={
         200: _ok(
@@ -743,12 +743,13 @@ GAMES = dict(
             "Lista de juegos (puede estar vacía).",
             (
                 "games",
-                "Un juego sincronizado y otro sin sincronizar",
+                "Un juego con appid de Steam y sincronizado, y otro sin appid ni sincronizar",
                 [
                     {
                         "id": "g1",
                         "name": "Mi Juego",
                         "enabled": True,
+                        "steam_appid": 1245620,
                         "status": {
                             "result": "ok",
                             "code": "err.sync.done",
@@ -756,7 +757,7 @@ GAMES = dict(
                             "finished": "2026-01-15T18:30:14",
                         },
                     },
-                    {"id": "g2", "name": "Otro Juego", "enabled": True, "status": None},
+                    {"id": "g2", "name": "Otro Juego", "enabled": True, "steam_appid": None, "status": None},
                 ],
             ),
             ("empty", "Sin juegos configurados", []),

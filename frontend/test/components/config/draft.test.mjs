@@ -3,7 +3,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { readFlat } from '../../helpers/source.mjs';
-import { baseKeyOf, fromConfig, isDirty, toConfig } from '#src/components/config/draft.js';
+import { baseKeyOf, blankGame, fromConfig, isDirty, localErrors, toConfig } from '#src/components/config/draft.js';
 import { labelOf } from '#src/lib/names.js';
 
 // Lo que devuelve /api/config para un config.yaml LEGADO (claves por nombre, sin `name`): el backend lo
@@ -275,4 +275,72 @@ test('dispositivo http: toConfig emite http y no host/user/port/local; ida y vue
   assert.deepEqual(out, cfg);
   assert.deepEqual(Object.keys(out.devices['web-1a2b3c4d']).sort(), ['http', 'name', 'os']);
   assert.equal(isDirty(fromConfig(cfg), cfg), false);
+});
+
+// --- Appid de Steam por juego ---
+const WITH_APPID = {
+  max_versions: 20,
+  devices: { pc: { name: 'PC', host: '10.0.0.1', user: 'u', os: 'linux', port: 22 } },
+  games: {
+    'a-1': { name: 'A', devices: ['pc'], paths: { pc: '/a' }, steam_appid: 1245620 },
+    'b-2': { name: 'B', devices: ['pc'], paths: { pc: '/b' } },
+  },
+};
+
+test('steam_appid: ida y vuelta idéntica; sin appid no se escribe la clave', () => {
+  const out = toConfig(fromConfig(WITH_APPID));
+  assert.deepEqual(out, WITH_APPID);
+  assert.equal('steam_appid' in out.games['b-2'], false);
+  assert.equal(isDirty(fromConfig(WITH_APPID), WITH_APPID), false);
+});
+
+test('steam_appid: fromConfig lo pasa a texto y null cuenta como vacío', () => {
+  const d = fromConfig({ ...WITH_APPID, games: { 'a-1': { ...WITH_APPID.games['a-1'], steam_appid: null } } });
+  assert.equal(d.games[0].steamAppid, '');
+  assert.equal(fromConfig(WITH_APPID).games[0].steamAppid, '1245620');
+});
+
+test('steam_appid: editarlo, ponerlo o quitarlo marca cambios', () => {
+  for (const [i, v] of [
+    [0, '440'],
+    [0, ''],
+    [1, '220'],
+  ]) {
+    const d = fromConfig(WITH_APPID);
+    d.games[i].steamAppid = v;
+    assert.equal(isDirty(d, WITH_APPID), true, `${i}=${v}`);
+  }
+  const d = fromConfig(WITH_APPID);
+  d.games[1].steamAppid = '  220 ';
+  assert.equal(toConfig(d).games['b-2'].steam_appid, 220);
+});
+
+test('steam_appid: vacío o solo espacios no se envía; un juego nuevo no lo lleva', () => {
+  const d = fromConfig(WITH_APPID);
+  d.games[0].steamAppid = '   ';
+  assert.equal('steam_appid' in toConfig(d).games['a-1'], false);
+  assert.equal(blankGame().steamAppid, '');
+});
+
+test('steam_appid: validación del cliente (códigos del backend)', () => {
+  const d = fromConfig(WITH_APPID);
+  const [a, b] = d.games;
+  const invalid = { code: 'err.config.steam_appid_invalid', params: {} };
+  assert.deepEqual(localErrors(d, 'native'), {});
+  for (const bad of ['0', '00', '-5', '1.5', 'abc', '12a', '1e3', '99999999999999999999']) {
+    a.steamAppid = bad;
+    assert.deepEqual(localErrors(d, 'native')[`steam-${a.key}`], invalid, bad);
+  }
+  a.steamAppid = '440';
+  b.steamAppid = '440';
+  assert.deepEqual(localErrors(d, 'native')[`steam-${b.key}`], { code: 'err.config.steam_appid_duplicate', params: { other: 'A' } });
+  assert.equal(`steam-${a.key}` in localErrors(d, 'native'), false);
+  b.steamAppid = '';
+  assert.deepEqual(localErrors(d, 'native'), {});
+});
+
+test('steam_appid: un valor inválido se envía tal cual para que el backend dé el error', () => {
+  const d = fromConfig(WITH_APPID);
+  d.games[0].steamAppid = 'abc';
+  assert.equal(toConfig(d).games['a-1'].steam_appid, 'abc');
 });

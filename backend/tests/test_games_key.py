@@ -5,7 +5,7 @@ import json
 from app.core import settings
 from test_hook_close import cl, hopen, mk  # noqa: F401 (fixtures)
 
-KEYS = {"id", "name", "enabled", "status"}
+KEYS = {"id", "name", "enabled", "steam_appid", "status"}
 STATUS_KEYS = {"result", "code", "started", "finished"}
 
 

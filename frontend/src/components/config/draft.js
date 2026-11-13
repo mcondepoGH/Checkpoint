@@ -84,6 +84,7 @@ export const blankGame = () => ({
   keep: '',
   onConflict: '',
   enabled: true,
+  steamAppid: '',
 });
 
 // Versiones guardadas por juego: global (por defecto) y override por juego (vacío = usar el global). 0 = sin límite.
@@ -118,6 +119,7 @@ export function fromConfig(cfg) {
     keep: g.keep_versions == null ? '' : String(g.keep_versions),
     onConflict: g.on_conflict || '',
     enabled: g.enabled !== false,
+    steamAppid: g.steam_appid == null ? '' : String(g.steam_appid),
   }));
   return { devices, games, maxVersions: String(cfg?.max_versions ?? DEFAULT_MAX_VERSIONS) };
 }
@@ -150,6 +152,10 @@ const versionsError = (v) =>
     ? undefined
     : { code: 'err.config.versions_range', params: { max: MAX_VERSIONS_LIMIT } };
 
+// Appid de Steam: entero positivo (el mismo criterio que el backend). Vacío = sin appid.
+const appidText = (v) => String(v ?? '').trim();
+const appidValid = (v) => /^\d+$/.test(v) && Number.isSafeInteger(Number(v)) && Number(v) > 0;
+
 export function localErrors(draft, runtime) {
   const errs = {};
   const locals = draft.devices.filter((d) => d.local);
@@ -162,6 +168,15 @@ export function localErrors(draft, runtime) {
   for (const g of draft.games) {
     const e = String(g.keep).trim() === '' ? undefined : versionsError(g.keep);
     if (e) errs[`keep-${g.key}`] = e;
+  }
+  const appids = new Map(); // appid -> nombre del primer juego que lo usa
+  for (const g of draft.games) {
+    const v = appidText(g.steamAppid);
+    if (v === '') continue;
+    if (!appidValid(v)) errs[`steam-${g.key}`] = { code: 'err.config.steam_appid_invalid', params: {} };
+    else if (appids.has(Number(v)))
+      errs[`steam-${g.key}`] = { code: 'err.config.steam_appid_duplicate', params: { other: appids.get(Number(v)) } };
+    else appids.set(Number(v), cleanName(g.name));
   }
   for (const list of [draft.devices, draft.games]) {
     const seen = new Map(); // nombre normalizado -> primer nombre que lo usó
@@ -208,6 +223,9 @@ export function toConfig(draft) {
       ...(g.process.trim() ? { process: g.process.trim() } : {}),
       ...(String(g.keep).trim() !== '' ? { keep_versions: num(g.keep) } : {}),
       ...(g.onConflict ? { on_conflict: g.onConflict } : {}),
+      ...(appidText(g.steamAppid) !== ''
+        ? { steam_appid: appidValid(appidText(g.steamAppid)) ? Number(appidText(g.steamAppid)) : appidText(g.steamAppid) }
+        : {}),
       ...(g.enabled === false ? { enabled: false } : {}), // solo se escribe `enabled: false`
     };
   }

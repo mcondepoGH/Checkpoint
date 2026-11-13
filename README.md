@@ -255,7 +255,10 @@ games:
       laptop-5e6f7a8b: "/home/usuario/.local/share/Ejemplo/Saves"
     keep_versions: 5           # opcional: sustituye a max_versions para este juego
     # enabled: false           # opcional: desactiva el juego (no se sincroniza por ninguna vía)
+    # steam_appid: 1245620     # opcional: id de Steam del juego (ver abajo)
 ```
+
+**Appid de Steam (opcional).** `steam_appid` es el id de Steam del juego: un dato del juego, igual en todos los dispositivos, que el plugin de Steam Deck usa para saber qué juego del hub corresponde a cada juego de Steam. Se edita en Configuración, en el campo «Appid de Steam» de la tarjeta del juego (o en `config.yaml`); vacío o ausente = sin appid. Debe ser un número entero mayor que 0: `0`, negativos, decimales, texto (también `"440"` entre comillas) y `true`/`false` se rechazan con `err.config.steam_appid_invalid`. Dos juegos no pueden compartir el mismo appid (`err.config.steam_appid_duplicate`, indica el otro juego). Solo se pueden guardar juegos de Steam por ahora: no hay appid para los que no lo son. Las keys de la API solo lo leen (`GET /api/games`); no pueden cambiarlo.
 
 La clave de cada juego y dispositivo es su **ID interno**, que no cambia nunca; `name` es solo una etiqueta y se puede renombrar libremente sin perder saves, versiones ni logs. `name` es obligatorio en cada juego y dispositivo. La CLI y la API aceptan el ID o el nombre.
 
@@ -548,13 +551,13 @@ Con **sesión de cookie** (la usa la web; la API key no vale aquí). Por cada di
 
 #### `GET /api/games`
 
-Con **API key** (Bearer; mismo 401 único y 429 por IP que `/api/hook/*`; la cookie de sesión no vale). Con la key de **usuario** devuelve todos los juegos; con la de **dispositivo** `http`, solo los que tienen ese dispositivo en su lista. Lista de juegos y su último estado, para consultar desde un dispositivo sin SSH. Solo lectura; no devuelve rutas, dispositivos ni ajustes, ni mensajes del resultado. `status` es `null` si el juego nunca se ha sincronizado; `started`/`finished` son hora local del hub (ISO 8601 sin zona). No confundir con `GET /api/games/{juego}/hook-status` (sesión, interna).
+Con **API key** (Bearer; mismo 401 único y 429 por IP que `/api/hook/*`; la cookie de sesión no vale). Con la key de **usuario** devuelve todos los juegos; con la de **dispositivo** `http`, solo los que tienen ese dispositivo en su lista. Lista de juegos y su último estado, para consultar desde un dispositivo sin SSH. Solo lectura; no devuelve rutas, dispositivos ni ajustes, ni mensajes del resultado. `steam_appid` es el id de Steam del juego (entero) o `null` si no tiene; es el mismo para todos los dispositivos y con la key de dispositivo solo se ven los juegos de ese dispositivo, como siempre. `status` es `null` si el juego nunca se ha sincronizado; `started`/`finished` son hora local del hub (ISO 8601 sin zona). No confundir con `GET /api/games/{juego}/hook-status` (sesión, interna).
 
 ```json
 [
-  {"id": "g1", "name": "Mi Juego", "enabled": true,
+  {"id": "g1", "name": "Mi Juego", "enabled": true, "steam_appid": 1245620,
    "status": {"result": "ok", "code": "err.sync.done", "started": "2026-01-15T18:30:12", "finished": "2026-01-15T18:30:14"}},
-  {"id": "g2", "name": "Otro Juego", "enabled": true, "status": null}
+  {"id": "g2", "name": "Otro Juego", "enabled": true, "steam_appid": null, "status": null}
 ]
 ```
 

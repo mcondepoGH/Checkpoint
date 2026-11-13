@@ -31,7 +31,7 @@ backend/app/
 │   ├── watcher.py       vigilancia del cierre del juego
 │   └── transport/       acceso a dispositivos: base (interfaz y utilidades), posix (ssh + rsync),
 │                        windows (ssh + tar) y local («Este equipo»); __init__ reexporta lo público
-├── config/              modelo (models.py) y almacén (store.py) de config.yaml
+├── config/              modelo (models.py) y almacén (store.py) de config.yaml; `Game.steam_appid` (opcional; entero > 0, único entre juegos) lo expone `GET /api/games`
 ├── users/               datos por usuario: apikey (key de usuario `ck_` y de dispositivo http `ckd_`, mismo almacén cifrado), avatar, history
 └── core/                utilidades base: settings, errors, hosts, bootstrap, redact, runtime, updates
 ```

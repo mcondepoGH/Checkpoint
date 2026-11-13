@@ -12,6 +12,7 @@ export default function GameCard({
   errors,
   localError,
   keepError,
+  steamError,
   globalMax,
   nameA,
   nameB,
@@ -89,6 +90,20 @@ export default function GameCard({
           {(p) => <Input {...p} value={game.pathB} onChange={set('pathB')} />}
         </Field>
       )}
+      <Field label={t('game.steamAppid')} hint={t('game.steamAppidHint')} error={steamError || errors.steam_appid}>
+        {(p) => (
+          <Input
+            {...p}
+            type="number"
+            inputMode="numeric"
+            min="1"
+            step="1"
+            value={game.steamAppid}
+            onChange={set('steamAppid')}
+            placeholder={t('game.steamAppidPh')}
+          />
+        )}
+      </Field>
       <div id={extraId} className="cfg-more" hidden={!more}>
         <div className="two">
           <Field label={t('game.process')} hint={t('game.processHint')} error={errors.process}>
