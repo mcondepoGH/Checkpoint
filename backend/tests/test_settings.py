@@ -40,3 +40,23 @@ def test_removed_variables_are_ignored(tmp_path):
 def test_session_hours_invalid_is_clear_error():
     r = _run("from app.core import settings", CHECKPOINT_SESSION_HOURS="mucho")
     assert r.returncode != 0 and "CHECKPOINT_SESSION_HOURS" in r.stderr
+
+
+def test_hook_max_file_default_512_mib():
+    r = _run("from app.core import settings\nprint(settings.HOOK_MAX_FILE_BYTES)")
+    assert r.returncode == 0, r.stderr
+    assert r.stdout.strip() == str(512 * 1024 * 1024)
+
+
+def test_hook_max_file_from_env_in_mib():
+    r = _run("from app.core import settings\nprint(settings.HOOK_MAX_FILE_BYTES)", CHECKPOINT_HOOK_MAX_FILE_MB="16384")
+    assert r.returncode == 0, r.stderr
+    assert r.stdout.strip() == str(16 * 1024 * 1024 * 1024)
+    r = _run("from app.core import settings\nprint(settings.HOOK_MAX_FILE_BYTES)", CHECKPOINT_HOOK_MAX_FILE_MB="1")
+    assert r.stdout.strip() == str(1024 * 1024)
+
+
+def test_hook_max_file_out_of_range_or_not_a_number_is_clear_error():
+    for v in ("0", "0.5", "16385", "-3", "abc", "nan", "inf"):
+        r = _run("from app.core import settings", CHECKPOINT_HOOK_MAX_FILE_MB=v)
+        assert r.returncode != 0 and "CHECKPOINT_HOOK_MAX_FILE_MB" in r.stderr, v

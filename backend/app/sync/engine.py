@@ -14,7 +14,7 @@ from typing import Callable, Dict, Optional
 from . import locking
 from ..core import settings
 from ..core.errors import describe_code, error_body
-from ..config.models import ON_CONFLICT, Config, ConfigError, resolve_ref
+from ..config.models import ON_CONFLICT, Config, ConfigError, classic_devices, resolve_ref
 from ..core.redact import redact
 
 # Reexportados (API pública de sync.engine): baseline, decide, fingerprint y versions viven en sus módulos.
@@ -182,6 +182,46 @@ def run_sync(
     return status
 
 
+def write_winner_to_hub(
+    data_dir: Path,
+    game: str,
+    src: Path,
+    losers: Dict[str, Path],
+    replace_hub: bool = True,
+    L: Callable[[str], None] = lambda m: None,
+    dn: Callable[[str], str] = lambda k: k,
+) -> Optional[str]:
+    """Aplica el ganador al hub: guarda en una versión nueva cada directorio perdedor (`losers`: {origen: directorio},
+    solo los que tienen datos; siempre ANTES de sobrescribir) y, con `replace_hub`, sustituye `data/hub/<juego>` por
+    `src` de forma casi atómica. Devuelve el nombre de la versión creada (None si no hubo perdedores).
+    El llamador tiene el lock del juego. Lo comparten la sync clásica y la subida HTTP (`services.hooks`)."""
+    new_version = None
+    if losers:
+        vdir = _new_version_dir(data_dir, game)
+        new_version = vdir.name
+        for k, d in losers.items():
+            shutil.copytree(d, vdir / k)
+            L(f"versión guardada: {vdir.name}/{dn(k)}")
+    if replace_hub:
+        _replace_dir(src, Path(data_dir) / "hub" / game)
+        L("hub actualizado")
+    return new_version
+
+
+def finish_hub_update(
+    data_dir: Path,
+    game: str,
+    keep: int,
+    new_version: Optional[str],
+    baseline: Dict[str, Optional[str]],
+    L: Callable[[str], None] = lambda m: None,
+) -> None:
+    """Tras una actualización completa: guarda el baseline (`baseline`: {origen: hash}) y poda las versiones antiguas
+    (nunca `new_version`). Solo en éxito y dentro del lock del juego."""
+    save_baseline(data_dir, game, baseline)
+    prune_versions(data_dir, game, keep, L, protect=new_version)
+
+
 def _check_process(g, tr, online, L=None, dn=lambda k: k):
     if not g.process:
         return
@@ -213,7 +253,9 @@ def _do_sync(
     def resolution_text(r):  # 'device:<id>' -> 'device:<nombre>' para los logs
         return "device:" + dn(r[7:]) if isinstance(r, str) and r.startswith("device:") else r
 
-    labels = list(g.devices)  # ids de dispositivo; en mensajes se muestra siempre el nombre
+    labels = classic_devices(cfg, game)  # ids de dispositivo (sin los `http`); en mensajes se muestra el nombre
+    if not labels:  # solo dispositivos http: nada que contactar desde el hub
+        raise SyncAbort("err.sync.push_only")
 
     def dn(k):
         return k if k == "hub" else (cfg.devices[k].name if k in cfg.devices else k)
@@ -376,21 +418,19 @@ def _do_sync(
         # 4. Re-comprobar el proceso justo antes de escribir (puede haberse abierto durante la descarga).
         _check_process(g, tr, online, dn=dn)
 
-        # 5. Guardar versiones perdedoras (siempre antes de sobrescribir).
-        new_version = None
-        if any(not fps[k].empty for k in targets):
-            vdir = _new_version_dir(data_dir, game)
-            new_version = vdir.name
-            for k in targets:
-                if not fps[k].empty:
-                    shutil.copytree(dirs[k], vdir / k)
-                    L(f"versión guardada: {vdir.name}/{dn(k)}")
-        # 6. Escribir: primero el hub (local, atómico), luego los dispositivos. Un fallo en un dispositivo
-        #    no impide intentar el otro; el resultado es 'partial' y NO se actualiza ningún baseline.
+        # 5. Guardar versiones perdedoras (siempre antes de sobrescribir) y 6a. escribir el hub (local, atómico).
         src = dirs[winner]
-        if "hub" in targets:
-            _replace_dir(src, hub)
-            L("hub actualizado")
+        new_version = write_winner_to_hub(
+            data_dir,
+            game,
+            src,
+            {k: dirs[k] for k in targets if not fps[k].empty},
+            replace_hub="hub" in targets,
+            L=L,
+            dn=dn,
+        )
+        # 6b. Luego los dispositivos. Un fallo en un dispositivo no impide intentar el otro; el resultado es
+        #    'partial' y NO se actualiza ningún baseline.
         failed = {}
         for k in targets:
             if k == "hub":
@@ -424,9 +464,8 @@ def _do_sync(
             status["failed"] = sorted(failed)
             L("sincronización PARCIAL: baseline sin actualizar; se completará en la próxima ejecución")
             return
-        remember(wh)
-        # 7. Poda (solo tras éxito, no en dry-run; dentro del lock del juego).
-        prune_versions(data_dir, game, cfg.versions_limit(game), L, protect=new_version)
+        # 7. Baseline y poda (solo tras éxito, no en dry-run; dentro del lock del juego).
+        finish_hub_update(data_dir, game, cfg.versions_limit(game), new_version, {k: wh for k in fps}, L)
         if offline:
             _set(status, "ok", "err.sync.done_pending", winner=dn(winner), updated=dns(targets), offline=dns(offline))
         else:

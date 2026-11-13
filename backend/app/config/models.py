@@ -152,14 +152,16 @@ def normalize_path(os_name: str, p: str) -> str:
 
 
 class Device(BaseModel):
-    """Dispositivo remoto (SSH: host, user, port) o `local: true` = el equipo donde corre Checkpoint
-    (sin SSH; solo fuera de Docker). Un dispositivo local no lleva host/user/port."""
+    """Dispositivo remoto (SSH: host, user, port), `local: true` = el equipo donde corre Checkpoint
+    (sin SSH; solo fuera de Docker) o `http: true` = dispositivo que sube y baja sus saves por la API HTTP
+    (transporte sin SSH, el hub nunca lo contacta). `local` y `http` no llevan host/user/port y son excluyentes."""
 
     model_config = ConfigDict(extra="forbid")
     name: str = Field(
         None, validate_default=True
     )  # obligatorio: etiqueta visible y editable; la clave del mapa es el id
     local: StrictBool = False
+    http: StrictBool = False
     host: Optional[str] = Field(None, validate_default=True)
     user: Optional[str] = Field(None, validate_default=True)
     os: str
@@ -178,6 +180,10 @@ class Device(BaseModel):
         if info.data.get("local") is True:
             if v not in (None, ""):
                 raise _pyd("err.config.local_no_remote")
+            return None
+        if info.data.get("http") is True:
+            if v not in (None, ""):
+                raise _pyd("err.config.http_no_remote")
             return None
         if info.field_name == "port" and v is None:
             return 22
@@ -205,14 +211,22 @@ class Device(BaseModel):
             raise _pyd("err.config.os_invalid", options=", ".join(OSES))
         return v
 
+    @model_validator(mode="after")
+    def _exclusive(self):
+        if self.local and self.http:
+            raise _pyd("err.config.http_local_exclusive")
+        return self
+
     @model_serializer(mode="wrap")
     def _ser(self, handler):
         d = handler(self)
-        if self.local:  # sin host/user/port
+        if self.local or self.http:  # sin host/user/port
             for k in ("host", "user", "port"):
                 d.pop(k, None)
-        else:  # los remotos no escriben `local: false`
+        if not self.local:  # solo se escribe `local: true`
             d.pop("local", None)
+        if not self.http:  # solo se escribe `http: true`
+            d.pop("http", None)
         return d
 
 
@@ -315,6 +329,11 @@ def semantic_errors(devices, games) -> List[Tuple[str, dict]]:
     for i, d in devices.items():
         if isinstance(d, dict) and "local" in d and not isinstance(d["local"], bool):
             errs.append((f"devices.{i}.local", error_body("err.config.bool_required")))
+    for i, d in devices.items():
+        if not isinstance(d, dict):
+            continue
+        if "http" in d and not isinstance(d["http"], bool):
+            errs.append((f"devices.{i}.http", error_body("err.config.bool_required")))
     for gname, g in games.items():
         gp = f"games.{gname}"
         if not isinstance(g, dict):
@@ -392,6 +411,12 @@ class Config(BaseModel):
             for d in g.devices:
                 g.paths[d] = normalize_path(self.devices[d].os, g.paths[d])
         return self
+
+
+def classic_devices(cfg: "Config", game: str) -> List[str]:
+    """Ids de los dispositivos del juego que el hub contacta (SSH o «Este equipo»): sin los `http: true`, que solo
+    suben y bajan por la API HTTP y quedan fuera de la sync clásica, el scheduler, `opened` y la vigilancia."""
+    return [d for d in cfg.games[game].devices if d in cfg.devices and not cfg.devices[d].http]
 
 
 def parse_config(data) -> Config:

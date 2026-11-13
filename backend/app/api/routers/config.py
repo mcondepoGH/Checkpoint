@@ -10,7 +10,7 @@ from ...config.store import Conflict, InvalidConfig, config_events_gen, diff_con
 from ...core import bootstrap, runtime
 from ...core.errors import ApiError, error_response
 from ...services.context import AppContext
-from ...services.devices import check_device
+from ...services.devices import check_device, prune_device_keys
 from ..deps import body_json, get_ctx, internal_router
 
 api_log = logging.getLogger(
@@ -108,6 +108,7 @@ async def put_config(request: Request, ctx: AppContext = Depends(get_ctx)):
         api_log.debug("config guardar: conflicto base=%s actual=%s", base, e.current_version)
         return conflict_response(e)
     api_log.debug("config guardada: base=%s", base)
+    prune_device_keys(store, ctx.auth.user)  # fuera las keys de dispositivos borrados o que dejaron de ser `http`
     return {**res, "config": store.snapshot().as_dict()}
 
 
@@ -137,6 +138,7 @@ async def restore_config(request: Request, ctx: AppContext = Depends(get_ctx)):
         api_log.debug("config restaurar: conflicto base=%s actual=%s", base, e.current_version)
         return conflict_response(e)
     api_log.debug("config restaurada: backup=%r base=%s", body.get("name"), base)
+    prune_device_keys(store, ctx.auth.user)  # fuera las keys de dispositivos borrados o que dejaron de ser `http`
     return {**res, "config": store.snapshot().as_dict()}
 
 

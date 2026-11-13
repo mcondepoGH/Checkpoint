@@ -10,7 +10,7 @@ import os
 import threading
 import time
 from datetime import datetime, timedelta, timezone
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 
 from starlette.concurrency import run_in_threadpool
 
@@ -19,10 +19,11 @@ from starlette.concurrency import run_in_threadpool
 from ..users import history
 from ..core import settings
 from ..core.errors import describe_code, error_body
-from ..config.models import ON_CONFLICT
+from ..config.models import ON_CONFLICT, classic_devices
 from .engine import SyncAbort, run_sync
 
 MIN_HOURS, MAX_HOURS = 0.25, 168.0
+MAINT_EVERY_S = 3600  # cada cuánto despierta el bucle para el mantenimiento (aunque los ciclos estén desactivados)
 FILE = "scheduler.json"
 log = logging.getLogger("checkpoint.scheduler")
 _root = logging.getLogger("checkpoint")
@@ -131,6 +132,9 @@ class Scheduler:
             starting=True,
         )
         self._wake: Optional[asyncio.Event] = None
+        self.maintenance: List[
+            Callable[[], object]
+        ] = []  # tareas de mantenimiento: las lanza `loop` cada MAINT_EVERY_S
         self._booting = True  # el primer ciclo tras arrancar (sin cambios de ajustes) es 'startup' si run_on_start
 
     # ---- persistencia ----
@@ -253,6 +257,8 @@ class Scheduler:
         for game in cfg.games:  # `game` es el id; en logs se muestra el nombre
             if not cfg.games[game].enabled:
                 continue  # desactivado: se omite en silencio (ni registro, ni resumen)
+            if not classic_devices(cfg, game):
+                continue  # solo dispositivos http: los empuja el dispositivo por la API, el hub no tiene a quién contactar
             name = cfg.games[game].name
             if self.busy(game):
                 res[game] = "skipped"
@@ -331,18 +337,32 @@ class Scheduler:
             except OSError:
                 pass
 
+    async def _maintain(self):
+        """Tareas de mantenimiento (p. ej. purga del staging) en un hilo. Una que falle no tira al scheduler."""
+        for fn in self.maintenance:
+            try:
+                await run_in_threadpool(fn)
+            except Exception:
+                pass
+
     async def loop(self):
         self._wake = asyncio.Event()
         while True:
             try:
                 nxt = self.next_run if self.cfg["enabled"] else None
                 timeout = None if nxt is None else max(0.0, (nxt - self.clock()).total_seconds())
+                wait = timeout
+                if self.maintenance:  # despertar periódico aunque el ciclo esté apagado
+                    wait = MAINT_EVERY_S if timeout is None else min(timeout, MAINT_EVERY_S)
                 try:
-                    await asyncio.wait_for(self._wake.wait(), timeout)
+                    await asyncio.wait_for(self._wake.wait(), wait)
                     self._wake.clear()
                     continue
                 except asyncio.TimeoutError:
                     pass
+                await self._maintain()
+                if nxt is None or self.clock() < nxt:
+                    continue  # solo era el despertar de mantenimiento: aún no toca el ciclo
                 trig = "startup" if self._booting and self.cfg["run_on_start"] else "scheduled"
                 self._booting = False
                 await self._cycle(trig)

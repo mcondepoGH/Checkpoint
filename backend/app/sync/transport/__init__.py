@@ -20,6 +20,8 @@ __all__ = [
 
 
 def get_transport(dev: Device) -> Transport:
+    if dev.http:  # el hub nunca lo contacta: es el dispositivo quien llama a /api/hook
+        raise TransportError("err.transport.push_only")
     if dev.local:
         if running_in_docker():
             raise TransportError("err.config.local_docker")
