@@ -2,6 +2,8 @@
 
 ## Sin publicar
 
+## 1.12.0 (2026-11-13)
+
 ### Cambios
 
 - Configuración se divide en tres subpestañas (estado en memoria, sin URL ni almacenamiento): **General** (sincronización automática con su registro, y actualizaciones), **Biblioteca** (clave SSH, versiones guardadas, dispositivos y juegos) y **Lanzadores**. Abre en General, y en Biblioteca en el primer uso (sin dispositivos). La barra de guardar y el borrador son solo de Biblioteca; el borrador se conserva al cambiar de subpestaña y, con cambios sin guardar, Biblioteca muestra un punto de aviso accesible. En móvil (≤640 px) las etiquetas son cortas y la fila cabe a 320 px. La barra superior sigue con 3 pestañas.
