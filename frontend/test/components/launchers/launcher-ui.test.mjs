@@ -645,3 +645,21 @@ test('Filtro por origen: sin entradas de ese origen, mensaje (es/en) y sin lista
     assert.ok(has(h, txt) && !has(h, 'class="run"') && !has(h, 'class="runlog"'), h);
   }
 });
+
+test('Lanzador: los dispositivos http no salen en el selector ni dan comandos (opened daría 400 device_push_only)', { skip }, () => {
+  const mixed = [
+    { id: 'mi-pc', name: 'Mi PC' },
+    { id: 'deck', name: 'Deck', http: true },
+    { id: 'laptop', name: 'Portátil' },
+  ];
+  const h = block(WITH, { game: { devices: mixed } });
+  assert.ok(!has(h, 'device=deck') && !has(h, '>Deck<'), 'sin el http');
+  assert.ok(has(h, 'device=mi-pc') && has(h, '>Portátil<') && has(h, 'Dispositivo del lanzador'), 'quedan dos: selector');
+  const one = block(WITH, { game: { devices: [mixed[0], mixed[1]] } });
+  assert.ok(has(one, 'device=mi-pc') && !has(one, '<select') && !has(one, 'device=deck'), 'queda uno: sin selector');
+});
+
+test('Lanzador: solo dispositivos http -> el estado vacío de siempre', { skip }, () => {
+  const h = block(WITH, { game: { devices: [{ id: 'deck', name: 'Deck', http: true }] } });
+  assert.ok(has(h, 'Elige los dispositivos') && !has(h.split('class="launcher-row"')[1], 'curl') && !has(h, 'device=deck'));
+});

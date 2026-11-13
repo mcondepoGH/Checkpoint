@@ -98,6 +98,7 @@ export function fromConfig(cfg) {
     name: d.name,
     orig: d.name,
     local: d.local === true,
+    http: d.http === true, // se conserva al guardar (toConfig); aún no se edita en el formulario
     host: d.host ?? '',
     port: String(d.port ?? 22),
     user: d.user ?? '',
@@ -185,9 +186,12 @@ export function toConfig(draft) {
   const devices = {};
   for (const d of draft.devices) {
     const { os } = d;
-    devices[idOf(d, 'dispositivo')] = d.local
-      ? { name: cleanName(d.name), local: true, os }
-      : { name: cleanName(d.name), host: d.host, user: d.user, os, port: num(d.port) };
+    // `http` (escrito a mano en config.yaml) no se edita en el formulario: se conserva sin host/user/port/local.
+    devices[idOf(d, 'dispositivo')] = d.http
+      ? { name: cleanName(d.name), http: true, os }
+      : d.local
+        ? { name: cleanName(d.name), local: true, os }
+        : { name: cleanName(d.name), host: d.host, user: d.user, os, port: num(d.port) };
   }
   const games = {};
   for (const g of draft.games) {

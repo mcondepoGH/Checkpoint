@@ -248,3 +248,31 @@ test('enabled: alternar el interruptor marca cambios en ambos sentidos', () => {
   assert.equal(isDirty(back, off), true);
   assert.ok(!('enabled' in toConfig(back).games['Mi-Juego-82542a10']));
 });
+
+test('fromConfig conserva la marca http del dispositivo (los lanzadores la usan para excluirlo)', () => {
+  const d = fromConfig({
+    max_versions: 1,
+    devices: { a: { name: 'A', http: true, os: 'linux' }, b: { name: 'B', host: 'h', user: 'u', os: 'linux', port: 22 } },
+    games: {},
+  });
+  assert.deepEqual(
+    d.devices.map((x) => x.http),
+    [true, false],
+  );
+});
+
+test('dispositivo http: toConfig emite http y no host/user/port/local; ida y vuelta idéntica', () => {
+  const cfg = {
+    max_versions: 20,
+    devices: {
+      'web-1a2b3c4d': { name: 'Web', http: true, os: 'windows' },
+      'pc-5e6f7a8b': { name: 'PC', host: '10.0.0.1', user: 'u', os: 'linux', port: 22 },
+      'loc-9c8d7e6f': { name: 'Local', local: true, os: 'linux' },
+    },
+    games: {},
+  };
+  const out = toConfig(fromConfig(cfg));
+  assert.deepEqual(out, cfg);
+  assert.deepEqual(Object.keys(out.devices['web-1a2b3c4d']).sort(), ['http', 'name', 'os']);
+  assert.equal(isDirty(fromConfig(cfg), cfg), false);
+});
