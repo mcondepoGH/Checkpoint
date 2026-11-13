@@ -2,6 +2,17 @@
 
 ## Sin publicar
 
+## 1.14.0 (2026-11-13)
+
+### Cambios
+
+- API HTTP para dispositivos sin SSH: un dispositivo con `http: true` es quien llama al hub, que no lo contacta ni lo vigila. Endpoints (con API key Bearer): `POST /api/hook/{game}/fingerprint` (con `?manifest=1` devuelve el manifiesto), `GET /manifest`, `GET`/`PUT /files` (subida reanudable), `POST /commit` y `POST /closed`.
+- Key propia por dispositivo (`ckd_`), gestionada en `/api/devices/{id}/apikey`.
+- Las subidas pasan por un área temporal (staging) con purga y tope. Variables nuevas: `CHECKPOINT_HOOK_MAX_FILE_MB`, `CHECKPOINT_HOOK_STAGING_TTL_H` y `CHECKPOINT_HOOK_STAGING_MAX_MB`.
+- Configuración conserva los dispositivos http al guardar y los lanzadores los excluyen.
+- Corrige el popup de perfil, que se cerraba al copiar la API key por HTTP.
+- La insignia «Simulación» de Sincronizar es más corta.
+
 ## 1.13.0 (2026-11-13)
 
 ### Cambios

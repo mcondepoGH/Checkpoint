@@ -60,6 +60,9 @@ Variables (todas con prefijo `CHECKPOINT_`, salvo `TZ`). El `docker-compose.yml`
 | `CHECKPOINT_HOME_DIR` | según el sistema | Solo sin Docker: carpeta base de `config/`, `data/` y `keys/` (ver más abajo) |
 | `CHECKPOINT_SESSION_HOURS` | `12` | Horas de validez de la sesión |
 | `CHECKPOINT_COOKIE_SECURE` / `CHECKPOINT_TRUST_PROXY` | `0` | Pon `1` tras un proxy inverso con HTTPS |
+| `CHECKPOINT_HOOK_STAGING_TTL_H` | `24` | Horas sin escrituras tras las que se purga el staging de subidas (`data/staging/<juego>/<dispositivo>/`) al arrancar y cada hora; nunca el de un juego con el lock tomado o una ejecución en curso. Entre `1` y `720`; fuera de rango o no numérico, el arranque falla con un error claro |
+| `CHECKPOINT_HOOK_STAGING_MAX_MB` | `2048` | Tope (MiB) del staging de cada juego (todos sus dispositivos) en la subida de saves por la API; al superarlo, `413` `err.hook.staging_full`. Entre `1` y `1048576`; fuera de rango o no numérico, el arranque falla con un error claro |
+| `CHECKPOINT_HOOK_MAX_FILE_MB` | `512` | Tamaño máximo por fichero (MiB) en la subida de saves de los dispositivos `http` por la API (ver «Hooks»). Entre `1` y `16384` (16 GiB); fuera de rango o no numérico, el arranque falla con un error claro |
 | `CHECKPOINT_RUNTIME` | automático | `docker` o `native`: fuerza el modo (la imagen lo fija a `docker`) |
 | `CHECKPOINT_LANG` | `es` | Idioma por defecto de la interfaz: `es` o `en` (también `en-US`, `EN`…). Opcional; sin marcar es español. Un valor no soportado se ignora (español) y se avisa en el log de arranque. Ver [Idioma](#idioma) |
 | `CHECKPOINT_LOG_LEVEL` | `info` | Nivel de log de la app: `info` o `debug` (también `warning`, `error`). Con `debug` salen las trazas detalladas por petición. Un valor no válido se ignora (`info`) y se avisa en el log de arranque. Se aplica al reiniciar |
@@ -293,7 +296,7 @@ Todos operan sobre el usuario de la sesión (sin ids en la URL). Hoy solo existe
 
 Una sola API key por usuario, para que lanzadores y plugins avisen al hub sin iniciar sesión. Se gestiona en la sección «API key» del menú del perfil: **Generar** (nunca se crea sola), verla siempre (campo de solo lectura con botón **Copiar**), **Regenerar** (con confirmación: la anterior deja de valer y hay que actualizar los comandos y plugins ya vinculados) y **Revocar**. Formato: `ck_` + 32 bytes aleatorios en base64 urlsafe (46 caracteres).
 
-- **Alcance mínimo:** solo sirve para las rutas `/api/hook/*` (`GET /api/hook/ping`, `GET /api/hook/watches` y `POST /api/hook/{juego}/opened`, ver «Hooks») y para `GET /api/games` (lista de juegos y su estado). No da acceso al login, ajustes, versiones ni a restaurar, y la cookie de sesión no vale en esas rutas.
+- **Alcance mínimo:** esta key de **usuario** sirve para `GET /api/hook/ping`, `GET /api/hook/watches`, `POST /api/hook/{juego}/opened` y `GET /api/games` (todos los juegos). **No** vale en las rutas de los dispositivos `http` (`fingerprint`, `manifest`, `files`, `commit`, `closed`): esas piden la key del dispositivo (ver «API key de dispositivo `http`»). No da acceso al login, ajustes, versiones ni a restaurar, y la cookie de sesión no vale en esas rutas.
 - **Autenticación:** cabecera `Authorization: Bearer ck_...`, sin cookie ni comprobación de `Origin`. Cualquier fallo (sin cabecera, mal formada, inválida, revocada o regenerada) es el mismo `401` con `err.apikey.invalid`; la comparación es en tiempo constante (`hmac.compare_digest`). Tras 3 fallos seguidos desde una IP, `429` con `Retry-After` (misma escala que el login, con contador propio: un lanzador mal configurado no bloquea el login web).
 - **Dónde se guarda:** como la key se vuelve a mostrar, no vale guardar solo un hash. Se guarda cifrada en `data/profile/<id>/apikey.enc` (permisos 0600, misma carpeta por usuario que la foto). La clave de cifrado se deriva del **secreto del hub**, `hub.secret` (32 bytes aleatorios, 0600), que se crea la primera vez junto a `config.yaml` (en Docker, el volumen `/config`; sin Docker, `config/` del directorio de datos de la app), **fuera de `data/`**: una copia de seguridad solo de `data/` no expone la key. Haz copia de `hub.secret` si quieres conservar la key; sin él (o si lo cambias) la key guardada no se puede descifrar, la interfaz muestra «sin key» y basta generar una nueva.
 - **Cifrado:** [Fernet](https://cryptography.io/en/latest/fernet/) de la librería `cryptography` (AES-128-CBC + HMAC-SHA256). La clave Fernet se deriva del secreto del hub con HMAC-SHA256. Fernet no admite datos asociados, así que el id de usuario va dentro del payload cifrado y se verifica al descifrar: un fichero manipulado, copiado a otro usuario o cifrado con otro secreto no descifra (la interfaz muestra «sin key»).
@@ -311,21 +314,57 @@ API (con sesión de cookie, como el resto del perfil; las escrituras comprueban 
 curl -H "Authorization: Bearer ck_..." http://HOST:PORT/api/hook/ping
 ```
 
+### API key de dispositivo `http`
+
+Cada dispositivo con `http: true` tiene **su propia key**, distinta de la de usuario y de la de los demás dispositivos. Formato: `ckd_` + 32 bytes aleatorios en base64 urlsafe (47 caracteres); el prefijo distinto (`ck_` usuario, `ckd_` dispositivo) le dice al hub qué comprobar sin ambigüedad. Se genera, se ve siempre, se regenera (la anterior deja de valer al instante) y se revoca por sesión de cookie (la interfaz está pendiente: tarjeta «UI de dispositivos http»; mientras tanto, con la API). Se guarda igual que la de usuario (Fernet con `hub.secret`, 0600, comparación en tiempo constante) en `data/profile/<id>/devices/<id de dispositivo>.enc`; el id del dispositivo va dentro del payload cifrado: un fichero copiado a otro dispositivo no descifra.
+
+API (sesión de cookie; escrituras con comprobación de `Origin`; `Cache-Control: no-store`; `404` `err.hook.device_unknown` si el id no existe, `400` `err.hook.device_not_http` si el dispositivo no es `http`):
+
+- `GET /api/devices/{id}/apikey`: `{"exists": true, "key": "ckd_..."}` o `{"exists": false, "key": null}`.
+- `POST /api/devices/{id}/apikey`: genera o regenera; devuelve `{"exists": true, "key": "ckd_..."}`.
+- `DELETE /api/devices/{id}/apikey`: revoca (idempotente); devuelve `{"exists": false, "key": null}`.
+
+Con la sesión web (cookie, no una key; `COOKIE` = archivo de cookies del login, `ID` = id del dispositivo; las escrituras llevan `Origin`):
+
+```bash
+curl -fsS -b COOKIE "http://HOST:8088/api/devices/ID/apikey"
+curl -fsS -b COOKIE -H "Origin: http://HOST:8088" -X POST "http://HOST:8088/api/devices/ID/apikey"
+curl -fsS -b COOKIE -H "Origin: http://HOST:8088" -X DELETE "http://HOST:8088/api/devices/ID/apikey"
+```
+
+La key **identifica al dispositivo**: `?device=` pasa a ser opcional en sus endpoints y, si se pasa (id o nombre) y no es el de la key, `403` `err.apikey.device_mismatch` (también con un dispositivo desconocido, para no revelar cuáles existen). El juego solo se busca entre los que incluyen ese dispositivo: uno que no lo incluye responde el mismo `404` `err.main.game_unknown` que uno inexistente.
+
+**Ciclo de vida con la config.** La key va ligada al **id** del dispositivo, no al nombre: **renombrar un dispositivo no cambia su key**. Borrar el dispositivo o quitarle `http` borra su key (al guardar o restaurar la config y al arrancar el hub, por si se editó `config.yaml` a mano); además, una key de un dispositivo que ya no es `http` no autentica aunque su fichero siguiera en disco. Un dispositivo nuevo con el mismo id no hereda la key anterior.
+
+#### Qué key acepta cada endpoint
+
+| Endpoint | Key de usuario (`ck_`) | Key de dispositivo (`ckd_`) |
+|---|---|---|
+| `GET /api/hook/ping` | sí | sí (añade `"device": "<id>"`) |
+| `GET /api/hook/watches` | sí | no (`401`) |
+| `POST /api/hook/{juego}/opened` | sí | no (`401`) |
+| `GET /api/games` | sí: todos los juegos | sí: solo los juegos que tienen ese dispositivo |
+| `POST /api/hook/{juego}/fingerprint`, `GET /manifest`, `GET`/`PUT /files`, `POST /commit`, `POST /closed` | no (`401`) | sí, solo en juegos que incluyen el dispositivo |
+
+Una clase de key no admitida es el **mismo `401`** (`err.apikey.invalid`) que una key inválida, y cuenta como fallo para el límite por IP (`429`); `403` y `404` de alcance no cuentan.
+
+**Aviso de seguridad.** Las keys de dispositivo dan acceso de lectura y escritura a los saves de sus juegos: trátalas como contraseñas (HTTPS o VPN fuera de tu red de confianza, no las subas a repositorios) y regenera o revoca la que se filtre o del dispositivo que pierdas. La de dispositivo limita el daño: no sirve para `opened`, `watches` ni para otros dispositivos, y no da acceso a ajustes. Excluye `hub.secret` de las copias, como con la de usuario.
+
 ### Documentación de la API (OpenAPI)
 
-La API que usa la API key (`GET /api/hook/ping`, `GET /api/hook/watches`, `POST /api/hook/{juego}/opened` y `GET /api/games`) se documenta con OpenAPI y se puede probar desde el navegador con Swagger UI:
+La API que usa la API key (la de usuario y la de dispositivo `http`: `/api/hook/*` y `GET /api/games`) se documenta con OpenAPI y se puede probar desde el navegador con Swagger UI:
 
 - **Abrir:** enlace «Documentación de la API» en el menú del perfil, bajo «API key» (`/api/docs`, pestaña nueva). El esquema está en `/api/openapi.json`.
 - **Solo con sesión:** `/api/docs`, `/api/openapi.json` y los ficheros de Swagger UI exigen la sesión de la web; sin ella responden `401` como el resto de rutas protegidas. La API key sola no abre la documentación.
-- **Alcance:** solo esas cuatro rutas (tag «Avisos del lanzador» las tres de `/api/hook/*` y «Juegos» la de `/api/games`). El resto de `/api/*` (login, perfil, configuración, sincronización, versiones...) es interno de la web, no está en el esquema y puede cambiar sin aviso.
-- **Probar:** pulsa «Authorize», pega tu API key (sin el prefijo `Bearer`) y usa «Try it out». Ojo: `POST .../opened` **ejecuta de verdad** una sincronización previa y arma el vigilante de cierre del juego.
+- **Alcance:** solo las rutas de la API key (tag «Avisos del lanzador» las de `/api/hook/*` y «Juegos» la de `/api/games`); cada operación indica qué clase de key acepta (esquemas de seguridad `bearerAuth` = usuario y `deviceKeyAuth` = dispositivo). El resto de `/api/*` (login, perfil, configuración, sincronización, versiones...) es interno de la web, no está en el esquema y puede cambiar sin aviso.
+- **Probar:** pulsa «Authorize», pega tu API key (sin el prefijo `Bearer`; hay un campo por clase de key) y usa «Try it out». Ojo: `POST .../opened` **ejecuta de verdad** una sincronización previa y arma el vigilante de cierre del juego.
 - **Sin internet:** Swagger UI va empaquetada en la imagen (`swagger-ui-dist`, versión fijada en `frontend/package.json`; el build de Vite la copia a `docs-assets/` y el backend la sirve en `/api/docs-assets/`). No se carga nada de CDNs ni de terceros.
 - **Idioma:** los textos de la documentación están en español; los códigos `err.*` van sin traducir.
 - **Mantenimiento:** toda ruta `/api/*` nueva queda fuera del esquema por defecto; para publicarla hay que ponerle un tag público (`TAG` o `GAMES_TAG` en `backend/app/api/docs/install.py`). `backend/tests/test_apidocs.py` falla si el esquema deja de tener exactamente las rutas de la API key.
 
 ## Hooks
 
-Rutas `/api/hook/*` para que un lanzador avise al hub con la API key (ver «API key de usuario»). Hoy: el aviso de apertura (que además arma el **cierre automático**), la consulta de vigilancias y, con la misma key, la lista de juegos (`GET /api/games`).
+Rutas `/api/hook/*` para que un lanzador avise al hub con la API key de usuario (ver «API key de usuario») o, en las de los dispositivos `http`, con la del dispositivo (ver «API key de dispositivo `http`»). Hoy: el aviso de apertura (que además arma el **cierre automático**), la comparación de saves de un dispositivo `http` (`fingerprint`) y su subida y bajada fichero a fichero (`manifest`, `files`, `commit`), la consulta de vigilancias y, con la misma key, la lista de juegos (`GET /api/games`).
 
 ### `POST /api/hook/{juego}/opened?device=<dispositivo>`
 
@@ -344,6 +383,98 @@ curl -fsS -m 60 -X POST -H "Authorization: Bearer ck_..." "http://HOST:8088/api/
 ```
 
 Pon la URL **entre comillas**: el `?` lo interpretaría el shell como comodín.
+
+### Dispositivos `http` (sin SSH)
+
+Un dispositivo con `http: true` no lleva `host`, `user` ni `port` (ni `local`; son excluyentes, `os` sigue siendo obligatorio) y funciona también en Docker: el hub **nunca lo contacta**, es el dispositivo quien llama a la API con **su propia key** (`ckd_...`, ver «API key de dispositivo `http`»), que ya lo identifica (`?device=` es opcional). Queda fuera de la sincronización clásica (manual y automática), del aviso `opened` (`400` `err.hook.device_push_only`) y de la vigilancia de cierre; en un juego con un dispositivo `http` y otro SSH o local, la sync clásica solo trata al segundo. Un juego con solo dispositivos `http` no entra en la sync automática y una sync manual responde `err.sync.push_only`. «Probar conexión» con un dispositivo `http` no intenta SSH: responde `err.transport.push_only`.
+
+```yaml
+devices:
+  deck-1a2b3c4d: {name: "Steam Deck", http: true, os: linux}   # sin host, user ni port
+```
+
+#### `POST /api/hook/{juego}/fingerprint?device=<dispositivo>`
+
+El dispositivo envía el manifiesto de su carpeta de saves y el hub responde qué debe hacer, comparándolo con su copia (`data/hub/<juego>`) y con la línea base de la última sync, con la misma lógica que la sync clásica (nunca decide por fecha; un lado vacío no gana a uno con datos). **Única escritura**: con `action: none` (`reason: same`, huella igual a la del hub y no vacía) fija la línea base del dispositivo y del hub, verificada contra el manifiesto real, con el lock del juego (ocupado: `409` `err.main.run_in_progress`) y sin reescribirla si ya es esa. Con el lock tomado vuelve a comprobar que el hub sigue teniendo esa huella: si un `commit` lo cambió entre medias, **no escribe la línea base** (la respuesta sigue siendo `none`; el siguiente `fingerprint` decidirá con el hub nuevo); con `upload`, `download` o `conflict` no escribe nada ni toma el lock. Nunca toca ficheros ni historial.
+
+Parámetro opcional `?manifest=1` (aditivo): con `action: download`, la respuesta incluye además `hub_manifest` (`[{path, sha256, size, mtime}]`, la misma forma que `GET /manifest`), calculado de la misma lectura del hub que la decisión (sin segunda pasada ni carrera). Sin el parámetro, o con otra acción, la respuesta no cambia; `GET /manifest` sigue igual.
+
+Petición (`Content-Type: application/json`): lista de ficheros, máximo 50 000; `path` relativa con `/` (se rechazan `..`, las rutas absolutas, el carácter NUL, las vacías y las repetidas; cualquier otro carácter vale: `'`, `&`, `:` o espacios, para que el save pueda igualar al del hub), `sha256` hexadecimal de 64, `size` en bytes y `mtime` en segundos Unix; `[]` es una carpeta vacía.
+
+```json
+[{"path": "slot1/save.dat", "sha256": "9f86d0...0a08", "size": 10240, "mtime": 1768501812}]
+```
+
+Respuesta `200`:
+
+```json
+{"game": "g1", "device": "deck", "action": "upload", "reason": null,
+ "hub": {"hash": "…", "files": 2, "size": 20480, "mtime": 1768501000},
+ "device_state": {"hash": "…", "files": 2, "size": 20480, "mtime": 1768501812}}
+```
+
+`action`: `upload` (manda el dispositivo), `download` (manda el hub), `none` (iguales, `reason: "same"`) o `conflict` (`reason`: `both-changed`, `no-baseline` o `inconsistent`; no se hace nada).
+
+- **Errores:** `401`/`429` como el resto (la key de usuario es un `401`); `403` `err.apikey.device_mismatch` (`?device=` distinto del de la key); `404` `err.main.game_unknown` (juego inexistente o que no incluye el dispositivo); `400` `err.main.json_body_required` (el cuerpo no es una lista JSON); `409` `err.main.run_in_progress` (ejecución del juego en curso) o `err.sync.game_disabled`; `422` `err.hook.manifest_path_invalid`, `err.hook.manifest_sha_invalid`, `err.hook.manifest_duplicate`, `err.hook.manifest_invalid` o `err.hook.manifest_too_large`.
+
+```bash
+curl -fsS -X POST -H "Authorization: Bearer ckd_..." -H "Content-Type: application/json" \
+  -d '[{"path": "slot1/save.dat", "sha256": "9f86d0...0a08", "size": 10240, "mtime": 1768501812}]' \
+  "http://HOST:8088/api/hook/MiJuego/fingerprint?device=Steam%20Deck"
+# con el listado del hub si la acción es download:
+curl -fsS -X POST -H "Authorization: Bearer ckd_..." -H "Content-Type: application/json" \
+  -d '[{"path": "slot1/save.dat", "sha256": "9f86d0...0a08", "size": 10240, "mtime": 1768501812}]' \
+  "http://HOST:8088/api/hook/MiJuego/fingerprint?device=Steam%20Deck&manifest=1"
+```
+
+#### `POST /api/hook/{juego}/closed?device=<dispositivo>`
+
+El dispositivo `http` avisa de que cerró el juego (el hub no puede sondear su proceso por SSH). **Solo deja constancia** en el historial (disparador `hook_closed`, con el dispositivo) y devuelve el estado: no hay pull ni push ni sync clásica; el dispositivo hará después `fingerprint` y subirá o bajará por su cuenta. Sin cuerpo.
+
+Respuesta `200`:
+
+```json
+{"game": "g1", "device": "deck", "recorded": true, "outcome": "ok"}
+```
+
+Un juego **desactivado** responde `200` con `outcome: "skipped"`, `code: "err.sync.game_disabled"` y `params: {}` (queda `skipped` en el historial, como en `opened`).
+
+- **Errores:** `401`/`429` como el resto (la key de usuario es un `401`); `403` `err.apikey.device_mismatch`; `404` `err.main.game_unknown` (juego inexistente o que no incluye el dispositivo); `409` `err.main.run_in_progress` (ejecución del juego en curso; el cierre queda `skipped` con `err.hook.busy`).
+
+```bash
+curl -fsS -m 10 -X POST -H "Authorization: Bearer ckd_..." "http://HOST:8088/api/hook/MiJuego/closed?device=Steam%20Deck"
+```
+
+#### Subida y bajada de saves (dispositivos `http`)
+
+Tras `fingerprint`, el dispositivo sube o baja sus saves **fichero a fichero** (reanudable, con sha256 de cada fichero y del conjunto). Todas llevan `Authorization: Bearer ckd_...` (key del dispositivo; `401`/`429` como el resto; `?device=` opcional, `403` `err.apikey.device_mismatch` si no es el de la key; juego que no incluye el dispositivo, `404` `err.main.game_unknown`) y el id o nombre del juego. Política de conflicto: siempre `skip` (nunca se sobrescribe al perdedor de un conflicto).
+
+**Rutas.** La `path` de los ficheros se normaliza (`\` pasa a `/`) y se **revalida cada vez** contra el directorio donde se lee o escribe (staging o hub): se rechazan `..`, las rutas absolutas, NUL, vacías, los enlaces simbólicos (nunca se siguen) y cualquier ruta que acabe fuera (`400` `err.hook.file_path_invalid`). El manifiesto acepta caracteres raros (`C:/x`, `a;b`, `'`), pero como ruta relativa dentro de esa carpeta, nada más.
+
+**Bloqueo y límites.** `PUT files` **no toma el lock del juego**: una subida lenta no bloquea la sync clásica. Al entrar solo comprueba que no haya una ejecución del juego en curso (`409` `err.main.run_in_progress`) y reserva ese fichero del dispositivo (otro `PUT` simultáneo al mismo fichero: `409` `err.hook.upload_busy`; el staging es de cada juego y dispositivo). El resto (`commit`, `manifest`, `GET files`, y `fingerprint` al fijar la línea base) toma el lock del juego (el de la sync) mientras dura, sin esperar: ocupado, `409` `err.main.run_in_progress` (reintenta luego). El `commit` reserva además todo el staging de ese dispositivo (después del lock del juego, siempre en ese orden, y sin esperar: no hay interbloqueo) mientras verifica `tree/` y lo copia al hub, para que un `PUT` concurrente del mismo dispositivo no pueda cambiar un fichero entre la verificación y la escritura (el hub quedaría distinto del hash guardado en la línea base). Decisión: no espera, responde `409` `err.hook.upload_busy` en ambos sentidos y sin tocar nada: un `PUT files` que llegue durante el commit, o un `commit` que llegue con un `PUT` del mismo dispositivo aún en curso (que no se corta). Reintenta después. Tras un `409` el staging queda intacto (la purga recoge lo que no se reintente); si el commit termina bien, se borra entero, incluidos los restos que no estaban en el manifiesto. Los `PUT` de otros dispositivos no se ven afectados. Un juego desactivado da `409` `err.sync.game_disabled`. No hay sesiones ni tokens: la coherencia entre `fingerprint` y `commit` la da `expect`. Máximo por fichero: `CHECKPOINT_HOOK_MAX_FILE_MB` (512 MiB por defecto): `413` `err.hook.file_too_large` con `params.max_mb`; se comprueba con `size`, con `Content-Length` y mientras llega el cuerpo (`size` y `Content-Length` son falsificables y con chunked no hay `Content-Length`). La subida va en streaming a disco: nunca se carga el cuerpo en memoria. **Staging:** todo el de un juego (todos sus dispositivos) tiene un tope, `CHECKPOINT_HOOK_STAGING_MAX_MB` (2048 MiB por defecto): al superarlo, `413` `err.hook.staging_full` con `params.max_mb` (se comprueba con `size` y mientras llega el cuerpo). El staging sin escrituras en `CHECKPOINT_HOOK_STAGING_TTL_H` horas (24 por defecto) se borra solo, al arrancar, cada hora (tarea de mantenimiento del scheduler, aunque la sync automática esté apagada) y de forma oportunista al subir; nunca el de un juego con el lock tomado o una ejecución en curso.
+
+**Flujo de subida** (`fingerprint` dio `action: upload`):
+
+1. Por cada fichero del manifiesto: `PUT /api/hook/{juego}/files?device=..&path=slot1/save.dat&size=10240&sha256=<sha256 del fichero entero>&offset=0` con el contenido en bruto (`Content-Type: application/octet-stream`). Respuesta `200` `{"game", "device", "path", "received", "size", "complete"}`. Los ficheros van a `data/staging/<juego>/<dispositivo>/`; **`data/hub/<juego>` no se toca**. Si se corta, repite con `offset` = bytes ya recibidos; si `offset` no coincide con lo que el hub tiene (o `sha256`/`size` cambiaron), `409` `err.hook.upload_offset_mismatch` con `params.received` (continúa desde ahí, o `offset=0` para reiniciar). Al completar los `size` bytes se verifica el sha256 (`422` `err.hook.sha_mismatch`: se descarta) y `complete` pasa a `true`. Más bytes que `size`: `422` `err.hook.upload_size_mismatch`. `size`, `offset` o `sha256` mal formados: `422` `err.hook.param_invalid`.
+2. `POST /api/hook/{juego}/commit?device=..` con `{"expect": "<hub.hash de fingerprint, o null si el hub estaba vacío>", "manifest": [ ...el manifiesto completo... ]}`. Con el lock del juego comprueba, en orden: el hub no cambió (`409` `err.hook.hub_changed`: repite `fingerprint`); sigue mandando el dispositivo con la misma lógica que `fingerprint` (conflicto o hub más nuevo: `409` `err.hook.commit_rejected`, `params.reason` = `both-changed`, `no-baseline`, `inconsistent` o `hub`; no se toca nada); están todos los ficheros (`422` `err.hook.upload_incomplete`, con `params.missing` y `params.paths`, hasta 10); y el conjunto da la huella del manifiesto (`422` `err.hook.set_mismatch`). Entonces: guarda el hub actual en una versión nueva (`hub`), lo **reemplaza por el manifiesto entero** (lo que el hub tuviera de más desaparece; los ficheros de staging que no estén en el manifiesto se ignoran), aplica el `mtime` del manifiesto, fija la línea base del dispositivo y del hub, poda las versiones antiguas y deja una entrada en el historial (disparador `hook`, con el dispositivo). Respuesta `200`: `{"game", "device", "outcome": "ok", "hash", "files", "size", "version"}`; `outcome: "unchanged"` (sin `version`) si el hub ya era igual. El staging del dispositivo se borra.
+
+**Flujo de bajada** (`fingerprint` dio `action: download`):
+
+1. `GET /api/hook/{juego}/manifest?device=..`: `{"game", "device", "hash", "files", "size", "mtime", "manifest": [{"path", "sha256", "size", "mtime"}, ...]}` (el mismo formato que el manifiesto de `fingerprint`; `hash` es el `hub.hash`). Con el lock del juego. Decisión: es un endpoint aparte (y no se reutiliza `fingerprint`) para no obligar a hashear el hub entero en cada comparación ni a enviar el listado cuando no hace falta.
+2. `GET /api/hook/{juego}/files?device=..&path=slot1/save.dat` por cada fichero que difiera de lo que el dispositivo tiene: cuerpo en bruto, `Content-Length` y `Accept-Ranges: bytes`. Con `Range: bytes=a-b` (un solo rango; `a-` y `-n` valen) responde `206` con `Content-Range`; un rango inválido, múltiple o fuera del fichero, `416` `err.hook.range_invalid` con `Content-Range: bytes */tamaño`. Fichero que no existe, `404` `err.hook.file_unknown`. El lock solo se toma para abrir el fichero.
+3. El dispositivo verifica el sha256 de cada fichero y la huella del conjunto contra el `hash` del manifiesto, borra lo que le sobre y vuelve a llamar a `POST /api/hook/{juego}/fingerprint` con su manifiesto: si ahora es igual al hub (`none`/`same`), el hub fija esa huella como línea base del dispositivo (sin ella, su siguiente cambio local daría un conflicto falso). No hay endpoint de confirmación aparte.
+
+```bash
+curl -fsS -H "Authorization: Bearer ckd_..." "http://HOST:8088/api/hook/MiJuego/manifest?device=Steam%20Deck"
+curl -fsS -X PUT -H "Authorization: Bearer ckd_..." --data-binary @save.dat \
+  "http://HOST:8088/api/hook/MiJuego/files?device=Steam%20Deck&path=slot1/save.dat&size=10240&sha256=9f86d0...0a08&offset=0"
+curl -fsS -X POST -H "Authorization: Bearer ckd_..." -H "Content-Type: application/json" \
+  -d '{"expect": null, "manifest": [{"path": "slot1/save.dat", "sha256": "9f86d0...0a08", "size": 10240, "mtime": 1768501812}]}' \
+  "http://HOST:8088/api/hook/MiJuego/commit?device=Steam%20Deck"
+curl -fsS -H "Authorization: Bearer ckd_..." -H "Range: bytes=1048576-" "http://HOST:8088/api/hook/MiJuego/files?device=Steam%20Deck&path=slot1/save.dat"
+```
+
+Todos aparecen en el Swagger (`/api/docs`) con ejemplos y los errores `401`, `403`, `404`, `429`, `409`, `413` y `422`.
 
 ### Lanzadores
 
@@ -417,7 +548,7 @@ Con **sesión de cookie** (la usa la web; la API key no vale aquí). Por cada di
 
 #### `GET /api/games`
 
-Con **API key** (Bearer; mismo 401 único y 429 por IP que `/api/hook/*`; la cookie de sesión no vale). Lista de juegos y su último estado, para consultar desde un dispositivo sin SSH. Solo lectura; no devuelve rutas, dispositivos ni ajustes, ni mensajes del resultado. `status` es `null` si el juego nunca se ha sincronizado; `started`/`finished` son hora local del hub (ISO 8601 sin zona). No confundir con `GET /api/games/{juego}/hook-status` (sesión, interna).
+Con **API key** (Bearer; mismo 401 único y 429 por IP que `/api/hook/*`; la cookie de sesión no vale). Con la key de **usuario** devuelve todos los juegos; con la de **dispositivo** `http`, solo los que tienen ese dispositivo en su lista. Lista de juegos y su último estado, para consultar desde un dispositivo sin SSH. Solo lectura; no devuelve rutas, dispositivos ni ajustes, ni mensajes del resultado. `status` es `null` si el juego nunca se ha sincronizado; `started`/`finished` son hora local del hub (ISO 8601 sin zona). No confundir con `GET /api/games/{juego}/hook-status` (sesión, interna).
 
 ```json
 [
@@ -459,7 +590,7 @@ Checkpoint sigue siendo instalable desde el menú del navegador (manifest, icono
 - No expongas el servicio a Internet sin un proxy inverso con TLS (activa `CHECKPOINT_COOKIE_SECURE=1` y `CHECKPOINT_TRUST_PROXY=1`).
 - **Límite de frecuencia del login y de `/api/hook/*`:** se cuenta por IP de origen, con contadores separados (login y API key). Los 2 primeros fallos seguidos no esperan; el 3.º bloquea 5 s y cada fallo posterior duplica la espera (10, 20, 40 s...) hasta 15 min. Mientras dura el bloqueo se responde `429` con `Retry-After` (también con una key válida) y esos intentos no alargan la espera. Un acierto reinicia el contador, y una IP sin fallos durante 1 h se olvida. Es en memoria: se reinicia con el hub. **Detrás de un proxy inverso** pon `CHECKPOINT_TRUST_PROXY=1` para que cuente la IP real del cliente: se toma la **última** entrada de `X-Forwarded-For` (la que añade tu proxy; lo que el cliente ponga delante no cuenta), así que el proxy debe añadir esa cabecera y el hub no debe ser accesible sin pasar por él. Sin esa variable, todos los clientes comparten la IP del proxy y los fallos de uno bloquean a los demás; con ella activada sin proxy delante, un cliente podría falsear su IP y evadir el límite.
 - La clave privada vive en `keys/` y no debe compartirse ni subirse a ningún repositorio.
-- La API key de usuario (ver «API key de usuario») se guarda cifrada en `data/`; su secreto, `hub.secret`, vive junto a `config.yaml`, fuera de `data/`. No subas ninguno de los dos a un repositorio y trata la key como una contraseña: regenérala si se filtra.
+- Las API keys (de usuario, ver «API key de usuario», y de dispositivo `http`, ver «API key de dispositivo `http`») se guardan cifradas en `data/`; su secreto, `hub.secret`, vive junto a `config.yaml`, fuera de `data/`. No subas ninguno de los dos a un repositorio y trata la key como una contraseña: regenérala si se filtra.
 - Si cambia la huella de un dispositivo, la conexión falla; revisa la entrada de `keys/known_hosts` antes de borrarla.
 - Usa una cuenta limitada en los dispositivos siempre que sea posible.
 - Sin Docker, `serve` escucha en `127.0.0.1`: ábrelo a la red solo si lo necesitas. «Este equipo» da acceso al sistema de ficheros de quien ejecuta Checkpoint, con sus permisos; no lo ejecutes como administrador/root.
@@ -494,7 +625,7 @@ El detalle (árbol, reglas de dependencia y cómo añadir un módulo) está en [
 
 | Carpeta | Contenido |
 |---|---|
-| `api/` | Capa web (FastAPI): `routers/` (uno por área: `hook`, `games`, `session`, `profile`, `config`, `sync`, `versions`, `scheduler`, `updates`, `spa`), `auth.py`, `deps.py`, `middleware.py` y `docs/` (OpenAPI y Swagger de la API key) |
+| `api/` | Capa web (FastAPI): `routers/` (uno por área: `hook`, `games`, `session`, `profile`, `devices`, `config`, `sync`, `versions`, `scheduler`, `updates`, `spa`), `auth.py`, `deps.py`, `middleware.py` y `docs/` (OpenAPI y Swagger de la API key) |
 | `services/` | Lógica de negocio sin FastAPI (`context`, `runs`, `hooks`, `devices`, `games`, `status`, `versions`) |
 | `sync/` | Motor de sincronización: `engine`, `decide`, `fingerprint`, `versions`, `baseline`, `errors`, `locking`, `scheduler`, `watcher` y `transport/` (`base`, `posix`, `windows`, `local`) |
 | `config/` | Modelo y almacén de `config.yaml` |

@@ -46,7 +46,7 @@ function LastRun({ s, devName }) {
           ) : (
             <span>{s.finished?.replace('T', ' ') || '—'}</span>
           )}
-          {s.dry_run && <span className="lr-tag">{t('common.dryRun')}</span>}
+          {s.dry_run && <span className="lr-tag">{t('common.dryRunBadge')}</span>}
         </dd>
       </div>
       {s.result === 'conflict' && (

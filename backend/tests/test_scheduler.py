@@ -41,7 +41,8 @@ def sched(tmp_path, monkeypatch):
     calls = []
 
     class Cfg:
-        games = {k: SimpleNamespace(name=k.upper(), on_conflict=None, enabled=True) for k in "abc"}
+        devices = {"pc": SimpleNamespace(http=False)}
+        games = {k: SimpleNamespace(name=k.upper(), on_conflict=None, enabled=True, devices=["pc"]) for k in "abc"}
 
     def runner(cfg, game, dry, log, **kw):  # kw: conflict_policy
         calls.append((game, dry))
@@ -193,9 +194,10 @@ def test_cycle_omits_disabled_silently(tmp_path, monkeypatch):
     calls, busy_q = [], []
 
     class Cfg:
+        devices = {"pc": SimpleNamespace(http=False)}
         games = {
-            "a": SimpleNamespace(name="A", on_conflict=None, enabled=True),
-            "d": SimpleNamespace(name="D", on_conflict=None, enabled=False),
+            "a": SimpleNamespace(name="A", on_conflict=None, enabled=True, devices=["pc"]),
+            "d": SimpleNamespace(name="D", on_conflict=None, enabled=False, devices=["pc"]),
         }
 
     def runner(cfg, game, dry, log, **kw):
@@ -212,7 +214,29 @@ def test_cycle_omits_disabled_silently(tmp_path, monkeypatch):
 
 
 def test_run_game_guard_for_disabled(sched):
-    cfg = SimpleNamespace(games={"d": SimpleNamespace(name="D", on_conflict=None, enabled=False)})
+    cfg = SimpleNamespace(games={"d": SimpleNamespace(name="D", on_conflict=None, enabled=False, devices=["pc"])})
     res, m, c, st = sched.run_game(cfg, "d")
     assert res == "skipped" and c == {"code": "err.sync.game_disabled", "params": {}} and st is None
     assert sched.calls == []
+
+
+def test_loop_runs_maintenance_even_with_cycles_disabled(monkeypatch):
+    """El bucle despierta cada MAINT_EVERY_S aunque el ciclo esté apagado y ejecuta las tareas de mantenimiento."""
+    import asyncio
+
+    from app.sync import scheduler as sched_mod
+
+    s = sched_mod.Scheduler(lambda: None, lambda g: False)
+    s.cfg["enabled"] = False
+    s.next_run = None
+    calls = []
+    s.maintenance.append(lambda: calls.append(1))
+    monkeypatch.setattr(sched_mod, "MAINT_EVERY_S", 0.05)
+
+    async def go():
+        t = asyncio.create_task(s.loop())
+        await asyncio.sleep(0.3)
+        t.cancel()
+
+    asyncio.run(go())
+    assert len(calls) >= 2

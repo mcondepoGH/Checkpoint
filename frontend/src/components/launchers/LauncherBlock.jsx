@@ -22,7 +22,7 @@ const defaultUrl = () => (typeof window !== 'undefined' ? window.location.origin
 
 // Subpestaña «Lanzadores»: una fila por juego guardado con los comandos de la plataforma elegida (pestañas Steam/Lutris/Heroic/Windows,
 // comunes a todas las filas) listos para copiar con la API key del usuario, más el último aviso por dispositivo de ese juego.
-// `games`: [{ sel (clave única), id, name, process, enabled (false = desactivado), devices: [{ id, name }] }] (`id` vacío = sin guardar: su fila no da comandos).
+// `games`: [{ sel (clave única), id, name, process, enabled (false = desactivado), devices: [{ id, name, http? }] }] (`id` vacío = sin guardar: su fila no da comandos).
 // `active`: panel abierto (solo entonces pide la key y consulta el estado de cada juego, cada 15 s).
 // `defaultHub`: URL por defecto (si no, el origen de la página). `initial` ({ key, loaded, status: { [idJuego]: estado }, error }) y `api`
 // permiten pintar cada estado en pruebas sin red; `now` fija la hora.
@@ -125,7 +125,8 @@ export default function LauncherBlock({ games, active, initial = null, api = rea
 function GameRow({ game, tab, url, apiKey, hintId, active, initial, api, now }) {
   const { t, locale } = useI18n();
   const uid = useId();
-  const devices = game.devices || [];
+  // Los dispositivos `http` no usan `opened` (400 `err.hook.device_push_only`): fuera hasta que exista su UI propia.
+  const devices = (game.devices || []).filter((d) => !d.http);
   const gameId = game.id || '';
   const [device, setDevice] = useState(devices[0]?.id || '');
   const [status, setStatus] = useState(initial?.status?.[gameId] ?? null);

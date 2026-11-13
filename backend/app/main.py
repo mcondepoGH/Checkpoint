@@ -15,11 +15,12 @@ from .api import docs
 from .api.auth import Auth
 from .api.deps import require
 from .api.middleware import RequestDebugLog
-from .api.routers import config, games, hook, profile, session, spa, sync, versions
+from .api.routers import config, devices, games, hook, profile, session, spa, sync, versions
 from .api.routers import scheduler as scheduler_router
 from .api.routers import updates as updates_router
 from .core import bootstrap, updates
 from .services.context import AppContext
+from .services.devices import prune_device_keys
 from .users import avatar
 
 api_log = logging.getLogger(
@@ -31,6 +32,10 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(_app):
         await run_in_threadpool(avatar.migrate_legacy, ctx.auth.user)
+        await run_in_threadpool(
+            prune_device_keys, ctx.store, ctx.auth.user
+        )  # keys de dispositivos borrados con la config editada a mano
+        await run_in_threadpool(ctx.hooks.purge_staging)  # staging abandonado de antes del arranque
         task = asyncio.create_task(ctx.scheduler.loop())
         try:
             yield
@@ -62,6 +67,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         session.router,
         profile.router,
         config.router,
+        devices.router,
         scheduler_router.router,
         updates_router.router,
         sync.router,

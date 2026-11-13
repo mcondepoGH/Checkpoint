@@ -16,7 +16,28 @@ from ...core import settings
 from ...core.errors import ApiError
 
 TAG = "Avisos del lanzador (API key)"
-SECURITY = "bearerAuth"
+SECURITY = "bearerAuth"  # key de USUARIO (`ck_...`)
+SECURITY_DEVICE = "deviceKeyAuth"  # key de DISPOSITIVO http (`ckd_...`)
+# Qué key acepta cada ruta publicada (debe coincidir con la dependencia de `routers/hook.py` y `routers/games.py`):
+# "user" = solo `ck_`, "device" = solo `ckd_`, "any" = las dos. `patch_schema` falla con una ruta sin clasificar.
+KEY_KINDS = {
+    "/api/hook/ping": "any",
+    "/api/hook/watches": "user",
+    "/api/hook/{game}/opened": "user",
+    "/api/hook/{game}/closed": "device",
+    "/api/hook/{game}/fingerprint": "device",
+    "/api/hook/{game}/manifest": "device",
+    "/api/hook/{game}/files": "device",
+    "/api/hook/{game}/commit": "device",
+    "/api/games": "any",
+}
+KEY_NOTES = {
+    "user": "**Key aceptada:** solo la de **usuario** (`ck_...`, Mi perfil → API key). La de dispositivo (`ckd_...`) da `401`.",
+    "device": "**Key aceptada:** solo la de **dispositivo** `http` (`ckd_...`), que identifica al dispositivo y solo "
+    "ve sus juegos (`?device=` opcional: otro dispositivo, `403`; juego que no lo incluye, `404`). La de usuario "
+    "(`ck_...`) da `401`.",
+    "any": "**Key aceptada:** la de usuario (`ck_...`) o la de dispositivo (`ckd_...`).",
+}
 API_PREFIX = "/api/hook/"
 GAMES_TAG = "Juegos (API key)"
 GAMES_PATH = "/api/games"  # ruta pública exacta; `/api/games/{game}/...` sigue siendo interna (sesión)
@@ -37,18 +58,30 @@ TITLE = "API de Checkpoint (avisos del lanzador)"
 DESCRIPTION = (
     "API externa de Checkpoint para que un lanzador (Steam, Lutris, un script...) avise al hub y consulte sus "
     "vigilancias de cierre.\n\n"
-    "**Autenticación.** Todas las rutas piden `Authorization: Bearer ck_...` con tu API key. Se genera en la web, en "
-    "**Mi perfil → API key**. La cookie de sesión de la web **no** vale aquí. En «Authorize» pega solo la key "
-    "(Swagger añade `Bearer`).\n\n"
+    "**Autenticación.** Todas las rutas piden `Authorization: Bearer <key>`. Hay **dos clases de key**, que no se "
+    "intercambian (la clase equivocada es el mismo `401` que una inválida):\n\n"
+    "- **Key de usuario** (`ck_...`): la de **Mi perfil → API key**. Vale en `GET /api/hook/ping`, "
+    "`GET /api/hook/watches`, `POST /api/hook/{game}/opened` y `GET /api/games` (todos los juegos).\n"
+    "- **Key de dispositivo** `http` (`ckd_...`): una por dispositivo con `http: true`, que se genera en la web "
+    "(`/api/devices/{id}/apikey`, con sesión). Vale en `fingerprint`, `manifest`, `files`, `commit` y `closed`, y "
+    "también en `ping` y `GET /api/games` (este último solo con los juegos de ese dispositivo). Identifica al "
+    "dispositivo: `?device=` es opcional y, si se pasa y no es el suyo, `403`. Un juego que no incluye el "
+    "dispositivo da el mismo `404` que uno inexistente.\n\n"
+    "La cookie de sesión de la web **no** vale aquí. En «Authorize» pega solo la key (Swagger añade `Bearer`). Trata "
+    "las keys como contraseñas: dan acceso a los saves; regenera la que se filtre.\n\n"
     '**Errores.** Todos tienen la forma `{"detail": {"code": "err.<módulo>.<causa>", "params": {...}}}`. '
     "Los códigos `err.*` no se traducen: son el contrato estable.\n\n"
     "**Solo se documenta la API de la API key.** El resto de rutas `/api/*` son internas de la web y pueden cambiar "
     "sin aviso."
 )
 TAG_DESCRIPTION = (
-    "Rutas `/api/hook/*`: se autentican solo con la API key (Bearer), sin cookie ni comprobación de Origin."
+    "Rutas `/api/hook/*`: se autentican solo con una API key (Bearer; de usuario o de dispositivo según la ruta, ver "
+    "cada operación), sin cookie ni comprobación de Origin."
 )
-GAMES_TAG_DESCRIPTION = "Ruta `GET /api/games`: lista de juegos y su estado, solo con la API key (Bearer)."
+GAMES_TAG_DESCRIPTION = (
+    "Ruta `GET /api/games`: lista de juegos y su estado, con la API key de usuario (todos los juegos) o de "
+    "dispositivo (solo los suyos)."
+)
 
 
 def iter_api_routes(routes):
@@ -61,20 +94,38 @@ def iter_api_routes(routes):
 
 
 def patch_schema(schema: dict) -> None:
-    """Esquema de seguridad único, sin los 422 de validación (la API no los devuelve) y con la seguridad en cada operación."""
+    """Esquema de seguridad único, sin los 422 genéricos de FastAPI (los documentados a mano se conservan) y con la seguridad en cada operación."""
     comps = schema.setdefault("components", {})
-    comps.setdefault("securitySchemes", {})[SECURITY] = {
+    schemes = comps.setdefault("securitySchemes", {})
+    schemes[SECURITY] = {
         "type": "http",
         "scheme": "bearer",
         "bearerFormat": "ck_<43 caracteres base64 urlsafe>",
-        "description": "API key de usuario (`ck_...`) de **Mi perfil → API key**. Pégala sin el prefijo `Bearer`. "
-        "La cookie de sesión no vale en estas rutas.",
+        "description": "API key de **usuario** (`ck_...`) de **Mi perfil → API key**. Pégala sin el prefijo `Bearer`. "
+        "Solo vale en las rutas que la aceptan (ver cada operación). La cookie de sesión no vale en estas rutas.",
     }
-    for item in schema.get("paths", {}).values():
+    schemes[SECURITY_DEVICE] = {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "ckd_<43 caracteres base64 urlsafe>",
+        "description": "API key de **dispositivo** `http` (`ckd_...`), una por dispositivo (`/api/devices/{id}/apikey`, "
+        "con sesión). Pégala sin el prefijo `Bearer`. Identifica al dispositivo y solo ve sus juegos. Solo vale en las "
+        "rutas que la aceptan (ver cada operación).",
+    }
+    security = {
+        "user": [{SECURITY: []}],
+        "device": [{SECURITY_DEVICE: []}],
+        "any": [{SECURITY: []}, {SECURITY_DEVICE: []}],  # una u otra
+    }
+    for path, item in schema.get("paths", {}).items():
+        kind = KEY_KINDS[path]  # KeyError = ruta pública nueva sin clasificar: añádela a KEY_KINDS
         for op in item.values():
             if isinstance(op, dict):
-                op.setdefault("security", [{SECURITY: []}])
-                op.get("responses", {}).pop("422", None)
+                op["security"] = security[kind]
+                op["description"] = (op.get("description", "") + "\n\n" + KEY_NOTES[kind]).strip()
+                r = op.get("responses", {})
+                if r.get("422", {}).get("description") == "Validation Error":  # el de FastAPI; los propios se quedan
+                    r.pop("422")
     for name in ("HTTPValidationError", "ValidationError"):
         comps.get("schemas", {}).pop(name, None)
 

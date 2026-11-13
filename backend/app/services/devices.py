@@ -10,6 +10,7 @@ from ..config.models import ConfigError, Device, normalize_path, pyd_body
 from ..core import bootstrap, runtime
 from ..core.errors import describe_code
 from ..core.redact import redact
+from ..users import apikey
 from ..sync.transport import TransportError, get_transport, local_folder_status
 
 api_log = logging.getLogger("checkpoint.api")  # DEBUG: detalle por endpoint (sin secretos)
@@ -29,6 +30,13 @@ async def check_device(body: dict) -> dict:
             "message": "err.main.device_invalid",
             "code": "err.main.device_invalid",
             "params": {"causes": causes},
+        }
+    if dev.http:  # el hub nunca lo contacta: nada que probar (ni SSH ni host key)
+        return {
+            "ok": False,
+            "message": describe_code("err.transport.push_only", {}),
+            "code": "err.transport.push_only",
+            "params": {},
         }
     t0 = time.monotonic()
     if dev.local:
@@ -108,3 +116,20 @@ def _check_connection(dev: Device):
             "params": params,
             "first_use": first,
         }
+
+
+def prune_device_keys(store, user: str) -> list:
+    """Borra las API keys de dispositivo de los que ya no están en la config o ya no son `http`. El id es estable:
+    renombrar un dispositivo NO toca su key (la key va ligada al id, no al nombre). Nunca lanza (se llama tras
+    guardar la config y al arrancar; un fallo de disco aquí no debe romper ni el guardado ni el arranque)."""
+    try:
+        cfg = store.snapshot().cfg
+        if cfg is None:  # config inválida: no se borra nada
+            return []
+        gone = apikey.device_prune(user, [i for i, d in cfg.devices.items() if d.http])
+    except Exception as e:
+        api_log.warning("API keys de dispositivo: no se pudo limpiar (%s)", type(e).__name__)
+        return []
+    if gone:
+        api_log.debug("API keys de dispositivo: borradas las de %s", ", ".join(gone))
+    return gone

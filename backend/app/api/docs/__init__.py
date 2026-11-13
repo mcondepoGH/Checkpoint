@@ -1,7 +1,27 @@
 """Swagger/OpenAPI de la API externa (la de la API key). `install` monta los endpoints de la documentación;
 `models` y `examples` solo describen el contrato (ver el docstring de `install`)."""
 
-from .examples import GAMES, OPENED, PING, R400, R401, R404, R409, R429, WATCHES, error_response
+from .examples import (
+    CLOSED,
+    COMMIT,
+    DOWNLOAD,
+    FINGERPRINT,
+    MANIFEST,
+    UPLOAD,
+    GAMES,
+    OPENED,
+    PING,
+    R400,
+    R401,
+    R403,
+    R404,
+    R404_GAME,
+    R409,
+    R422,
+    R429,
+    WATCHES,
+    error_response,
+)
 from .install import (
     API_PREFIX,
     GAMES_PATH,
@@ -14,6 +34,8 @@ from .install import (
     DOCS_URL,
     OPENAPI_URL,
     SECURITY,
+    SECURITY_DEVICE,
+    KEY_KINDS,
     TAG,
     TAG_DESCRIPTION,
     TITLE,
@@ -23,13 +45,22 @@ from .install import (
 )
 
 __all__ = [
+    "CLOSED",
+    "COMMIT",
+    "DOWNLOAD",
+    "MANIFEST",
+    "UPLOAD",
+    "FINGERPRINT",
     "GAMES",
     "OPENED",
     "PING",
     "R400",
     "R401",
+    "R403",
     "R404",
+    "R404_GAME",
     "R409",
+    "R422",
     "R429",
     "WATCHES",
     "error_response",
@@ -44,6 +75,8 @@ __all__ = [
     "DOCS_URL",
     "OPENAPI_URL",
     "SECURITY",
+    "SECURITY_DEVICE",
+    "KEY_KINDS",
     "TAG",
     "TAG_DESCRIPTION",
     "TITLE",

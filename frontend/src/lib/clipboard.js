@@ -9,11 +9,13 @@ export function copyText(text, area) {
       /* HTTP en LAN: sin API de portapapeles */
     }
     const ta = area || document.createElement('textarea');
+    // Se monta junto al elemento enfocado (no en body): al enfocarlo con select(), un contenedor con onBlur (popup del perfil) no ve salir el foco y no se cierra.
+    const host = area ? null : document.activeElement?.parentElement || document.body;
     if (!area) {
       ta.value = text;
       ta.style.position = 'fixed';
       ta.style.opacity = '0';
-      document.body.appendChild(ta);
+      host.appendChild(ta);
     }
     ta.select();
     let ok = false;
@@ -22,7 +24,7 @@ export function copyText(text, area) {
     } catch {
       ok = false;
     }
-    if (!area) document.body.removeChild(ta);
+    if (!area) host.removeChild(ta);
     return ok;
   })();
 }

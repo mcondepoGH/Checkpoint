@@ -1,5 +1,5 @@
 """Ajustes desde variables de entorno (CHECKPOINT_*): USER, PASSWORD, PORT, HOST, HOME_DIR, SESSION_HOURS,
-COOKIE_SECURE, TRUST_PROXY, RUNTIME, LANG, LOG_LEVEL y HOOK_POLL/HOOK_SETTLE/HOOK_FIRST_SEEN (vigilante de cierre). El resto de rutas y valores se derivan de ellas o son constantes."""
+COOKIE_SECURE, TRUST_PROXY, RUNTIME, LANG, LOG_LEVEL y HOOK_POLL/HOOK_SETTLE/HOOK_FIRST_SEEN (vigilante de cierre), HOOK_MAX_FILE_MB (tamaño máximo por fichero de la subida HTTP), HOOK_STAGING_TTL_H y HOOK_STAGING_MAX_MB (purga y tope del staging). El resto de rutas y valores se derivan de ellas o son constantes."""
 
 import os
 from pathlib import Path
@@ -132,3 +132,34 @@ def _secs(suffix, default, environ=None):
 HOOK_POLL = _secs("HOOK_POLL", 15)
 HOOK_SETTLE = _secs("HOOK_SETTLE", 10)
 HOOK_FIRST_SEEN = _secs("HOOK_FIRST_SEEN", 120)
+
+
+# Subida de saves por la API HTTP (dispositivos `http: true`): tamaño máximo por fichero, en MiB. 512 por defecto;
+# rango permitido de 1 MiB a 16 GiB (fuera de rango o no numérico = error de arranque claro, como `_float_env`).
+HOOK_MAX_FILE_MB_MIN, HOOK_MAX_FILE_MB_MAX = 1, 16 * 1024
+
+
+def _ranged_mb_env(suffix, default, lo, hi, unit="MiB"):
+    v = _float_env(suffix, default)
+    if not lo <= v <= hi:  # también rechaza nan e inf
+        raise SystemExit(f"CHECKPOINT_{suffix} debe estar entre {lo} y {hi} {unit} (valor: {env(suffix)!r})")
+    return v
+
+
+HOOK_MAX_FILE_BYTES = int(
+    _ranged_mb_env("HOOK_MAX_FILE_MB", "512", HOOK_MAX_FILE_MB_MIN, HOOK_MAX_FILE_MB_MAX) * 1024 * 1024
+)
+
+
+# Staging de las subidas HTTP (`data/staging/<juego>/<dispositivo>/`): antigüedad máxima sin escrituras antes de purgarlo,
+# en horas (24 por defecto; de 1 a 720 = 30 días) y tope total por juego, en MiB (2048 por defecto; de 1 MiB a 1 TiB).
+# Fuera de rango o no numérico = error de arranque claro.
+HOOK_STAGING_TTL_H_MIN, HOOK_STAGING_TTL_H_MAX = 1, 720
+HOOK_STAGING_MAX_MB_MIN, HOOK_STAGING_MAX_MB_MAX = 1, 1024 * 1024
+
+HOOK_STAGING_TTL_S = (
+    _ranged_mb_env("HOOK_STAGING_TTL_H", "24", HOOK_STAGING_TTL_H_MIN, HOOK_STAGING_TTL_H_MAX, "h") * 3600.0
+)
+HOOK_STAGING_MAX_BYTES = int(
+    _ranged_mb_env("HOOK_STAGING_MAX_MB", "2048", HOOK_STAGING_MAX_MB_MIN, HOOK_STAGING_MAX_MB_MAX) * 1024 * 1024
+)

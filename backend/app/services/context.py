@@ -21,6 +21,7 @@ class AppContext:
         self.scheduler = Scheduler(self.auto_cfg, self.runs.active)
         self.checker = updates.UpdateChecker()
         self.hooks = HookService(self.scheduler, self.runs, self.auto_cfg)
+        self.scheduler.maintenance.append(self.hooks.purge_staging)  # purga horaria del staging de subidas HTTP
 
     @property
     def watcher(self):

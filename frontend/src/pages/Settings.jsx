@@ -58,7 +58,9 @@ export default function Settings({
         name: g.name,
         process: g.process,
         enabled: g.enabled !== false,
-        devices: [g.a, g.b].map((k) => ({ id: deviceId(draft, k), name: nameOf(draft, k) })).filter((d) => d.id && d.name),
+        devices: [g.a, g.b]
+          .map((k) => ({ id: deviceId(draft, k), name: nameOf(draft, k), http: draft.devices.find((d) => d.key === k)?.http === true }))
+          .filter((d) => d.id && d.name),
       })),
     [draft],
   );
