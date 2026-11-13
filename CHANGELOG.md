@@ -2,6 +2,12 @@
 
 ## Sin publicar
 
+## 1.16.0 (2026-11-13)
+
+### Cambios
+
+- Vinculación de dispositivos por solicitud y código de 6 dígitos (`/api/pairing/*`): el dispositivo pide acceso sin key previa, el usuario lo acepta o rechaza en el hub con sesión y el dispositivo recibe su key `ckd_` una sola vez. Límites por IP y por hub, caducidad de 10 minutos y solicitudes solo en memoria. Al aceptar se crea el dispositivo http en la configuración. La pantalla de solicitudes llegará aparte.
+
 ## 1.15.0 (2026-11-13)
 
 ### Cambios
