@@ -21,7 +21,6 @@ export default function GameCard({
   renamed,
   onChange,
   onRemove,
-  onShowLaunchers,
 }) {
   const { t } = useI18n();
   // Campos secundarios (proceso, versiones, conflicto, id) tras «Mostrar más»: la tarjeta arranca siempre plegada, tengan o no valor propio.
@@ -132,11 +131,6 @@ export default function GameCard({
         <Button variant="ghost" onClick={() => setMore((m) => !m)} aria-expanded={more} aria-controls={extraId}>
           {t(more ? 'game.showLess' : 'game.showMore')}
         </Button>
-        {onShowLaunchers && game.id && (
-          <Button variant="ghost" onClick={onShowLaunchers} aria-label={t('game.launchersAria', { title })}>
-            {t('game.launchers')}
-          </Button>
-        )}
         <Button variant="danger" onClick={onRemove} aria-label={t('game.deleteAria', { title })}>
           {t('common.delete')}
         </Button>

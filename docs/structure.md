@@ -63,10 +63,11 @@ Para repartir los imports públicos de un paquete sin romper a quien ya importa 
 ```
 frontend/src/
 ├── main.jsx, App.jsx        arranque y raíz (pestañas, sesión, cabecera)
-├── pages/                   Login, Sync, Versions, Settings (una por pestaña)
+├── pages/                   Login, Sync, Versions, Settings (una por pestaña; Settings es el contenedor de las subpestañas)
+│   └── settings/            paneles de las subpestañas de Configuración: General, Library (Biblioteca) y Launchers
 ├── components/
 │   ├── ui/                  componentes genéricos (Button, Badge, Alert, Pill, Select, Checkbox, Switch,
-│   │                        Tabs, CopyBox, WatchBar, WatchStatus, Input, Icon, Modal, Field,
+│   │                        Tabs (con variante subnav y paneles conservados), CopyBox, WatchBar, WatchStatus, Input, Icon, Modal, Field,
 │   │                        EmptyState, AppIcon) con su parcial SCSS al lado (_button.scss...)
 │   ├── profile/             Avatar, ProfileMenu, ApiKeySection, LanguageSelect, photo.js, _profile.scss
 │   ├── updates/             UpdateBadge, UpdateDialog, UpdateCheck
@@ -74,7 +75,7 @@ frontend/src/
 │   ├── config/              DeviceCard, GameCard, IdNote, SaveDialog, YamlDialog, BackupsDialog,
 │   │                        DiffView, draft.js, useConfigDraft.js, _config.scss
 │   ├── autosync/            AutoSync, AutoSyncLog, runLog.js, _autosync.scss
-│   ├── launchers/           LaunchersPanel, LauncherBlock, launchers.js
+│   ├── launchers/           LauncherBlock (una fila por juego), launchers.js
 │   ├── keyhelp/             PublicKey, keyhelpSteps.js
 │   └── sync/                ConflictDialog
 ├── hooks/                   useI18n, useWatches, useTheme

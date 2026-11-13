@@ -1,4 +1,4 @@
-// Tabs, CopyBox y la sección Lanzadores (panel único con selector de juego), renderizados a HTML (esbuild + react-dom/server).
+// Tabs, CopyBox y la subpestaña Lanzadores (panel único con selector de juego), renderizados a HTML (esbuild + react-dom/server).
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { bundle } from '../../helpers/bundle.mjs';
@@ -8,11 +8,10 @@ const { mod: m, skip } = await bundle(
   import { renderToStaticMarkup } from 'react-dom/server';
   import { i18n } from '#src/hooks/useI18n.js';
   import LauncherBlock from '#src/components/launchers/LauncherBlock.jsx';
-  import LaunchersPanel from '#src/components/launchers/LaunchersPanel.jsx';
   import GameCard from '#src/components/config/GameCard.jsx';
   import { Tabs, CopyBox } from '#src/components/ui/index.js';
   import { EntryMessage, EntryDetail, RunEntry, RunLog } from '#src/components/autosync/AutoSyncLog.jsx';
-  export { React, renderToStaticMarkup, i18n, LauncherBlock, LaunchersPanel, GameCard, Tabs, CopyBox, EntryMessage, EntryDetail, RunEntry, RunLog };`,
+  export { React, renderToStaticMarkup, i18n, LauncherBlock, GameCard, Tabs, CopyBox, EntryMessage, EntryDetail, RunEntry, RunLog };`,
   { navigator: true, tag: 'ckpt-launcher' },
 );
 const KEY = 'ck_AbC123xyz';
@@ -38,11 +37,10 @@ const block = (initial, o = {}, lang = 'es') =>
     'LauncherBlock',
     {
       games: [game(o.game), OTHER],
-      selected: 'juego-1a2b3c4d',
-      onSelect() {},
       active: true,
       defaultHub: 'http://hub.example.lan:8088',
-      initial,
+      // `status` de las pruebas = estado del primer juego (el mapa por id lo pide LauncherBlock)
+      initial: initial?.status ? { ...initial, status: { 'juego-1a2b3c4d': initial.status } } : initial,
       now: new Date('2026-11-09T12:00:00Z'),
       ...o,
       game: undefined,
@@ -110,33 +108,21 @@ test('CopyBox: caja de solo lectura + botón de icono con aria-label; copiado = 
   assert.ok(has(c, 'M20 6 9 17l-5-5') && has(c, 'role="status"'));
 });
 
-test('Lanzador con key: pestañas, selector de dispositivo, URL y comando Steam con %command%', { skip }, () => {
+test('Lanzador con key: pestañas de plataforma, URL del hub y, por fila, comando Steam con %command%', { skip }, () => {
   const h = block(WITH, {}, 'es');
   for (const l of ['Steam / Steam Deck', 'Lutris', 'Heroic', 'Windows (Playnite)']) assert.ok(has(h, `>${l}</button>`), l);
   assert.ok(has(h, 'Opciones de lanzamiento') && has(h, 'El cierre lo vigila el hub solo'));
-  assert.ok(has(h, 'Mi PC') && has(h, 'Deck') && has(h, 'Dispositivo del lanzador') && has(h, 'URL del hub'));
+  assert.ok(
+    has(h, 'URL del hub') && has(h, 'Deck') && has(h, 'Dispositivo del lanzador'),
+    'selector de dispositivo solo en el juego con dos',
+  );
   assert.ok(
     has(h, `Bearer ${KEY}`) && has(h, 'http://hub.example.lan:8088/api/hook/juego-1a2b3c4d/opened?device=mi-pc') && has(h, '; %command%'),
   );
-  assert.equal(h.split(KEY).length - 1, 1);
-  assert.ok(has(h, 'aria-label="Copiar comando de Steam / Steam Deck"'), h);
-  assert.ok(
-    has(
-      R(
-        'LauncherBlock',
-        {
-          games: [game({ devices: DEVS })],
-          selected: 'juego-1a2b3c4d',
-          onSelect() {},
-          active: true,
-          initial: WITH,
-          defaultHub: 'http://x:1',
-        },
-        'en',
-      ),
-      'aria-label="Copy Steam / Steam Deck command"',
-    ),
-  );
+  assert.ok(has(h, 'aria-label="Copiar comando de Steam / Steam Deck de Juego"'), h);
+  assert.ok(has(h, 'aria-label="Copiar comando de Steam / Steam Deck de Otro juego"'), h);
+  const en = R('LauncherBlock', { games: [game({ devices: DEVS })], active: true, initial: WITH, defaultHub: 'http://x:1' }, 'en');
+  assert.ok(has(en, 'aria-label="Copy Steam / Steam Deck command for Juego"'), en);
 });
 
 test('Lanzador: sin key -> aviso informativo y ningún comando ni placeholder', { skip }, () => {
@@ -155,7 +141,7 @@ test('Lanzador: sin process -> aviso; con process no', { skip }, () => {
 test('Lanzador: juego sin guardar o sin dispositivos no muestra comandos', { skip }, () => {
   assert.ok(has(block(WITH, { game: { id: '' } }), 'Guarda el juego para obtener sus comandos.'));
   const h = block(WITH, { game: { devices: [] } });
-  assert.ok(has(h, 'Elige los dispositivos') && !has(h, 'curl'));
+  assert.ok(has(h, 'Elige los dispositivos') && !has(h.split('class="launcher-row"')[1], 'curl'));
 });
 
 test('Lanzador: cargando y error de API', { skip }, () => {
@@ -194,80 +180,41 @@ test('Último aviso por dispositivo: tipo, hace cuánto, resultado y vigilancia'
   assert.ok(has(e, 'Last notice') && has(e, 'Mi PC: Game opened, 3 minutes ago') && has(e, 'watching: game open'), e);
 });
 
-test('Panel: selector de juego con todos los juegos, el elegido seleccionado y sus dispositivos', { skip }, () => {
+test('Una fila por juego guardado: nombre, sus dispositivos y su propio comando; el selector de juego ya no existe', { skip }, () => {
   const h = block(WITH);
-  assert.match(h, /<select[^>]*>(<option[^>]*>[^<]*<\/option>)+<\/select>/);
-  assert.ok(has(h, '>Juego</label>') || has(h, 'Juego</label>'), h);
-  assert.match(h, /<option value="juego-1a2b3c4d" selected="">Juego<\/option><option value="otro-9f8e7d6c">Otro juego<\/option>/);
-  assert.ok(has(h, '/api/hook/juego-1a2b3c4d/opened?device=mi-pc') && !has(h, 'otro-9f8e7d6c/opened'));
-  // Otro juego elegido: sus dispositivos (solo Mi PC) y su id; sin Deck.
-  const o = R('LauncherBlock', {
-    games: [game(), OTHER],
-    selected: 'otro-9f8e7d6c',
-    onSelect() {},
-    active: true,
-    initial: WITH,
-    defaultHub: 'http://h:1',
-  });
-  assert.ok(has(o, '/api/hook/otro-9f8e7d6c/opened?device=mi-pc') && !has(o, '>Deck<'));
-  assert.equal(o.split(KEY).length - 1, 1);
-  // Selección desconocida: cae en el primero.
-  assert.ok(
-    has(
-      R('LauncherBlock', {
-        games: [game(), OTHER],
-        selected: 'nada',
-        onSelect() {},
-        active: true,
-        initial: WITH,
-        defaultHub: 'http://h:1',
-      }),
-      'juego-1a2b3c4d/opened',
-    ),
-  );
+  assert.equal((h.match(/class="launcher-row"/g) || []).length, 2);
+  assert.ok(has(h, '>Juego</strong>') && has(h, '>Otro juego</strong>'));
+  assert.ok(!has(h, 'for=') || !has(h, '>Juego</label>'), 'sin selector de juego');
+  const [first, second] = h.split('class="launcher-row"').slice(1);
+  assert.ok(has(first, '/api/hook/juego-1a2b3c4d/opened?device=mi-pc') && !has(first, 'otro-9f8e7d6c'));
+  assert.ok(has(first, '>Deck</option>') && has(first, '>Mi PC</option>'), 'dos dispositivos: selector en la fila');
+  assert.ok(has(second, '/api/hook/otro-9f8e7d6c/opened?device=mi-pc') && !has(second, '<select'), 'un dispositivo: sin selector');
+  assert.equal(h.split(KEY).length - 1, 2, 'la key aparece una vez por comando');
 });
 
-test('Panel: sin juegos aviso; el último aviso es solo del juego elegido', { skip }, () => {
-  const h = R('LauncherBlock', { games: [], selected: '', onSelect() {}, active: true, initial: WITH });
-  assert.ok(has(h, 'Añade un juego para obtener sus comandos.') && !has(h, 'curl'));
-  assert.ok(
-    has(
-      R('LauncherBlock', { games: [], selected: '', onSelect() {}, active: true, initial: WITH }, 'en'),
-      'Add a game to get its commands.',
-    ),
-  );
+test('Las pestañas de plataforma cambian los comandos de todas las filas (un comando por fila y plataforma)', { skip }, () => {
+  m.i18n.setLocale('es');
+  const h = block(WITH);
+  assert.equal((h.match(/class="copybox"/g) || []).length, 2, 'Steam: un comando por juego');
+  assert.ok(has(h, 'role="tabpanel"') && has(h, '>Lutris</button>'));
 });
 
-test('LaunchersPanel: tarjeta propia plegada por defecto (hidden, sin contenido) y desplegada con Ocultar', { skip }, () => {
-  const props = {
-    id: 'launchers-section',
-    games: [game()],
-    selected: 'juego-1a2b3c4d',
-    onSelect() {},
-    onToggle() {},
-    initial: WITH,
-    defaultHub: 'http://h:1',
-  };
-  const closed = R('LaunchersPanel', { ...props, open: false });
-  assert.ok(
-    has(closed, 'id="launchers-section"') &&
-      has(closed, '>Lanzadores</h3>') &&
-      has(closed, '>Mostrar</button>') &&
-      has(closed, 'aria-expanded="false"'),
-  );
-  assert.match(closed, /<div id="([^"]+)" class="launchers-body" hidden="">/);
-  assert.ok(!has(closed, 'curl') && !has(closed, 'class="launcher"'));
-  const id = /aria-controls="([^"]+)"/.exec(closed)[1];
-  assert.ok(has(closed, `id="${id}"`));
-  const open = R('LaunchersPanel', { ...props, open: true });
-  assert.ok(has(open, '>Ocultar</button>') && has(open, 'aria-expanded="true"') && has(open, 'curl') && !has(open, 'hidden=""'));
-  assert.ok(
-    has(R('LaunchersPanel', { ...props, open: false }, 'en'), '>Show</button>') &&
-      has(R('LaunchersPanel', { ...props, open: true }, 'en'), '>Hide</button>'),
-  );
+test('Fila de un juego sin guardar o desactivado: sin comandos / con etiqueta y nota', { skip }, () => {
+  const h = block(WITH, { game: { id: '', sel: 'tmp' } });
+  const [first] = h.split('class="launcher-row"').slice(1);
+  assert.ok(has(first, 'Guarda el juego para obtener sus comandos.') && !has(first, 'curl') && has(h, 'otro-9f8e7d6c/opened'));
+  const off = block(WITH, { game: { enabled: false } });
+  assert.ok(has(off, 'class="badge">Desactivado</span>') && has(off, 'Desactivado: el aviso se omitirá.'));
+  assert.ok(has(block(WITH, { game: { enabled: false } }, 'en'), 'class="badge">Disabled</span>'));
 });
 
-test('GameCard: sin bloque Lanzador; enlace «Ver comandos de lanzador» solo con onShowLaunchers y juego guardado', { skip }, () => {
+test('Panel: sin juegos, mensaje vacío en es/en y sin URL ni comandos', { skip }, () => {
+  const h = R('LauncherBlock', { games: [], active: true, initial: WITH });
+  assert.ok(has(h, 'Añade un juego para obtener sus comandos.') && !has(h, 'curl') && !has(h, 'URL del hub'));
+  assert.ok(has(R('LauncherBlock', { games: [], active: true, initial: WITH }, 'en'), 'Add a game to get its commands.'));
+});
+
+test('GameCard: sin bloque Lanzador ni botón «Ver comandos de lanzador» (los comandos viven en la subpestaña Lanzadores)', { skip }, () => {
   m.i18n.setLocale('es');
   const g = {
     key: 'g1',
@@ -304,9 +251,7 @@ test('GameCard: sin bloque Lanzador; enlace «Ver comandos de lanzador» solo co
     );
   const h = render();
   assert.ok(!has(h, 'class="launcher"') && !has(h, 'Lanzador') && !has(h, 'Ver comandos'), h);
-  const l = render({ onShowLaunchers() {} });
-  assert.ok(has(l, '>Ver comandos de lanzador</button>') && has(l, 'aria-label="Ver comandos de lanzador de Juego"'), l);
-  assert.ok(!has(render({ onShowLaunchers() {} }, { ...g, id: '' }), 'Ver comandos'));
+  assert.ok(!has(render({ onShowLaunchers() {} }), 'Ver comandos') && !has(render({}, { ...g, id: '' }), 'lanzador'));
 });
 
 const NOTES = [

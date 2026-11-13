@@ -1,44 +1,37 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { diffConfig, testDevice as testDeviceApi } from '#src/lib/api/config.js';
-import {
-  MAX_VERSIONS_LIMIT,
-  VERSIONS_HINT,
-  blankDevice,
-  blankGame,
-  canOfferLocal,
-  deviceId,
-  errorsFor,
-  fromConfig,
-  gamesUsing,
-  idOf,
-  nameOf,
-  pathsOf,
-  removeDevice,
-  renamed,
-} from '#src/components/config/draft.js';
+import { deviceId, errorsFor, fromConfig, gamesUsing, idOf, nameOf, pathsOf, removeDevice } from '#src/components/config/draft.js';
 import useConfigDraft from '#src/components/config/useConfigDraft.js';
-import Field from '#src/components/ui/Field.jsx';
-import DeviceCard from '#src/components/config/DeviceCard.jsx';
-import GameCard from '#src/components/config/GameCard.jsx';
-import LaunchersPanel from '#src/components/launchers/LaunchersPanel.jsx';
-import { loadGameSel, saveGameSel } from '#src/components/launchers/launchers.js';
-import PublicKey from '#src/components/keyhelp/PublicKey.jsx';
-import AutoSync from '#src/components/autosync/AutoSync.jsx';
-import UpdateCheck from '#src/components/updates/UpdateCheck.jsx';
-import { updatesApplicable } from '#src/lib/updates.js';
 import SaveDialog from '#src/components/config/SaveDialog.jsx';
 import YamlDialog from '#src/components/config/YamlDialog.jsx';
 import BackupsDialog from '#src/components/config/BackupsDialog.jsx';
-import Icon from '#src/components/ui/Icon.jsx';
-import EmptyState from '#src/components/ui/EmptyState.jsx';
 import DiffView from '#src/components/config/DiffView.jsx';
 import { errText, useI18n } from '#src/hooks/useI18n.js';
 import { errorText, fieldErrorText, ui } from '#src/lib/errors.js';
-import { Alert, Button, Input } from '#src/components/ui/index.js';
+import { Alert, Button, Tabs } from '#src/components/ui/index.js';
+import General from './settings/General.jsx';
+import Library from './settings/Library.jsx';
+import Launchers from './settings/Launchers.jsx';
 
-// Pantalla única de Configuración: dispositivos y juegos como tarjetas, validación en vivo con el
-// validador del backend, vista previa de cambios antes de guardar.
-export default function Settings({ loaded, stale, configError, runtime, platform, onApplied, onReload, onDirty, updates, onUpdates }) {
+const SUBTABS = ['general', 'library', 'launchers'];
+
+// Configuración con tres subpestañas (General, Biblioteca, Lanzadores; estado en memoria). Biblioteca edita el borrador de config.yaml
+// (dispositivos y juegos como tarjetas, validación en vivo con el validador del backend, vista previa antes de guardar) y es la única con
+// barra de guardar. Los paneles se conservan montados (el borrador sobrevive al cambiar de subpestaña) salvo Lanzadores, que solo se monta
+// al abrirla (sus peticiones no se hacen antes). Abre General; Biblioteca en el primer uso (`firstUse`: aún sin dispositivos).
+export default function Settings({
+  loaded,
+  stale,
+  configError,
+  runtime,
+  platform,
+  onApplied,
+  onReload,
+  onDirty,
+  updates,
+  onUpdates,
+  firstUse = false,
+}) {
   const { t } = useI18n(); // re-renderiza al cambiar de idioma: errores y mensajes se guardan sin traducir y se traducen al pintar
   const fe = (v) => fieldErrorText(v, t);
   const [tests, setTests] = useState({});
@@ -52,24 +45,11 @@ export default function Settings({ loaded, stale, configError, runtime, platform
     onDirty,
     onVersionChange: () => setStaleDiff(null),
   });
-  const [launchersOpen, setLaunchersOpen] = useState(false); // sección «Lanzadores»: plegada por defecto
-  const [launcherGame, setLauncherGame] = useState(() => {
-    try {
-      return loadGameSel(window.localStorage);
-    } catch {
-      return '';
-    }
-  });
-  const chooseLauncherGame = (sel) => {
-    setLauncherGame(sel);
-    try {
-      saveGameSel(window.localStorage, sel);
-    } catch {
-      /* sin almacenamiento */
-    }
-  };
-
-  // Juegos para el panel de lanzadores: dispositivos con nombre e id (los que el lanzador puede indicar en ?device=).
+  const [sub, setSub] = useState(firstUse ? 'library' : 'general');
+  useEffect(() => {
+    if (firstUse) setSub('library'); // el primer uso se conoce al cargar la configuración, con Settings ya montado
+  }, [firstUse]);
+  // Juegos para Lanzadores (una fila por juego): dispositivos con nombre e id (los que el lanzador puede indicar en ?device=).
   const launcherGames = useMemo(
     () =>
       draft.games.map((g) => ({
@@ -82,11 +62,6 @@ export default function Settings({ loaded, stale, configError, runtime, platform
       })),
     [draft],
   );
-  const showLaunchers = (g) => {
-    chooseLauncherGame(g.id || g.key);
-    setLaunchersOpen(true);
-    setTimeout(() => document.getElementById('launchers-section')?.scrollIntoView({ block: 'start', behavior: 'smooth' }), 0);
-  };
   const delDevice = (dev) => {
     const used = gamesUsing(draft, dev.key);
     if (
@@ -188,175 +163,55 @@ export default function Settings({ loaded, stale, configError, runtime, platform
         {msg && <Alert variant={msg.ok ? 'ok' : 'error'}>{errText(msg.body)}</Alert>}
       </div>
 
-      {/* La clave SSH solo importa si hay (o puede haber) dispositivos remotos. */}
-      {(draft.devices.length === 0 || draft.devices.some((d) => !d.local)) && <PublicKey />}
-
-      <AutoSync />
-
-      {updatesApplicable(updates) && <UpdateCheck info={updates} onInfo={onUpdates} />}
-
-      <fieldset className="card cfg-card">
-        <legend className="cfg-title">{t('settings.versions.legend')}</legend>
-        <Field label={t('settings.versions.max')} hint={t(VERSIONS_HINT)} error={local.maxVersions || fe(errors.max_versions)}>
-          {(p) => (
-            <Input
-              {...p}
-              type="number"
-              inputMode="numeric"
-              min="0"
-              max={MAX_VERSIONS_LIMIT}
-              step="1"
-              value={draft.maxVersions}
-              onChange={(e) => setDraft((d) => ({ ...d, maxVersions: e.target.value }))}
+      <Tabs
+        variant="subnav"
+        keepMounted
+        label={t('settings.subtabs.aria')}
+        value={sub}
+        onChange={setSub}
+        tabs={SUBTABS.map((id) => ({
+          id,
+          label: t(`settings.subtabs.${id}.full`),
+          short: t(`settings.subtabs.${id}.short`),
+          dot: id === 'library' && dirty ? t('settings.subtabs.dirty') : undefined,
+        }))}
+        panels={{
+          general: <General updates={updates} onUpdates={onUpdates} />,
+          library: (
+            <Library
+              draft={draft}
+              setDraft={setDraft}
+              patch={patch}
+              errors={errors}
+              local={local}
+              fe={fe}
+              devErrs={devErrs}
+              gameErrs={gameErrs}
+              runtime={runtime}
+              platform={platform}
+              tests={tests}
+              onTest={testDevice}
+              onDelDevice={delDevice}
+              bar={{
+                hasErrors,
+                validating,
+                dirty,
+                canSave,
+                errorCount,
+                jumpToError,
+                onBackups: () => setDialog({ kind: 'backups' }),
+                onYaml: () => setDialog({ kind: 'yaml', config: payload }),
+                onDiscard: () => {
+                  setDraft(fromConfig(loaded.config));
+                  setMsg(null);
+                },
+                onSave: openSave,
+              }}
             />
-          )}
-        </Field>
-      </fieldset>
-
-      <div className="row between section-head">
-        <h3>{t('settings.devices')}</h3>
-        <Button onClick={() => setDraft((d) => ({ ...d, devices: [...d.devices, blankDevice()] }))}>{t('settings.addDevice')}</Button>
-      </div>
-      <div className="grid">
-        {draft.devices.map((d) => (
-          <DeviceCard
-            key={d.key}
-            dev={d}
-            errors={devErrs(d)}
-            localError={local[d.key]}
-            localFlagError={local[`local-${d.key}`]}
-            canLocal={canOfferLocal(draft, runtime, d.key)}
-            runtime={runtime}
-            platform={platform}
-            test={tests[d.key]}
-            idText={idOf(d, 'dispositivo')}
-            renamed={renamed(d)}
-            onChange={(p) => patch('devices', d.key, p)}
-            onTest={() => testDevice(d)}
-            onRemove={() => delDevice(d)}
-          />
-        ))}
-      </div>
-      {draft.devices.length === 0 && (
-        <EmptyState
-          icon="💻"
-          title={t('settings.noDevices.title')}
-          text={t('settings.noDevices.text')}
-          action={
-            <Button variant="primary" onClick={() => setDraft((d) => ({ ...d, devices: [...d.devices, blankDevice()] }))}>
-              {t('settings.addDevice')}
-            </Button>
-          }
-        />
-      )}
-
-      <div className="row between section-head">
-        <h3>{t('settings.games')}</h3>
-        <Button
-          disabled={draft.devices.filter((d) => d.name).length < 1}
-          onClick={() => setDraft((d) => ({ ...d, games: [...d.games, blankGame()] }))}
-        >
-          {t('settings.addGame')}
-        </Button>
-      </div>
-      {draft.devices.filter((d) => d.name).length < 1 && <p className="muted">{t('settings.needOne')}</p>}
-      <div className="grid">
-        {draft.games.map((g) => (
-          <GameCard
-            key={g.key}
-            game={g}
-            devices={draft.devices}
-            errors={gameErrs(g)}
-            localError={local[g.key]}
-            keepError={local[`keep-${g.key}`]}
-            globalMax={draft.maxVersions}
-            nameA={nameOf(draft, g.a)}
-            nameB={nameOf(draft, g.b)}
-            idA={deviceId(draft, g.a)}
-            idB={deviceId(draft, g.b)}
-            idText={idOf(g, 'juego')}
-            renamed={renamed(g)}
-            onChange={(p) => patch('games', g.key, p)}
-            onShowLaunchers={() => showLaunchers(g)}
-            onRemove={() => setDraft((d) => ({ ...d, games: d.games.filter((x) => x.key !== g.key) }))}
-          />
-        ))}
-      </div>
-
-      <LaunchersPanel
-        id="launchers-section"
-        open={launchersOpen}
-        onToggle={() => setLaunchersOpen((o) => !o)}
-        games={launcherGames}
-        selected={launcherGame}
-        onSelect={chooseLauncherGame}
+          ),
+          launchers: sub === 'launchers' ? <Launchers games={launcherGames} /> : null,
+        }}
       />
-
-      <div className="actionbar" role="group" aria-label={t('settings.bar.aria')}>
-        {hasErrors && !validating ? (
-          <button
-            type="button"
-            className="ab-chip error"
-            onClick={jumpToError}
-            aria-label={t('settings.bar.errorsAria', { count: errorCount || 1 })}
-          >
-            <Icon name="alert" />
-            <b>{errorCount || 1}</b>
-            <span className="ab-long">{t('settings.bar.errors')}</span>
-          </button>
-        ) : (
-          <span className={`ab-chip${dirty ? ' dirty' : ''}`} aria-live="polite">
-            {validating ? (
-              t('settings.bar.validating')
-            ) : dirty ? (
-              <>
-                <span className="ab-long">{t('settings.bar.dirty')}</span>
-                <span className="ab-short">{t('settings.bar.dirtyShort')}</span>
-              </>
-            ) : (
-              t('settings.bar.clean')
-            )}
-          </span>
-        )}
-        <span className="spacer" />
-        <Button
-          variant="ghost"
-          className="ab-tool"
-          title={t('settings.bar.backups')}
-          aria-label={t('settings.bar.backups')}
-          onClick={() => setDialog({ kind: 'backups' })}
-        >
-          <Icon name="history" />
-          <span className="lbl">{t('settings.bar.backups')}</span>
-        </Button>
-        <Button
-          variant="ghost"
-          className="ab-tool"
-          title={t('settings.bar.yaml')}
-          aria-label={t('settings.bar.yaml')}
-          onClick={() => setDialog({ kind: 'yaml', config: payload })}
-          disabled={hasErrors}
-        >
-          <Icon name="code" />
-          <span className="lbl">{t('settings.bar.yaml')}</span>
-        </Button>
-        <Button
-          className="ab-tool"
-          title={t('settings.bar.discardTitle')}
-          aria-label={t('settings.bar.discardTitle')}
-          disabled={!dirty}
-          onClick={() => {
-            setDraft(fromConfig(loaded.config));
-            setMsg(null);
-          }}
-        >
-          <Icon name="undo" />
-          <span className="lbl">{t('settings.bar.discard')}</span>
-        </Button>
-        <Button variant="primary" disabled={!canSave} onClick={openSave}>
-          {t('settings.bar.save')}
-        </Button>
-      </div>
 
       {dialog?.kind === 'save' && (
         <SaveDialog
