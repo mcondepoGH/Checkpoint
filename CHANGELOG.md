@@ -2,6 +2,12 @@
 
 ## Sin publicar
 
+## 1.13.0 (2026-11-13)
+
+### Cambios
+
+- Nuevo `GET /api/games` con API key (Bearer): devuelve la lista de juegos y el estado de la última sincronización de cada uno, para dispositivos sin SSH. Aparece en Swagger con el tag «Juegos (API key)». README y documentación actualizados.
+
 ## 1.12.0 (2026-11-13)
 
 ### Cambios

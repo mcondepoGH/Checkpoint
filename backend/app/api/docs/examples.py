@@ -1,7 +1,7 @@
 """Respuestas de error y documentación de cada operación pública (resúmenes, descripciones y ejemplos).
 Se pasa tal cual al decorador de la ruta: solo `summary`/`description`/`responses`."""
 
-from .models import ErrorBody, OpenedResult, Ping, WatchItem
+from .models import ErrorBody, GameItem, OpenedResult, Ping, WatchItem
 
 
 def _ok(model, description: str, *examples: tuple) -> dict:
@@ -212,5 +212,37 @@ OPENED = dict(
         400: R400,
         404: R404,
         409: R409,
+    },
+)
+
+GAMES = dict(
+    summary="Listar los juegos y su estado",
+    description="Todos los juegos de la configuración con el resultado de su última sincronización, para consultarlo "
+    "desde un dispositivo sin SSH. `status` es `null` si el juego aún no se ha sincronizado. Solo lectura: no "
+    "sincroniza nada y no devuelve rutas, dispositivos ni ajustes.",
+    responses={
+        200: _ok(
+            list[GameItem],
+            "Lista de juegos (puede estar vacía).",
+            (
+                "games",
+                "Un juego sincronizado y otro sin sincronizar",
+                [
+                    {
+                        "id": "g1",
+                        "name": "Mi Juego",
+                        "enabled": True,
+                        "status": {
+                            "result": "ok",
+                            "code": "err.sync.done",
+                            "started": "2026-01-15T18:30:12",
+                            "finished": "2026-01-15T18:30:14",
+                        },
+                    },
+                    {"id": "g2", "name": "Otro Juego", "enabled": True, "status": None},
+                ],
+            ),
+            ("empty", "Sin juegos configurados", []),
+        )
     },
 )

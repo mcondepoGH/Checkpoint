@@ -60,3 +60,22 @@ class OpenedResult(BaseModel):
         description="Si `watching` es `false`: `no_process` (el juego no tiene "
         "`process` configurado) o `disabled` (el juego está desactivado).",
     )
+
+
+class GameSyncStatus(BaseModel):
+    result: str = Field(
+        description="Resultado de la última sincronización: `ok`, `conflict`, `aborted`, `skipped`, `partial` o `error`.",
+        examples=["ok"],
+    )
+    code: Optional[str] = Field(None, description="Código `err.sync.*` del resultado (sin traducir). Puede faltar.")
+    started: Optional[str] = Field(None, description="Inicio (hora local del hub, ISO 8601 sin zona).")
+    finished: Optional[str] = Field(None, description="Fin (hora local del hub, ISO 8601 sin zona).")
+
+
+class GameItem(BaseModel):
+    id: str = Field(description="Id interno del juego (vale en las rutas `/api/hook/{game}/...`).")
+    name: str = Field(description="Nombre visible del juego (también vale en las rutas).")
+    enabled: bool = Field(description="`false` si el juego está desactivado: no se sincroniza por ninguna vía.")
+    status: Optional[GameSyncStatus] = Field(
+        None, description="Última sincronización del juego, o `null` si aún no hay ninguna."
+    )
