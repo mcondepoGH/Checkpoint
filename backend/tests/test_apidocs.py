@@ -11,7 +11,7 @@ from app.api.auth import Auth
 from app.main import create_app
 
 PW = "correct horse"
-HOOK_PATHS = {"/api/hook/ping", "/api/hook/watches", "/api/hook/{game}/opened"}
+HOOK_PATHS = {"/api/hook/ping", "/api/hook/watches", "/api/hook/{game}/opened", "/api/games"}
 ASSET_BODIES = {
     "swagger-ui-bundle.js": b"/* bundle */",
     "swagger-ui.css": b"/* css */",
@@ -60,7 +60,7 @@ def test_api_key_alone_does_not_open_docs(client, anon):
         assert r.status_code == 401 and code(r) == "err.main.session_required", url
 
 
-def test_openapi_only_has_the_three_hook_paths(client):
+def test_openapi_only_has_the_api_key_paths(client):
     r = client.get("/api/openapi.json")
     assert r.status_code == 200
     j = r.json()
@@ -69,11 +69,15 @@ def test_openapi_only_has_the_three_hook_paths(client):
         ("/api/hook/ping", "get"),
         ("/api/hook/watches", "get"),
         ("/api/hook/{game}/opened", "post"),
+        ("/api/games", "get"),
     }
     assert j["info"]["title"] == "API de Checkpoint (avisos del lanzador)"
     assert j["info"]["version"] == (Path(__file__).resolve().parents[2] / "VERSION").read_text().strip()
-    assert [t["name"] for t in j["tags"]] == [apidocs.TAG]
-    assert all(op["tags"] == [apidocs.TAG] for v in j["paths"].values() for op in v.values())
+    assert [t["name"] for t in j["tags"]] == [apidocs.TAG, apidocs.GAMES_TAG]
+    assert {p: [op["tags"] for op in v.values()] for p, v in j["paths"].items()} == {
+        **{p: [[apidocs.TAG]] for p in HOOK_PATHS - {"/api/games"}},
+        "/api/games": [[apidocs.GAMES_TAG]],
+    }
 
 
 def test_openapi_security_scheme_and_errors(client):
@@ -95,6 +99,11 @@ def test_openapi_security_scheme_and_errors(client):
                 "Retry-After" in op["responses"]["429"]["headers"]
                 and "WWW-Authenticate" in op["responses"]["401"]["headers"]
             )
+    games = j["paths"]["/api/games"]["get"]
+    assert games["summary"] and "200" in games["responses"]
+    ok = games["responses"]["200"]["content"]["application/json"]
+    assert ok["schema"]["items"]["$ref"].endswith("/GameItem") and ok["examples"]["games"]["value"][0]["id"] == "g1"
+    assert {"GameItem", "GameSyncStatus"} <= set(j["components"]["schemas"])
     opened = j["paths"]["/api/hook/{game}/opened"]["post"]
     assert {"200", "400", "404", "409"} <= set(opened["responses"])
     assert "sincronización previa real" in opened["description"] and "arma el vigilante" in opened["description"]
@@ -136,18 +145,18 @@ def test_catch_all_does_not_swallow_docs_and_unknown_api_is_404(client):
 
 
 def test_every_api_route_is_public_tag_or_hidden(app):
-    """Deriva: una ruta /api/* nueva debe quedar oculta del esquema o ser del tag público (y entonces es una de las 3)."""
+    """Deriva: una ruta /api/* nueva debe quedar oculta del esquema o ser del tag público (y entonces es una de las rutas de la API key)."""
     public = set()
     for r in apidocs.iter_api_routes(app.routes):
         path = r.path
         if not path.startswith("/api/"):
             continue
-        in_public = apidocs.TAG in (r.tags or [])
+        in_public = bool({apidocs.TAG, apidocs.GAMES_TAG} & set(r.tags or []))
         assert in_public or not r.include_in_schema, (
-            f"{r.methods} {path}: ni en el tag público ni include_in_schema=False"
+            f"{r.methods} {path}: ni en un tag público ni include_in_schema=False"
         )
         if in_public:
-            assert r.include_in_schema and path.startswith(apidocs.API_PREFIX), path
+            assert r.include_in_schema and (path.startswith(apidocs.API_PREFIX) or path == apidocs.GAMES_PATH), path
             public.add(path)
     assert public == HOOK_PATHS
     assert (

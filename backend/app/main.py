@@ -15,7 +15,7 @@ from .api import docs
 from .api.auth import Auth
 from .api.deps import require
 from .api.middleware import RequestDebugLog
-from .api.routers import config, hook, profile, session, spa, sync, versions
+from .api.routers import config, games, hook, profile, session, spa, sync, versions
 from .api.routers import scheduler as scheduler_router
 from .api.routers import updates as updates_router
 from .core import bootstrap, updates
@@ -43,7 +43,10 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         title=docs.TITLE,
         version=updates.installed_version(),
         description=docs.DESCRIPTION,
-        openapi_tags=[{"name": docs.TAG, "description": docs.TAG_DESCRIPTION}],
+        openapi_tags=[
+            {"name": docs.TAG, "description": docs.TAG_DESCRIPTION},
+            {"name": docs.GAMES_TAG, "description": docs.GAMES_TAG_DESCRIPTION},
+        ],
         docs_url=None,
         redoc_url=None,
         openapi_url=None,
@@ -64,6 +67,7 @@ def create_app(auth: Optional[Auth] = None) -> FastAPI:
         sync.router,
         versions.router,
         hook.router,
+        games.router,
     ):
         app.include_router(router)
     # Documentación OpenAPI (solo la API de la API key; con sesión). Antes del catch-all SPA.

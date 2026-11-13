@@ -293,7 +293,7 @@ Todos operan sobre el usuario de la sesión (sin ids en la URL). Hoy solo existe
 
 Una sola API key por usuario, para que lanzadores y plugins avisen al hub sin iniciar sesión. Se gestiona en la sección «API key» del menú del perfil: **Generar** (nunca se crea sola), verla siempre (campo de solo lectura con botón **Copiar**), **Regenerar** (con confirmación: la anterior deja de valer y hay que actualizar los comandos y plugins ya vinculados) y **Revocar**. Formato: `ck_` + 32 bytes aleatorios en base64 urlsafe (46 caracteres).
 
-- **Alcance mínimo:** solo sirve para las rutas `/api/hook/*` (`GET /api/hook/ping` y `POST /api/hook/{juego}/opened`, ver «Hooks»). No da acceso al login, ajustes, versiones ni a restaurar, y la cookie de sesión no vale en esas rutas.
+- **Alcance mínimo:** solo sirve para las rutas `/api/hook/*` (`GET /api/hook/ping`, `GET /api/hook/watches` y `POST /api/hook/{juego}/opened`, ver «Hooks») y para `GET /api/games` (lista de juegos y su estado). No da acceso al login, ajustes, versiones ni a restaurar, y la cookie de sesión no vale en esas rutas.
 - **Autenticación:** cabecera `Authorization: Bearer ck_...`, sin cookie ni comprobación de `Origin`. Cualquier fallo (sin cabecera, mal formada, inválida, revocada o regenerada) es el mismo `401` con `err.apikey.invalid`; la comparación es en tiempo constante (`hmac.compare_digest`). Tras 3 fallos seguidos desde una IP, `429` con `Retry-After` (misma escala que el login, con contador propio: un lanzador mal configurado no bloquea el login web).
 - **Dónde se guarda:** como la key se vuelve a mostrar, no vale guardar solo un hash. Se guarda cifrada en `data/profile/<id>/apikey.enc` (permisos 0600, misma carpeta por usuario que la foto). La clave de cifrado se deriva del **secreto del hub**, `hub.secret` (32 bytes aleatorios, 0600), que se crea la primera vez junto a `config.yaml` (en Docker, el volumen `/config`; sin Docker, `config/` del directorio de datos de la app), **fuera de `data/`**: una copia de seguridad solo de `data/` no expone la key. Haz copia de `hub.secret` si quieres conservar la key; sin él (o si lo cambias) la key guardada no se puede descifrar, la interfaz muestra «sin key» y basta generar una nueva.
 - **Cifrado:** [Fernet](https://cryptography.io/en/latest/fernet/) de la librería `cryptography` (AES-128-CBC + HMAC-SHA256). La clave Fernet se deriva del secreto del hub con HMAC-SHA256. Fernet no admite datos asociados, así que el id de usuario va dentro del payload cifrado y se verifica al descifrar: un fichero manipulado, copiado a otro usuario o cifrado con otro secreto no descifra (la interfaz muestra «sin key»).
@@ -313,19 +313,19 @@ curl -H "Authorization: Bearer ck_..." http://HOST:PORT/api/hook/ping
 
 ### Documentación de la API (OpenAPI)
 
-La API que usa la API key (`GET /api/hook/ping`, `GET /api/hook/watches` y `POST /api/hook/{juego}/opened`) se documenta con OpenAPI y se puede probar desde el navegador con Swagger UI:
+La API que usa la API key (`GET /api/hook/ping`, `GET /api/hook/watches`, `POST /api/hook/{juego}/opened` y `GET /api/games`) se documenta con OpenAPI y se puede probar desde el navegador con Swagger UI:
 
 - **Abrir:** enlace «Documentación de la API» en el menú del perfil, bajo «API key» (`/api/docs`, pestaña nueva). El esquema está en `/api/openapi.json`.
 - **Solo con sesión:** `/api/docs`, `/api/openapi.json` y los ficheros de Swagger UI exigen la sesión de la web; sin ella responden `401` como el resto de rutas protegidas. La API key sola no abre la documentación.
-- **Alcance:** solo esas tres rutas. El resto de `/api/*` (login, perfil, configuración, sincronización, versiones...) es interno de la web, no está en el esquema y puede cambiar sin aviso.
+- **Alcance:** solo esas cuatro rutas (tag «Avisos del lanzador» las tres de `/api/hook/*` y «Juegos» la de `/api/games`). El resto de `/api/*` (login, perfil, configuración, sincronización, versiones...) es interno de la web, no está en el esquema y puede cambiar sin aviso.
 - **Probar:** pulsa «Authorize», pega tu API key (sin el prefijo `Bearer`) y usa «Try it out». Ojo: `POST .../opened` **ejecuta de verdad** una sincronización previa y arma el vigilante de cierre del juego.
 - **Sin internet:** Swagger UI va empaquetada en la imagen (`swagger-ui-dist`, versión fijada en `frontend/package.json`; el build de Vite la copia a `docs-assets/` y el backend la sirve en `/api/docs-assets/`). No se carga nada de CDNs ni de terceros.
 - **Idioma:** los textos de la documentación están en español; los códigos `err.*` van sin traducir.
-- **Mantenimiento:** toda ruta `/api/*` nueva queda fuera del esquema por defecto; para publicarla hay que ponerle el tag público (`TAG` en `backend/app/api/docs/install.py`). `backend/tests/test_apidocs.py` falla si el esquema deja de tener exactamente las rutas de la API key.
+- **Mantenimiento:** toda ruta `/api/*` nueva queda fuera del esquema por defecto; para publicarla hay que ponerle un tag público (`TAG` o `GAMES_TAG` en `backend/app/api/docs/install.py`). `backend/tests/test_apidocs.py` falla si el esquema deja de tener exactamente las rutas de la API key.
 
 ## Hooks
 
-Rutas `/api/hook/*` para que un lanzador avise al hub con la API key (ver «API key de usuario»). Hoy: el aviso de apertura (que además arma el **cierre automático**) y la consulta de vigilancias.
+Rutas `/api/hook/*` para que un lanzador avise al hub con la API key (ver «API key de usuario»). Hoy: el aviso de apertura (que además arma el **cierre automático**), la consulta de vigilancias y, con la misma key, la lista de juegos (`GET /api/games`).
 
 ### `POST /api/hook/{juego}/opened?device=<dispositivo>`
 
@@ -415,6 +415,22 @@ Limitaciones:
 
 Con **sesión de cookie** (la usa la web; la API key no vale aquí). Por cada dispositivo del juego: el último evento de hook y la vigilancia activa, sin datos sensibles: `{"devices": [{"device": "<id>", "last": {"trigger": "hook|hook_closed", "at": "<UTC ISO 8601>", "outcome": "ok|conflict|..."} | null, "watching": {"state": "waiting|running|settling", "since": "..."} | null}]}`. `404` si el juego no existe. Las entradas de historial de `hook` y `hook_closed` guardan ahora el dispositivo (campo `device`); las anteriores no lo tienen y no cuentan como «último aviso».
 
+#### `GET /api/games`
+
+Con **API key** (Bearer; mismo 401 único y 429 por IP que `/api/hook/*`; la cookie de sesión no vale). Lista de juegos y su último estado, para consultar desde un dispositivo sin SSH. Solo lectura; no devuelve rutas, dispositivos ni ajustes, ni mensajes del resultado. `status` es `null` si el juego nunca se ha sincronizado; `started`/`finished` son hora local del hub (ISO 8601 sin zona). No confundir con `GET /api/games/{juego}/hook-status` (sesión, interna).
+
+```json
+[
+  {"id": "g1", "name": "Mi Juego", "enabled": true,
+   "status": {"result": "ok", "code": "err.sync.done", "started": "2026-01-15T18:30:12", "finished": "2026-01-15T18:30:14"}},
+  {"id": "g2", "name": "Otro Juego", "enabled": true, "status": null}
+]
+```
+
+```bash
+curl -fsS -H "Authorization: Bearer ck_..." "http://HOST:8088/api/games"
+```
+
 #### `GET /api/hook/watches`
 
 Con `Authorization: Bearer ck_...` (sin cookie; `401` sin key). Lista las vigilancias activas, sin datos sensibles: `[{"game": "<id>", "device": "<id>", "state": "waiting|running|settling", "since": "<UTC ISO 8601>", "last_poll": "<UTC ISO 8601>", "poll": <segundos>}]`. `since` es el inicio del estado actual; `last_poll`, el último sondeo completado (latido); `poll`, el intervalo de sondeo. `waiting`: aún no se ha visto el proceso; `running`: visto abierto; `settling`: cerrado, esperando antes del checkpoint.
@@ -478,7 +494,7 @@ El detalle (árbol, reglas de dependencia y cómo añadir un módulo) está en [
 
 | Carpeta | Contenido |
 |---|---|
-| `api/` | Capa web (FastAPI): `routers/` (uno por área: `hook`, `session`, `profile`, `config`, `sync`, `versions`, `scheduler`, `updates`, `spa`), `auth.py`, `deps.py`, `middleware.py` y `docs/` (OpenAPI y Swagger de la API key) |
+| `api/` | Capa web (FastAPI): `routers/` (uno por área: `hook`, `games`, `session`, `profile`, `config`, `sync`, `versions`, `scheduler`, `updates`, `spa`), `auth.py`, `deps.py`, `middleware.py` y `docs/` (OpenAPI y Swagger de la API key) |
 | `services/` | Lógica de negocio sin FastAPI (`context`, `runs`, `hooks`, `devices`, `games`, `status`, `versions`) |
 | `sync/` | Motor de sincronización: `engine`, `decide`, `fingerprint`, `versions`, `baseline`, `errors`, `locking`, `scheduler`, `watcher` y `transport/` (`base`, `posix`, `windows`, `local`) |
 | `config/` | Modelo y almacén de `config.yaml` |

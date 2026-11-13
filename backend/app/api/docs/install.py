@@ -18,6 +18,8 @@ from ...core.errors import ApiError
 TAG = "Avisos del lanzador (API key)"
 SECURITY = "bearerAuth"
 API_PREFIX = "/api/hook/"
+GAMES_TAG = "Juegos (API key)"
+GAMES_PATH = "/api/games"  # ruta pública exacta; `/api/games/{game}/...` sigue siendo interna (sesión)
 DOCS_URL = "/api/docs"
 OPENAPI_URL = "/api/openapi.json"
 ASSETS_URL = "/api/docs-assets"
@@ -46,6 +48,7 @@ DESCRIPTION = (
 TAG_DESCRIPTION = (
     "Rutas `/api/hook/*`: se autentican solo con la API key (Bearer), sin cookie ni comprobación de Origin."
 )
+GAMES_TAG_DESCRIPTION = "Ruta `GET /api/games`: lista de juegos y su estado, solo con la API key (Bearer)."
 
 
 def iter_api_routes(routes):

@@ -13,7 +13,7 @@ backend/app/
 │   ├── deps.py          dependencias de FastAPI (require, usuario actual...)
 │   ├── middleware.py    log de depuración de cada petición
 │   ├── docs/            OpenAPI y Swagger de la API key (install, models, examples)
-│   └── routers/         un router por área: hook, session, profile, config, sync,
+│   └── routers/         un router por área: hook, games, session, profile, config, sync,
 │                        versions, scheduler, updates y spa (catch-all, siempre el último)
 ├── services/            lógica de negocio sin FastAPI
 │   ├── context.py       AppContext: objetos compartidos de la app (auth, scheduler, watcher...)
