@@ -571,6 +571,18 @@
       "invalid": "API key missing or invalid",
       "device_mismatch": "the given device is not the one of the API key"
     },
+    "pairing": {
+      "name_invalid": "invalid device name: {cause}",
+      "os_invalid": "invalid operating system (options: {options})",
+      "body_too_large": "the request is too large (max {max} bytes)",
+      "too_many_requests": "too many pairing requests; wait {seconds} s",
+      "too_many_pending": "too many pending requests from this address",
+      "busy": "the hub has too many pending requests; try again in {seconds} s",
+      "request_unknown": "unknown or expired pairing request",
+      "code_mismatch": "the code does not match; {remaining} attempts left",
+      "device_not_http": "there is already a non-http device named “{name}”",
+      "not_pending": "the request is no longer pending"
+    },
     "config": {
       "required": "required field",
       "int": "must be an integer",

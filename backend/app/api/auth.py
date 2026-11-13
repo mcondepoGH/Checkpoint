@@ -31,6 +31,9 @@ class Auth:
         # Misma mecánica para los fallos de API key (/api/hook/*), con contador propio: un lanzador mal configurado
         # no debe bloquear el login web de esa IP.
         self.hook_fails: Dict[str, Tuple[int, float]] = {}
+        # Y para los fallos de secreto en la consulta de una solicitud de vinculación (endpoint público), también
+        # con contador propio.
+        self.pair_fails: Dict[str, Tuple[int, float]] = {}
         self.lock = threading.Lock()
         # hash señuelo para igualar tiempos con usuario inexistente
         self._dummy = bcrypt.hashpw(b"x", bcrypt.gensalt(rounds=4))
@@ -65,6 +68,16 @@ class Auth:
     def hook_ok(self, ip: str):
         with self.lock:
             self.hook_fails.pop(ip, None)
+
+    def pair_wait(self, ip: str) -> int:
+        return self.wait_time(ip, self.pair_fails)
+
+    def pair_fail(self, ip: str):
+        self._register_fail(self.pair_fails, ip)
+
+    def pair_ok(self, ip: str):
+        with self.lock:
+            self.pair_fails.pop(ip, None)
 
     def login(self, ip: str, user: str, password: str) -> Optional[str]:
         """Devuelve token o None. Lanza PermissionError(segundos) si está bloqueada la IP."""

@@ -22,6 +22,23 @@ from .examples import (
     WATCHES,
     error_response,
 )
+from .pairing import (
+    PAIRING_ACCEPT,
+    PAIRING_CREATE,
+    PAIRING_LIST,
+    PAIRING_REJECT,
+    PAIRING_SESSION_TAG,
+    PAIRING_SESSION_TAG_DESCRIPTION,
+    PAIRING_STATUS,
+    PAIRING_TAG,
+    PAIRING_TAG_DESCRIPTION,
+    PAIRING_PREFIX,
+    R401_SESSION,
+    R403_ORIGIN,
+    R429_PAIRING,
+    SECURITY_PAIRING,
+    SECURITY_SESSION,
+)
 from .install import (
     API_PREFIX,
     GAMES_PATH,
@@ -45,6 +62,21 @@ from .install import (
 )
 
 __all__ = [
+    "PAIRING_ACCEPT",
+    "PAIRING_CREATE",
+    "PAIRING_LIST",
+    "PAIRING_REJECT",
+    "PAIRING_SESSION_TAG",
+    "PAIRING_SESSION_TAG_DESCRIPTION",
+    "PAIRING_STATUS",
+    "PAIRING_TAG",
+    "PAIRING_TAG_DESCRIPTION",
+    "PAIRING_PREFIX",
+    "R401_SESSION",
+    "R403_ORIGIN",
+    "R429_PAIRING",
+    "SECURITY_PAIRING",
+    "SECURITY_SESSION",
     "CLOSED",
     "COMMIT",
     "DOWNLOAD",

@@ -14,6 +14,7 @@ from fastapi.routing import APIRoute
 
 from ...core import settings
 from ...core.errors import ApiError
+from .pairing import COOKIE_NAME, SECURITY_PAIRING, SECURITY_SESSION
 
 TAG = "Avisos del lanzador (API key)"
 SECURITY = "bearerAuth"  # key de USUARIO (`ck_...`)
@@ -30,6 +31,13 @@ KEY_KINDS = {
     "/api/hook/{game}/files": "device",
     "/api/hook/{game}/commit": "device",
     "/api/games": "any",
+    # Vinculación de dispositivos (`routers/pairing.py`): "public" = sin credencial (único caso), "pairing_secret" =
+    # secreto de la solicitud en `X-Pairing-Secret`, "session" = cookie de sesión web.
+    "/api/pairing/requests": "public",
+    "/api/pairing/requests/{request_id}": "pairing_secret",
+    "/api/pairing/pending": "session",
+    "/api/pairing/pending/{request_id}/accept": "session",
+    "/api/pairing/pending/{request_id}/reject": "session",
 }
 KEY_NOTES = {
     "user": "**Key aceptada:** solo la de **usuario** (`ck_...`, Mi perfil → API key). La de dispositivo (`ckd_...`) da `401`.",
@@ -37,8 +45,15 @@ KEY_NOTES = {
     "ve sus juegos (`?device=` opcional: otro dispositivo, `403`; juego que no lo incluye, `404`). La de usuario "
     "(`ck_...`) da `401`.",
     "any": "**Key aceptada:** la de usuario (`ck_...`) o la de dispositivo (`ckd_...`).",
+    "public": "**Sin credencial:** es el único endpoint de Checkpoint sin key ni sesión previas. Límites por IP, tope "
+    "de solicitudes pendientes y caducidad de 10 min (ver «Vinculación de dispositivos» arriba).",
+    "pairing_secret": "**Credencial:** el secreto de la solicitud, en la cabecera `X-Pairing-Secret` (nunca en la URL). "
+    "No vale una key ni la sesión, y el código de 6 dígitos tampoco.",
+    "session": "**Credencial:** la sesión web (cookie `checkpoint_session`; las escrituras comprueban `Origin`). Una API "
+    "key no vale aquí.",
 }
 API_PREFIX = "/api/hook/"
+PAIRING_PREFIX = "/api/pairing/"
 GAMES_TAG = "Juegos (API key)"
 GAMES_PATH = "/api/games"  # ruta pública exacta; `/api/games/{game}/...` sigue siendo interna (sesión)
 DOCS_URL = "/api/docs"
@@ -71,8 +86,17 @@ DESCRIPTION = (
     "las keys como contraseñas: dan acceso a los saves; regenera la que se filtre.\n\n"
     '**Errores.** Todos tienen la forma `{"detail": {"code": "err.<módulo>.<causa>", "params": {...}}}`. '
     "Los códigos `err.*` no se traducen: son el contrato estable.\n\n"
-    "**Solo se documenta la API de la API key.** El resto de rutas `/api/*` son internas de la web y pueden cambiar "
-    "sin aviso."
+    "**Vinculación de dispositivos (`/api/pairing/*`).** Un dispositivo (el plugin de la Steam Deck) se vincula sin "
+    "key previa: pide acceso con su nombre y sistema operativo (`POST /api/pairing/requests`), recibe un código de 6 "
+    "dígitos que enseña al usuario y un secreto que solo conoce él; el usuario, **con sesión web**, acepta en el hub "
+    "solo si el código coincide (`/api/pairing/pending*`); el dispositivo consulta su solicitud con el secreto "
+    "(cabecera `X-Pairing-Secret`) y recibe **una sola vez** su key `ckd_...`. **Es el único endpoint sin credencial "
+    "previa.** Mitigaciones: límite de solicitudes y de pendientes por IP, tope de 10 pendientes en el hub, caducidad "
+    "de 10 min (solo en memoria), código y secreto aleatorios criptográficos (secreto de 32 bytes, comparación en "
+    "tiempo constante), el código no recoge la key, `404` uniforme con secreto erróneo (cuenta para el bloqueo por "
+    "IP) y nada de secretos en logs.\n\n"
+    "**Solo se documenta la API de la API key y la vinculación.** El resto de rutas `/api/*` son internas de la web "
+    "y pueden cambiar sin aviso."
 )
 TAG_DESCRIPTION = (
     "Rutas `/api/hook/*`: se autentican solo con una API key (Bearer; de usuario o de dispositivo según la ruta, ver "
@@ -112,7 +136,23 @@ def patch_schema(schema: dict) -> None:
         "con sesión). Pégala sin el prefijo `Bearer`. Identifica al dispositivo y solo ve sus juegos. Solo vale en las "
         "rutas que la aceptan (ver cada operación).",
     }
+    schemes[SECURITY_PAIRING] = {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-Pairing-Secret",
+        "description": "Secreto de la solicitud de vinculación (`secret` de `POST /api/pairing/requests`). Solo vale en "
+        "la consulta de esa solicitud; va en cabecera y nunca en la URL.",
+    }
+    schemes[SECURITY_SESSION] = {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": COOKIE_NAME,
+        "description": "Sesión web (cookie del login). Swagger UI la envía sola si estás en la web con sesión.",
+    }
     security = {
+        "public": [],
+        "pairing_secret": [{SECURITY_PAIRING: []}],
+        "session": [{SECURITY_SESSION: []}],
         "user": [{SECURITY: []}],
         "device": [{SECURITY_DEVICE: []}],
         "any": [{SECURITY: []}, {SECURITY_DEVICE: []}],  # una u otra
