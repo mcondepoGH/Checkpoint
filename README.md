@@ -353,6 +353,28 @@ Una clase de key no admitida es el **mismo `401`** (`err.apikey.invalid`) que un
 
 **Aviso de seguridad.** Las keys de dispositivo dan acceso de lectura y escritura a los saves de sus juegos: trátalas como contraseñas (HTTPS o VPN fuera de tu red de confianza, no las subas a repositorios) y regenera o revoca la que se filtre o del dispositivo que pierdas. La de dispositivo limita el daño: no sirve para `opened`, `watches` ni para otros dispositivos, y no da acceso a ajustes. Excluye `hub.secret` de las copias, como con la de usuario.
 
+### Vinculación de dispositivos por solicitud y código
+
+Para que el plugin de un dispositivo `http` (p. ej. la Steam Deck) se vincule con solo conocer la URL del hub, sin copiar keys a mano. **Es el único endpoint de Checkpoint que se llama sin key ni sesión previas**; por eso lleva las mitigaciones de más abajo. Hoy se usa solo por API (`/api/docs`, tags «Vinculación de dispositivos»); la pantalla de solicitudes pendientes llegará con la tarjeta «UI de dispositivos http».
+
+Flujo:
+
+1. **El dispositivo pide acceso** (sin key): `POST /api/pairing/requests` con `{"name": "Steam Deck", "os": "linux"}` (nombre con las reglas de los dispositivos, `os` = `linux` o `windows`). Responde `201` con `{"id", "code", "secret", "expires_in": 600}`: `code` son 6 dígitos que el dispositivo **enseña al usuario**; `secret` solo lo guarda el dispositivo.
+2. **El usuario**, con sesión web, ve `GET /api/pairing/pending` (`[{"id", "name", "os", "code", "ip", "expires_in", "existing": "none"|"http"|"other"}]`) y acepta con `POST /api/pairing/pending/{id}/accept` y `{"code": "<el código que enseña el dispositivo>"}` (responde `{"id", "device", "name", "created"}`), o rechaza con `POST /api/pairing/pending/{id}/reject` (`{"id", "rejected": true}`). Un código erróneo es `400` `err.pairing.code_mismatch`; tres seguidos anulan la solicitud.
+3. **El dispositivo consulta** `GET /api/pairing/requests/{id}` con la cabecera `X-Pairing-Secret: <secret>`: `{"status": "pending", "expires_in"}`, `{"status": "rejected"}` o `{"status": "accepted", "device": "<id>", "key": "ckd_..."}`. La key se entrega **una sola vez** (se genera en ese momento) y la solicitud se borra; después, `404`.
+
+Al aceptar se crea el dispositivo `http` en `config.yaml` si no existe (por el mismo camino que `PUT /api/config`: versión base, validación completa, copia de seguridad, comentarios conservados). Si ya hay un dispositivo `http` con ese nombre (sin distinguir mayúsculas) se **reutiliza** y, al recoger, se **regenera su key** (la anterior deja de valer: quien se vincula de nuevo ha perdido la key o es otro equipo, y regenerar es lo que invalida una key filtrada; solo se regenera cuando el dispositivo recoge, no al aceptar). Si ya hay uno que **no** es `http` con ese nombre, `409` `err.pairing.device_not_http` (no se suplanta).
+
+Mitigaciones del endpoint público:
+
+- **Límites por IP:** 5 solicitudes por 10 min y 3 pendientes a la vez (`429`); **10 pendientes en todo el hub** (`503`). Los fallos de secreto en la consulta cuentan para un bloqueo por IP (3 gratis, luego 5 s, 10 s... hasta 15 min; contador propio, no bloquea el login ni las keys).
+- **Caducidad de 10 min** y solo **en memoria** (reiniciar el hub borra las pendientes; el plugin vuelve a pedir; una purga periódica del scheduler limpia las caducadas).
+- **Aleatorios criptográficos** (`secrets`): código de 6 dígitos, id y secreto de 32 bytes; el secreto se guarda solo como hash y se compara en tiempo constante. **El código no recoge la key**, solo el secreto.
+- **El secreto nunca va en la URL**, sino en la cabecera `X-Pairing-Secret`: las URL acaban en logs de accesos, de proxies inversos y en el historial; una cabecera no.
+- **404 uniforme:** id desconocido, solicitud caducada o ya entregada, secreto ausente o erróneo dan la misma respuesta (`err.pairing.request_unknown`): no se revela si una solicitud existe.
+- Listar, aceptar y rechazar exigen sesión (cookie y, al escribir, `Origin`). Respuestas con `Cache-Control: no-store`. Ningún log ni error incluye secretos, keys ni códigos. Cuerpo máximo de 2048 bytes.
+- **Límite conocido:** quien pueda llegar al hub puede ocupar las 10 plazas pendientes durante 10 min (denegación de vinculación, no acceso). Compara siempre el código y el nombre; rechaza lo que no reconozcas.
+
 ### Documentación de la API (OpenAPI)
 
 La API que usa la API key (la de usuario y la de dispositivo `http`: `/api/hook/*` y `GET /api/games`) se documenta con OpenAPI y se puede probar desde el navegador con Swagger UI:

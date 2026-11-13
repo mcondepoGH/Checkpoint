@@ -571,6 +571,18 @@
       "invalid": "API key ausente o no válida",
       "device_mismatch": "el dispositivo indicado no es el de la API key"
     },
+    "pairing": {
+      "name_invalid": "nombre de dispositivo no válido: {cause}",
+      "os_invalid": "sistema operativo no válido (opciones: {options})",
+      "body_too_large": "la solicitud es demasiado grande (máx. {max} bytes)",
+      "too_many_requests": "demasiadas solicitudes de vinculación; espera {seconds} s",
+      "too_many_pending": "ya hay demasiadas solicitudes pendientes desde esta dirección",
+      "busy": "el hub tiene demasiadas solicitudes pendientes; vuelve a intentarlo en {seconds} s",
+      "request_unknown": "solicitud de vinculación desconocida o caducada",
+      "code_mismatch": "el código no coincide; quedan {remaining} intentos",
+      "device_not_http": "ya hay un dispositivo que no es http llamado «{name}»",
+      "not_pending": "la solicitud ya no está pendiente"
+    },
     "config": {
       "required": "campo obligatorio",
       "int": "debe ser un número entero",

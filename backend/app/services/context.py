@@ -10,6 +10,7 @@ from ..core.errors import ApiError
 from ..sync.scheduler import Scheduler
 from .games import resolve_game_id
 from .hooks import HookService
+from .pairing import PairingService
 from .runs import RunRegistry
 
 
@@ -22,6 +23,10 @@ class AppContext:
         self.checker = updates.UpdateChecker()
         self.hooks = HookService(self.scheduler, self.runs, self.auto_cfg)
         self.scheduler.maintenance.append(self.hooks.purge_staging)  # purga horaria del staging de subidas HTTP
+        self.pairing = PairingService(
+            self.store, self.cfg, auth.user, auth.clock
+        )  # solicitudes de vinculación (memoria)
+        self.scheduler.maintenance.append(self.pairing.purge)  # caducadas
 
     @property
     def watcher(self):
